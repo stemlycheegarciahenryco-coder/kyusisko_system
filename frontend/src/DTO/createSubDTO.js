@@ -13,6 +13,7 @@ export const createSubDTO = (formData) => {
     city: formData.city,
     barangay: formData.barangay,
     street_address: formData.street_address,
+    provider_type: formData.provider_type,
     ability_level: '1'
   };
 };

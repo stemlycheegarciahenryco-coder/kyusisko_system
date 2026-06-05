@@ -1,53 +1,72 @@
 const express = require('express');
 const cors = require('cors');
-const subAdminRoutes = require('./routes/subAdminRoutes'); // 1. Import it
-const authRoutes = require('./routes/authRoutes'); // 2. Import auth routes
+const cookieParser = require('cookie-parser'); //
+const subAdminRoutes = require('./routes/subAdminRoutes');
+const authRoutes = require('./routes/authRoutes');
 const RegStudentRoutes = require('./routes/RegStudentRoutes');
-const scholarshipRoutes = require('./routes/ScholarShipRoutes');           // ← add
-const scholarshipFieldRoutes = require('./routes/createFieldScholarship'); // ← add
-const applicationRoutes = require('./routes/applicationRoutes'); 
-const recommendationRoutes = require('./routes/recommendationRoutes'); // ← add
-const securityRoutes = require('./routes/securityRoutes'); // ← add
-const orgRoutes = require('./routes/orgRoutes'); // ← add
-const superRoutes = require('./routes/superRoutes'); // ← add
+const scholarshipRoutes = require('./routes/ScholarShipRoutes');
+const scholarshipFieldRoutes = require('./routes/createFieldScholarship');
+const applicationRoutes = require('./routes/applicationRoutes');
+const recommendationRoutes = require('./routes/recommendationRoutes');
+const securityRoutes = require('./routes/securityRoutes');
+const orgRoutes = require('./routes/orgRoutes');
+const notifRoutes = require('./routes/notifRoutes');
 const renewRoutes = require('./routes/renewRoutes');
-const http = require('http');
+const messageRoutes = require('./routes/messageRoutes');
+const searchRoutes = require('./routes/searchRoutes');
+const lookupRouter = require('./routes/lookup');
+const systemAdminRouter = require('./routes/systemadmin');
 
-const {Server} = require('socket.io');
+
+const http = require('http');
+const path = require('path');
+const { Server } = require('socket.io');
 require('dotenv').config();
 
 const app = express();
-const path = require('path');
-//websocket realtime
+
+// --- 1. WebSocket & Server Setup ---
+// We use 'server' instead of 'app' to allow Socket.io to hook into the HTTP traffic
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: '*' }
+  cors: { 
+    origin: "http://localhost:5173", // Replace with your actual frontend URL
+    credentials: true 
+  }
 });
+
+// --- 2. Middleware Configuration ---
+// CRITICAL: CORS must allow credentials for HttpOnly cookies to work
+app.use(cors({
+  origin: "http://localhost:5173", // Your React/Vite dev server
+  credentials: true
+}));
+
+app.use(cookieParser()); // REQUIRED: Allows Express to read req.cookies
+app.use(express.json());
+
+// --- 3. Static Files & Routes ---
 const uploadsPath = path.resolve(__dirname, 'uploads');
+app.use('/uploads', express.static(uploadsPath));
 
-app.use(cors());
-app.use(express.json())
-
-
-//student NOT STRUCTURED PLEASE COMEBACK!!!!
-app.get('/test', (req, res) => res.send("Server is reaching this point!"));
-app.use('/uploads', express.static(uploadsPath)); // serve uploaded files statically
-
-app.use('/api/onboarding', subAdminRoutes);; // endpoint creating a subadmin
-app.use('/api/recommendations', recommendationRoutes); // ← add this line to include recommendation routes
-app.use('/api/orgs', orgRoutes);
+app.use('/api/onboarding-orgs', subAdminRoutes);       // Matches /api/onboarding-orgs/profile
+app.use('/api/organizations', orgRoutes);         // Matches /api/organizations/profile/:id
+app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/security', securityRoutes);
-
-app.use('/api/super', superRoutes);
-app.use('/api/renew', renewRoutes);
+app.use('/api/notif', notifRoutes);               // Matches /api/notif/mark-read
+// Keep these only if the routes inside them don't have their own prefixes
+app.use('/api', authRoutes);                 // Example: if routes are /login, /register
+app.use('/api/scholarships', scholarshipRoutes);  // Matches /api/scholarships/...
+app.use('/api/applications', applicationRoutes);
+app.use('/api/renewals', renewRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/system-admin', systemAdminRouter);
+app.use('/api/search', searchRoutes);
+app.use('/api/lookup', lookupRouter);
 app.use('/api', RegStudentRoutes);
-app.use('/api', authRoutes); // This makes the URL /Sapi/auth/login
-// scholarship routes
-app.use('/api', scholarshipRoutes);        // /api/scholarship
-app.use('/api', scholarshipFieldRoutes);   // /api/scholarship/:id/fields
-app.use('/api', applicationRoutes);        // /api/scholarship/:id/apply
+app.get('/test', (req, res) => res.send("Server is reaching this point!"));
 
-
-
+// --- 4. Start Server ---
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Running on port ${PORT}`));
+// CRITICAL: Use server.listen, not app.listen, or Socket.io won't work!
+server.listen(PORT, () => console.log(`🚀 Server & WebSocket running on port ${PORT}`));

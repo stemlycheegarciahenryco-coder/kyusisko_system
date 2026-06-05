@@ -1,23 +1,21 @@
+// auth.js
 const jwt = require('jsonwebtoken');
 
-
-
-//TOKENN BEARERRRRR
-
-
 const verifyToken = (req, res, next) => {
-  const token = req.header('Authorization')?.split(' ')[1]; // Expects "Bearer TOKEN"
+  // Now checks the 'token' cookie instead of Authorization header
+  const token = req.cookies.token;
 
   if (!token) {
-    return res.status(403).json({ error: "Access denied. No token provided." });
+    return res.status(403).json({ error: "Access denied. Please log in." });
   }
 
   try {
     const verified = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = verified; // Adds user info (id, role) to the request object
-    next(); // Moves to the actual route logic
+    req.user = verified; 
+    next();
   } catch (err) {
-    res.status(401).json({ error: "Invalid or expired token." });
+    res.clearCookie('token'); // Clean up invalid cookies
+    res.status(401).json({ error: "Invalid or expired session." });
   }
 };
 

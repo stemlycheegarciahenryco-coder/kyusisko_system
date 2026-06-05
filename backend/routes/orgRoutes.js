@@ -1,18 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const uploadOrgPic = require('../config/orgMulter'); // Ensure this name matches the export
+const uploadOrgPic = require('../config/orgMulter');
 const { verifyToken } = require('../middleware/auth');
-const orgController = require('../controller/orgController'); // Import the whole object
+const orgController = require('../controller/orgController');
 
-// 1. GET Profile
-router.get('/:id/profile', verifyToken, orgController.getOrgProfile);
-
-// 2. PATCH Text Details
-router.patch('/:id/profile', verifyToken, orgController.updateOrgProfile);
-
-// 3. PATCH Profile Picture
-router.patch('/:id/profile-picture', verifyToken, uploadOrgPic.single('org_pic'), orgController.updateProfilePicture);
-
-
+// Standardized Routes (All start with /profile/:id or similar)
+router.get('/profile/:id', verifyToken, orgController.getOrgProfile);
+router.patch('/profile/:id', verifyToken, orgController.updateOrgProfile);
+router.patch('/profile-picture/:id', verifyToken, uploadOrgPic.single('org_pic'), orgController.updateProfilePicture);
 router.get('/applications', verifyToken, orgController.getOrgApplications);
+router.get('/dashboard-programs/:id', verifyToken, orgController.getOrgPrograms);
+router.get('/dashboard-stats', verifyToken, orgController.getDashboardStats);
+router.get( '/conflicts', verifyToken, orgController.monitorApplications);
 module.exports = router;

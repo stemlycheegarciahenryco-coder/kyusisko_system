@@ -1,27 +1,24 @@
-// ScholarshipRoutes.js
 const express = require('express');
 const router = express.Router();
 const scholarship = require('../controller/scholarshipController');
 const { verifyToken } = require('../middleware/auth');
+const upload = require('../middleware/multerConfig'); // Import your multer config
 
-// --- PUBLIC OR SHARED ROUTES ---
-// (If you want students to see these, they stay here)
 router.use(verifyToken); 
 
-// These two now work for BOTH Admins and Students because 
-// we removed the sub_admin_id check in the controller!
-router.get('/scholarships/:id', scholarship.getScholarshipById);
-router.get('/scholarships/:id/fields', scholarship.getScholarshipFields);
+// Core Scholarship Routes
+// ADD upload.array('attachments') HERE
+router.post('/', upload.array('attachments'), scholarship.createScholarship);
 
+router.get('/get-all', scholarship.getScholarships);
+router.get('/view-details/:id', scholarship.getScholarshipById);
 
-// --- ADMIN ONLY ROUTES ---
-// (You might want to add an 'isAdmin' middleware here later)
-router.post('/scholarships-create', scholarship.createScholarship);
-router.get('/scholarships', scholarship.getScholarships);
+// If you want to allow file updates later, add it here too:
+router.patch('/:id', upload.array('attachments'), scholarship.updateScholarship);
 
-router.post('/scholarships/:id/fields', scholarship.saveScholarshipFields);
-router.put('/scholarships/:id', scholarship.updateScholarship);
-router.patch('/scholarships/:id/status', scholarship.updateScholarshipStatus);
-router.delete('/scholarships/:id', scholarship.deleteScholarship);
+router.patch('/:id/status', scholarship.updateScholarshipStatus);
+router.delete('/:id', scholarship.deleteScholarship);
+
+router.get('/:id/requirements', scholarship.getRequirements);
 
 module.exports = router;

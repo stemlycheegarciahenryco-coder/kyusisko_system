@@ -3,12 +3,26 @@ const transporter = require('../config/mailer');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const { trackEvent } = require('../utils/logger');
 
 const MAX_ATTEMPTS = 5;
 const WINDOW_MINUTES = 10;
 
+// Helper function to track authentication attempts
+async function logAttempt(identifier, ip, success) {
+    await pool.query(
+        'INSERT INTO login_attempts (email, ip_address, success) VALUES ($1, $2, $3)',
+        [identifier, ip, success]
+    );
+}
+
+// ==========================================
+// 1. FORGOT PASSWORD SYSTEM (Email-based)
+// ==========================================
 exports.forgotPassword = async (req, res) => {
     const { email } = req.body;
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+
     try {
         // 1. Check ALL tables: Admin, Sub-Admin, and Students
         const userRes = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
@@ -17,8 +31,25 @@ exports.forgotPassword = async (req, res) => {
 
         // 2. If email doesn't exist in ANY table
         if (userRes.rows.length === 0 && subRes.rows.length === 0 && studentRes.rows.length === 0) {
+            await trackEvent({
+                userId: null,
+                subAdminId: null,
+                studentId: null,
+                actionType: 'FORGOT_PASSWORD_FAIL',
+                ipAddress: ip,
+                email: email,
+                message: `Password reset requested for non-existent email address.`
+            });
             return res.json({ message: "If that email exists, a verification code has been sent." });
         }
+
+        let userId = null;
+        let subAdminId = null;
+        let studentId = null;
+
+        if (userRes.rows.length > 0) userId = userRes.rows[0].id;
+        else if (subRes.rows.length > 0) subAdminId = subRes.rows[0].id;
+        else if (studentRes.rows.length > 0) studentId = studentRes.rows[0].id;
 
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000); 
@@ -43,6 +74,16 @@ exports.forgotPassword = async (req, res) => {
                 </div>`
         });
 
+        await trackEvent({
+            userId,
+            subAdminId,
+            studentId,
+            actionType: 'FORGOT_PASSWORD_REQUEST',
+            ipAddress: ip,
+            email: email,
+            message: `Verification code successfully generated and emailed to the account.`
+        });
+
         res.json({ message: "If that email exists, a verification code has been sent." });
     } catch (err) {
         console.error("Forgot Pass Error:", err.message);
@@ -50,8 +91,13 @@ exports.forgotPassword = async (req, res) => {
     }
 };
 
+// ==========================================
+// 2. RESET PASSWORD EXECUTION
+// ==========================================
 exports.resetPassword = async (req, res) => {
     const { email, token, newPassword } = req.body;
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+
     try {
         const tokenCheck = await pool.query(
             'SELECT * FROM password_reset_tokens WHERE email = $1 AND token = $2 AND used = FALSE AND expires_at > NOW()',
@@ -59,26 +105,51 @@ exports.resetPassword = async (req, res) => {
         );
 
         if (tokenCheck.rows.length === 0) {
+            await trackEvent({
+                userId: null,
+                subAdminId: null,
+                studentId: null,
+                actionType: 'PASSWORD_RESET_BAD_TOKEN',
+                ipAddress: ip,
+                email: email,
+                message: `Failed password reset attempt: Invalid, expired, or used verification token submitted.`
+            });
             return res.status(400).json({ error: "Invalid or expired verification code." });
         }
 
-        // Use 10 rounds for hashing
         const hashed = await bcrypt.hash(newPassword, 10);
         
         const userRes = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
         const subRes = await pool.query('SELECT id FROM sub_admins WHERE sub_email = $1', [email]);
+        const studentRes = await pool.query('SELECT id FROM students WHERE student_email = $1', [email]);
+
+        let userId = null;
+        let subAdminId = null;
+        let studentId = null;
 
         if (userRes.rows.length > 0) {
+            userId = userRes.rows[0].id;
             await pool.query('UPDATE users SET password_hash = $1 WHERE email = $2', [hashed, email]);
         } else if (subRes.rows.length > 0) {
+            subAdminId = subRes.rows[0].id;
             await pool.query('UPDATE sub_admins SET sub_password = $1 WHERE sub_email = $2', [hashed, email]);
-        } else {
-            // FIX: Match your student login column name: student_password_hash
+        } else if (studentRes.rows.length > 0) {
+            studentId = studentRes.rows[0].id;
             await pool.query('UPDATE students SET student_password_hash = $1 WHERE student_email = $2', [hashed, email]);
         }
 
         await pool.query('UPDATE password_reset_tokens SET used = TRUE WHERE token = $1 AND email = $2', [token, email]);
         
+        await trackEvent({
+            userId,
+            subAdminId,
+            studentId,
+            actionType: 'PASSWORD_RESET_SUCCESS',
+            ipAddress: ip,
+            email: email,
+            message: `Password update transaction completed successfully. Previous tokens revoked.`
+        });
+
         res.json({ message: "Password updated successfully." });
     } catch (err) {
         console.error("Reset Error:", err.message);
@@ -86,96 +157,186 @@ exports.resetPassword = async (req, res) => {
     }
 };
 
-exports.login = async (req, res) => {
-  const { email, password } = req.body;
-  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+// ==========================================
+// 3. SYSTEM ADMIN LOGIN (SADM-001, SADM-002 via UID)
+// ==========================================
+exports.systemAdminLogin = async (req, res) => {
+    const { systemId, password } = req.body; // Expects systemId: 'SADM-001'
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
-  try {
-    // 1. Rate Limiting Check
-    const attemptCheck = await pool.query(
-      `SELECT COUNT(*) FROM login_attempts 
-       WHERE email = $1 AND success = FALSE 
-       AND attempted_at > NOW() - INTERVAL '${WINDOW_MINUTES} minutes'`,
-      [email]
-    );
-    const failedCount = parseInt(attemptCheck.rows[0].count);
+    try {
+        // Rate Limiting Check using systemId string mapping
+        const attemptCheck = await pool.query(
+            `SELECT COUNT(*) FROM login_attempts 
+             WHERE email = $1 AND success = FALSE 
+             AND attempted_at > NOW() - INTERVAL '${WINDOW_MINUTES} minutes'`,
+            [systemId]
+        );
+        const failedCount = parseInt(attemptCheck.rows[0].count);
 
-    if (failedCount >= MAX_ATTEMPTS) {
-      return res.status(429).json({ error: "Too many attempts. Blocked for 10 minutes.", blocked: true });
-    }
+        if (failedCount >= MAX_ATTEMPTS) {
+            await trackEvent({
+                userId: null, subAdminId: null, studentId: null,
+                actionType: 'SECURITY_LOCKOUT', ipAddress: ip, email: systemId,
+                message: `Admin lockout triggered: 5 consecutive authentication failures for System ID: ${systemId}.`
+            });
+            return res.status(429).json({ error: "Too many attempts. Blocked for 10 minutes.", blocked: true });
+        }
 
-    // 2. Try Root Admin Login (users table)
-    const userResult = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-    if (userResult.rows.length > 0) {
-      const user = userResult.rows[0];
-      const isMatch = await bcrypt.compare(password, user.password_hash);
-      if (user.account_status === 'blocked') {
-    return res.status(403).json({ error: "Access denied. Your account is blocked." });
-  }
-      if (isMatch) {
-        await logAttempt(email, ip, true);
-        const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
-        return res.json({ token, role: user.role, id: user.id, sub_email: user.email });
-      }
-    }
+        // Query database via 'uid' field instead of email
+        const userResult = await pool.query('SELECT * FROM users WHERE uid = $1', [systemId]);
+        if (userResult.rows.length === 0) {
+            await logAttempt(systemId, ip, false);
+            return res.status(401).json({ error: "Invalid System ID or Password" });
+        }
 
-    // 3. Try Sub-Admin Login (sub_admins table)
-    const subResult = await pool.query('SELECT * FROM sub_admins WHERE sub_email = $1', [email]);
-    if (subResult.rows.length > 0) {
-      const sub = subResult.rows[0];
-
-      if (!sub.is_active) {
-        return res.status(403).json({ error: "Account deactivated. Contact root admin." });
-      }
-
-      const isMatch = await bcrypt.compare(password, sub.sub_password);
-      if (isMatch) {
-        await logAttempt(email, ip, true);
+        const user = userResult.rows[0];
         
-        // Include sub_email in token payload for RBAC
+        // Handle suspension or blocking logic states
+        if (user.account_status === 'blocked' || user.account_status === 'suspended') {
+            await trackEvent({
+                userId: user.id, subAdminId: null, studentId: null,
+                actionType: 'LOGIN_BLOCKED_ACCOUNT', ipAddress: ip, email: user.email,
+                message: `Admin login rejected: Account state locked under '${user.account_status}' status flags.`
+            });
+            return res.status(403).json({ error: `Access denied. Your administrative account is ${user.account_status}.` });
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password_hash);
+        if (!isMatch) {
+            await logAttempt(systemId, ip, false);
+            return res.status(401).json({ error: "Invalid System ID or Password" });
+        }
+
+        await logAttempt(systemId, ip, true);
+        
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: null,
+            actionType: user.role === 'root_admin' ? 'ROOT_ADMIN_LOGIN' : 'CO_ADMIN_LOGIN',
+            ipAddress: ip, email: user.email,
+            message: `System session verified and initialized successfully for administrative ID: ${user.uid}.`
+        });
+
         const token = jwt.sign(
-          { id: sub.id, role: 'sub_admin', email: sub.sub_email }, 
-          process.env.JWT_SECRET, 
-          { expiresIn: '1d' }
+            { id: user.id, role: user.role, email: user.email, uid: user.uid }, 
+            process.env.JWT_SECRET, 
+            { expiresIn: '1d' }
         );
 
-        // KEY FIX: Return 'sub_email' so it matches your LogIn.jsx destructuring
-        return res.json({ 
-          
-          token, 
-          role: 'sub_admin', 
-          sub_email: sub.sub_email,
-          id: sub.id // Include sub-admin ID for frontend use
-
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'Lax',
+            maxAge: 24 * 60 * 60 * 1000 
         });
-      }
+
+        // Returns specific admin roles ('root_admin' or 'co_admin') down to the UI layout
+        return res.json({ role: user.role, id: user.id, uid: user.uid, sub_email: user.email });
+
+    } catch (err) {
+        console.error("System Admin Login Error:", err.message);
+        res.status(500).json({ error: "Server Error" });
     }
-
-    // 4. Failed Login Handling
-    await logAttempt(email, ip, false);
-    res.status(401).json({ 
-      error: "Invalid credentials", 
-      attempts: MAX_ATTEMPTS - (failedCount + 1) 
-    });
-
-  } catch (err) {
-    console.error("Login Error:", err.message);
-    res.status(500).json({ error: "Server Error" });
-  }
 };
 
+// ==========================================
+// 4. ORGANIZATION SUB-ADMIN LOGIN (Institutional Email)
+// ==========================================
+exports.orgLogin = async (req, res) => {
+    const { email, password } = req.body; // Expects email input structure
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
+    try {
+        const attemptCheck = await pool.query(
+            `SELECT COUNT(*) FROM login_attempts 
+             WHERE email = $1 AND success = FALSE 
+             AND attempted_at > NOW() - INTERVAL '${WINDOW_MINUTES} minutes'`,
+            [email]
+        );
+        const failedCount = parseInt(attemptCheck.rows[0].count);
 
+        if (failedCount >= MAX_ATTEMPTS) {
+            await trackEvent({
+                userId: null, subAdminId: null, studentId: null,
+                actionType: 'SECURITY_LOCKOUT', ipAddress: ip, email: email,
+                message: `Organization lockout triggered due to consecutive system failures.`
+            });
+            return res.status(429).json({ error: "Too many attempts. Blocked for 10 minutes.", blocked: true });
+        }
+
+        const subResult = await pool.query('SELECT * FROM sub_admins WHERE sub_email = $1', [email]);
+        if (subResult.rows.length === 0) {
+            await logAttempt(email, ip, false);
+            return res.status(401).json({ error: "Invalid Credentials" });
+        }
+
+        const sub = subResult.rows[0];
+
+        if (!sub.is_active) {
+            await trackEvent({
+                userId: null, subAdminId: sub.id, studentId: null,
+                actionType: 'LOGIN_DEACTIVATED_ACCOUNT', ipAddress: ip, email: email,
+                message: `Organization Admin login rejected: Access deactivated for sub-admin of: "${sub.org_name}".`
+            });
+            return res.status(403).json({ error: "Account deactivated. Contact root admin." });
+        }
+
+        const isMatch = await bcrypt.compare(password, sub.sub_password);
+        if (!isMatch) {
+            await logAttempt(email, ip, false);
+            return res.status(401).json({ error: "Invalid Credentials" });
+        }
+
+        await logAttempt(email, ip, true);
+        
+        await trackEvent({
+            userId: null, subAdminId: sub.id, studentId: null,
+            actionType: 'ORG_LOGIN', ipAddress: ip, email: email,
+            message: `Organization session initialized successfully for institution: "${sub.org_name}".`
+        });
+
+        const token = jwt.sign(
+            { id: sub.id, role: 'sub_admin', email: sub.sub_email }, 
+            process.env.JWT_SECRET, 
+            { expiresIn: '1d' }
+        );
+
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'Lax',
+            maxAge: 24 * 60 * 60 * 1000
+        });
+
+        return res.json({ role: 'sub_admin', id: sub.id, sub_email: sub.sub_email });
+
+    } catch (err) {
+        console.error("Org Login Error:", err.message);
+        res.status(500).json({ error: "Server Error" });
+    }
+};
+
+// ==========================================
+// 5. FETCH AUDIT RECORDS LOG
+// ==========================================
 exports.getLogInAttempt = async (req, res) => {
-  try {
-    const { rows } = await pool.query(`SELECT email, COUNT(*) FROM login_attempts GROUP BY email`);
-    res.json(rows);
-  } catch (err) { res.status(500).json({ error: "Server Error" }); }
+    try {
+        const { rows } = await pool.query(`
+            SELECT id, email, ip_address, success, attempted_at 
+            FROM login_attempts 
+            ORDER BY attempted_at DESC 
+            LIMIT 100
+        `);
+        
+        res.json({
+            success: true,
+            attempts: rows
+        });
+    } catch (err) { 
+        console.error("Error fetching login attempts:", err.message);
+        res.status(500).json({ 
+            success: false, 
+            error: "Server Error" 
+        }); 
+    }
 };
-
-async function logAttempt(email, ip, success) {
-  await pool.query(
-    'INSERT INTO login_attempts (email, ip_address, success) VALUES ($1, $2, $3)',
-    [email, ip, success]
-  );
-}

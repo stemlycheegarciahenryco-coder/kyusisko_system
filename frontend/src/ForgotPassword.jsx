@@ -1,100 +1,109 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from './api';
-import { IconMail, IconArrowLeft, IconShieldCheck, IconLogin, IconX } from '@tabler/icons-react';
+import { IconMail, IconX, IconAlertTriangle } from '@tabler/icons-react';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
     try {
-      // 1. Hit the backend
       await api.post('/auth/forgot-password', { email });
-      
-      // 2. SUCCESS: Navigate immediately to the verification page
-      // We pass the email in the URL so the next page knows who it's for
       navigate(`/verify-reset?email=${encodeURIComponent(email)}`);
-      
     } catch (err) {
-      const errorMsg = err.response?.data?.error || "Failed to send code. Please try again.";
-      alert(errorMsg);
-      console.error(err);
+      setError(err.response?.data?.error || "Failed to send code.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-blue-50/50 flex items-center justify-center p-4 font-sans">
-      <div className="max-w-md w-full bg-white rounded-[2rem] shadow-2xl shadow-blue-200/50 p-10 border border-blue-100 relative overflow-hidden">
+    <div 
+      className="min-h-screen w-full flex items-center justify-center p-4 bg-[#FFFCFB] bg-no-repeat relative overflow-hidden font-sans"
+      style={{ 
+        backgroundImage: `url('/bg2.png')`,
+        backgroundSize: '100% 100%', // This stretches the BG to fit exactly
+        backgroundPosition: 'center'
+      }}
+    >
+      {/* Slimmer Rectangular Card */}
+      <div className="bg-white w-full max-w-[380px] rounded-[1.5rem] shadow-2xl overflow-hidden border border-slate-100 relative z-10">
         
-        {/* Back/Close Button */}
         <button 
           onClick={() => navigate(-1)} 
-          className="absolute top-6 right-6 text-slate-300 hover:text-red-500 transition-colors p-1"
+          className="absolute top-4 right-4 text-slate-300 hover:text-[#FF1E1E] transition-colors p-2 z-20"
         >
-          <IconX size={24} stroke={2.5} />
+          <IconX size={20} />
         </button>
 
-        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-400 via-blue-600 to-blue-800"></div>
+        <div className="h-1.5 w-full bg-[#093fb4]" />
 
-        <div className="text-center mb-10 mt-6">
-          <h2 className="text-4xl font-black text-slate-800 tracking-tighter italic uppercase">
-            Kyus<span className="text-blue-600">ISKO</span>
-          </h2>
-          <div className="mt-4 space-y-1">
-            <h3 className="text-lg font-bold text-slate-700 uppercase tracking-tight">Reset Password</h3>
-            <p className="text-slate-400 text-[11px] leading-relaxed px-4 italic">
-              Enter your verified student or admin email account and a 6-digit code will be sent to you.
+        <div className="p-8 space-y-6">
+          <div className="text-center">
+            <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight italic">
+              Reset <span className="text-[#093fb4]">Password</span>
+            </h2>
+            <p className="text-black-500 text-[11px] font-bold leading-tight mt-4 px-5">
+              Enter your email to receive a 6-digit recovery code.
             </p>
           </div>
-        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase ml-2 tracking-widest">
-              Account Email
-            </label>
-            <div className="relative group">
-              <IconMail size={22} stroke={1.5} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
-              <input
-                type="email"
-                required
-                placeholder="student or admin@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all placeholder:text-slate-300 font-medium text-slate-700"
-              />
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-[9px] font-black text-[#093FB4] uppercase tracking-widest ml-1">
+                Student / Admin Email
+              </label>
+              <div className="relative group">
+                <IconMail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#093FB4] transition-colors" />
+                <input
+                  type="email"
+                  required
+                  placeholder="email@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:border-[#093FB4] focus:bg-white outline-none text-sm text-slate-900 font-bold transition-all"
+                />
+              </div>
             </div>
-          </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-5 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-lg shadow-blue-200 active:scale-[0.98] disabled:bg-blue-200"
-          >
-            {loading ? (
-              <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
-            ) : (
-              "SEND VERIFICATION CODE"
+            {error && (
+              <div className="p-3 rounded-xl border flex items-center gap-2 bg-red-50 border-red-100">
+                <IconAlertTriangle size={16} className="text-[#FF1E1E] shrink-0" />
+                <p className="text-[9px] font-black text-[#FF1E1E] uppercase">{error}</p>
+              </div>
             )}
-          </button>
-        </form>
 
-        <div className="mt-10 border-t border-slate-100 pt-8 text-center">
-          <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mb-4">Already remember?</p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button onClick={() => navigate('/login')} className="text-xs font-black text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-2">
-              <IconLogin size={16} /> SIGN IN AS ADMIN
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="w-full bg-[#093FB4] hover:bg-[#073496] text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-blue-900/10 disabled:opacity-50 uppercase text-xs tracking-widest"
+            >
+              {loading ? "Sending..." : "Send Code"}
             </button>
-            <span className="hidden sm:block text-slate-200">|</span>
-            <button onClick={() => navigate('/student-login')} className="text-xs font-black text-slate-600 hover:text-blue-600 transition-colors flex items-center gap-2">
-               STUDENT SIGN IN
-            </button>
+          </form>
+
+          <div className="pt-4 border-t border-slate-50 flex flex-col gap-2">
+            <div className="flex items-center justify-center gap-4">
+              <button 
+                onClick={() => navigate('/student-login')} 
+                className="text-[9px] font-black text-slate-500 hover:text-[#093FB4] transition-colors uppercase"
+              >
+                Student Sign In
+              </button>
+              <span className="text-slate-200">|</span>
+              <button 
+                onClick={() => navigate('/rootlogin')} 
+                className="text-[9px] font-black text-[#FF1E1E] hover:text-red-700 transition-colors uppercase"
+              >
+                Admin Sign In
+              </button>
+            </div>
           </div>
         </div>
       </div>

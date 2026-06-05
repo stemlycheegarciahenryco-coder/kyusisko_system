@@ -1,17 +1,30 @@
 import axios from 'axios';
 
+export const backendURL = 'http://localhost:5000'; 
+
 const api = axios.create({
-  // This is your Node.js backend URL
-  baseURL: 'http://localhost:5000/api', 
+  baseURL: `${backendURL}/api`, 
+  withCredentials: true 
 });
 
-// Optional: This automatically attaches your JWT token to every request
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Check if the error is 401
+    if (error.response && error.response.status === 401) {
+      
+      // FIX: Don't redirect if the user is ALREADY on a login or home page
+      // or if the request was specifically to a login endpoint.
+      const isLoginRequest = error.config.url.includes('/login');
+      const isPublicPage = ['/', '/studentlogin','/rootlogin' ,'/Home'].includes(window.location.pathname);
+
+      if (!isLoginRequest && !isPublicPage) {
+        localStorage.clear();
+        window.location.href = '/Home'; 
+      }
+    }
+    return Promise.reject(error);
   }
-  return config;
-});
+);
 
 export default api;

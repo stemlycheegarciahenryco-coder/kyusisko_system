@@ -1,13 +1,11 @@
 import api from './api';
 import { useState, useEffect } from 'react';
-import { useNavigate,useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
-  IconSchool, 
   IconMail, 
   IconKey, 
   IconAlertCircle, 
   IconLogin,
-  IconShieldCheck,
   IconEye,
   IconEyeOff,
   IconX,
@@ -15,54 +13,59 @@ import {
 } from '@tabler/icons-react';
 
 export default function LogIn() {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState(''); // 🚀 Changed from 'email' to handle both ID or Email
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false); // State for password toggle
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [attempts, setAttempts] = useState(null);
-  const [verifiedStatus, setVerifiedStatus] = useState(false); // New state for reg subadmins verification
+  const [verifiedStatus, setVerifiedStatus] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
-
-useEffect(() => {
-  const params = new URLSearchParams(window.location.search);
-  const isVerified = params.get('verified');
-  
-  console.log("URL Params detected:", isVerified); // Check your browser console!
-
-  if (isVerified === 'true') {
-    setVerifiedStatus(true);
-    navigate('/rootlogin', { replace: true }); // Remove query params after showing message
-  }
-}, [location]);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const isVerified = params.get('verified');
+    if (isVerified === 'true') {
+      setVerifiedStatus(true);
+      navigate('/rootlogin', { replace: true });
+    }
+  }, [location, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await api.post('/auth/adminlogin', { email, password });
+      // 🚀 DYNAMIC ROUTE SEPARATION
+      // If user inputs something starting with 'SADM-', route to system admin endpoint
+      const isSystemAdmin = identifier.trim().toUpperCase().startsWith('SADM-');
       
-      const { token, role, sub_email,id } = response.data; 
+      const endpoint = isSystemAdmin 
+        ? '/auth/system-admin-login' 
+        : '/auth/organization-login';
+
+      const payload = isSystemAdmin 
+        ? { systemId: identifier.trim().toUpperCase(), password } 
+        : { email: identifier.trim(), password };
+
+      const response = await api.post(endpoint, payload);
+      const { token, role, sub_email, id, uid } = response.data; 
+
       localStorage.setItem('token', token);
-      localStorage.setItem('userRole', role);
-      localStorage.setItem('orgId', id); 
-
-      if (role === 'sub_admin' && !sub_email) {
-        alert("Error: Organization identity not verified. Contact system admin.");
-        return;
+      localStorage.setItem('userRole', role); // root_admin, co_admin, or sub_admin
+      
+      if (isSystemAdmin) {
+        localStorage.setItem('systemUid', uid);
+        localStorage.setItem('adminEmail', sub_email);
+        navigate('/RootDashboard');
+      } else {
+        localStorage.setItem('orgId', id); 
+        if (role === 'sub_admin' && !sub_email) {
+          alert("Error: Organization identity not verified. Contact system admin.");
+          return;
+        }
+        localStorage.setItem('adminEmail', sub_email);
+        navigate('/OrgDashboard');
       }
-
-      localStorage.setItem('adminEmail', sub_email);
-
-      if (role === 'super_root') {
-  navigate('/SuperRootConsole'); // Use the route name you defined for the new UI
-} else if (role === 'root_admin') {
-  navigate('/RootDashboard');
-} else if (role === 'sub_admin') {
-  navigate('/OrgDashboard');
-}
-
     } catch (err) {
       const data = err.response?.data;
       alert(data?.error || "Login failed");
@@ -73,103 +76,88 @@ useEffect(() => {
   };
 
   return (
-    <div className="min-h-screen bg-blue-50/50 flex items-center justify-center p-4 font-sans relative">
-      
-      <div className="max-w-md w-full bg-white rounded-[2rem] shadow-2xl shadow-blue-200/50 p-10 border border-blue-100 relative overflow-hidden">
+    <div className="min-h-screen w-full flex items-center justify-center p-6 relative overflow-hidden bg-[#FFFCFB]">
+      {/* Background Image - Full Visibility */}
+      <div 
+        className="absolute inset-0 bg-no-repeat bg-cover bg-center pointer-events-none"
+        style={{ backgroundImage: `url('/bg2.png')` }}
+      />
+
+      {/* Form Container */}
+      <div className="max-w-sm w-full bg-white rounded-[2rem] shadow-2xl p-8 border border-black/5 relative z-10">
         
-        {/* Close (X) Button */}
+        {/* Close Button */}
         <button 
           onClick={() => navigate('/')} 
-          className="absolute top-6 right-6 text-slate-300 hover:text-red-500 transition-colors p-1"
+          className="absolute top-6 right-6 text-black/20 hover:text-[#FF1E1E] transition-colors p-1"
         >
-          <IconX size={24} stroke={2.5} />
+          <IconX size={20} stroke={3} />
         </button>
-        {/* Verification Success Message */}
-{verifiedStatus && (
-  <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center gap-3">
-    <IconCircleCheckFilled className="text-emerald-500" size={28} />
-    <div>
-      <p className="text-sm font-bold text-emerald-900">Account Verified!</p>
-      <p className="text-[10px] font-medium text-emerald-600 uppercase tracking-wider">
-        You can now log in to your portal
-      </p>
-    </div>
-    <button 
-      onClick={() => setVerifiedStatus(false)}
-      className="ml-auto text-emerald-400 hover:text-emerald-600"
-    >
-      <IconX size={16} />
-    </button>
-  </div>
-)}
-        {/* Top Accent Bar */}
-        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-400 via-blue-600 to-blue-800"></div>
 
-        <div className="text-center mb-10 mt-6">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-blue-50 text-blue-600 mb-6 border border-blue-100 shadow-sm">
-            <IconSchool size={40} stroke={1.5} />
+        {verifiedStatus && (
+          <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center gap-2">
+            <IconCircleCheckFilled className="text-emerald-500" size={20} />
+            <p className="text-[10px] font-black text-emerald-900 uppercase">Verified! Please log in.</p>
+          </div>
+        )}
+
+        <div className="text-center mb-8 mt-2">
+          <div className="inline-flex items-center justify-center mb-4">
+            <img src="/logo.png" alt="Logo" className="h-18 w-auto" />
           </div>
           
-          <h2 className="text-4xl font-black text-slate-800 tracking-tighter italic">
-            Kyus<span className="text-blue-600">ISKO</span>
-          </h2>
-          
-          <div className="mt-4 flex justify-center items-center gap-2 px-6">
-            <span className="h-[1px] w-full bg-blue-50"></span>
-            <p className="whitespace-nowrap text-[10px] font-bold text-blue-400 uppercase tracking-[0.4em]">
-              School & Org Portal
-            </p>
-            <span className="h-[1px] w-full bg-blue-50"></span>
-          </div>
+          <p className="mt-2 text-[14px] font-black text-black-300 uppercase tracking-[0.3em]">
+            Portal Login 
+          </p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-6">
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase ml-2 tracking-widest">
-              Organization Email
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-[10px] font-black text-black uppercase ml-1 tracking-widest">
+              Provider Email
             </label>
             <div className="relative group">
-              <IconMail size={22} stroke={1.5} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
+              <IconMail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-black/20 group-focus-within:text-[#093fb4] transition-colors" />
               <input 
-                type="email" 
+                type="text" // 🚀 Changed to 'text' to accept both SADM-001 and emails
                 required
-                placeholder="org@school.edu.ph"
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all placeholder:text-slate-300 font-medium text-slate-700"
+                placeholder="Email Address"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                className="w-full pl-11 pr-4 py-3 bg-black/5 border-2 border-transparent rounded-xl focus:bg-white focus:border-[#093fb4] outline-none transition-all placeholder:text-black/20 font-bold text-black text-sm"
               />
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase ml-2 tracking-widest">
+          <div className="space-y-1">
+            <label className="text-[10px] font-black text-black uppercase ml-1 tracking-widest">
               Password
             </label>
             <div className="relative group">
-              <IconKey size={22} stroke={1.5} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
+              <IconKey size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-black/20 group-focus-within:text-[#093fb4] transition-colors" />
               <input 
                 type={showPassword ? "text" : "password"} 
                 required
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-12 pr-12 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all placeholder:text-slate-300 font-medium text-slate-700"
+                className="w-full pl-11 pr-11 py-3 bg-black/5 border-2 border-transparent rounded-xl focus:bg-white focus:border-[#093fb4] outline-none transition-all placeholder:text-black/20 font-bold text-black text-sm"
               />
-              {/* Show/Hide Password Toggle */}
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-blue-600 transition-colors"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-black/20 hover:text-[#093fb4] transition-colors"
               >
-                {showPassword ? <IconEyeOff size={20} /> : <IconEye size={20} />}
+                {showPassword ? <IconEyeOff size={18} /> : <IconEye size={18} />}
               </button>
             </div>
           </div>
 
           {attempts !== null && (
-            <div className="flex items-center gap-3 p-4 rounded-2xl bg-red-50 border border-red-100 text-red-700">
-              <IconAlertCircle size={22} stroke={2} />
-              <p className="text-xs font-bold uppercase tracking-tight">
-                {attempts === 0 ? "Access Blocked" : `${attempts} Attempts remaining`}
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-[#FF1E1E]/5 border border-[#FF1E1E]/10 text-[#FF1E1E]">
+              <IconAlertCircle size={18} stroke={3} />
+              <p className="text-[10px] font-black uppercase">
+                {attempts === 0 ? "Blocked" : `${attempts} Attempts left`}
               </p>
             </div>
           )}
@@ -177,30 +165,26 @@ useEffect(() => {
           <button 
             type="submit" 
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-5 rounded-2xl transition-all flex items-center justify-center gap-3 group shadow-lg shadow-blue-200 active:scale-[0.98] disabled:bg-blue-200 disabled:shadow-none"
+            className="w-full bg-[#093fb4] hover:bg-[#073496] text-[#FFFCFB] font-black py-4 rounded-xl transition-all flex items-center justify-center gap-2 group shadow-lg shadow-[#093fb4]/20 active:scale-[0.98] disabled:bg-black/10 text-xs"
           >
             {loading ? (
-              <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
+              <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
             ) : (
               <>
-                LOG IN TO PORTAL
-                <IconLogin size={22} stroke={2} className="group-hover:translate-x-1 transition-transform" />
+                LOG IN
+                <IconLogin size={18} stroke={2.5} className="group-hover:translate-x-1 transition-transform" />
               </>
             )}
           </button>
         </form>
 
-        <div className="mt-12 flex items-center justify-between border-t border-blue-50 pt-8">
-            <span className="text-[10px] font-bold text-blue-500 uppercase flex items-center gap-1.5">
-              <IconShieldCheck size={14} />
-              Partner Access
-            </span>
+        <div className="mt-8 flex justify-center border-t border-black/5 pt-6">
             <button
               type="button"
               onClick={() => navigate('/forgot-password')}
-              className="text-[11px] font-bold text-slate-400 uppercase hover:text-blue-600 transition-colors tracking-widest"
+              className="text-[10px] font-black text-black/40 uppercase hover:text-[#FF1E1E] transition-colors tracking-widest"
             >
-              Account Recovery
+              Forgot Password?
             </button>
         </div>
       </div>

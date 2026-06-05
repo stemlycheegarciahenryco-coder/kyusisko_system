@@ -1,208 +1,173 @@
-const pool = require('../config/db');
+const db = require('../config/db'); // Adjust this to your database connection file
 
-// --- STUDENT ACTIONS ---
+// Request a renewal to student
+exports.requestRenewal = async (req, res) => {
+    const { id } = req.params; 
+    const { reason, docs } = req.body;
 
-// Get notifications specifically for the student
-const getStudentNotifications = async (req, res) => {
     try {
-        const student_id = req.user.id; 
-        const result = await pool.query(
-            `SELECT n.*, a.status as app_status 
-             FROM notifications n
-             LEFT JOIN applications a ON n.application_id = a.id
-             WHERE n.student_id = $1 
-             ORDER BY n.created_at DESC`, 
-            [student_id]
+        await db.query('BEGIN');
+
+        // 1. Get the student_id associated with this application
+        const appRes = await db.query('SELECT student_id FROM applications WHERE id = $1', [id]);
+        const studentId = appRes.rows[0].student_id;
+
+        // 2. Insert into scholarship_renewals
+        const docArray = docs.split('\n').filter(d => d.trim() !== '');
+        await db.query(
+            'INSERT INTO scholarship_renewals (application_id, reason, required_docs_renewal) VALUES ($1, $2, $3)',
+            [id, reason, JSON.stringify(docArray)]
         );
-        res.status(200).json({ success: true, data: result.rows });
+
+        // 3. Update application status
+        await db.query('UPDATE applications SET status = $1 WHERE id = $2', ['renewing', id]);
+
+        // 4. 🔥 INSERT NOTIFICATION HERE
+        await db.query(
+            'INSERT INTO notifications (student_id, title, message, application_id, created_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)',
+            [studentId, 'Renewal Required', 'Action needed: New requirements have been set for your scholarship renewal.', id]
+        );
+
+        await db.query('COMMIT');
+        res.status(200).json({ message: "Renewal request sent and student notified" });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
-    }
-};
-// Get the specific requirements for a renewal application
-const getRequirements = async (req, res) => {
-    try {
-        const { appId } = req.params;
-        if (!appId || isNaN(appId)) return res.status(400).json({ success: false, message: "Invalid ID" });
-
-        const result = await pool.query(
-            'SELECT * FROM renewal_requirements WHERE application_id = $1 ORDER BY sort_order ASC',
-            [appId]
-        );
-        res.json({ success: true, data: result.rows });
-    } catch (err) { 
-        res.status(500).json({ success: false, message: err.message }); 
+        await db.query('ROLLBACK');
+        console.error("Renewal Error:", err);
+        res.status(500).json({ error: "Failed to process renewal" });
     }
 };
 
-const submit = async (req, res) => {
-    const client = await pool.connect();
+//student get the renewal requirements and reason
+exports.getRenewalCompliance = async (req, res) => {
+    const { id } = req.params;
+
+    if (!id || id === 'undefined' || isNaN(id)) {
+        return res.status(400).json({ error: "Invalid Application ID" });
+    }
+
     try {
-        await client.query('BEGIN');
-        const student_id = req.user.id;
-        const { appId, term, sy } = req.body;
-
-        // 1. Update Academic Records - Set others to false, this one to true
-        await client.query(
-            `UPDATE academic_records SET is_current = false WHERE student_id = $1`, 
-            [student_id]
-        );
-        await client.query(
-            `INSERT INTO academic_records (student_id, gwa, term, school_year, is_current) 
-             VALUES ($1, $2, $3, $4, $5)`, 
-            [student_id, 0, term, sy, true]
+        const result = await db.query(
+            'SELECT reason, required_docs_renewal FROM scholarship_renewals WHERE application_id = $1 ORDER BY id DESC LIMIT 1',
+            [parseInt(id)]
         );
 
-        // 2. Handle File Uploads (Matches renewal_requirements table)
-        if (req.files) {
-            for (const file of req.files) {
-                // Extracts the ID from field_123
-                const fieldId = file.fieldname.replace('field_', '');
-                await client.query(
-                    `UPDATE renewal_requirements SET status = 'submitted', file_path = $1 
-                     WHERE application_id = $2 AND id = $3`,
-                    [file.path, appId, fieldId]
-                );
-            }
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: "No renewal record found" });
         }
 
-        // 3. Get the sub_admin_id (Org Admin) 
-        const orgInfo = await client.query(
-            `SELECT s.sub_admin_id FROM applications a 
-             JOIN scholarships s ON a.scholarship_id = s.id 
-             WHERE a.id = $1`, [appId]
-        );
+        const data = result.rows[0];
+        
+        // Robust JSON handling
+        let docsArray = data.required_docs_renewal;
+        if (typeof docsArray === 'string') {
+            try { docsArray = JSON.parse(docsArray); } catch (e) { docsArray = []; }
+        }
 
-        if (orgInfo.rows.length === 0) throw new Error("Scholarship provider not found.");
-        const targetSubAdminId = orgInfo.rows[0].sub_admin_id;
-
-        // 4. Update Main Application Status
-        await client.query(
-            'UPDATE applications SET status = $1 WHERE id = $2', 
-            ['renewal_under_review', appId]
-        );
-
-        // 5. Create Notification for Org (Sub-Admin)
-        await client.query(
-            `INSERT INTO notifications (org_id, title, message, application_id, is_read, created_at) 
-             VALUES ($1, $2, $3, $4, $5, NOW())`,
-            [targetSubAdminId, "New Renewal Submission", `Application #${appId} has submitted renewal documents.`, appId, false]
-        );
-
-        await client.query('COMMIT');
-        res.json({ success: true, message: "Submitted for review!" });
+        res.status(200).json({ 
+            data: {
+                reason: data.reason,
+                required_docs: docsArray // Send the array directly, let the frontend format it
+            } 
+        });
     } catch (err) {
-        await client.query('ROLLBACK');
-        console.error("Submit Error:", err.message);
-        res.status(500).json({ success: false, message: err.message });
-    } finally { 
-        client.release(); 
+        console.error("Fetch Renewal Error:", err);
+        res.status(500).json({ error: "Failed to fetch renewal details" });
     }
 };
-// --- ORGANIZATION / ADMIN ACTIONS ---
 
-// Combined Setup & Initiation Logic
-const setup = async (req, res) => {
-    const { appId } = req.params;
-    const { targetTerm, targetSY, requirements } = req.body;
-    const sub_admin_id = req.user.id; 
-    const client = await pool.connect();
+//this is handling the  student submit renewal requiremnts
+exports.submitRenewal = async (req, res) => {
+    const { id } = req.params; 
+    const files = req.files;   
+
+    if (!files || files.length === 0) {
+        return res.status(400).json({ error: "No files uploaded" });
+    }
+    if (!req.body.requirement_ids) {
+        return res.status(400).json({ error: "Requirement labels are missing." });
+    }
 
     try {
-        await client.query('BEGIN');
-        
-        const infoResult = await client.query(
-            `SELECT a.student_id, s.title 
-             FROM applications a 
-             JOIN scholarships s ON a.scholarship_id = s.id 
-             WHERE a.id = $1`,
-            [appId]
-        );
+        await db.query('BEGIN');
 
-        if (infoResult.rows.length === 0) throw new Error("Application not found");
-        const { student_id, title } = infoResult.rows[0];
+        const requirementLabels = JSON.parse(req.body.requirement_ids); 
 
-        // 1. Manage Requirements
-        await client.query('DELETE FROM renewal_requirements WHERE application_id = $1', [appId]);
-        for (const item of requirements) {
-            await client.query(
-                `INSERT INTO renewal_requirements (application_id, field_label, is_required, sort_order) 
-                 VALUES ($1, $2, $3, $4)`,
-                [appId, item.field_label, item.is_required, item.sort_order]
+        for (let i = 0; i < files.length; i++) {
+            // We use 'null' for requirement_id because these are custom renewal docs,
+            // and we store the actual label in a notes or metadata field if available.
+            // OR: If your table allows it, change requirement_id to TEXT.
+            
+            await db.query(
+                `INSERT INTO application_submissions (application_id, file_path, requirement_id,source, created_at) 
+                 VALUES ($1, $2, $3, 'renewal', CURRENT_TIMESTAMP)`,
+                [
+                  id, 
+                  files[i].path.replace(/\\/g, '/').replace(/^uploads\//, ''), 
+                  null // Changed from requirementLabels[i] to prevent the Integer Error
+                ]
             );
         }
 
-        // 2. Update Status
-        await client.query('UPDATE applications SET status = $1 WHERE id = $2', ['renewal_pending', appId]);
+        await db.query("UPDATE applications SET status = 'submitted' WHERE id = $1", [id]);
+        await db.query("UPDATE scholarship_renewals SET status = 'submitted' WHERE application_id = $1", [id]);
 
-        // 3. Notify Student (Title matched to StudentNotification.jsx)
-        const notifTitle = "Recommence Application Required";
-        const notifMessage = `It's time to renew your scholarship for "${title}". Please upload requirements for ${targetTerm} (${targetSY}).`;
+        await db.query('COMMIT');
+        res.status(200).json({ message: "Renewal submission successful" });
 
-        await client.query(
-            `INSERT INTO notifications (student_id, title, message, application_id) VALUES ($1, $2, $3, $4)`,
-            [student_id, notifTitle, notifMessage, appId]
-        );
-
-        // 4. Audit Trail
-        await client.query(
-            `INSERT INTO audit_trails (user_id, action_type, details) VALUES ($1, $2, $3)`,
-            [sub_admin_id, 'RENEWAL_INITIATED', `Org requested renewal for App #${appId}`]
-        );
-
-        await client.query('COMMIT');
-        res.json({ success: true, message: "Renewal requirements set and student notified!" });
     } catch (err) {
-        await client.query('ROLLBACK');
-        res.status(500).json({ success: false, message: err.message });
-    } finally { client.release(); }
-};
-
-const getOrgNotifications = async (req, res) => {
-    try {
-        // sub_admins ID from the token
-        const subAdminId = req.user.id; 
-
-        const result = await pool.query(
-            `SELECT 
-                n.id,
-                n.title,
-                n.message,
-                n.created_at,
-                n.application_id,
-                n.is_read,
-                s.sfirst_name, -- Matches your ERD
-                s.slast_name   -- Matches your ERD
-             FROM notifications n
-             LEFT JOIN applications a ON n.application_id = a.id
-             LEFT JOIN students s ON a.student_id = s.id
-             WHERE n.org_id = $1 
-             ORDER BY n.created_at DESC`,
-            [subAdminId]
-        );
-
-        res.json({ success: true, data: result.rows });
-    } catch (err) {
-        console.error("DATABASE ERROR:", err.message);
-        res.status(500).json({ success: false, message: err.message });
+        await db.query('ROLLBACK');
+        console.error("Submission Error:", err);
+        res.status(500).json({ error: "Failed to process submission" });
     }
 };
 
-const approveRenewalSubmission = async (req, res) => {
+//org or provider approve the renewal after student submit the renewal requirements
+exports.approveRenewal = async (req, res) => {
+    const { id } = req.params;
     try {
-        const { appId } = req.params;
-        await pool.query("UPDATE applications SET status = 'approved' WHERE id = $1", [appId]);
-        res.json({ success: true, message: "Renewal approved!" });
-    } catch (err) { 
-        res.status(500).json({ success: false, message: err.message }); 
+        await db.query("UPDATE applications SET status = 'active' WHERE id = $1", [id]);
+        await db.query("UPDATE scholarship_renewals SET status = 'approved' WHERE application_id = $1", [id]);
+        res.status(200).json({ message: "Renewal approved successfully" });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to approve" });
     }
 };
 
-module.exports = { 
-    setup, 
-    getRequirements, 
-    submit, 
-    getOrgNotifications, 
-    getStudentNotifications, 
-    approveRenewalSubmission 
+// TERMINATE THE AGREEMENT SCHOLARSHIP
+exports.terminateApplication = async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body; // Capture the status from frontend
+
+    try {
+        // Update status to 'terminated'
+        await db.query(
+            'UPDATE applications SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', 
+            [status || 'terminated', id]
+        );
+        
+        res.status(200).json({ message: "Application terminated successfully" });
+    } catch (err) {
+        console.error("Termination Error:", err);
+        res.status(500).json({ error: "Failed to terminate application" });
+    }
+};
+
+//org or provider get those renewal submission from student and evaluate it 
+exports.getRenewalSubmissions = async (req, res) => {
+    const { id } = req.params;
+    if (!id || isNaN(id)) return res.status(400).json({ error: "Invalid ID" });
+
+    try {
+        const result = await db.query(
+            `SELECT file_path, created_at
+             FROM application_submissions
+             WHERE application_id = $1 AND source = 'renewal'
+             ORDER BY created_at DESC`,
+            [parseInt(id)]
+        );
+        res.status(200).json({ success: true, data: result.rows });
+    } catch (err) {
+        console.error("Fetch Submissions Error:", err);
+        res.status(500).json({ error: "Failed to fetch student submissions" });
+    }
 };

@@ -1,13 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from './api';
-import { IconShieldCheck, IconLock, IconArrowLeft, IconEye, IconEyeOff } from '@tabler/icons-react';
+import { IconShieldCheck, IconLock, IconArrowLeft, IconEye, IconEyeOff, IconAlertTriangle, IconX } from '@tabler/icons-react';
 
 export default function VerifyReset() {
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -15,84 +17,121 @@ export default function VerifyReset() {
   const email = new URLSearchParams(location.search).get('email');
 
   const handleVerify = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  try {
-    // 1. Ensure the path matches your router (/auth/reset-password)
-    // 2. Ensure you pass 'token: otp'
-    await api.post('/auth/reset-password', { 
-      email, 
-      token: otp, 
-      newPassword 
-    });
-    
-    alert("Password reset successful!");
-    navigate('/login');
-  } catch (err) {
-    alert(err.response?.data?.error || "Error updating password.");
-  } finally {
-    setLoading(false);
-  }
-};
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      await api.post('/auth/reset-password', { 
+        email, 
+        token: otp, 
+        newPassword 
+      });
+      
+      // Navigate to success or login
+      navigate('/student-login');
+    } catch (err) {
+      setError(err.response?.data?.error || "Error updating password.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-blue-50/50 flex items-center justify-center p-4 font-sans">
-      <div className="max-w-md w-full bg-white rounded-[2rem] shadow-2xl p-10 border border-blue-100 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-400 to-blue-800"></div>
-
-        <button onClick={() => navigate(-1)} className="mb-6 text-slate-400 hover:text-blue-600 transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-widest">
-          <IconArrowLeft size={16} /> Back
+    <div 
+      className="min-h-screen w-full flex items-center justify-center p-4 bg-[#FFFCFB] bg-no-repeat relative overflow-hidden font-sans"
+      style={{ 
+        backgroundImage: `url('/bg2.png')`,
+        backgroundSize: '100% 100%',
+        backgroundPosition: 'center'
+      }}
+    >
+      {/* Slimmer Rectangular Card */}
+      <div className="bg-white w-full max-w-[380px] rounded-[1.5rem] shadow-2xl overflow-hidden border border-slate-100 relative z-10 animate-in fade-in zoom-in duration-300">
+        
+        <button 
+          onClick={() => navigate('/student-login')} 
+          className="absolute top-4 right-4 text-slate-300 hover:text-[#FF1E1E] transition-colors p-2 z-20"
+        >
+          <IconX size={20} />
         </button>
 
-        <div className="text-center mb-8">
-          <h3 className="text-2xl font-black text-slate-800 tracking-tighter uppercase">Verify Identity</h3>
-          <p className="text-slate-400 text-[11px] mt-2 italic px-6">
-            Enter the 6-digit code sent to <span className="text-blue-600 font-bold">{email}</span> and set your new password.
-          </p>
-        </div>
+        <div className="h-1.5 w-full bg-[#093fb4]" />
 
-        <form onSubmit={handleVerify} className="space-y-5">
-          {/* OTP Input */}
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase ml-2 tracking-widest">Verification Code</label>
-            <input
-              type="text"
-              required
-              maxLength="6"
-              placeholder="000000"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value)}
-              className="w-full text-center text-2xl tracking-[0.5em] font-black py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all text-slate-700"
-            />
+        <div className="p-8 space-y-6">
+          <div className="text-center">
+          
+            <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.2em] mb-1">
+              Final Step
+            </p>
+            <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight italic">
+              Verify <span className="text-[#093fb4]">& Reset</span>
+            </h2>
+            <p className="text-slate-500 text-[10px] font-medium leading-tight mt-2 px-4">
+              Enter the code sent to <span className="text-[#093fb4] font-bold">{email}</span>
+            </p>
           </div>
 
-          {/* New Password Input */}
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase ml-2 tracking-widest">New Password</label>
-            <div className="relative group">
-              <IconLock size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
+          <form onSubmit={handleVerify} className="space-y-4">
+            {/* OTP Input */}
+            <div className="space-y-1">
+              <label className="text-[9px] font-black text-[#093FB4] uppercase tracking-widest ml-1">Verification Code</label>
               <input
-                type={showPassword ? "text" : "password"}
+                type="text"
                 required
-                placeholder="••••••••"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full pl-12 pr-12 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all text-slate-700 font-medium"
+                maxLength="6"
+                placeholder="000000"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                className="w-full text-center text-xl tracking-[0.5em] font-black py-3 bg-slate-50 border border-slate-100 rounded-xl focus:border-[#093FB4] focus:bg-white outline-none transition-all text-slate-900"
               />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-blue-600">
-                {showPassword ? <IconEyeOff size={20} /> : <IconEye size={20} />}
-              </button>
             </div>
-          </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-5 rounded-2xl transition-all shadow-lg shadow-blue-100 flex items-center justify-center gap-3"
+            {/* New Password Input */}
+            <div className="space-y-1">
+              <label className="text-[9px] font-black text-[#093FB4] uppercase tracking-widest ml-1">New Password</label>
+              <div className="relative group">
+                <IconLock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#093FB4] transition-colors" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  placeholder="••••••••"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full pl-11 pr-11 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:border-[#093FB4] focus:bg-white outline-none text-sm text-slate-900 font-bold transition-all"
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)} 
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-[#093FB4]"
+                >
+                  {showPassword ? <IconEyeOff size={18} /> : <IconEye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="p-3 rounded-xl border flex items-center gap-2 bg-red-50 border-red-100">
+                <IconAlertTriangle size={16} className="text-[#FF1E1E] shrink-0" />
+                <p className="text-[9px] font-black text-[#FF1E1E] uppercase leading-tight">{error}</p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#093fb4] hover:bg-[#073496] text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-blue-900/10 disabled:opacity-50 uppercase text-xs tracking-widest"
+            >
+              {loading ? "Updating..." : "Update Password"}
+            </button>
+          </form>
+
+          <button 
+            onClick={() => navigate(-1)}
+            className="w-full flex items-center justify-center gap-2 text-slate-400 hover:text-slate-600 font-black text-[9px] uppercase tracking-widest transition-colors"
           >
-            {loading ? <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div> : "RESET PASSWORD"}
+            <IconArrowLeft size={14} /> Change Email
           </button>
-        </form>
+        </div>
       </div>
     </div>
   );

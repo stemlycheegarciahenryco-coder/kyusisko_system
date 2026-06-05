@@ -1,22 +1,23 @@
 import React, { useState, useEffect } from "react";
-import { Eye, EyeOff, ShieldCheck, ShieldAlert, ShieldX } from "lucide-react";
+import { Eye, EyeOff, ShieldCheck, ShieldAlert, Check, X } from "lucide-react";
 
-export default function RegisterPassField({ label, name, value, onChange, placeholder, error, showStrength = false }) {
+export default function RegisterPassField({ name, value = "", onChange, placeholder, error, showStrength = false }) {
   const [showPassword, setShowPassword] = useState(false);
-  const [strength, setStrength] = useState({ score: 0, label: "Empty", color: "bg-slate-700" });
+  const [strength, setStrength] = useState({ score: 0, label: "Empty", color: "bg-slate-200" });
+
+  const requirements = [
+    { label: "8+ Characters", met: value.length >= 8 },
+    { label: "One Uppercase", met: /[A-Z]/.test(value) },
+    { label: "One Number", met: /[0-9]/.test(value) },
+    { label: "One Special Char", met: /[@$!%*?&]/.test(value) },
+  ];
 
   useEffect(() => {
     if (!showStrength) return;
     
     const calculateStrength = (pass) => {
-      if (!pass) return { score: 0, label: "Empty", color: "bg-slate-700" };
-      
-      let score = 0;
-      if (pass.length >= 8) score++; // Length 8+
-      if (/[A-Z]/.test(pass)) score++; // Has Uppercase
-      if (/[0-9]/.test(pass)) score++; // Has Number
-      if (/[@$!%*?&]/.test(pass)) score++; // Has Special Char
-      if (pass.length > 12) score = 0; // Penalize if over 12 (as per your specific rule)
+      if (!pass) return { score: 0, label: "Empty", color: "bg-slate-200" };
+      let score = requirements.filter(req => req.met).length;
 
       switch (score) {
         case 0: return { score: 10, label: "Invalid", color: "bg-red-500" };
@@ -24,7 +25,7 @@ export default function RegisterPassField({ label, name, value, onChange, placeh
         case 2: return { score: 50, label: "Fair", color: "bg-yellow-500" };
         case 3: return { score: 75, label: "Good", color: "bg-blue-400" };
         case 4: return { score: 100, label: "Strong", color: "bg-green-500" };
-        default: return { score: 0, label: "Empty", color: "bg-slate-700" };
+        default: return { score: 0, label: "Empty", color: "bg-slate-200" };
       }
     };
 
@@ -32,11 +33,7 @@ export default function RegisterPassField({ label, name, value, onChange, placeh
   }, [value, showStrength]);
 
   return (
-    <div className="flex flex-col w-full space-y-1">
-      <label className="text-[10px] font-bold text-blue-400 uppercase tracking-widest ml-1">
-        {label}
-      </label>
-      
+    <div className="flex flex-col w-full">
       <div className="relative">
         <input
           type={showPassword ? "text" : "password"}
@@ -44,31 +41,39 @@ export default function RegisterPassField({ label, name, value, onChange, placeh
           value={value}
           onChange={onChange}
           placeholder={placeholder || "••••••••"}
-          className={`block w-full p-4 pr-12 bg-white/5 border rounded-2xl text-white transition-all outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-slate-600 ${
-            error ? "border-red-500/50 bg-red-500/10" : "border-white/10 hover:border-white/20"
-          }`}
+          className={`w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-black outline-none focus:border-[#093FB4] focus:bg-white transition-all text-sm pr-12 ${error ? "border-red-500 bg-red-50" : ""}`}
         />
-
         <button
           type="button"
           onClick={() => setShowPassword(!showPassword)}
-          className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-500 hover:text-blue-400 transition-colors"
+          className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-[#093FB4] transition-colors"
         >
-          {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
         </button>
       </div>
 
-      {/* Real-time Strength Meter */}
-      {showStrength && value && (
-        <div className="px-1 mt-2 space-y-1.5">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-1">
-              {strength.score >= 75 ? <ShieldCheck size={12} className="text-green-500" /> : <ShieldAlert size={12} className="text-slate-500" />}
-              <span className="text-[9px] font-black uppercase tracking-tighter text-slate-400">Security: <span className={strength.label === "Strong" ? "text-green-500" : "text-white"}>{strength.label}</span></span>
-            </div>
-            <span className="text-[9px] font-bold text-slate-500">{value.length}/12</span>
+      {showStrength && value.length > 0 && (
+        <div className="px-1 mt-3 space-y-2">
+          {/* Requirement Checklist */}
+          <div className="grid grid-cols-2 gap-y-1">
+            {requirements.map((req, i) => (
+              <div key={i} className="flex items-center gap-1.5">
+                {req.met ? <Check size={10} className="text-green-500" /> : <X size={10} className="text-black-300" />}
+                <span className={`text-[8px] font-bold uppercase tracking-tight ${req.met ? "text-green-600" : "text-black-400"}`}>
+                  {req.label}
+                </span>
+              </div>
+            ))}
           </div>
-          <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+
+          {/* Strength Bar */}
+          <div className="flex justify-between items-center pt-1">
+            <span className="text-[8px] font-black uppercase text-slate-500">
+              Security: <span className={strength.score === 100 ? "text-green-600" : "text-black"}>{strength.label}</span>
+            </span>
+            <span className="text-[8px] font-black text-slate-400">{value.length} chars</span>
+          </div>
+          <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
             <div 
               className={`h-full transition-all duration-500 ease-out ${strength.color}`} 
               style={{ width: `${strength.score}%` }}
@@ -76,8 +81,6 @@ export default function RegisterPassField({ label, name, value, onChange, placeh
           </div>
         </div>
       )}
-
-      {error && <p className="text-[10px] text-red-400 mt-1 ml-1 font-bold italic tracking-wide">{error}</p>}
     </div>
   );
 }

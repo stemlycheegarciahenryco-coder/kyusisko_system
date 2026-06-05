@@ -1,15 +1,27 @@
 const express = require('express');
 const router = express.Router();
-// Import BOTH functions from your controller
 const { 
   getRecommendedScholarships, 
-  getAllScholarships 
+  getAllScholarships,
+  getRecommendedProviders,
+  reportScholarship,
+  saveScholarship,
+  unsaveScholarship,
+  getSavedScholarships
 } = require('../controller/recommendationController');
+const { verifyToken } = require('../middleware/auth');
 
-// 1. Specific static routes MUST come first
-router.get('/all', getAllScholarships);
+// Static routes first
+router.get('/all', verifyToken, getAllScholarships);
+router.get('/providers', getRecommendedProviders);
+router.get('/saved-scholarships', verifyToken, getSavedScholarships);
 
-// 2. Dynamic parameter routes come last
-router.get('/:studentId', getRecommendedScholarships);
+// Action routes with two segments — MUST come before /:studentId
+router.post('/:id/save', verifyToken, saveScholarship);
+router.delete('/:id/unsave', verifyToken, unsaveScholarship);
+router.post('/:id/report', verifyToken, reportScholarship);
+
+// Wildcard last
+router.get('/:studentId', verifyToken, getRecommendedScholarships);
 
 module.exports = router;
