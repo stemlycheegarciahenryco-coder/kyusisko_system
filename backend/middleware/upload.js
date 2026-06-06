@@ -7,7 +7,7 @@ const ensureDir = (dir) => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 };
 
-// storage config
+// storage config       //memoryStorage 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     let folder = 'uploads/others';
@@ -65,7 +65,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 } // Increased to 10MB
+  limits: { fileSize: 5 * 1024 * 1024 } // Increased to 10MB
 });
 
 module.exports = upload;
