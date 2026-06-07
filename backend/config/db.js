@@ -10,11 +10,11 @@ const localPool = new Pool({
 });
 
 // Supabase is paused
-/* const supabasePool = new Pool({
+const supabasePool = new Pool({
   connectionString: process.env.SUPABASE_URL,
   ssl: { rejectUnauthorized: false }
 }); 
-*/
+
 
 const pool = {
   // 1. Keep our custom query logic
