@@ -29,6 +29,7 @@ export default function StudentLogin() {
         setStep('otp');
       } else {
         localStorage.setItem('studentId', res.data.student?.id);
+        localStorage.setItem('token', res.data.token);
         localStorage.setItem('userRole', 'student');
         navigate(res.data.student.is_profile_complete ? '/scholarships' : '/student-onboard');
       }

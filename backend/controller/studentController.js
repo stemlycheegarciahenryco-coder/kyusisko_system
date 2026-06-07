@@ -69,15 +69,16 @@ exports.studentLogin = async (req, res) => {
     );
 
     res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', 
-      sameSite: 'Lax',
-      maxAge: 24 * 60 * 60 * 1000 // 1 day
-    });
+  httpOnly: true,
+  secure: true,        // Always true — Render is always HTTPS
+  sameSite: 'None',    // Always None — Vercel → Render is always cross-origin
+  maxAge: 24 * 60 * 60 * 1000
+});
 
     return res.json({
       message: 'Login successful',
       role: 'student',
+      token:token,
       student: {
         id: student.id,
         firstName: student.sfirst_name,

@@ -40,13 +40,25 @@ const io = new Server(server, {
 
 // --- 2. Middleware Configuration ---
 // CRITICAL: CORS must allow credentials for HttpOnly cookies to work
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://kyusisko-frontend.vercel.app'
+];
+
 app.use(cors({
-  origin: [
-    'http://localhost:5173', 
-    'https://kyusisko-frontend.vercel.app'
-  ],
-  credentials: true
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, Postman)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 
 app.use(cookieParser()); // REQUIRED: Allows Express to read req.cookies
 app.use(express.json());
