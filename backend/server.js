@@ -30,7 +30,10 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { 
-    origin: "http://localhost:5173", // Replace with your actual frontend URL
+    origin: [
+      'http://localhost:5173', 
+      'https://kyusisko-frontend.vercel.app'
+    ],
     credentials: true 
   }
 });
@@ -38,7 +41,10 @@ const io = new Server(server, {
 // --- 2. Middleware Configuration ---
 // CRITICAL: CORS must allow credentials for HttpOnly cookies to work
 app.use(cors({
-  origin: "http://localhost:5173", // Your React/Vite dev server
+  origin: [
+    'http://localhost:5173', 
+    'https://kyusisko-frontend.vercel.app'
+  ],
   credentials: true
 }));
 
