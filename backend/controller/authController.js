@@ -302,13 +302,13 @@ exports.orgLogin = async (req, res) => {
         );
 
         res.cookie('token', token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'Lax',
-            maxAge: 24 * 60 * 60 * 1000
-        });
+  httpOnly: true,
+  secure: true,
+  sameSite: 'None',        
+  maxAge: 24 * 60 * 60 * 1000
+});
 
-        return res.json({ role: 'sub_admin', id: sub.id, sub_email: sub.sub_email });
+        return res.json({ token: token, role: 'sub_admin', id: sub.id, sub_email: sub.sub_email });
 
     } catch (err) {
         console.error("Org Login Error:", err.message);
