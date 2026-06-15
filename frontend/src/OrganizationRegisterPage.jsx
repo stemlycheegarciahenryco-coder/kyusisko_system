@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  IconBuildingCommunity, IconMail, IconArrowLeft, IconWorld, IconCloudUpload, IconX,
-  IconMapPin, IconUser, IconPhone
+  IconBuildingCommunity, IconMail, IconArrowLeft, IconWorld, IconMapPin, IconFileText
 } from '@tabler/icons-react';
 import { useOrganization } from './useOrganization';
-import RegisterPassField from "./RegisterPassField"; 
 import { OrgSuccessModal, OtpModal, ErrorModal } from './component/RegisterModals';
 import { useNavigate } from 'react-router-dom';
 
@@ -26,6 +24,7 @@ const OrganizationRegisterPage = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  // Fetch location API profiles
   useEffect(() => {
     fetch('https://psgc.gitlab.io/api/regions/')
       .then(res => res.json())
@@ -49,20 +48,13 @@ const OrganizationRegisterPage = () => {
   }, [activeCityCode]);
 
   const handleChange = (e) => {
-    const { name, value, files } = e.target;
+    const { name, value } = e.target;
 
     if (name === "contact_number") {
       const numbersOnly = value.replace(/[^0-9]/g, "");
       if (numbersOnly.length > 0 && numbersOnly[0] !== '9') return;
       if (numbersOnly.length > 10) return;
       setFormData(prev => ({ ...prev, [name]: numbersOnly }));
-      return;
-    }
-
-    if (name === "proof" || name === "sec_file" || name === "valid_id") {
-      if (files && files.length > 0) {
-        setFormData(prev => ({ ...prev, [name]: Array.from(files) }));
-      }
       return;
     }
 
@@ -107,27 +99,18 @@ const OrganizationRegisterPage = () => {
 
   const isFormInvalid = (() => {
     const requiredFields = [
-      "first_name", "last_name", "org_name", "sub_email",
-      "contact_number", "region", "city", "barangay", "street_address"
+      "org_name", "provider_type", "sub_email", "contact_number", 
+      "region", "city", "barangay", "street_address", "guidelines"
     ];
+    
     const allRequiredFilled = requiredFields.every(field => {
       const val = formData[field];
       return val && String(val).trim() !== "";
     });
-    let hasValidFiles = false;
-    if (formData.provider_type === "INDIVIDUAL") {
-      hasValidFiles = formData.valid_id?.length > 0;
-    } else if (formData.provider_type === "LGU" || formData.provider_type === "NGO") {
-      hasValidFiles = formData.proof?.length > 0 && formData.sec_file?.length > 0;
-    }
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    const isPasswordValid = passwordRegex.test(formData.sub_password || "");
-    const passwordsMatch = formData.sub_password === formData.confirm_password;
-    const isContactValid = formData.contact_number?.length === 10;
-    return !allRequiredFilled || !hasValidFiles || !isPasswordValid || !passwordsMatch || !isContactValid;
-  })();
 
-  const showMismatchError = formData.confirm_password?.length > 0 && formData.sub_password !== formData.confirm_password;
+    const isContactValid = formData.contact_number?.length === 10;
+    return !allRequiredFilled || !isContactValid;
+  })();
 
   return (
     <div
@@ -139,7 +122,6 @@ const OrganizationRegisterPage = () => {
         backgroundAttachment: 'fixed',
       }}
     >
-      {/* Dark overlay */}
       <div className="absolute inset-0 bg-black/15" />
 
       {/* Back button */}
@@ -153,36 +135,75 @@ const OrganizationRegisterPage = () => {
       {/* Glass Form Card */}
       <div className="relative z-10 w-full max-w-3xl bg-white/45 backdrop-blur-xl border border-white/40 rounded-3xl shadow-2xl px-8 py-10 md:px-12 md:py-12">
 
-  {/* Logo + Title */}
-  <div className="flex flex-col items-center mb-10">
-    <img src="/logo.png" alt="Logo" className="h-20 mb-4 drop-shadow-lg" />
-    <h1 className="text-2xl font-black text-black uppercase tracking-tight text-center">
-      Scholarship Provider Registration
-    </h1>
-    <div className="h-1 w-16 bg-[#FF1E1E] mt-3 rounded-full" />
-  </div>
+        {/* Logo + Title */}
+        <div className="flex flex-col items-center mb-10">
+          <img src="/logo.png" alt="Logo" className="h-20 mb-4 drop-shadow-lg" />
+          <h1 className="text-2xl font-black text-black uppercase tracking-tight text-center">
+            Scholarship Provider Registration
+          </h1>
+          <div className="h-1 w-16 bg-[#FF1E1E] mt-3 rounded-full" />
+        </div>
 
         <form onSubmit={handleInitialSubmit} className="space-y-6">
 
-          {/* SECTION: Personal Info */}
-          <SectionLabel label="Account Holder" />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Field label="First Name" required>
-              <input required name="first_name" value={formData.first_name} onChange={handleChange}
-                className={inputCls} placeholder="First Name" />
+          {/* SECTION: Institution Profile Identity */}
+          <SectionLabel label="Institution Identity" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Field label="Organization / Institution Name" required>
+              <div className="relative">
+                <IconBuildingCommunity className="absolute left-3.5 top-3.5 text-black/60" size={18} />
+                <input required name="org_name" value={formData.org_name} onChange={handleChange}
+                  className={`${inputCls} pl-10`} placeholder="e.g. KyusIsko Foundation" />
+              </div>
             </Field>
-            <Field label="Middle Name">
-              <input name="middle_name" value={formData.middle_name} onChange={handleChange}
-                className={inputCls} placeholder="Middle Name" />
+            
+            <Field label="Provider Type" required>
+              <select required name="provider_type" value={formData.provider_type} onChange={handleChange} className={inputCls}>
+                <option value="">Select Type</option>
+                <option value="Government">Government</option>
+                <option value="Private">Private</option>
+                <option value="Corporate">Corporate</option>
+                <option value="NGO">NGO</option>
+                <option value="Individual Provider">Individual Provider</option>
+                <option value="Institution">Institution</option>
+              </select>
             </Field>
-            <Field label="Last Name" required>
-              <input required name="last_name" value={formData.last_name} onChange={handleChange}
-                className={inputCls} placeholder="Last Name" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Field label="Organization / Coordinator Email" required>
+              <div className="relative">
+                <IconMail className="absolute left-3.5 top-3.5 text-black/60" size={18} />
+                <input required name="sub_email" type="email" value={formData.sub_email} onChange={handleChange}
+                  className={`${inputCls} pl-10`} placeholder="org@domain.com" />
+              </div>
+            </Field>
+
+            <Field label="Contact / Telephone Number" required>
+              <div className="relative flex items-center">
+                <div className="absolute left-3.5 flex items-center gap-2 pointer-events-none border-r border-black/15 pr-3 h-6">
+                  <img src="/ph.svg" alt="PH" className="w-5 h-3 object-contain" />
+                  <span className="text-xs font-bold text-black/60">+63</span>
+                </div>
+                <input type="text" required name="contact_number" placeholder="9XXXXXXXXX"
+                  value={formData.contact_number} onChange={handleChange}
+                  className={`${inputCls} pl-24`} />
+              </div>
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
+            <Field label="Website / Social Media Page">
+              <div className="relative">
+                <IconWorld className="absolute left-3.5 top-3.5 text-black/60" size={18} />
+                <input name="website" value={formData.website} onChange={handleChange}
+                  className={`${inputCls} pl-10`} placeholder="https://your-institution.org or Facebook Link" />
+              </div>
             </Field>
           </div>
 
           {/* SECTION: Address */}
-          <SectionLabel label="Address" />
+          <SectionLabel label="Operational Address" />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Field label="Region" required>
               <select required name="region" value={activeRegionCode} onChange={handleChange} className={inputCls}>
@@ -190,6 +211,7 @@ const OrganizationRegisterPage = () => {
                 {regions.map(r => <option key={r.code} value={r.code}>{r.name}</option>)}
               </select>
             </Field>
+            
             <Field label="City / Municipality" required>
               <select required name="city" value={activeCityCode} onChange={handleChange}
                 disabled={!activeRegionCode} className={inputCls}>
@@ -197,6 +219,7 @@ const OrganizationRegisterPage = () => {
                 {cities.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
               </select>
             </Field>
+            
             <Field label="Barangay" required>
               <select required name="barangay" value={formData.barangay} onChange={handleChange}
                 disabled={!activeCityCode} className={inputCls}>
@@ -205,114 +228,53 @@ const OrganizationRegisterPage = () => {
               </select>
             </Field>
           </div>
-          <Field label="Street Address / Building / House No." required>
+          
+          <Field label="Street Address / Building / Office No." required>
             <div className="relative">
               <IconMapPin className="absolute left-3.5 top-3.5 text-black/60" size={18} />
               <input required name="street_address" value={formData.street_address} onChange={handleChange}
-                className={`${inputCls} pl-10`} placeholder="Street Address/Building/House No." />
+                className={`${inputCls} pl-10`} placeholder="Unit No., Street name, Building location" />
             </div>
           </Field>
 
-          {/* SECTION: Organization */}
-          <SectionLabel label="Organization Details" />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label=" Organization/Institution Name" required>
-              <div className="relative">
-                <IconBuildingCommunity className="absolute left-3.5 top-3.5 text-black/60" size={18} />
-                <input required name="org_name" value={formData.org_name} onChange={handleChange}
-                  className={`${inputCls} pl-10`} placeholder="Provider Name" />
-              </div>
-            </Field>
-            <Field label="Provider Type" required>
-              <select required name="provider_type" value={formData.provider_type} onChange={handleChange} className={inputCls}>
-                <option value="">Select Type</option>
-                <option value="LGU">LGU</option>
-                <option value="NGO">NGO</option>
-                <option value="INDIVIDUAL">Individual / Private Sponsorship</option>
-              </select>
-            </Field>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Email Address" required>
-              <div className="relative">
-               <IconMail className="absolute left-3.5 top-3.5 text-black/60" size={18} />
-                <input required name="sub_email" type="email" value={formData.sub_email} onChange={handleChange}
-                  className={`${inputCls} pl-10`} placeholder="Email Address" />
-              </div>
-            </Field>
-            <Field label="Contact Number" required>
-              <div className="relative flex items-center">
-                <div className="absolute left-3.5 flex items-center gap-2 pointer-events-none border-r border-black/15 pr-3 h-6">
-  <img src="/ph.svg" alt="PH" className="w-5 h-3 object-contain" />
-  <span className="text-xs font-bold text-black/60">+63</span>
-</div>
-                <input type="text" required name="contact_number" placeholder="Contact Number"
-                  value={formData.contact_number} onChange={handleChange}
-                  className={`${inputCls} pl-24`} />
-              </div>
-            </Field>
-          </div>
-          <Field label="Website / Social Page">
+          {/* SECTION: Provider Guidelines */}
+          <SectionLabel label="Program Configuration" />
+          <Field label="Provider Guidelines & General Requirements" required>
             <div className="relative">
-             <IconWorld className="absolute left-3.5 top-3.5 text-black/60" size={18} />
-              <input name="website" value={formData.website} onChange={handleChange}
-                className={`${inputCls} pl-10`} placeholder="https://Website.com / Facebook Page" />
+              <IconFileText className="absolute left-3.5 top-3.5 text-black/60" size={18} />
+              <textarea 
+                required 
+                name="guidelines" 
+                value={formData.guidelines || ""} 
+                onChange={handleChange}
+                rows={4}
+                className={`${inputCls} pl-10 resize-none pt-3.5`} 
+                placeholder="State your generic operational rules, target student criteria, maintaining grades, or assessment processes..." 
+              />
             </div>
           </Field>
 
-          {/* SECTION: Documents */}
-          {(formData.provider_type === "INDIVIDUAL" || formData.provider_type === "LGU" || formData.provider_type === "NGO") && (
-            <>
-              <SectionLabel label="Supporting Documents" />
-              {formData.provider_type === "INDIVIDUAL" ? (
-                <UploadBlock label="Valid ID (Individual)" name="valid_id"
-                  files={formData.valid_id} setFormData={setFormData} handleChange={handleChange} />
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <UploadBlock label="Proof of Recipients" name="proof"
-                    files={formData.proof} setFormData={setFormData} handleChange={handleChange} />
-                  <UploadBlock label="SEC Certificate" name="sec_file"
-                    files={formData.sec_file} setFormData={setFormData} handleChange={handleChange} />
-                </div>
-              )}
-            </>
-          )}
-
-          {/* SECTION: Security */}
-          <SectionLabel label="Password" />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Password" required>
-              <RegisterPassField name="sub_password" value={formData.sub_password} onChange={handleChange} showStrength={true} />
-            </Field>
-            <Field label="Confirm Password" required>
-              <RegisterPassField name="confirm_password" value={formData.confirm_password} onChange={handleChange} error={showMismatchError} />
-              {showMismatchError && (
-                <p className="text-xs font-bold text-[#FF1E1E] mt-1">Passwords do not match</p>
-              )}
-            </Field>
-          </div>
-
-          {/* Submit */}
+          {/* Submit Action Button */}
           <button
             type="submit"
             disabled={isFormInvalid || loading || verifying}
             className="w-full bg-[#093fb4] hover:bg-[#FF1E1E] disabled:bg-white/20 disabled:text-white/40 text-white font-black py-4 rounded-2xl transition-all uppercase text-sm tracking-widest shadow-lg mt-4"
           >
-            {loading || verifying ? "Processing..." : "Complete Registration"}
+            {loading || verifying ? "Processing Onboarding..." : "Submit Registration Proposal"}
           </button>
         </form>
       </div>
 
       <OtpModal isOpen={showOtpModal} email={formData.sub_email} onVerify={handleOtpVerified} onCancel={() => setShowOtpModal(false)} />
       <ErrorModal isOpen={showError} onClose={() => setShowError(false)} message={errorMessage} />
-      <OrgSuccessModal isOpen={showSuccess} message="Registration Submitted!" onConfirm={() => navigate('/Home')} />
+      <OrgSuccessModal isOpen={showSuccess} message="Registration Submitted! Awaiting Admin verification." onConfirm={() => navigate('/')} />
     </div>
   );
 };
 
-// Shared input style — glass look
+// Global style utility
 const inputCls = "w-full px-4 py-3 bg-white border border-black/15 rounded-xl text-sm text-black placeholder-black/50 outline-none focus:ring-2 focus:ring-[#093fb4] focus:border-transparent transition-all";
-// Label + children wrapper
+
 function Field({ label, required, children }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -324,61 +286,12 @@ function Field({ label, required, children }) {
   );
 }
 
-// Section divider label
 function SectionLabel({ label }) {
   return (
     <div className="flex items-center gap-3 pt-2">
       <div className="h-px flex-1 bg-black/20" />
       <span className="text-[11px] font-black uppercase tracking-widest text-black/80">{label}</span>
       <div className="h-px flex-1 bg-black/20" />
-    </div>
-  );
-}
-
-// Upload block
-function UploadBlock({ label, name, files, setFormData, handleChange }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-black uppercase tracking-widest text-black">{label}</label>
-      <div className="relative border-2 border-dashed border-black/20 rounded-xl p-5 bg-white/60 hover:border-[#093fb4] transition-all flex flex-col items-center justify-center cursor-pointer group min-h-[110px]">
-        {!files || files.length === 0 ? (
-          <>
-            <IconCloudUpload className="text-black/30 group-hover:text-[#093fb4] mb-2" size={28} />
-            <span className="text-xs font-bold text-black/50 uppercase text-center">
-              Click to upload<br />
-              <span className="text-[10px] lowercase text-black/30 italic">png, pdf, docx, jpg</span>
-            </span>
-          </>
-        ) : (
-          <div className="w-full space-y-2">
-            <span className="text-[10px] font-black text-[#093fb4] uppercase block text-center mb-1">
-              {files.length} file{files.length > 1 ? 's' : ''} selected
-            </span>
-            {Array.from(files).map((file, idx) => (
-              <div key={idx} className="flex items-center justify-between bg-white border border-black/10 px-3 py-2 rounded-xl">
-                <div className="flex items-center gap-2 overflow-hidden">
-                  <span className="text-[9px] font-black text-white bg-[#093fb4] px-2 py-0.5 rounded">
-                    {file.name.split('.').pop().toUpperCase()}
-                  </span>
-                  <span className="text-xs font-bold text-black/70 truncate">{file.name}</span>
-                </div>
-                <button type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const newFiles = Array.from(files).filter((_, i) => i !== idx);
-                    setFormData(prev => ({ ...prev, [name]: newFiles }));
-                  }}
-                  className="text-black/30 hover:text-[#FF1E1E] transition-colors ml-2 shrink-0"
-                >
-                  <IconX size={14} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-        <input type="file" name={name} multiple accept=".pdf,.docx,.png,.jpg,.jpeg"
-          className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleChange} />
-      </div>
     </div>
   );
 }
