@@ -32,23 +32,21 @@ export default function ProviderGuidelines() {
   const navigate = useNavigate();
 
   return (
-    /* The absolute pseudo-elements here safely render your bg2.png image at 50% opacity
-       without affecting the layout properties or muddying text layers.
-    */
     <div className="min-h-screen bg-slate-50 font-['Inter'] pb-20 relative">
 
-  {/* Fixed full-screen background image */}
-  <div
-  className="fixed inset-0 pointer-events-none"
-  style={{
-    backgroundImage: "url('/bg2.png')",
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    backgroundRepeat: 'no-repeat',
-    opacity: 0.8,  // 👈 lower this — 0.1 to 0.2 is ideal for busy images
-    zIndex: 0,
-  }}
-/>
+      {/* Fixed full-screen background image */}
+      <div
+        className="fixed inset-0 pointer-events-none"
+        style={{
+          backgroundImage: "url('/bg2.png')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          opacity: 0.15,  // 👈 set to an ideal level for busy images
+          zIndex: 0,
+        }}
+      />
+      
       {/* Header */}
       <header className="bg-white/95 backdrop-blur-md border-b border-slate-100 sticky top-0 z-50 shadow-sm">
         <div className="max-w-5xl mx-auto px-6 h-24 flex items-center justify-between">
@@ -92,17 +90,16 @@ export default function ProviderGuidelines() {
         {/* 1. Registration Requirements */}
         <GuidelineSection icon={Building2} title="Provider Registration Requirements">
           <p className="text-slate-600 mb-6 font-medium leading-relaxed">
-            To verify the legitimacy and credibility of scholarship providers, the following information and
-            documents may be required during registration:
+            To register your onboarding profile proposal within the platform, the system collects the following core identification details:
           </p>
           <ul className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             {[
-              "Organization or Institution Name",
-              "Official Email Address and Contact Number",
-              "Office Address or Business Location",
-              "Valid Identification of Authorized Representative",
-              "Proof of Organization Legitimacy (e.g., business permit, school certification, SEC registration, government accreditation, or related supporting documents)",
-              "Scholarship Program Details and Eligibility Requirements"
+              "Organization / Institution Identity Name",
+              "Valid Classification Type (Government, Private, Corporate, NGO, Individual, or Institution)",
+              "Official Coordinator Email Address & Contact Number",
+              "Operational Business Location or Office Address",
+              "Official Website or Public Social Media Profile Link",
+              "Generic Provider Guidelines and Baseline Eligibility Criteria"
             ].map((item, idx) => (
               <li key={idx} className="flex items-start gap-3 p-4 bg-slate-50/80 rounded-2xl border border-slate-100 text-sm font-semibold text-slate-700 leading-relaxed">
                 <CheckCircle size={18} className="text-green-500 shrink-0 mt-0.5" /> 
@@ -111,9 +108,7 @@ export default function ProviderGuidelines() {
             ))}
           </ul>
           <p className="text-sm font-medium text-slate-500 bg-blue-50/50 rounded-2xl p-4 border border-blue-100/50 leading-relaxed">
-            These requirements are collected to ensure that only verified and legitimate scholarship providers
-            are allowed to post opportunities within the platform. This process helps protect students from
-            fraudulent, misleading, or unauthorized scholarship postings.
+            These structural identities are evaluated by system administrators to maintain a clean database directory. Verified provider profiles are granted authority to draft programs directly to targeted student applicants.
           </p>
         </GuidelineSection>
 
@@ -180,7 +175,7 @@ export default function ProviderGuidelines() {
             {[
               "Share student information with unauthorized third parties",
               "Use student data for commercial or unrelated purposes",
-              "Misuse uploaded documents or personal information"
+              "Misuse uploaded student documents or personal information"
             ].map((text, idx) => (
               <div key={idx} className="flex gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 items-center">
                 <ShieldCheck className="text-blue-600 shrink-0" size={20} />

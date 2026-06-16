@@ -231,7 +231,7 @@ exports.systemAdminLogin = async (req, res) => {
         });
 
         // Returns specific admin roles ('root_admin' or 'co_admin') down to the UI layout
-        return res.json({ role: user.role, id: user.id, uid: user.uid, sub_email: user.email });
+        return res.json({token: token, role: user.role, id: user.id, uid: user.uid, sub_email: user.email });
 
     } catch (err) {
         console.error("System Admin Login Error:", err.message);

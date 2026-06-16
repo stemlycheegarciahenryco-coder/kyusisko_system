@@ -19,12 +19,9 @@ export const useOrganization = () => {
     sub_password: '',
     confirm_password: '',
     contact_number: '',
+    tel_number: '',
     website: '',
-    provider_type: '',
-    proof: [],
-    sec_file: [],
-    valid_id: [],
-    org_pic: null // Added profile picture tracking safely here
+    provider_type: ''
   });
 
   // --- OTP VERIFICATION HANDLERS ---
@@ -54,36 +51,13 @@ export const useOrganization = () => {
     }
   };
 
-  // --- STANDARD NEW ONBOARDING REGISTRATION ---
+  // --- STANDARD NEW ONBOARDING REGISTRATION (Pure JSON request) ---
   const handleOnboard = async () => {
     setLoading(true);
     try {
-      const data = new FormData();
-      const fileArrayFields = ['proof', 'sec_file', 'valid_id'];
-
-      // Append text fields cleanly
-      Object.keys(formData).forEach(key => {
-        if (!fileArrayFields.includes(key) && key !== 'org_pic') {
-          data.append(key, formData[key] || '');
-        }
-      });
-
-      // Append multiple requirement files arrays
-      fileArrayFields.forEach(field => {
-        if (formData[field] && formData[field].length > 0) {
-          formData[field].forEach((file) => {
-            data.append(field, file);
-          });
-        }
-      });
-
-      // Append standalone profile image if tracking state contains one
-      if (formData.org_pic) {
-        data.append('org_pic', formData.org_pic);
-      }
-
-      await api.post('/onboarding-orgs/register-organization', data, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+      // Send text fields over directly as a standard JSON body payload
+      await api.post('/onboarding-orgs/register-organization', formData, {
+        headers: { 'Content-Type': 'application/json' }
       });
 
       resetForm();
@@ -95,7 +69,7 @@ export const useOrganization = () => {
     }
   };
 
-  // --- FIXED: COMPLIANCE HANDLER IS NOW SEPARATE AND SCOPED CORRECTLY ---
+  // --- COMPLIANCE SUBMIT: Keeps multi-part file layout for System Admin tasks ---
   const handleComplianceSubmit = async (orgId, complianceFiles) => {
     setLoading(true);
     try {
@@ -130,21 +104,13 @@ export const useOrganization = () => {
       org_name: '', first_name: '', middle_name: '', last_name: '', 
       sub_email: '', region: '', city: '', barangay: '', 
       street_address: '', sub_password: '', confirm_password: '', 
-      contact_number: '', website: '', provider_type: '',
-      proof: [], sec_file: [], valid_id: [], org_pic: null
+      contact_number: '', tel_number: '', website: '', provider_type: ''
     });
     setIsVerified(false);
   };
 
   return { 
-    loading, 
-    verifying, 
-    isVerified, 
-    formData, 
-    setFormData, 
-    handleOnboard, 
-    handleRequestOtp, 
-    handleVerifyOtp,
-    handleComplianceSubmit
+    loading, verifying, isVerified, formData, setFormData, 
+    handleOnboard, handleRequestOtp, handleVerifyOtp, handleComplianceSubmit
   };
 };

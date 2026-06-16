@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  IconBuildingCommunity, IconMail, IconArrowLeft, IconWorld, IconMapPin, IconFileText
+  IconBuildingCommunity, IconMail, IconArrowLeft, IconWorld, IconMapPin, IconFileText, IconPhone
 } from '@tabler/icons-react';
 import { useOrganization } from './useOrganization';
 import { OrgSuccessModal, OtpModal, ErrorModal } from './component/RegisterModals';
@@ -58,6 +58,13 @@ const OrganizationRegisterPage = () => {
       return;
     }
 
+    if (name === "tel_number") {
+      const numbersOnly = value.replace(/[^0-9]/g, "");
+      if (numbersOnly.length > 10) return; // Standard PH Landline length safeguard
+      setFormData(prev => ({ ...prev, [name]: numbersOnly }));
+      return;
+    }
+
     if (name === "region") {
       const selected = regions.find(r => r.code === value);
       setActiveRegionCode(value);
@@ -100,7 +107,7 @@ const OrganizationRegisterPage = () => {
   const isFormInvalid = (() => {
     const requiredFields = [
       "org_name", "provider_type", "sub_email", "contact_number", 
-      "region", "city", "barangay", "street_address", "guidelines"
+      "region", "city", "barangay", "street_address"
     ];
     
     const allRequiredFilled = requiredFields.every(field => {
@@ -179,7 +186,7 @@ const OrganizationRegisterPage = () => {
               </div>
             </Field>
 
-            <Field label="Contact / Telephone Number" required>
+            <Field label="Mobile Number" required>
               <div className="relative flex items-center">
                 <div className="absolute left-3.5 flex items-center gap-2 pointer-events-none border-r border-black/15 pr-3 h-6">
                   <img src="/ph.svg" alt="PH" className="w-5 h-3 object-contain" />
@@ -192,7 +199,16 @@ const OrganizationRegisterPage = () => {
             </Field>
           </div>
 
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Field label="Telephone Number (Landline)">
+              <div className="relative">
+                <IconPhone className="absolute left-3.5 top-3.5 text-black/60" size={18} />
+                <input type="text" name="tel_number" placeholder="e.g. 0281234567"
+                  value={formData.tel_number || ""} onChange={handleChange}
+                  className={`${inputCls} pl-10`} />
+              </div>
+            </Field>
+
             <Field label="Website / Social Media Page">
               <div className="relative">
                 <IconWorld className="absolute left-3.5 top-3.5 text-black/60" size={18} />
@@ -237,22 +253,23 @@ const OrganizationRegisterPage = () => {
             </div>
           </Field>
 
-          {/* SECTION: Provider Guidelines */}
-          <SectionLabel label="Program Configuration" />
-          <Field label="Provider Guidelines & General Requirements" required>
-            <div className="relative">
-              <IconFileText className="absolute left-3.5 top-3.5 text-black/60" size={18} />
-              <textarea 
-                required 
-                name="guidelines" 
-                value={formData.guidelines || ""} 
-                onChange={handleChange}
-                rows={4}
-                className={`${inputCls} pl-10 resize-none pt-3.5`} 
-                placeholder="State your generic operational rules, target student criteria, maintaining grades, or assessment processes..." 
-              />
+          {/* SECTION: Replaced Text Area with Guidelines Navigation Link */}
+          <div className="pt-2 flex flex-col items-center justify-center gap-1 bg-white/20 border border-white/30 backdrop-blur-sm rounded-2xl p-4 text-center">
+            <div className="flex items-center gap-2 text-black font-bold text-xs uppercase tracking-wider">
+              <IconFileText size={16} className="text-[#093fb4]" />
+              Registration Terms
             </div>
-          </Field>
+            <p className="text-xs text-black/70 max-w-md my-1">
+              By submitting this application, you agree to comply with our platform policies.
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate('/provider-guidelines')}
+              className="text-xs font-black text-[#093fb4] hover:text-[#FF1E1E] underline underline-offset-4 transition-all uppercase tracking-widest mt-1"
+            >
+              Read Scholarship Provider Guidelines
+            </button>
+          </div>
 
           {/* Submit Action Button */}
           <button
@@ -272,7 +289,6 @@ const OrganizationRegisterPage = () => {
   );
 };
 
-// Global style utility
 const inputCls = "w-full px-4 py-3 bg-white border border-black/15 rounded-xl text-sm text-black placeholder-black/50 outline-none focus:ring-2 focus:ring-[#093fb4] focus:border-transparent transition-all";
 
 function Field({ label, required, children }) {
