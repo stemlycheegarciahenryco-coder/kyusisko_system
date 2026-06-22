@@ -79,7 +79,8 @@ const HomeNav = () => {
               <div className="absolute top-full left-0 mt-3 w-64 bg-white border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.12)] rounded-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                 <div className="p-1.5 flex flex-col gap-0.5">
                   <button onClick={() => { navigate('/organization-register'); setShowPartnerMenu(false); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 rounded-lg text-slate-900"><UserPlus size={16} /> Create Provider Account</button>
-                  <button onClick={() => { navigate('/rootlogin'); setShowPartnerMenu(false); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 rounded-lg text-slate-900"><LogIn size={16} /> Provider Login</button>
+                  {/* UPDATED: Points to unified login */}
+                  <button onClick={() => { navigate('/login'); setShowPartnerMenu(false); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 rounded-lg text-slate-900"><LogIn size={16} /> Provider Login</button>
                   <button onClick={() => { navigate('/provider-guidelines'); setShowPartnerMenu(false); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 rounded-lg border-t border-slate-50 text-slate-900"><FileText size={16} /> Provider Guidelines</button>
                 </div>
               </div>
@@ -97,7 +98,8 @@ const HomeNav = () => {
               <div className="absolute top-full left-0 mt-3 w-64 bg-white border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.12)] rounded-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                 <div className="p-1.5 flex flex-col gap-0.5">
                   <button onClick={() => { navigate('/student-register'); setShowStudentMenu(false); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 rounded-lg text-slate-900"><UserPlus size={16} /> Student Sign Up</button>
-                  <button onClick={() => { navigate('/student-login'); setShowStudentMenu(false); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 rounded-lg text-slate-900"><UserCircle size={16} /> Student Portal Login</button>
+                  {/* UPDATED: Points to unified login */}
+                  <button onClick={() => { navigate('/login'); setShowStudentMenu(false); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 rounded-lg text-slate-900"><UserCircle size={16} /> Student Portal Login</button>
                 </div>
               </div>
             )}
@@ -107,7 +109,7 @@ const HomeNav = () => {
         {/* Right Action Trigger */}
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate('/login')} // Update this path to your preferred login route
+            onClick={() => navigate('/login')} 
             className="px-5 py-2.5 bg-[#093fb4] text-[#FFFCFB] text-[11px] font-black uppercase tracking-[0.12em] rounded-xl hover:bg-[#073496] transition-all shadow-md shadow-[#093fb4]/10 flex items-center gap-1.5 group"
           >
             <LogIn size={14} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform" />

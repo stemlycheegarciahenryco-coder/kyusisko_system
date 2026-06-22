@@ -22,7 +22,7 @@ import RootAudit from './rootadmin/RootAudit';
 //Student
 import StudentRegister from './student/StudentRegister';
 
-import StudentLogin from './student/StudentLogin';
+
 import StudentProfile from './student/StudentProfile';
 import StudentSettings from './student/StudentSettings';
 import StudentLayout from './student/StudentLayout';
@@ -74,10 +74,10 @@ export default function App() {
      <Route path="/student-onboard" element= {<StudentOnboarding/>}/>
 
       {/* 2. STUDENT FLOW: Publicly accessible scholarship routes */}
-      <Route path="/student-login"    element={<StudentLogin />} />
+
       <Route path="/student-register" element={<StudentRegister />} />
       {/* 3. ADMIN AUTH: Entry point for Root and Org admins */}
-      <Route path="/rootlogin" element={<LogIn />} />
+      <Route path="/login" element={<LogIn />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/verify-reset" element={<VerifyReset />} />
       <Route path="/reset-password" element={<ResetPassword />} />

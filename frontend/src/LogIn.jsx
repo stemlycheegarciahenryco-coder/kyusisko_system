@@ -13,7 +13,7 @@ import {
 } from '@tabler/icons-react';
 
 export default function LogIn() {
-  const [identifier, setIdentifier] = useState(''); // 🚀 Changed from 'email' to handle both ID or Email
+  const [identifier, setIdentifier] = useState(''); 
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -27,7 +27,7 @@ export default function LogIn() {
     const isVerified = params.get('verified');
     if (isVerified === 'true') {
       setVerifiedStatus(true);
-      navigate('/rootlogin', { replace: true });
+      navigate('/login', { replace: true });
     }
   }, [location, navigate]);
 
@@ -35,41 +35,35 @@ export default function LogIn() {
     e.preventDefault();
     setLoading(true);
     try {
-      // 🚀 DYNAMIC ROUTE SEPARATION
-      // If user inputs something starting with 'SADM-', route to system admin endpoint
-      const isSystemAdmin = identifier.trim().toUpperCase().startsWith('SADM-');
+      // 🚀 Single unified endpoint for all 3 portals
+      const response = await api.post('/auth/portal-login', { 
+        identifier: identifier.trim(), 
+        password 
+      });
       
-      const endpoint = isSystemAdmin 
-        ? '/auth/system-admin-login' 
-        : '/auth/organization-login';
-
-      const payload = isSystemAdmin 
-        ? { systemId: identifier.trim().toUpperCase(), password } 
-        : { email: identifier.trim(), password };
-
-      const response = await api.post(endpoint, payload);
-      const { token, role, sub_email, id, uid } = response.data; 
+      const { token, role, data } = response.data; 
 
       localStorage.setItem('token', token);
-      localStorage.setItem('userRole', role); // root_admin, co_admin, or sub_admin
+      localStorage.setItem('userRole', role); 
       
-      if (isSystemAdmin) {
-        localStorage.setItem('systemUid', uid);
-        localStorage.setItem('adminEmail', sub_email);
+      // 🚀 Dynamic RBAC Client-Side Routing
+      if (role === 'root_admin' || role === 'co_admin') {
+        localStorage.setItem('systemUid', data.uid);
+        localStorage.setItem('adminEmail', data.email);
         navigate('/RootDashboard');
-      } else {
-        localStorage.setItem('orgId', id); 
-        if (role === 'sub_admin' && !sub_email) {
-          alert("Error: Organization identity not verified. Contact system admin.");
-          return;
-        }
-        localStorage.setItem('adminEmail', sub_email);
+      } else if (role === 'sub_admin') {
+        localStorage.setItem('orgId', data.id); 
+        localStorage.setItem('adminEmail', data.email);
         navigate('/OrgDashboard');
+      } else if (role === 'student') {
+        localStorage.setItem('studentId', data.id);
+        localStorage.setItem('studentInfo', JSON.stringify(data));
+        navigate('/scholarships'); // Redirect to your student view
       }
     } catch (err) {
-      const data = err.response?.data;
-      alert(data?.error || "Login failed");
-      setAttempts(data?.blocked ? 0 : data?.attempts);
+      const errorData = err.response?.data;
+      alert(errorData?.error || "Login failed");
+      setAttempts(errorData?.blocked ? 0 : errorData?.attempts);
     } finally {
       setLoading(false);
     }
@@ -77,16 +71,12 @@ export default function LogIn() {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-6 relative overflow-hidden bg-[#FFFCFB]">
-      {/* Background Image - Full Visibility */}
       <div 
         className="absolute inset-0 bg-no-repeat bg-cover bg-center pointer-events-none"
         style={{ backgroundImage: `url('/bg2.png')` }}
       />
 
-      {/* Form Container */}
       <div className="max-w-sm w-full bg-white rounded-[2rem] shadow-2xl p-8 border border-black/5 relative z-10">
-        
-        {/* Close Button */}
         <button 
           onClick={() => navigate('/')} 
           className="absolute top-6 right-6 text-black/20 hover:text-[#FF1E1E] transition-colors p-1"
@@ -105,7 +95,6 @@ export default function LogIn() {
           <div className="inline-flex items-center justify-center mb-4">
             <img src="/logo.png" alt="Logo" className="h-18 w-auto" />
           </div>
-          
           <p className="mt-2 text-[14px] font-black text-black-300 uppercase tracking-[0.3em]">
             Portal Login 
           </p>
@@ -114,14 +103,14 @@ export default function LogIn() {
         <form onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-1">
             <label className="text-[10px] font-black text-black uppercase ml-1 tracking-widest">
-              Provider Email
+              Email Address / System ID
             </label>
             <div className="relative group">
               <IconMail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-black/20 group-focus-within:text-[#093fb4] transition-colors" />
               <input 
-                type="text" // 🚀 Changed to 'text' to accept both SADM-001 and emails
+                type="text" 
                 required
-                placeholder="Email Address"
+                placeholder="Enter your credentials"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 className="w-full pl-11 pr-4 py-3 bg-black/5 border-2 border-transparent rounded-xl focus:bg-white focus:border-[#093fb4] outline-none transition-all placeholder:text-black/20 font-bold text-black text-sm"

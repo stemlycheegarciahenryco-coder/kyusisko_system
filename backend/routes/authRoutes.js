@@ -14,10 +14,11 @@ const upload = require('../middleware/multerConfig');
 
 // 🚀 FIXED & SEPARATED: Replaced the old shared authCtrl.login with separate paths
 // For System Administrators (Root & Co-Admins logging in with SADM-XXX tracking IDs)
-router.post('/auth/system-admin-login', authCtrl.systemAdminLogin);
 
-// For Organization Portal Accounts (Logging in via corporate/institutional email)
-router.post('/auth/organization-login', authCtrl.orgLogin);
+
+router.post('/auth/portal-login', authCtrl.portalLogin); 
+
+
 
 // Shared Security Utilities
 router.post('/auth/forgot-password', authCtrl.forgotPassword);
@@ -28,7 +29,7 @@ router.get('/auth/login-attempts', authCtrl.getLogInAttempt);
 // ==========================================
 // 2. STUDENT ACCOUNT MANAGEMENT
 // ==========================================
-router.post('/students/login', stdCtrl.studentLogin);
+
 router.put('/students/update-2fa', stdCtrl.update2FA);
 router.get('/students', stdCtrl.getAllStudents);
 

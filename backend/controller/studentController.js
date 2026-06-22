@@ -2,96 +2,13 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const pool = require('../config/db');
-const security = require('./securityController'); // Import your new security logic
+//const security = require('./securityController'); // Import your new security logic
 const transporter = require('../config/mailer'); // For sending emails
 
 
-const WINDOW_MINUTES = 15;
-const MAX_ATTEMPTS = 7;
-const JWT_SECRET = process.env.JWT_SECRET;
 
-//STUDENTLOGIN
-exports.studentLogin = async (req, res) => {
-  const { email, password } = req.body;
-  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
-  try {
-    // 1. Check Brute Force Protection
-    const attemptCheck = await pool.query(
-                          //!attempts
-      `SELECT COUNT(*) FROM login_attempts 
-       WHERE email = $1 AND success = FALSE 
-       AND attempted_at > NOW() - INTERVAL '${WINDOW_MINUTES} minutes'`,
-      [email]
-    );
-    
-    if (parseInt(attemptCheck.rows[0].count) >= MAX_ATTEMPTS) {
-      return res.status(429).json({ error: "Security Lockout. Try again later.", blocked: true });
-    }
 
-    // 2. Find Student & Validate Password
-    const result = await pool.query('SELECT * FROM students WHERE student_email = $1', [email]);
-    const student = result.rows[0];
-
-    if (!student || !(await bcrypt.compare(password, student.student_password_hash))) {
-                                    //!attempts
-      await pool.query('INSERT INTO login_attempts (email, ip_address, success) VALUES ($1, $2, false)', [email, ip]);
-      return res.status(401).json({ error: 'Invalid email or password.' });
-    }
-
-    // 3. Updated Status Checks (Bypassing Approval Logic)
-    // We remove the 'pending' and 'rejected' checks since registration is now instant
-
-    // We still check if the account is active (for manual deactivations)
-    if (!student.sis_active) {
-        return res.status(403).json({ error: 'Account is Restricted.' });
-    }
-
-    // 4. Log Successful Password Entry //!attempts
-    await pool.query('INSERT INTO login_attempts (email, ip_address, success) VALUES ($1, $2, true)', [email, ip]);
-
-    // 5. 2FA Interception
-    if (student.two_factor_enabled) {
-     await security.initiateOTP(student.student_email, student.preferred_2fa_method);
-      return res.json({
-        status: 'OTP_REQUIRED',
-        method: student.preferred_2fa_method,
-        studentId: student.id,
-        email: student.student_email 
-      });
-    }
-
-    // 6. Normal Login (Token Generation)
-    const token = jwt.sign(
-      { id: student.id, role: 'student', email: student.student_email },
-      JWT_SECRET,
-      { expiresIn: '1d' }
-    );
-
-    res.cookie('token', token, {
-  httpOnly: true,
-  secure: true,        // Always true — Render is always HTTPS
-  sameSite: 'None',    // Always None — Vercel → Render is always cross-origin
-  maxAge: 24 * 60 * 60 * 1000
-});
-
-    return res.json({
-      message: 'Login successful',
-      role: 'student',
-      token:token,
-      student: {
-        id: student.id,
-        firstName: student.sfirst_name,
-        lastName: student.slast_name,
-        is_profile_complete: student.is_profile_complete
-      }
-    });
-
-  } catch (err) {
-    console.error('Student login error:', err.message);
-    res.status(500).json({ error: 'Server Error' });
-  }
-};
 
 
 // Get specific student profile by ID
