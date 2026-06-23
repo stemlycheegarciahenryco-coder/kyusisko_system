@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   IconCheck, IconX, IconLock, IconLockOpen, IconFileText,
   IconMail, IconPhone, IconMapPin, IconWorld, IconBuilding,
-  IconUser, IconExternalLink, IconAlertCircle, IconRefresh, IconUpload, IconSend
+  IconUser, IconExternalLink, IconAlertCircle, IconRefresh, IconPlus, IconTrash, IconSend
 } from '@tabler/icons-react';
 import api from '../api';
 import Swal from 'sweetalert2';
@@ -10,8 +10,14 @@ import Swal from 'sweetalert2';
 const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetchOrgs }) => {
   if (!org) return null;
 
-  const [uploadingDocs, setUploadingDocs] = useState(false);
-  const [selectedDocs, setSelectedDocs] = useState(null);
+  const [sendingReqs, setSendingReqs] = useState(false);
+  const [reqFields, setReqFields] = useState([
+    'SEC Registration / DTI Permit',
+    'Mayor\'s Business Permit',
+    'Valid ID of Representative',
+    'Signed Memorandum of Agreement (MOA)'
+  ]);
+  const [newField, setNewField] = useState('');
 
   const isPending  = org.status === 'pending';
   const isApproved = org.status === 'approved';
@@ -32,38 +38,49 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
   const statusColor = isApproved ? '#22c55e' : isRejected ? colors.red : '#f59e0b';
   const statusLabel = isApproved ? 'Approved' : isRejected ? 'Rejected' : isResubmitted ? 'Updated & Pending' : 'Pending Review';
 
-  // Handle Forwarding Requirements to Org via Email
+  // Add requirement item to checklist field state
+  const handleAddField = () => {
+    if (newField.trim()) {
+      if (reqFields.includes(newField.trim())) {
+        return Swal.fire('Notice', 'This requirement title is already in your checklist.', 'info');
+      }
+      setReqFields([...reqFields, newField.trim()]);
+      setNewField('');
+    }
+  };
+
+  // Remove individual text requirements
+  const handleRemoveField = (fieldToRemove) => {
+    setReqFields(reqFields.filter(f => f !== fieldToRemove));
+  };
+
+  // Handle Forwarding Requirement guidelines to Org via JSON payload
   const handleSendRequirements = async (e) => {
     e.preventDefault();
-    if (!selectedDocs || selectedDocs.length === 0) {
-      return Swal.fire('Error', 'Please select at least one document template to send.', 'error');
-    }
-
-    const formData = new FormData();
-    for (let i = 0; i < selectedDocs.length; i++) {
-      formData.append('requirement_templates', selectedDocs[i]);
+    if (reqFields.length === 0) {
+      return Swal.fire('Error', 'Please include at least one document requirement title to send.', 'error');
     }
 
     try {
-      setUploadingDocs(true);
-      // Calls your backend route to save files and email the organization
-      await api.post(`/onboarding-orgs/send-requirements/${org.id}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+      setSendingReqs(true);
+      
+      // Changed to clean JSON payload instead of FormData
+      await api.post(`/onboarding-orgs/send-requirements/${org.id}`, {
+        requirements: reqFields 
       });
       
       Swal.fire({
-        title: 'Documents Sent!',
-        text: `Requirement guidelines have been emailed to ${org.org_name}.`,
+        title: 'Requirements Dispatched!',
+        text: `Compliance checklist guidelines have been sent to ${org.org_name}.`,
         icon: 'success',
         confirmButtonColor: colors.blue
       });
-      setSelectedDocs(null);
       if (fetchOrgs) fetchOrgs();
     } catch (err) {
       console.error(err);
-      Swal.fire('Error', 'Failed to upload or send document requirements.', 'error');
+      Swal.fire('Error', 'Failed to submit dynamic required fields data.', 'error');
     } finally {
-      setUploadingDocs(false);
+      setSendingReqs(false);
     }
   };
 
@@ -141,35 +158,59 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
             </div>
           )}
 
-          {/* ADMIN ACTION: Forward Requirements File Section */}
+          {/* ADMIN ACTION: Request Specific Requirement Upload Fields Section */}
           {isPending && (
-            <Section label="Forward Compliance Requirements">
-              <form onSubmit={handleSendRequirements} className="bg-slate-50 border border-slate-200/60 rounded-2xl p-4 space-y-3">
+            <Section label="Specify Compliance Upload Fields">
+              <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-4 space-y-4">
                 <p className="text-[11px] font-medium text-slate-500 leading-relaxed">
-                  Upload document templates or checklist forms here to dispatch them directly to this provider's registration email.
+                  Enter the specific document names you expect this provider to fulfill. These titles will be assigned to their onboarding field profile.
                 </p>
-                <div className="flex items-center gap-3">
-                  <label className="flex-1 flex items-center justify-between px-4 py-2.5 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-blue-500 transition-colors">
-                    <span className="text-xs text-slate-600 truncate max-w-[250px]">
-                      {selectedDocs ? `${selectedDocs.length} file(s) selected` : 'Choose requirement templates...'}
-                    </span>
-                    <IconUpload size={16} className="text-slate-400" />
-                    <input 
-                      type="file" 
-                      multiple 
-                      className="hidden" 
-                      onChange={(e) => setSelectedDocs(e.target.files)} 
-                    />
-                  </label>
+
+                {/* Checklist Requirements Stack */}
+                <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
+                  {reqFields.map((field, idx) => (
+                    <div key={idx} className="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-slate-100 shadow-sm group">
+                      <span className="text-xs font-semibold text-slate-800">{field}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveField(field)}
+                        className="text-slate-300 hover:text-red-500 transition-colors"
+                      >
+                        <IconTrash size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add Fields Action Line */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="e.g., BIR Form 2303, Cert of Good Standing"
+                    value={newField}
+                    onChange={(e) => setNewField(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddField())}
+                    className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-slate-400 transition-all font-['Inter']"
+                  />
                   <button
-                    type="submit"
-                    disabled={uploadingDocs}
-                    className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 text-white font-black text-[10px] uppercase tracking-widest rounded-xl flex items-center gap-2 transition-all shrink-0"
+                    type="button"
+                    onClick={handleAddField}
+                    className="p-2 bg-slate-200 hover:bg-slate-300 rounded-xl text-slate-700 transition-colors flex items-center justify-center shrink-0"
                   >
-                    {uploadingDocs ? 'Sending...' : <><IconSend size={14} /> Send Docs</>}
+                    <IconPlus size={16} />
                   </button>
                 </div>
-              </form>
+
+                {/* Dispatch Trigger */}
+                <button
+                  type="button"
+                  onClick={handleSendRequirements}
+                  disabled={sendingReqs}
+                  className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 text-white font-black text-[10px] uppercase tracking-widest rounded-xl flex items-center justify-center gap-2 transition-all"
+                >
+                  {sendingReqs ? 'Sending Fields...' : <><IconSend size={14} /> Assign & Request Requirements</>}
+                </button>
+              </div>
             </Section>
           )}
 
