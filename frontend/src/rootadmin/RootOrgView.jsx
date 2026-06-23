@@ -1,18 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   IconCheck, IconX, IconLock, IconLockOpen, IconFileText,
   IconMail, IconPhone, IconMapPin, IconWorld, IconBuilding,
-  IconUser, IconExternalLink, IconAlertCircle, IconRefresh
+  IconUser, IconExternalLink, IconAlertCircle, IconRefresh, IconUpload, IconSend
 } from '@tabler/icons-react';
+import api from '../api';
+import Swal from 'sweetalert2';
 
-const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors }) => {
+const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetchOrgs }) => {
   if (!org) return null;
+
+  const [uploadingDocs, setUploadingDocs] = useState(false);
+  const [selectedDocs, setSelectedDocs] = useState(null);
 
   const isPending  = org.status === 'pending';
   const isApproved = org.status === 'approved';
   const isRejected = org.status === 'rejected';
-
-  // Condition to check if a pending provider is an updated compliance re-submission
   const isResubmitted = isPending && org.rejection_reason;
 
   const proofData = (() => {
@@ -28,6 +31,41 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors }) => 
 
   const statusColor = isApproved ? '#22c55e' : isRejected ? colors.red : '#f59e0b';
   const statusLabel = isApproved ? 'Approved' : isRejected ? 'Rejected' : isResubmitted ? 'Updated & Pending' : 'Pending Review';
+
+  // Handle Forwarding Requirements to Org via Email
+  const handleSendRequirements = async (e) => {
+    e.preventDefault();
+    if (!selectedDocs || selectedDocs.length === 0) {
+      return Swal.fire('Error', 'Please select at least one document template to send.', 'error');
+    }
+
+    const formData = new FormData();
+    for (let i = 0; i < selectedDocs.length; i++) {
+      formData.append('requirement_templates', selectedDocs[i]);
+    }
+
+    try {
+      setUploadingDocs(true);
+      // Calls your backend route to save files and email the organization
+      await api.post(`/onboarding-orgs/send-requirements/${org.id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      Swal.fire({
+        title: 'Documents Sent!',
+        text: `Requirement guidelines have been emailed to ${org.org_name}.`,
+        icon: 'success',
+        confirmButtonColor: colors.blue
+      });
+      setSelectedDocs(null);
+      if (fetchOrgs) fetchOrgs();
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Error', 'Failed to upload or send document requirements.', 'error');
+    } finally {
+      setUploadingDocs(false);
+    }
+  };
 
   return (
     <div
@@ -79,7 +117,6 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors }) => 
         {/* Body */}
         <div className="overflow-y-auto flex-1 px-7 py-6 space-y-6">
 
-          {/* NEW: Admin Compliance Resubmission Alert Flag Box */}
           {isResubmitted && (
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex gap-3 items-start">
               <IconRefresh size={18} className="text-amber-600 shrink-0 mt-0.5 animate-spin [animation-duration:4s]" />
@@ -94,7 +131,6 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors }) => 
             </div>
           )}
 
-          {/* Historical Rejection alert (Stays if state is still set to rejected) */}
           {isRejected && org.rejection_reason && (
             <div className="bg-red-50 border border-red-100 rounded-2xl p-4 flex gap-3 items-start">
               <IconAlertCircle size={18} className="text-red-500 shrink-0 mt-0.5" />
@@ -103,6 +139,38 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors }) => 
                 <p className="text-sm font-medium text-red-700">{org.rejection_reason}</p>
               </div>
             </div>
+          )}
+
+          {/* ADMIN ACTION: Forward Requirements File Section */}
+          {isPending && (
+            <Section label="Forward Compliance Requirements">
+              <form onSubmit={handleSendRequirements} className="bg-slate-50 border border-slate-200/60 rounded-2xl p-4 space-y-3">
+                <p className="text-[11px] font-medium text-slate-500 leading-relaxed">
+                  Upload document templates or checklist forms here to dispatch them directly to this provider's registration email.
+                </p>
+                <div className="flex items-center gap-3">
+                  <label className="flex-1 flex items-center justify-between px-4 py-2.5 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-blue-500 transition-colors">
+                    <span className="text-xs text-slate-600 truncate max-w-[250px]">
+                      {selectedDocs ? `${selectedDocs.length} file(s) selected` : 'Choose requirement templates...'}
+                    </span>
+                    <IconUpload size={16} className="text-slate-400" />
+                    <input 
+                      type="file" 
+                      multiple 
+                      className="hidden" 
+                      onChange={(e) => setSelectedDocs(e.target.files)} 
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={uploadingDocs}
+                    className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 text-white font-black text-[10px] uppercase tracking-widest rounded-xl flex items-center gap-2 transition-all shrink-0"
+                  >
+                    {uploadingDocs ? 'Sending...' : <><IconSend size={14} /> Send Docs</>}
+                  </button>
+                </div>
+              </form>
+            </Section>
           )}
 
           {/* Contact person */}

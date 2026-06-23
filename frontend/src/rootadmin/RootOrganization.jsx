@@ -233,13 +233,14 @@ const RootOrganization = () => {
       </div>
 
       <RootOrgView
-        org={selectedOrg}
-        onClose={() => setSelectedOrg(null)}
-        onApprove={handleApprove}
-        onReject={handleReject}
-        onBlock={handleBlockToggle}
-        colors={colors}
-      />
+  org={selectedOrg}
+  onClose={() => setSelectedOrg(null)}
+  onApprove={handleApprove}
+  onReject={handleReject}
+  onBlock={handleBlockToggle}
+  colors={colors}
+  fetchOrgs={fetchOrgs} // Added line here
+/>
     </div>
   );
 };
