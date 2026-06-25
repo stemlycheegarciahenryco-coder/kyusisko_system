@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useOrganization } from './useOrganization'; // Adjust path if needed
-import api from './api'; // Adjust path to your axios instance
+import { useOrganization } from './useOrganization'; 
+import api from './api'; 
 
-// Styled custom Modal matching your design architecture 
+// Styled custom Modal
 function OrgSuccessModal({ isOpen, onConfirm }) {
   if (!isOpen) return null;
   return (
@@ -37,32 +37,46 @@ export const CompliancePage = () => {
   const navigate = useNavigate();
   const { handleComplianceSubmit, loading } = useOrganization();
 
-  // Dialog visual states
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [fetching, setFetching] = useState(true);
+  const [message, setMessage] = useState({ type: '', text: '' });
 
-  // State for the text details fetched from the DB
   const [orgDetails, setOrgDetails] = useState({
     org_name: '',
     provider_type: '',
-    rejection_reason: ''
+    rejection_reason: '',
+    required_fields: [] // Array of dynamically requested fields
   });
-  const [fetching, setFetching] = useState(true);
 
-  // State to hold the new files selected by the user
+  // State for fallback static files
   const [complianceFiles, setComplianceFiles] = useState({
     proof: [],
     sec_file: [],
     valid_id: []
   });
 
-  const [message, setMessage] = useState({ type: '', text: '' });
+  // State for dynamic files
+  const [dynamicFiles, setDynamicFiles] = useState({});
 
-  // Fetch the rejection reason automatically when the page loads
   useEffect(() => {
     const fetchDetails = async () => {
       try {
         const response = await api.get(`/onboarding-orgs/compliance-details/${id}`);
-        setOrgDetails(response.data);
+        
+        // Safely parse the required_fields JSON string from the database
+        let parsedFields = [];
+        try {
+          if (response.data.required_fields) {
+            parsedFields = JSON.parse(response.data.required_fields);
+          }
+        } catch (e) {
+          console.error("Failed to parse required_fields", e);
+        }
+
+        setOrgDetails({ 
+          ...response.data, 
+          required_fields: parsedFields 
+        });
       } catch (err) {
         setMessage({ 
           type: 'error', 
@@ -75,16 +89,27 @@ export const CompliancePage = () => {
     fetchDetails();
   }, [id]);
 
+  const handleDynamicFileChange = (fieldName, files) => {
+    setDynamicFiles(prev => ({
+      ...prev,
+      [fieldName]: Array.from(files)
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault(); 
     setMessage({ type: '', text: '' });
 
-    const result = await handleComplianceSubmit(id, complianceFiles);
+    // Determine which payload to send based on whether dynamic fields exist
+    const hasDynamicRequirements = orgDetails.required_fields.length > 0;
+    const payloadToSend = hasDynamicRequirements ? dynamicFiles : complianceFiles;
+
+    // Pass the payload and a flag to your hook so it knows how to handle the FormData
+    const result = await handleComplianceSubmit(id, payloadToSend, hasDynamicRequirements);
 
     if (result.success) {
-      // Clear local file inputs out of elements safely
       setComplianceFiles({ proof: [], sec_file: [], valid_id: [] });
-      // Open the custom dialog modal to announce the win
+      setDynamicFiles({});
       setIsModalOpen(true);
     } else {
       setMessage({ type: 'error', text: result.error });
@@ -93,7 +118,7 @@ export const CompliancePage = () => {
 
   const handleModalCloseAndRedirect = () => {
     setIsModalOpen(false);
-    navigate('/'); // Send them cleanly back to Home.jsx
+    navigate('/');
   };
 
   if (fetching) {
@@ -104,11 +129,12 @@ export const CompliancePage = () => {
     );
   }
 
+  const hasDynamicRequirements = orgDetails.required_fields.length > 0;
+
   return (
     <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center font-['Inter',_sans-serif]">
       <div className="max-w-xl w-full bg-[#FFFCFB] p-8 rounded-[2.5rem] shadow-2xl shadow-blue-900/5 border border-slate-100">
         
-        {/* Header */}
         <div className="text-center mb-8">
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#093fb4] mb-1">Security & Compliance</p>
           <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Compliance Portal</h2>
@@ -117,68 +143,94 @@ export const CompliancePage = () => {
           </p>
         </div>
 
-        {/* Display Rejection Reason Box */}
-        <div className="bg-red-50 border border-red-100 p-5 rounded-2xl mb-6">
-          <h3 className="text-[10px] font-black uppercase tracking-wider text-red-700 mb-1">Action Required / Reason for Rejection:</h3>
-          <p className="text-sm font-semibold text-red-700/90 leading-relaxed">
+        <div className={`border p-5 rounded-2xl mb-6 ${hasDynamicRequirements ? 'bg-indigo-50 border-indigo-100' : 'bg-red-50 border-red-100'}`}>
+          <h3 className={`text-[10px] font-black uppercase tracking-wider mb-1 ${hasDynamicRequirements ? 'text-indigo-700' : 'text-red-700'}`}>
+            {hasDynamicRequirements ? "Requested Documents / Notes:" : "Reason for Rejection / Notes:"}
+          </h3>
+          <p className={`text-sm font-semibold leading-relaxed ${hasDynamicRequirements ? 'text-indigo-700/90' : 'text-red-700/90'}`}>
             "{orgDetails.rejection_reason || "No specific reason provided. Please update your incomplete documents below."}"
           </p>
         </div>
 
-        {/* Status Alerts */}
         {message.text && message.type === 'error' && (
           <div className="p-4 mb-6 text-xs font-bold uppercase tracking-wide rounded-xl bg-red-50 text-red-600 border border-red-100">
             {message.text}
           </div>
         )}
 
-        {/* Dynamic File Inputs based on Organization Provider Type */}
         <form onSubmit={handleSubmit} className="space-y-6">
           
-          {orgDetails.provider_type === 'INDIVIDUAL' ? (
-            <div className="space-y-2">
-              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
-                Update Valid ID <span className="text-red-500">*</span>
-              </label>
-              <input 
-                type="file" 
-                multiple
-                required
-                onChange={(e) => setComplianceFiles({ ...complianceFiles, valid_id: Array.from(e.target.files) })}
-                className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-wider file:bg-[#EEF2FF] file:text-[#093fb4] hover:file:bg-blue-100 border border-slate-200/60 bg-white rounded-xl p-2.5 outline-none focus:border-[#093fb4]/30"
-              />
+          {hasDynamicRequirements ? (
+            /* DYNAMIC UPLOAD FIELDS (From System Admin) */
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Specific Requirements</span>
+                <div className="h-px flex-1 bg-slate-100" />
+              </div>
+              
+              {orgDetails.required_fields.map((field, idx) => (
+                <div key={idx} className="space-y-2">
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500">
+                    Upload {field} <span className="text-red-500">*</span>
+                  </label>
+                  <input 
+                    type="file" 
+                    multiple
+                    required
+                    onChange={(e) => handleDynamicFileChange(field, e.target.files)}
+                    className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-wider file:bg-[#EEF2FF] file:text-[#093fb4] hover:file:bg-blue-100 border border-slate-200/60 bg-white rounded-xl p-2.5 outline-none focus:border-[#093fb4]/30"
+                  />
+                </div>
+              ))}
             </div>
           ) : (
+            /* STATIC FALLBACK FIELDS (Standard Rejection) */
             <>
-              <div className="space-y-2">
-                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Update Proof of Existence <span className="text-red-500">*</span>
-                </label>
-                <input 
-                  type="file" 
-                  multiple
-                  required
-                  onChange={(e) => setComplianceFiles({ ...complianceFiles, proof: Array.from(e.target.files) })}
-                  className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-wider file:bg-[#EEF2FF] file:text-[#093fb4] hover:file:bg-blue-100 border border-slate-200/60 bg-white rounded-xl p-2.5 outline-none focus:border-[#093fb4]/30"
-                />
-              </div>
+              {orgDetails.provider_type === 'INDIVIDUAL' ? (
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Update Valid ID <span className="text-red-500">*</span>
+                  </label>
+                  <input 
+                    type="file" 
+                    multiple
+                    required
+                    onChange={(e) => setComplianceFiles({ ...complianceFiles, valid_id: Array.from(e.target.files) })}
+                    className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-wider file:bg-[#EEF2FF] file:text-[#093fb4] hover:file:bg-blue-100 border border-slate-200/60 bg-white rounded-xl p-2.5 outline-none focus:border-[#093fb4]/30"
+                  />
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      Update Proof of Existence <span className="text-red-500">*</span>
+                    </label>
+                    <input 
+                      type="file" 
+                      multiple
+                      required
+                      onChange={(e) => setComplianceFiles({ ...complianceFiles, proof: Array.from(e.target.files) })}
+                      className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-wider file:bg-[#EEF2FF] file:text-[#093fb4] hover:file:bg-blue-100 border border-slate-200/60 bg-white rounded-xl p-2.5 outline-none focus:border-[#093fb4]/30"
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Update SEC Registration Certificate <span className="text-red-500">*</span>
-                </label>
-                <input 
-                  type="file" 
-                  multiple
-                  required
-                  onChange={(e) => setComplianceFiles({ ...complianceFiles, sec_file: Array.from(e.target.files) })}
-                  className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-wider file:bg-[#EEF2FF] file:text-[#093fb4] hover:file:bg-blue-100 border border-slate-200/60 bg-white rounded-xl p-2.5 outline-none focus:border-[#093fb4]/30"
-                />
-              </div>
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      Update SEC Registration Certificate <span className="text-red-500">*</span>
+                    </label>
+                    <input 
+                      type="file" 
+                      multiple
+                      required
+                      onChange={(e) => setComplianceFiles({ ...complianceFiles, sec_file: Array.from(e.target.files) })}
+                      className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-wider file:bg-[#EEF2FF] file:text-[#093fb4] hover:file:bg-blue-100 border border-slate-200/60 bg-white rounded-xl p-2.5 outline-none focus:border-[#093fb4]/30"
+                    />
+                  </div>
+                </>
+              )}
             </>
           )}
 
-          {/* Action Buttons */}
           <div className="flex gap-4 pt-4">
             <button
               type="button"
@@ -199,7 +251,6 @@ export const CompliancePage = () => {
         </form>
       </div>
 
-      {/* Structured Status Tracking Confirmation Dialog */}
       <OrgSuccessModal 
         isOpen={isModalOpen} 
         onConfirm={handleModalCloseAndRedirect} 

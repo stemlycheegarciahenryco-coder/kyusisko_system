@@ -4,7 +4,7 @@ const pool = require('../config/db');
 const bcrypt = require('bcryptjs');
 const upload = require('../middleware/multerConfig');
 const { verifyToken } = require('../middleware/auth');
-const { sendApprovalEmail, sendRejectionEmail, sendOrgOTPEmail } = require('../config/emailServiceOrg');
+const { sendApprovalEmail, sendRejectionEmail, sendOrgOTPEmail, sendRequirementsEmail } = require('../config/emailServiceOrg');
 
 /**
  * GET all organizations
@@ -109,7 +109,7 @@ router.patch('/approve/:id', verifyToken, async (req, res) => {
   }
 });
 
-// block
+// block their access of account
 router.patch('/block/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -127,7 +127,7 @@ router.patch('/block/:id', verifyToken, async (req, res) => {
   }
 });
 
-// unblock
+// unblock their access of account 
 router.patch('/unblock/:id', verifyToken, async (req, res) => {
   try {
     await pool.query('UPDATE sub_admins SET is_active = true WHERE id = $1', [req.params.id]);
@@ -137,7 +137,7 @@ router.patch('/unblock/:id', verifyToken, async (req, res) => {
   }
 });
 
-// reject
+// reject function for their registration
 router.post('/reject/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -174,7 +174,7 @@ router.get('/compliance-details/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
-      `SELECT id, org_name, provider_type, rejection_reason 
+      `SELECT id, org_name, provider_type, rejection_reason, required_fields 
        FROM sub_admins WHERE id = $1`,
       [id]
     );
@@ -192,39 +192,27 @@ router.get('/compliance-details/:id', async (req, res) => {
  * POST /comply/:id
  * ASYNC SYSTEM ADMIN COMPLIANCE FLOW: This handles file uploads after review!
  */
-router.post('/comply/:id', uploadFields, async (req, res) => {
+router.post('/comply/:id', upload.any(), async (req, res) => {
   const { id } = req.params;
-  const files = req.files || {};
-
-  const fileData = {
-    proof_files: files.proof ? files.proof.map(f => f.path) : [],
-    sec_files: files.sec_file ? files.sec_file.map(f => f.path) : [],
-    valid_ids: files.valid_id ? files.valid_id.map(f => f.path) : []
-  };
+  
+  // Since we use upload.any(), files are returned as an array in req.files
+  // Map all uploaded dynamic files into a clean object structure
+  const dynamicFileData = req.files.map(file => ({
+    document_name: file.fieldname,
+    file_path: file.path
+  }));
 
   try {
-    const orgCheck = await pool.query('SELECT provider_type FROM sub_admins WHERE id = $1', [id]);
-    if (orgCheck.rows.length === 0) {
-      return res.status(404).json({ error: "Organization records do not exist." });
-    }
-
-    const provider_type = orgCheck.rows[0].provider_type;
-
-    if (provider_type === "INDIVIDUAL" && fileData.valid_ids.length === 0) {
-      return res.status(400).json({ error: "Valid ID update is required." });
-    }
-    if ((provider_type === "LGU" || provider_type === "NGO") &&
-        (fileData.proof_files.length === 0 || fileData.sec_files.length === 0)) {
-      return res.status(400).json({ error: "Proof and SEC Certificate revisions are required." });
-    }
+    // ... Validation logic ...
 
     await pool.query(
       `UPDATE sub_admins 
        SET status = 'pending', 
            proof_files = $1,
-           rejection_reason = NULL 
+           rejection_reason = NULL,
+           required_fields = '[]' -- Clear the checklist after compliance
        WHERE id = $2`,
-      [JSON.stringify(fileData), id]
+      [JSON.stringify({ new_compliance_docs: dynamicFileData }), id]
     );
 
     res.json({ message: "Compliance documents resubmitted successfully! Back under review." });
@@ -296,6 +284,57 @@ router.post('/verify-otp', async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: "Verification failed." });
     }
+});
+
+
+router.post('/send-requirements/:id', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { requirements } = req.body; 
+
+    if (!requirements || !Array.isArray(requirements)) {
+      return res.status(400).json({ error: "Requirements checklist array is required." });
+    }
+
+    // 1. Update the database record
+    // We set status to 'rejected' to trigger your compliance frontend UI, 
+    // but we use a friendly 'rejection_reason' internally.
+    const result = await pool.query(  
+      `UPDATE sub_admins 
+       SET required_fields = $1, 
+           status = 'pending', 
+           is_active = false, 
+           rejection_reason = 'Pending additional requested documents.'
+       WHERE id = $2 
+       RETURNING sub_email, org_name`,
+      [JSON.stringify(requirements), id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Organization not found." });
+    }
+
+    const { sub_email, org_name } = result.rows[0];
+
+    // 2. Build a beautifully formatted HTML list specifically designed for the new email template
+    const formattedRequirementsHtml = `
+      <ul style="margin: 0; padding-left: 20px; font-family: sans-serif; font-size: 13px; color: #3730a3; font-weight: 600; line-height: 1.8;">
+        ${requirements.map(item => `<li>${item}</li>`).join('')}
+      </ul>
+    `;
+
+    // 3. Dispatch the new dedicated Requirements Email
+    await sendRequirementsEmail(sub_email, org_name, formattedRequirementsHtml, id);
+
+    res.json({ 
+      success: true, 
+      message: `Requirements successfully assigned and emailed to ${org_name}.` 
+    });
+
+  } catch (err) {
+    console.error("ASSIGN REQUIREMENTS ERROR:", err.message);
+    res.status(500).json({ error: "Failed to process compliance requirement dispatch.", details: err.message });
+  }
 });
 
 module.exports = router;

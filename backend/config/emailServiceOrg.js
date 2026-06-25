@@ -93,9 +93,55 @@ const sendRejectionEmail = async (email, orgName, reason, orgId) => {
   };
   await transporter.sendMail(mailOptions);
 };
+// 4. REQUEST SPECIFIC REQUIREMENTS (NEW)
+const sendRequirementsEmail = async (email, orgName, requirementsListHtml, orgId) => {
+  const complianceLink = `http://localhost:5173/compliance/${orgId}`;
 
+  const mailOptions = {
+    from: `"KyusISKO Portal" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: 'Action Required: Submit Additional Documents for KyusISKO',
+    html: `
+      <div style="font-family: 'Inter', sans-serif; max-width: 550px; background: #FFFCFB; border: 1px solid #e2e8f0; border-radius: 24px; padding: 32px; color: #1e293b; margin: auto;">
+        
+        <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #093fb4; margin: 0 0 4px 0;">Onboarding Status Update</p>
+        <h2 style="font-size: 22px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.02em; color: #0f172a; margin: 0 0 16px 0;">Additional Documents Needed</h2>
+        
+        <p style="font-size: 14px; font-weight: 500; line-height: 1.6; color: #64748b;">
+          Hello <strong>${orgName}</strong>,<br /><br />
+          Thank you for registering with KyusISKO. To proceed with the approval of your organization's account, our review team requires the following specific documents:
+        </p>
+
+        <!-- Requirements Checklist Box -->
+        <div style="background: #EEF2FF; border: 1px solid #c7d2fe; border-radius: 16px; padding: 16px; margin: 24px 0;">
+          <p style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #3730a3; margin: 0 0 8px 0;">Requested Documents:</p>
+          ${requirementsListHtml}
+        </div>
+
+        <p style="font-size: 13px; font-weight: 500; line-height: 1.6; color: #64748b; margin-bottom: 24px;">
+          Please prepare clear, digital copies of the requested files. Click the secure link below to access your compliance portal and upload these documents.
+        </p>
+
+        <div style="text-align: center; margin-bottom: 24px;">
+          <a href="${complianceLink}" style="display: inline-block; background: #093fb4; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em;">
+            Upload Required Documents
+          </a>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #f1f5f9; margin-bottom: 16px;" />
+        <p style="font-size: 11px; font-weight: 500; color: #94a3b8; text-align: center; margin: 0;">
+          Your application will remain pending until these documents are submitted. Thank you for your cooperation.
+        </p>
+      </div>
+    `,
+  };
+  await transporter.sendMail(mailOptions);
+};
+
+// Update your exports at the bottom of the file to include the new function!
 module.exports = { 
   sendOrgOTPEmail,
   sendApprovalEmail, 
-  sendRejectionEmail 
+  sendRejectionEmail,
+  sendRequirementsEmail // <--- Added here
 };
