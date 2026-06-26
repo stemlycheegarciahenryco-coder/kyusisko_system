@@ -148,9 +148,65 @@ const sendRequirementsEmail = async (email, orgName, requirementsArray, orgId) =
   await transporter.sendMail(mailOptions);
 };
 
+// 5. APPROVAL CREDENTIALS (NEW)
+// Sent automatically right after approval — delivers the Provider ID and
+// generated password the org needs to log in. Kept separate from
+// sendApprovalEmail so the original approval notice is untouched.
+const sendApprovalCredentialsEmail = async (email, orgName, providerCode, password) => {
+  const loginLink = `http://localhost:5173/rootlogin`;
+
+  const mailOptions = {
+    from: `"KyusISKO Portal" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: 'Your KyusISKO Provider Login Credentials',
+    html: `
+      <div style="font-family: 'Inter', sans-serif; max-width: 550px; background: #FFFCFB; border: 1px solid #e2e8f0; border-radius: 24px; padding: 32px; color: #1e293b; margin: auto;">
+
+        <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #093fb4; margin: 0 0 4px 0;">Account Access Granted</p>
+        <h2 style="font-size: 22px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.02em; color: #0f172a; margin: 0 0 16px 0; font-style: italic;">Your Login Credentials</h2>
+
+        <p style="font-size: 14px; font-weight: 500; line-height: 1.6; color: #64748b;">
+          Hello <strong>${orgName}</strong>,<br /><br />
+          Your organization has been approved on the <strong>KyusISKO Scholarship Portal</strong>. Below are your login credentials — please keep them secure and change your password after your first login if that option is available.
+        </p>
+
+        <div style="background: #EEF2FF; border: 1px solid #c7d2fe; border-radius: 16px; padding: 20px; margin: 24px 0;">
+          <p style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #3730a3; margin: 0 0 10px 0;">Login Details:</p>
+          <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: #1e293b;">
+            Provider ID: <span style="font-weight: 900; color: #093fb4;">${providerCode}</span>
+          </p>
+          <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: #1e293b;">
+            Email: <span style="font-weight: 900; color: #093fb4;">${email}</span>
+          </p>
+          <p style="margin: 0; font-size: 13px; font-weight: 600; color: #1e293b;">
+            Password: <span style="font-weight: 900; color: #093fb4; letter-spacing: 0.05em;">${password}</span>
+          </p>
+        </div>
+
+        <p style="font-size: 13px; font-weight: 500; line-height: 1.6; color: #64748b; margin-bottom: 24px;">
+          You may log in using either your Provider ID or your email address, along with the password above.
+        </p>
+
+        <div style="text-align: center; margin-bottom: 24px;">
+          <a href="${loginLink}" style="display: inline-block; background: #093fb4; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em;">
+            Log In to Dashboard
+          </a>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #f1f5f9; margin-bottom: 16px;" />
+        <p style="font-size: 11px; font-weight: 500; color: #94a3b8; text-align: center; margin: 0;">
+          For security, please do not share these credentials. If you did not expect this email, contact our support team immediately.
+        </p>
+      </div>
+    `,
+  };
+  await transporter.sendMail(mailOptions);
+};
+
 module.exports = { 
   sendOrgOTPEmail,
   sendApprovalEmail, 
   sendRejectionEmail,
-  sendRequirementsEmail 
+  sendRequirementsEmail,
+  sendApprovalCredentialsEmail
 };

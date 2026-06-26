@@ -91,7 +91,13 @@ exports.portalLogin = async (req, res) => {
 
         // --- EMAIL ROUTING ENTRY STRATEGIES ---
         // Strategy A: Check if input matches an Institutional Organization Sub-Admin
-        const subResult = await pool.query('SELECT * FROM sub_admins WHERE sub_email = $1', [input]);
+        // FIX: Now matches by provider_code (e.g. "PROVIDER-001") OR sub_email,
+        // since orgs can log in with either their formatted Provider ID or email.
+        // Provider code match is case-insensitive (mirrors the SADM- admin check above).
+        const subResult = await pool.query(
+            'SELECT * FROM sub_admins WHERE UPPER(provider_code) = UPPER($1) OR sub_email = $1',
+            [input]
+        );
         
         if (subResult.rows.length > 0) {
             const sub = subResult.rows[0];
@@ -166,7 +172,8 @@ exports.portalLogin = async (req, res) => {
                     id: student.id, 
                     email: student.student_email,
                     firstName: student.sfirst_name,
-                    lastName: student.slast_name 
+                    lastName: student.slast_name,
+                    isProfileComplete: student.is_profile_complete === true
                 } 
             });
         }

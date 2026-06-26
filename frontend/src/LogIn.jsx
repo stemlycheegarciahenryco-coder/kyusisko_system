@@ -58,7 +58,13 @@ export default function LogIn() {
       } else if (role === 'student') {
         localStorage.setItem('studentId', data.id);
         localStorage.setItem('studentInfo', JSON.stringify(data));
-        navigate('/scholarships'); // Redirect to your student view
+        // New students (profile not yet completed) land on onboarding first;
+        // returning students with a completed profile go straight to scholarships.
+        if (!data.isProfileComplete) {
+          navigate('/student-onboard');
+        } else {
+          navigate('/scholarships');
+        }
       }
     } catch (err) {
       const errorData = err.response?.data;

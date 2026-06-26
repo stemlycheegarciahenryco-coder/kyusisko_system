@@ -45,6 +45,7 @@ export default function StudentRegister() {
     
     return !requiredFilled || !isPasswordValid || !passwordsMatch;
 })();
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         if (["firstName", "middleName", "lastName"].includes(name)) {

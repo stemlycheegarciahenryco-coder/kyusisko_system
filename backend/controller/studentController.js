@@ -95,6 +95,7 @@ exports.updateStudentStatus = async (req, res) => {
 };
 
 //profile student achievemets
+// Profile student achievements & academic updates
 exports.updatePortfolio = async (req, res) => {
   const { 
     student_id, 
@@ -116,9 +117,11 @@ exports.updatePortfolio = async (req, res) => {
       processedSports = JSON.stringify(sportsArray); 
     }
 
-    // 2. Format integers safely. Return undefined if blank so SQL COALESCE won't trigger update
+    // 2. Format integers safely.
     const finalCollegeId = college_id && college_id !== 'Others' && college_id !== '' ? parseInt(college_id) : null;
     const finalCourseId = course_id && course_id !== 'Others' && course_id !== '' ? parseInt(course_id) : null;
+    const finalOtherSchool = other_school && other_school.trim() !== '' ? other_school.trim() : null;
+    const finalOtherDegree = other_degree_program && other_degree_program.trim() !== '' ? other_degree_program.trim() : null;
 
     // 3. Update the 'students' table cleanly
     await pool.query(
@@ -128,53 +131,64 @@ exports.updatePortfolio = async (req, res) => {
       [bio || null, student_id]
     );
 
-    // 4. Update onboarding table safely using COALESCE patterns to prevent null wiping
+    // 4. ✅ FIXED: Smart cross-clearing CASE WHEN logic to handle toggling between formal IDs and custom text statuses
     await pool.query(
       `UPDATE student_onboarding_profiles 
-       SET college_id = CASE WHEN $1::integer IS NOT NULL THEN $1::integer ELSE college_id END, 
-           course_id = CASE WHEN $2::integer IS NOT NULL THEN $2::integer ELSE course_id END, 
-           other_school = CASE WHEN $3::text IS NOT NULL THEN $3::text ELSE other_school END, 
-           other_degree_program = CASE WHEN $4::text IS NOT NULL THEN $4::text ELSE other_degree_program END, 
+       SET college_id = CASE 
+               WHEN $1::integer IS NOT NULL THEN $1::integer 
+               WHEN $3::text IS NOT NULL THEN NULL          -- If they wrote a custom school/status, clear formal ID
+               ELSE college_id 
+           END, 
+           course_id = CASE 
+               WHEN $2::integer IS NOT NULL THEN $2::integer 
+               WHEN $4::text IS NOT NULL THEN NULL          -- If they wrote a custom degree, clear formal ID
+               ELSE course_id 
+           END, 
+           other_school = CASE 
+               WHEN $1::integer IS NOT NULL THEN NULL       -- If they selected a standard college (Ateneo), WIPE OUT "Currently Not Enrolled"!
+               WHEN $3::text IS NOT NULL THEN $3::text 
+               ELSE other_school 
+           END, 
+           other_degree_program = CASE 
+               WHEN $2::integer IS NOT NULL THEN NULL       -- If they selected a standard course, clear custom degree text
+               WHEN $4::text IS NOT NULL THEN $4::text 
+               ELSE other_degree_program 
+           END, 
            sports_interests = COALESCE($5, sports_interests),
            updated_at = NOW()
        WHERE student_id = $6`,
       [
         finalCollegeId, 
         finalCourseId, 
-        other_school || null, 
-        other_degree_program || null, 
+        finalOtherSchool, 
+        finalOtherDegree, 
         processedSports, 
         student_id
       ]
     );
 
     // 5. Handle portfolio document uploads if attached
-// ✅ FIXED: Changed from req.file to req.files to process multiple entries
-if (req.files && req.files.length > 0) {
-  const studentQuery = await pool.query('SELECT portfolio_data FROM students WHERE id = $1', [student_id]);
-  const currentPortfolio = studentQuery.rows[0]?.portfolio_data || [];
+    if (req.files && req.files.length > 0) {
+      const studentQuery = await pool.query('SELECT portfolio_data FROM students WHERE id = $1', [student_id]);
+      const currentPortfolio = studentQuery.rows[0]?.portfolio_data || [];
 
-  // If only 1 item is uploaded, Express treats req.body values as plain strings. 
-  // We normalize them into arrays here to ensure the loop works perfectly every time.
-  const titlesArray = Array.isArray(req.body.titles) ? req.body.titles : [req.body.titles];
-  const typesArray = Array.isArray(req.body.types) ? req.body.types : [req.body.types];
+      const titlesArray = Array.isArray(req.body.titles) ? req.body.titles : [req.body.titles];
+      const typesArray = Array.isArray(req.body.types) ? req.body.types : [req.body.types];
 
-  // Loop through all uploaded files matching them to their respective title and type
-  req.files.forEach((file, index) => {
-    const newEntry = {
-      type: typesArray[index] || 'Certificate',
-      title: titlesArray[index] || 'Untitled Document',
-      url: file.path // Saves the server path string (e.g., "uploads/1715...")
-    };
-    currentPortfolio.push(newEntry);
-  });
+      req.files.forEach((file, index) => {
+        const newEntry = {
+          type: typesArray[index] || 'Certificate',
+          title: titlesArray[index] || 'Untitled Document',
+          url: file.path 
+        };
+        currentPortfolio.push(newEntry);
+      });
 
-  // Save the updated portfolio matrix array back to PostgreSQL
-  await pool.query(
-    'UPDATE students SET portfolio_data = $1 WHERE id = $2', 
-    [JSON.stringify(currentPortfolio), student_id]
-  );
-}
+      await pool.query(
+        'UPDATE students SET portfolio_data = $1 WHERE id = $2', 
+        [JSON.stringify(currentPortfolio), student_id]
+      );
+    }
 
     res.json({ message: "Profile updated successfully!" });
   } catch (err) {
