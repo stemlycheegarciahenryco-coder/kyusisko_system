@@ -2,9 +2,10 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const upload = require('../middleware/multerConfig');
 const { verifyToken } = require('../middleware/auth');
-const { sendApprovalEmail, sendRejectionEmail, sendOrgOTPEmail, sendRequirementsEmail } = require('../config/emailServiceOrg');
+const { sendApprovalEmail, sendRejectionEmail, sendOrgOTPEmail, sendRequirementsEmail, sendApprovalCredentialsEmail } = require('../config/emailServiceOrg');
 
 /**
  * GET all organizations
@@ -16,7 +17,8 @@ router.get('/list', verifyToken, async (req, res) => {
       `SELECT 
         id, org_name, first_name, middle_name, last_name, 
         sub_email, contact_number, tel_number, is_active, status,
-        region, city, barangay, street_address, website, provider_type, proof_files
+        region, city, barangay, street_address, website, provider_type, proof_files,
+        provider_code
        FROM sub_admins 
        ORDER BY status = 'pending' DESC, id DESC`
     );
@@ -78,24 +80,68 @@ router.post('/register-organization', async (req, res) => {
 
 /**
  * PATCH /approve/:id
+ * FIX: Generates a brand-new random password AND a formatted Provider ID
+ * (e.g. "PROVIDER-001") on approval. The Provider ID comes from a dedicated
+ * Postgres sequence (provider_code_seq) so it never skips/collides even if
+ * orgs are rejected or deleted — see migration_add_provider_code.sql.
+ * Credentials are returned to the admin AND emailed to the org automatically.
  */
 router.patch('/approve/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
+
+    // Generate a readable-but-random temporary password, e.g. "Xk7mQp2R9z"
+    const generatedPassword = crypto.randomBytes(9).toString('base64')
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .slice(0, 12);
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(generatedPassword, salt);
+
+    // Pull the next value from the dedicated sequence and format it as
+    // "PROVIDER-001". Only happens here, at approval time — pending/rejected
+    // orgs never consume a number from the counter.
+    const seqResult = await pool.query("SELECT nextval('provider_code_seq') AS next_val");
+    const nextVal = seqResult.rows[0].next_val;
+    const providerCode = `PROVIDER-${String(nextVal).padStart(3, '0')}`;
+
     const result = await pool.query(
       `UPDATE sub_admins 
-       SET status = 'approved', is_active = true 
-       WHERE id = $1 
-       RETURNING sub_email, org_name`,
-      [id]
+       SET status = 'approved', is_active = true, sub_password = $1, provider_code = $2
+       WHERE id = $3 
+       RETURNING id, sub_email, org_name, provider_code`,
+      [hashedPassword, providerCode, id]
     );
 
-    if (result.rows.length > 0) {
-      const { sub_email, org_name } = result.rows[0];
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Organization not found." });
+    }
+
+    const { sub_email, org_name, provider_code } = result.rows[0];
+
+    // FIX: Email the Provider ID + password to the org automatically.
+    // sendApprovalCredentialsEmail must be added to emailServiceOrg.js —
+    // it is NOT the same as sendApprovalEmail (kept separate so the original
+    // approval notification email is untouched if used elsewhere).
+    if (typeof sendApprovalCredentialsEmail === 'function') {
+      await sendApprovalCredentialsEmail(sub_email, org_name, provider_code, generatedPassword);
+    } else {
+      console.warn("Warning: sendApprovalCredentialsEmail is not defined/imported in emailServiceOrg.js — credentials were NOT emailed.");
       await sendApprovalEmail(sub_email, org_name);
     }
-    res.json({ message: "Approved successfully." });
+
+    // Plaintext password is returned ONCE here for the admin to see/copy —
+    // it is never stored or logged anywhere after this point.
+    res.json({
+      message: "Approved successfully.",
+      credentials: {
+        provider_id: provider_code,
+        email: sub_email,
+        password: generatedPassword
+      }
+    });
   } catch (err) {
+    console.error("APPROVAL ERROR:", err.message);
     res.status(500).json({ error: "Approval failed" });
   }
 });
@@ -129,10 +175,18 @@ router.patch('/unblock/:id', verifyToken, async (req, res) => {
 });
 
 // Reject registration
+// FIX: Now accepts a `reasons` array (checked boxes, e.g. "Submitted documents
+// is fake or counterfeited") plus an optional free-text `note`. These are combined
+// into a single rejection_reason string. Rejection is now FINAL — is_active is
+// forced to false and /comply/:id will refuse any further resubmission for this org.
 router.post('/reject/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { reason } = req.body;
+    const { reasons, note } = req.body;
+
+    if (!reasons || !Array.isArray(reasons) || reasons.length === 0) {
+      return res.status(400).json({ error: "At least one rejection reason must be selected." });
+    }
 
     const result = await pool.query(
       'SELECT sub_email, org_name FROM sub_admins WHERE id = $1',
@@ -145,14 +199,22 @@ router.post('/reject/:id', verifyToken, async (req, res) => {
 
     const { sub_email, org_name } = result.rows[0];
 
+    // Combine checked reasons + optional note into one readable string
+    const combinedReason = note && note.trim()
+      ? `${reasons.join('; ')}. Additional note: ${note.trim()}`
+      : reasons.join('; ');
+
+    // FIX: Rejection is now permanent — status locked to 'rejected', is_active
+    // forced false, and required_fields cleared since no further compliance
+    // resubmission is allowed once an org is rejected.
     await pool.query(
       `UPDATE sub_admins 
-       SET status = 'rejected', is_active = false, rejection_reason = $1 
-       WHERE id = $2`,
-      [reason, id]
+       SET status = 'rejected', is_active = false, rejection_reason = $1, required_fields = $2
+       WHERE id = $3`,
+      [combinedReason, JSON.stringify([]), id]
     );
 
-    await sendRejectionEmail(sub_email, org_name, reason, id);
+    await sendRejectionEmail(sub_email, org_name, combinedReason, id);
     res.json({ message: "Organization rejected and compliance email sent." });
   } catch (err) {
     console.error(err.message);
@@ -196,12 +258,17 @@ router.get('/compliance-details/:id', async (req, res) => {
     }
     
     const orgResult = await pool.query(
-      'SELECT sub_email, org_name FROM sub_admins WHERE id = $1',
+      'SELECT sub_email, org_name, status FROM sub_admins WHERE id = $1',
       [id]
     );
 
     if (orgResult.rows.length === 0) {
       return res.status(404).json({ error: "Organization records do not exist." });
+    }
+
+    // FIX: Rejection is final — don't allow sending a new checklist to a rejected org.
+    if (orgResult.rows[0].status === 'rejected') {
+      return res.status(403).json({ error: "This organization has been rejected and can no longer receive compliance requirements." });
     }
 
     const { sub_email, org_name } = orgResult.rows[0];
@@ -250,9 +317,15 @@ router.post('/comply/:id', upload.any(), async (req, res) => {
   try {
     // FIX: also pull existing proof_files AND required_fields so we can MERGE
     // rather than overwrite either of them.
-    const orgCheck = await pool.query('SELECT provider_type, proof_files, required_fields FROM sub_admins WHERE id = $1', [id]);
+    const orgCheck = await pool.query('SELECT provider_type, status, proof_files, required_fields FROM sub_admins WHERE id = $1', [id]);
     if (orgCheck.rows.length === 0) {
       return res.status(404).json({ error: "Organization records do not exist." });
+    }
+
+    // FIX: Rejection is final. Once status = 'rejected', no further compliance
+    // resubmission is allowed for this organization.
+    if (orgCheck.rows[0].status === 'rejected') {
+      return res.status(403).json({ error: "This application has been rejected and can no longer submit compliance documents." });
     }
 
     // Parse whatever is already stored (string, object, null, or empty)

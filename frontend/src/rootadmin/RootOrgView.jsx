@@ -7,6 +7,13 @@ import {
 import api from '../api';
 import Swal from 'sweetalert2';
 
+const REJECTION_REASON_OPTIONS = [
+  'Submitted documents is fake or counterfeited',
+  'Registered account is unauthorized',
+  'Unverified Contact Information',
+  'Social Media Inconsistencies'
+];
+
 const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetchOrgs }) => {
   if (!org) return null;
 
@@ -18,6 +25,12 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
     'Signed Memorandum of Agreement (MOA)'
   ]);
   const [newField, setNewField] = useState('');
+
+  // NEW: Reject modal state — checkbox reasons + optional free-text note
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [selectedReasons, setSelectedReasons] = useState([]);
+  const [rejectNote, setRejectNote] = useState('');
+  const [submittingReject, setSubmittingReject] = useState(false);
 
   const isPending  = org.status === 'pending';
   const isApproved = org.status === 'approved';
@@ -112,6 +125,29 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
       Swal.fire('Error', 'Failed to submit required fields to the compliance flow.', 'error');
     } finally {
       setSendingReqs(false);
+    }
+  };
+
+  // NEW: Toggle a checkbox reason on/off
+  const toggleReason = (reason) => {
+    setSelectedReasons(prev =>
+      prev.includes(reason) ? prev.filter(r => r !== reason) : [...prev, reason]
+    );
+  };
+
+  // NEW: Submit the structured rejection (checked reasons + optional note)
+  const handleConfirmReject = async () => {
+    if (selectedReasons.length === 0) {
+      return Swal.fire('Select a reason', 'Please check at least one rejection reason.', 'warning');
+    }
+    try {
+      setSubmittingReject(true);
+      await onReject(org, selectedReasons, rejectNote);
+      setIsRejectModalOpen(false);
+      setSelectedReasons([]);
+      setRejectNote('');
+    } finally {
+      setSubmittingReject(false);
     }
   };
 
@@ -254,6 +290,10 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
           {/* Contact person */}
           <Section label="Contact person">
             <div className="grid grid-cols-2 gap-3">
+              {org.provider_code && (
+                <InfoCard icon={<IconUser size={14} className="text-[#093fb4]" />} label="Provider ID"
+                  value={org.provider_code} />
+              )}
               <InfoCard icon={<IconUser size={14} className="text-[#093fb4]" />} label="Full name"
                 value={`${org.first_name || ''} ${org.middle_name || ''} ${org.last_name || ''}`.trim()} />
               <InfoCard icon={<IconMail size={14} className="text-[#093fb4]" />} label="Email" value={org.sub_email} />
@@ -350,7 +390,7 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
                 <IconCheck size={16} /> {isResubmitted ? "Approve Resubmission" : "Approve Provider"}
               </button>
               <button
-                onClick={() => onReject(org)}
+                onClick={() => setIsRejectModalOpen(true)}
                 className="px-5 py-3 bg-red-50 hover:bg-red-100 text-red-500 border border-red-100 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
               >
                 <IconX size={16} /> Reject Account
@@ -384,6 +424,68 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
         </div>
 
       </div>
+
+      {/* NEW: Reject Reason Modal — checkbox list + optional note */}
+      {isRejectModalOpen && (
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+          onClick={(e) => e.target === e.currentTarget && !submittingReject && setIsRejectModalOpen(false)}
+        >
+          <div className="bg-[#FFFCFB] w-full max-w-md rounded-3xl shadow-2xl p-7">
+            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-1">Reject {org.org_name}</h3>
+            <p className="text-xs font-semibold text-slate-500 mb-5">
+              This action is final — the organization will not be able to resubmit compliance documents afterward.
+            </p>
+
+            <div className="space-y-2 mb-5">
+              {REJECTION_REASON_OPTIONS.map((reason) => (
+                <label
+                  key={reason}
+                  className="flex items-start gap-3 bg-slate-50 border border-slate-100 rounded-xl px-3.5 py-3 cursor-pointer hover:bg-red-50/50 transition-colors"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedReasons.includes(reason)}
+                    onChange={() => toggleReason(reason)}
+                    className="mt-0.5 w-4 h-4 accent-red-500 shrink-0"
+                  />
+                  <span className="text-xs font-semibold text-slate-700">{reason}</span>
+                </label>
+              ))}
+            </div>
+
+            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">
+              Additional note (optional)
+            </label>
+            <textarea
+              value={rejectNote}
+              onChange={(e) => setRejectNote(e.target.value)}
+              placeholder="Add any extra context for this rejection..."
+              rows={3}
+              className="w-full px-3.5 py-3 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-red-400 transition-all mb-6 resize-none"
+            />
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                disabled={submittingReject}
+                onClick={() => { setIsRejectModalOpen(false); setSelectedReasons([]); setRejectNote(''); }}
+                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={submittingReject}
+                onClick={handleConfirmReject}
+                className="flex-1 py-3 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+              >
+                <IconX size={14} /> {submittingReject ? 'Rejecting...' : 'Confirm Rejection'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

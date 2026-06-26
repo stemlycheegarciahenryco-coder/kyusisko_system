@@ -54,27 +54,53 @@ const RootOrganization = () => {
     const result = await Swal.fire(swalConfig('Approve?', `Verify ${org.org_name}?`, 'question', colors.blue));
     if (result.isConfirmed) {
       try {
-        await api.patch(`/onboarding-orgs/approve/${org.id}`);
-        Swal.fire({ title: 'Approved!', icon: 'success', timer: 1500, showConfirmButton: false });
+        const res = await api.patch(`/onboarding-orgs/approve/${org.id}`);
+        const creds = res.data?.credentials;
+
         setSelectedOrg(null);
         fetchOrgs();
+
+        // NEW: Show the generated Provider ID / email / password ONCE so the
+        // admin can relay them to the provider. This is the only place the
+        // plaintext password is ever visible.
+        if (creds) {
+          await Swal.fire({
+            title: 'Provider Approved!',
+            icon: 'success',
+            background: colors.white,
+            color: '#0f172a',
+            borderRadius: '24px',
+            confirmButtonColor: colors.blue,
+            confirmButtonText: 'Got it',
+            html: `
+              <div style="text-align:left; font-family:Inter, sans-serif; font-size:13px; line-height:1.6;">
+                <p style="margin-bottom:10px; font-weight:600; color:#475569;">
+                  Share these login credentials with <strong>${org.org_name}</strong>. This password will not be shown again.
+                </p>
+                <div style="background:#f1f5f9; border-radius:14px; padding:14px 16px; margin-top:8px;">
+                  <p style="margin:0 0 6px 0;"><strong>Provider ID:</strong> ${creds.provider_id}</p>
+                  <p style="margin:0 0 6px 0;"><strong>Email:</strong> ${creds.email}</p>
+                  <p style="margin:0;"><strong>Password:</strong> <code style="background:#e2e8f0; padding:2px 6px; border-radius:6px;">${creds.password}</code></p>
+                </div>
+              </div>
+            `
+          });
+        } else {
+          Swal.fire({ title: 'Approved!', icon: 'success', timer: 1500, showConfirmButton: false });
+        }
       } catch { Swal.fire('Error', 'Action failed.', 'error'); }
     }
   };
 
-  const handleReject = async (org) => {
-    const { value: reason } = await Swal.fire({
-      ...swalConfig('Reject Application', `Reason for rejecting ${org.org_name}?`, 'warning', colors.red),
-      input: 'textarea',
-      inputPlaceholder: 'Type reason here...',
-    });
-    if (reason) {
-      try {
-        await api.post(`/onboarding-orgs/reject/${org.id}`, { reason });
-        Swal.fire({ title: 'Rejected', icon: 'info', timer: 1500, showConfirmButton: false });
-        setSelectedOrg(null);
-        fetchOrgs();
-      } catch { Swal.fire('Error', 'Action failed.', 'error'); }
+  // NEW: Called from RootOrgView's reject modal with checked reasons + optional note
+  const handleReject = async (org, reasons, note) => {
+    try {
+      await api.post(`/onboarding-orgs/reject/${org.id}`, { reasons, note });
+      Swal.fire({ title: 'Rejected', icon: 'info', timer: 1500, showConfirmButton: false });
+      setSelectedOrg(null);
+      fetchOrgs();
+    } catch (err) {
+      Swal.fire('Error', err.response?.data?.error || 'Action failed.', 'error');
     }
   };
 
