@@ -170,7 +170,7 @@ const OrganizationRegisterPage = () => {
                 <option value="Government">Government</option>
                 <option value="Private">Private</option>
                 <option value="Corporate">Corporate</option>
-                <option value="NGO">NGO</option>
+                <option value="NGO">Non Government Organization</option>
                 <option value="Individual Provider">Individual Provider</option>
                 <option value="Institution">Institution</option>
               </select>

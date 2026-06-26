@@ -26,16 +26,9 @@ router.get('/list', verifyToken, async (req, res) => {
   }
 });
 
-// Multer config fields for the separate compliance route down below
-const uploadFields = upload.fields([
-  { name: 'proof', maxCount: 5 },
-  { name: 'sec_file', maxCount: 5 }, 
-  { name: 'valid_id', maxCount: 5 }
-]); 
-
 /**
  * POST /register-organization
- * PUBLIC: Self-registration flow (Pure text data payload, no uploads here)
+ * PUBLIC: Self-registration flow
  */
 router.post('/register-organization', async (req, res) => {
   const { 
@@ -49,7 +42,6 @@ router.post('/register-organization', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(sub_password, salt);
 
-    // 17 exact placeholders mapped to your Supabase schema columns
     await pool.query(
       `INSERT INTO sub_admins 
         (org_name, first_name, middle_name, last_name, sub_email, sub_password, 
@@ -64,21 +56,20 @@ router.post('/register-organization', async (req, res) => {
         sub_email,
         hashedPassword,
         contact_number,
-        tel_number || null, // Saves as NULL in Supabase if the user leaves it blank
+        tel_number || null,
         website || null,
         region,
         city,
         barangay,
         street_address,
-        false,              // is_active
-        'pending',          // status
-        JSON.stringify({}),  // proof_files text column initialized as an empty object string
+        false,
+        'pending',
+        JSON.stringify({}),
         provider_type
       ]
     );
 
     res.status(201).json({ message: "Registration submitted successfully." });
-
   } catch (err) {
     console.error("SUPABASE ERROR:", err.message);
     res.status(500).json({ error: "Registration failed." });
@@ -109,7 +100,7 @@ router.patch('/approve/:id', verifyToken, async (req, res) => {
   }
 });
 
-// block their access of account
+// Block account access
 router.patch('/block/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -127,7 +118,7 @@ router.patch('/block/:id', verifyToken, async (req, res) => {
   }
 });
 
-// unblock their access of account 
+// Unblock account access
 router.patch('/unblock/:id', verifyToken, async (req, res) => {
   try {
     await pool.query('UPDATE sub_admins SET is_active = true WHERE id = $1', [req.params.id]);
@@ -137,7 +128,7 @@ router.patch('/unblock/:id', verifyToken, async (req, res) => {
   }
 });
 
-// reject function for their registration
+// Reject registration
 router.post('/reject/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -169,7 +160,10 @@ router.post('/reject/:id', verifyToken, async (req, res) => {
   }
 });
 
-// GET ORG REJECTION DETAILS
+/**
+ * GET ORG REJECTION & COMPLIANCE DETAILS
+ * FIX: Added 'required_fields' to select query so the frontend form knows what fields to render
+ */
 router.get('/compliance-details/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -189,52 +183,142 @@ router.get('/compliance-details/:id', async (req, res) => {
 });
 
 /**
+ * POST /send-requirements/:id
+ * NEW: Endpoint explicitly matched to receive checklist arrays dispatched by RootOrgView.jsx
+ */
+  router.post('/send-requirements/:id', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { requirements } = req.body; 
+
+    if (!requirements || !Array.isArray(requirements)) {
+      return res.status(400).json({ error: "Requirements checklist array is required." });
+    }
+    
+    const orgResult = await pool.query(
+      'SELECT sub_email, org_name FROM sub_admins WHERE id = $1',
+      [id]
+    );
+
+    if (orgResult.rows.length === 0) {
+      return res.status(404).json({ error: "Organization records do not exist." });
+    }
+
+    const { sub_email, org_name } = orgResult.rows[0];
+
+    // FIX: Swapped status back to 'comply' so RootOrgView renders the 'Compliance Mode' state properly
+    await pool.query(  
+      `UPDATE sub_admins 
+       SET required_fields = $1, 
+           status = 'pending', 
+           is_active = false 
+       WHERE id = $2`,
+      [JSON.stringify(requirements), id]
+    );
+
+    // Call function cleanly passing down the clean raw array data structure
+    if (typeof sendRequirementsEmail === 'function') {
+      await sendRequirementsEmail(sub_email, org_name, requirements, id);
+    } else {
+      console.warn("Warning: sendRequirementsEmail function is not defined or imported.");
+    }
+
+    res.json({ success: true, message: "Compliance checklist saved and notification sent!" });
+  } catch (err) {
+    console.error("ASSIGN REQUIREMENTS ERROR:", err.message);
+    res.status(500).json({ error: "Failed to process compliance layout." });
+  }
+});
+
+/**
  * POST /comply/:id
- * ASYNC SYSTEM ADMIN COMPLIANCE FLOW: This handles file uploads after review!
+ * FIX: Uses upload.any() to handle any arbitrary checklist field titles defined dynamically by RootAdmin
  */
 router.post('/comply/:id', upload.any(), async (req, res) => {
   const { id } = req.params;
-  
-  // Since we use upload.any(), files are returned as an array in req.files
-  // Map all uploaded dynamic files into a clean object structure
-  const dynamicFileData = req.files.map(file => ({
-    document_name: file.fieldname,
-    file_path: file.path
+  const uploadedFiles = req.files || [];
+
+  // Structure the detailed file data for proof_files column (with storage paths)
+  const dynamicFileData = uploadedFiles.map(file => ({
+    document_name: file.fieldname, // E.g., "Mayor's Business Permit"
+    file_path: file.path           // E.g., "uploads/compliance-17194.png"
   }));
 
-  try {
-    // ... Validation logic ...
+  // Map the text strings of the uploaded items to store inside required_fields
+  const uploadedFieldNames = uploadedFiles.map(file => file.fieldname); // E.g., ["Mayor's Business Permit"]
 
+  try {
+    // FIX: also pull existing proof_files AND required_fields so we can MERGE
+    // rather than overwrite either of them.
+    const orgCheck = await pool.query('SELECT provider_type, proof_files, required_fields FROM sub_admins WHERE id = $1', [id]);
+    if (orgCheck.rows.length === 0) {
+      return res.status(404).json({ error: "Organization records do not exist." });
+    }
+
+    // Parse whatever is already stored (string, object, null, or empty)
+    let existingProof = {};
+    try {
+      const raw = orgCheck.rows[0].proof_files;
+      existingProof = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : {};
+    } catch (parseErr) {
+      console.warn("Could not parse existing proof_files, starting fresh:", parseErr.message);
+      existingProof = {};
+    }
+
+    // FIX: parse the ORIGINAL checklist the admin sent (e.g. "MOA"). This is what
+    // was getting blown away — required_fields was being replaced with
+    // uploadedFieldNames, which is empty/partial whenever the org skips a field
+    // or a file input's fieldname doesn't exactly match the requirement string.
+    let originalRequiredFields = [];
+    try {
+      const rawReq = orgCheck.rows[0].required_fields;
+      originalRequiredFields = rawReq
+        ? (typeof rawReq === 'string' ? JSON.parse(rawReq) : rawReq)
+        : [];
+      if (!Array.isArray(originalRequiredFields)) originalRequiredFields = [];
+    } catch (parseErr) {
+      console.warn("Could not parse existing required_fields:", parseErr.message);
+      originalRequiredFields = [];
+    }
+
+    // FIX: append new compliance docs to any previously uploaded ones instead of
+    // discarding them. This was the cause of documents "disappearing" in RootOrgView —
+    // every resubmission replaced proof_files entirely instead of adding to it.
+    const previousComplianceDocs = Array.isArray(existingProof.new_compliance_docs)
+      ? existingProof.new_compliance_docs
+      : [];
+
+    const mergedProof = {
+      ...existingProof,
+      new_compliance_docs: [...previousComplianceDocs, ...dynamicFileData]
+    };
+
+    // Move status back to 'pending'. This triggers 'isResubmitted' on your frontend automatically!
+    // FIX: required_fields now keeps the ADMIN'S ORIGINAL checklist (e.g. "MOA") intact.
+    // We no longer overwrite it with uploadedFieldNames, since that list is empty/partial
+    // whenever an org skips a field — which was collapsing required_fields to [].
     await pool.query(
       `UPDATE sub_admins 
        SET status = 'pending', 
-           proof_files = $1,
-           rejection_reason = NULL,
-           required_fields = '[]' -- Clear the checklist after compliance
-       WHERE id = $2`,
-      [JSON.stringify({ new_compliance_docs: dynamicFileData }), id]
+           proof_files = $1,        -- Merged: keeps old + new file references intact
+           required_fields = $2,    -- Preserved: admin's original checklist, never derived from uploads
+           rejection_reason = NULL
+       WHERE id = $3`,
+      [
+        JSON.stringify(mergedProof), 
+        JSON.stringify(originalRequiredFields), 
+        id
+      ]
     );
 
-    res.json({ message: "Compliance documents resubmitted successfully! Back under review." });
+    res.json({ message: "Compliance documents submitted successfully! Transferred back to pending review." });
   } catch (err) {
-    console.error(err.message);
+    console.error("COMPLIANCE SUBMISSION ERROR:", err.message);
     res.status(500).json({ error: "Submission processing dropped." });
   }
 });
 
-router.patch('/resubmit/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    await pool.query(
-      `UPDATE sub_admins SET status = 'pending' WHERE id = $1`,
-      [id]
-    );
-    res.json({ message: "Resubmitted successfully." });
-  } catch (err) {
-    res.status(500).json({ error: "Resubmission failed" });
-  }
-});
-
+// Request Registration OTP
 router.post('/request-otp', async (req, res) => {
     const { email } = req.body;
     try {
@@ -266,6 +350,7 @@ router.post('/request-otp', async (req, res) => {
     }
 });
 
+// Verify Registration OTP
 router.post('/verify-otp', async (req, res) => {
     const { email, otp } = req.body;
     try {
@@ -284,57 +369,6 @@ router.post('/verify-otp', async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: "Verification failed." });
     }
-});
-
-
-router.post('/send-requirements/:id', verifyToken, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { requirements } = req.body; 
-
-    if (!requirements || !Array.isArray(requirements)) {
-      return res.status(400).json({ error: "Requirements checklist array is required." });
-    }
-
-    // 1. Update the database record
-    // We set status to 'rejected' to trigger your compliance frontend UI, 
-    // but we use a friendly 'rejection_reason' internally.
-    const result = await pool.query(  
-      `UPDATE sub_admins 
-       SET required_fields = $1, 
-           status = 'pending', 
-           is_active = false, 
-           rejection_reason = 'Pending additional requested documents.'
-       WHERE id = $2 
-       RETURNING sub_email, org_name`,
-      [JSON.stringify(requirements), id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Organization not found." });
-    }
-
-    const { sub_email, org_name } = result.rows[0];
-
-    // 2. Build a beautifully formatted HTML list specifically designed for the new email template
-    const formattedRequirementsHtml = `
-      <ul style="margin: 0; padding-left: 20px; font-family: sans-serif; font-size: 13px; color: #3730a3; font-weight: 600; line-height: 1.8;">
-        ${requirements.map(item => `<li>${item}</li>`).join('')}
-      </ul>
-    `;
-
-    // 3. Dispatch the new dedicated Requirements Email
-    await sendRequirementsEmail(sub_email, org_name, formattedRequirementsHtml, id);
-
-    res.json({ 
-      success: true, 
-      message: `Requirements successfully assigned and emailed to ${org_name}.` 
-    });
-
-  } catch (err) {
-    console.error("ASSIGN REQUIREMENTS ERROR:", err.message);
-    res.status(500).json({ error: "Failed to process compliance requirement dispatch.", details: err.message });
-  }
 });
 
 module.exports = router;

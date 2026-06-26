@@ -74,12 +74,18 @@ export const useOrganization = () => {
     setLoading(true);
     try {
       const data = new FormData();
-      const fileFields = ['proof', 'sec_file', 'valid_id'];
-      
-      fileFields.forEach(field => {
-        if (complianceFiles[field] && complianceFiles[field].length > 0) {
-          complianceFiles[field].forEach((file) => {
-            data.append(field, file);
+
+      // FIX: complianceFiles is built dynamically in CompliancePage.jsx using the
+      // admin-defined requirement names as keys (e.g. "Signed Memorandum of
+      // Agreement (MOA)"), NOT the old fixed set ['proof', 'sec_file', 'valid_id'].
+      // Looping over the hardcoded legacy list meant none of those keys ever
+      // matched, so FormData was always sent empty and req.files was always [].
+      // Loop over whatever fields actually exist on the object instead.
+      Object.keys(complianceFiles).forEach((fieldName) => {
+        const files = complianceFiles[fieldName];
+        if (files && files.length > 0) {
+          files.forEach((file) => {
+            data.append(fieldName, file);
           });
         }
       });

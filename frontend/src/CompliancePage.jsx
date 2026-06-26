@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useOrganization } from './useOrganization'; 
 import api from './api'; 
 
-// Styled custom Modal
 function OrgSuccessModal({ isOpen, onConfirm }) {
   if (!isOpen) return null;
   return (
@@ -45,17 +44,9 @@ export const CompliancePage = () => {
     org_name: '',
     provider_type: '',
     rejection_reason: '',
-    required_fields: [] // Array of dynamically requested fields
+    required_fields: [] 
   });
 
-  // State for fallback static files
-  const [complianceFiles, setComplianceFiles] = useState({
-    proof: [],
-    sec_file: [],
-    valid_id: []
-  });
-
-  // State for dynamic files
   const [dynamicFiles, setDynamicFiles] = useState({});
 
   useEffect(() => {
@@ -63,11 +54,12 @@ export const CompliancePage = () => {
       try {
         const response = await api.get(`/onboarding-orgs/compliance-details/${id}`);
         
-        // Safely parse the required_fields JSON string from the database
         let parsedFields = [];
         try {
           if (response.data.required_fields) {
-            parsedFields = JSON.parse(response.data.required_fields);
+            parsedFields = typeof response.data.required_fields === 'string' 
+              ? JSON.parse(response.data.required_fields) 
+              : response.data.required_fields;
           }
         } catch (e) {
           console.error("Failed to parse required_fields", e);
@@ -96,29 +88,24 @@ export const CompliancePage = () => {
     }));
   };
 
+  const handleModalCloseAndRedirect = () => {
+    setIsModalOpen(false);
+    navigate('/'); // Change '/' to your actual homepage or login path if different
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault(); 
     setMessage({ type: '', text: '' });
 
-    // Determine which payload to send based on whether dynamic fields exist
-    const hasDynamicRequirements = orgDetails.required_fields.length > 0;
-    const payloadToSend = hasDynamicRequirements ? dynamicFiles : complianceFiles;
-
-    // Pass the payload and a flag to your hook so it knows how to handle the FormData
-    const result = await handleComplianceSubmit(id, payloadToSend, hasDynamicRequirements);
+    // Strictly using dynamic submission logic now
+    const result = await handleComplianceSubmit(id, dynamicFiles, true);
 
     if (result.success) {
-      setComplianceFiles({ proof: [], sec_file: [], valid_id: [] });
       setDynamicFiles({});
       setIsModalOpen(true);
     } else {
       setMessage({ type: 'error', text: result.error });
     }
-  };
-
-  const handleModalCloseAndRedirect = () => {
-    setIsModalOpen(false);
-    navigate('/');
   };
 
   if (fetching) {
@@ -128,8 +115,6 @@ export const CompliancePage = () => {
       </div>
     );
   }
-
-  const hasDynamicRequirements = orgDetails.required_fields.length > 0;
 
   return (
     <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center font-['Inter',_sans-serif]">
@@ -143,12 +128,12 @@ export const CompliancePage = () => {
           </p>
         </div>
 
-        <div className={`border p-5 rounded-2xl mb-6 ${hasDynamicRequirements ? 'bg-indigo-50 border-indigo-100' : 'bg-red-50 border-red-100'}`}>
-          <h3 className={`text-[10px] font-black uppercase tracking-wider mb-1 ${hasDynamicRequirements ? 'text-indigo-700' : 'text-red-700'}`}>
-            {hasDynamicRequirements ? "Requested Documents / Notes:" : "Reason for Rejection / Notes:"}
+        <div className="border p-5 rounded-2xl mb-6 bg-indigo-50 border-indigo-100">
+          <h3 className="text-[10px] font-black uppercase tracking-wider mb-1 text-indigo-700">
+            Requested Documents / Notes:
           </h3>
-          <p className={`text-sm font-semibold leading-relaxed ${hasDynamicRequirements ? 'text-indigo-700/90' : 'text-red-700/90'}`}>
-            "{orgDetails.rejection_reason || "No specific reason provided. Please update your incomplete documents below."}"
+          <p className="text-sm font-semibold leading-relaxed text-indigo-700/90">
+            "{orgDetails.rejection_reason || "Please upload your pending dynamic files required below."}"
           </p>
         </div>
 
@@ -160,15 +145,14 @@ export const CompliancePage = () => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           
-          {hasDynamicRequirements ? (
-            /* DYNAMIC UPLOAD FIELDS (From System Admin) */
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Specific Requirements</span>
-                <div className="h-px flex-1 bg-slate-100" />
-              </div>
-              
-              {orgDetails.required_fields.map((field, idx) => (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Specific Requirements</span>
+              <div className="h-px flex-1 bg-slate-100" />
+            </div>
+            
+            {orgDetails.required_fields && orgDetails.required_fields.length > 0 ? (
+              orgDetails.required_fields.map((field, idx) => (
                 <div key={idx} className="space-y-2">
                   <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500">
                     Upload {field} <span className="text-red-500">*</span>
@@ -181,73 +165,19 @@ export const CompliancePage = () => {
                     className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-wider file:bg-[#EEF2FF] file:text-[#093fb4] hover:file:bg-blue-100 border border-slate-200/60 bg-white rounded-xl p-2.5 outline-none focus:border-[#093fb4]/30"
                   />
                 </div>
-              ))}
-            </div>
-          ) : (
-            /* STATIC FALLBACK FIELDS (Standard Rejection) */
-            <>
-              {orgDetails.provider_type === 'INDIVIDUAL' ? (
-                <div className="space-y-2">
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    Update Valid ID <span className="text-red-500">*</span>
-                  </label>
-                  <input 
-                    type="file" 
-                    multiple
-                    required
-                    onChange={(e) => setComplianceFiles({ ...complianceFiles, valid_id: Array.from(e.target.files) })}
-                    className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-wider file:bg-[#EEF2FF] file:text-[#093fb4] hover:file:bg-blue-100 border border-slate-200/60 bg-white rounded-xl p-2.5 outline-none focus:border-[#093fb4]/30"
-                  />
-                </div>
-              ) : (
-                <>
-                  <div className="space-y-2">
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
-                      Update Proof of Existence <span className="text-red-500">*</span>
-                    </label>
-                    <input 
-                      type="file" 
-                      multiple
-                      required
-                      onChange={(e) => setComplianceFiles({ ...complianceFiles, proof: Array.from(e.target.files) })}
-                      className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-wider file:bg-[#EEF2FF] file:text-[#093fb4] hover:file:bg-blue-100 border border-slate-200/60 bg-white rounded-xl p-2.5 outline-none focus:border-[#093fb4]/30"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
-                      Update SEC Registration Certificate <span className="text-red-500">*</span>
-                    </label>
-                    <input 
-                      type="file" 
-                      multiple
-                      required
-                      onChange={(e) => setComplianceFiles({ ...complianceFiles, sec_file: Array.from(e.target.files) })}
-                      className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-wider file:bg-[#EEF2FF] file:text-[#093fb4] hover:file:bg-blue-100 border border-slate-200/60 bg-white rounded-xl p-2.5 outline-none focus:border-[#093fb4]/30"
-                    />
-                  </div>
-                </>
-              )}
-            </>
-          )}
-
-          <div className="flex gap-4 pt-4">
-            <button
-              type="button"
-              onClick={() => navigate('/')}
-              className="w-1/3 border border-slate-200 text-slate-500 font-black text-[10px] uppercase tracking-widest py-3 px-4 rounded-xl hover:bg-slate-50 transition duration-200 active:scale-[0.98]"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-2/3 bg-[#093fb4] text-white font-black text-[10px] uppercase tracking-widest py-3 px-4 rounded-xl hover:bg-blue-800 transition duration-200 disabled:bg-slate-300 disabled:cursor-not-allowed shadow-lg shadow-blue-900/10 active:scale-[0.98]"
-            >
-              {loading ? 'Processing Upload...' : 'Upload Docs & Comply'}
-            </button>
+              ))
+            ) : (
+              <p className="text-xs text-slate-400 italic text-center py-4">No specific dynamic document requirements currently specified.</p>
+            )}
           </div>
 
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-4 bg-[#093fb4] hover:bg-blue-800 disabled:bg-slate-300 text-white font-black text-xs uppercase tracking-widest rounded-2xl transition-all shadow-lg shadow-blue-900/10 flex items-center justify-center"
+          >
+            {loading ? "Uploading Records..." : "Submit Compliance Updates"}
+          </button>
         </form>
       </div>
 

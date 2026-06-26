@@ -22,23 +22,54 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
   const isPending  = org.status === 'pending';
   const isApproved = org.status === 'approved';
   const isRejected = org.status === 'rejected';
-  const isResubmitted = isPending && org.rejection_reason;
+  const isComply   = org.status === 'comply';
 
-  const proofData = (() => {
-    try { return org.proof_files ? JSON.parse(org.proof_files) : {}; }
-    catch { return {}; }
+  // 1. SAFELY EXTRACT AND PROCESS ALL DOCUMENT TYPE STRUCTURES FROM THE DB PAYLOAD
+  const processedFiles = (() => {
+    try {
+      if (!org.proof_files) return [];
+      
+      const proofData = typeof org.proof_files === 'string' ? JSON.parse(org.proof_files) : org.proof_files;
+      const items = [];
+
+      // Maps legacy static structures
+      if (proofData.proof_files && Array.isArray(proofData.proof_files)) {
+        proofData.proof_files.forEach(path => {
+          if (path && typeof path === 'string') items.push({ displayName: 'Proof of Existence', path });
+        });
+      }
+      if (proofData.sec_files && Array.isArray(proofData.sec_files)) {
+        proofData.sec_files.forEach(path => {
+          if (path && typeof path === 'string') items.push({ displayName: 'SEC / DTI Registration', path });
+        });
+      }
+      if (proofData.valid_ids && Array.isArray(proofData.valid_ids)) {
+        proofData.valid_ids.forEach(path => {
+          if (path && typeof path === 'string') items.push({ displayName: 'Representative Valid ID', path });
+        });
+      }
+
+      // Maps your new Dynamic Compliance uploads structure seamlessly!
+      if (proofData.new_compliance_docs && Array.isArray(proofData.new_compliance_docs)) {
+        proofData.new_compliance_docs.forEach(doc => {
+          if (doc && doc.file_path) {
+            items.push({ displayName: doc.document_name || 'Compliance Document', path: doc.file_path });
+          }
+        });
+      }
+
+      return items;
+    } catch (err) {
+      console.error("Failed parsing organization documents metadata object:", err);
+      return [];
+    }
   })();
 
-  const allFiles = [
-    ...(proofData.proof_files || []),
-    ...(proofData.sec_files   || []),
-    ...(proofData.valid_ids   || []),
-  ];
+  const isResubmitted = isPending && processedFiles.length > 0;
 
-  const statusColor = isApproved ? '#22c55e' : isRejected ? colors.red : '#f59e0b';
-  const statusLabel = isApproved ? 'Approved' : isRejected ? 'Rejected' : isResubmitted ? 'Updated & Pending' : 'Pending Review';
+  const statusColor = isApproved ? '#22c55e' : isRejected ? colors.red : isComply ? '#3b82f6' : '#f59e0b';
+  const statusLabel = isApproved ? 'Approved' : isRejected ? 'Rejected' : isComply ? 'Compliance Mode' : isResubmitted ? 'Updated & Pending' : 'Pending Review';
 
-  // Add requirement item to checklist field state
   const handleAddField = () => {
     if (newField.trim()) {
       if (reqFields.includes(newField.trim())) {
@@ -49,12 +80,11 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
     }
   };
 
-  // Remove individual text requirements
   const handleRemoveField = (fieldToRemove) => {
     setReqFields(reqFields.filter(f => f !== fieldToRemove));
   };
 
-  // Handle Forwarding Requirement guidelines to Org via JSON payload
+  // 2. DISPATCH CHECKLIST DIRECTLY TO THE CORRECT DYNAMIC ENDPOINT
   const handleSendRequirements = async (e) => {
     e.preventDefault();
     if (reqFields.length === 0) {
@@ -64,7 +94,7 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
     try {
       setSendingReqs(true);
       
-      // Changed to clean JSON payload instead of FormData
+      // Fixed to call the dedicated endpoint with an array payload
       await api.post(`/onboarding-orgs/send-requirements/${org.id}`, {
         requirements: reqFields 
       });
@@ -76,9 +106,10 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
         confirmButtonColor: colors.blue
       });
       if (fetchOrgs) fetchOrgs();
+      if (onClose) onClose();
     } catch (err) {
       console.error(err);
-      Swal.fire('Error', 'Failed to submit dynamic required fields data.', 'error');
+      Swal.fire('Error', 'Failed to submit required fields to the compliance flow.', 'error');
     } finally {
       setSendingReqs(false);
     }
@@ -139,11 +170,17 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
               <IconRefresh size={18} className="text-amber-600 shrink-0 mt-0.5 animate-spin [animation-duration:4s]" />
               <div>
                 <p className="text-[9px] font-black uppercase tracking-wider text-amber-800 mb-0.5">Action Required: Compliance Resubmitted</p>
-                <p className="text-xs font-semibold text-amber-900 mb-2">This provider updated their documents after being rejected.</p>
-                <div className="bg-white/60 rounded-xl p-2.5 border border-amber-100">
-                  <p className="text-[9px] font-bold uppercase text-slate-400 tracking-wide mb-0.5">Previous Rejection Reason:</p>
-                  <p className="text-xs font-medium text-slate-700 italic">"{org.rejection_reason}"</p>
-                </div>
+                <p className="text-xs font-semibold text-amber-900">This provider updated their documents for registration clearance review.</p>
+              </div>
+            </div>
+          )}
+
+          {isComply && (
+            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex gap-3 items-start">
+              <IconAlertCircle size={18} className="text-blue-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-wider text-blue-700 mb-1">Status: Compliance Requested</p>
+                <p className="text-xs font-semibold text-blue-900">This organization is currently requested to upload the custom fields specified below.</p>
               </div>
             </div>
           )}
@@ -158,12 +195,12 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
             </div>
           )}
 
-          {/* ADMIN ACTION: Request Specific Requirement Upload Fields Section */}
-          {isPending && (
+          {/* ADMIN ACTION: Compliance Upload Fields Creator Section */}
+          {(isPending || isComply) && (
             <Section label="Specify Compliance Upload Fields">
               <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-4 space-y-4">
                 <p className="text-[11px] font-medium text-slate-500 leading-relaxed">
-                  Enter the specific document names you expect this provider to fulfill. These titles will be assigned to their onboarding field profile.
+                  Enter the specific document names you expect this provider to fulfill. Submitting this list moves them into Compliance Mode and emails them a dynamic secure upload channel.
                 </p>
 
                 {/* Checklist Requirements Stack */}
@@ -206,9 +243,9 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
                   type="button"
                   onClick={handleSendRequirements}
                   disabled={sendingReqs}
-                  className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 text-white font-black text-[10px] uppercase tracking-widest rounded-xl flex items-center justify-center gap-2 transition-all"
+                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-black text-[10px] uppercase tracking-widest rounded-xl flex items-center justify-center gap-2 transition-all"
                 >
-                  {sendingReqs ? 'Sending Fields...' : <><IconSend size={14} /> Assign & Request Requirements</>}
+                  {sendingReqs ? 'Notifying Provider...' : <><IconSend size={14} /> Send Compliance Checklist</>}
                 </button>
               </div>
             </Section>
@@ -262,17 +299,19 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
             </div>
           </Section>
 
-          {/* Documents */}
-          <Section label={`Uploaded documents (${allFiles.length})`}>
-            {allFiles.length > 0 ? (
+          {/* Document Renderer */}
+          <Section label={`Uploaded documents (${processedFiles.length})`}>
+            {processedFiles.length > 0 ? (
               <div className="grid grid-cols-2 gap-2">
-                {allFiles.map((path, idx) => {
-                  const fileName = path.split('/').pop() || `Document ${idx + 1}`;
-                  const ext = fileName.split('.').pop()?.toUpperCase() || 'FILE';
+                {processedFiles.map((file, idx) => {
+                  const pathString = file.path || '';
+                  const rawFileName = pathString.split('/').pop() || `Document ${idx + 1}`;
+                  const ext = rawFileName.split('.').pop()?.toUpperCase() || 'FILE';
+
                   return (
                     <a
                       key={idx}
-                      href={`http://localhost:5000/${path}`}
+                      href={`http://localhost:5000/${pathString}`}
                       target="_blank"
                       rel="noreferrer"
                       className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-xl px-3.5 py-3 hover:bg-[#EEF2FF] hover:border-[#093fb4]/20 transition-all group"
@@ -281,8 +320,12 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
                         <IconFileText size={14} className="text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-black text-slate-800 truncate">{fileName}</p>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase">{ext} File</p>
+                        <p className="text-[11px] font-black text-slate-800 truncate" title={file.displayName}>
+                          {file.displayName}
+                        </p>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase truncate" title={rawFileName}>
+                          {ext} · {rawFileName}
+                        </p>
                       </div>
                       <IconExternalLink size={12} className="text-slate-300 group-hover:text-[#093fb4] transition-colors shrink-0" />
                     </a>
@@ -298,7 +341,7 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
 
         {/* Footer */}
         <div className="px-7 py-5 border-t border-black/5 bg-[#FFFCFB] shrink-0">
-          {isPending && (
+          {(isPending || isComply) && (
             <div className="flex gap-3">
               <button
                 onClick={() => onApprove(org)}
@@ -310,7 +353,7 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
                 onClick={() => onReject(org)}
                 className="px-5 py-3 bg-red-50 hover:bg-red-100 text-red-500 border border-red-100 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
               >
-                <IconX size={16} /> Reject Again
+                <IconX size={16} /> Reject Account
               </button>
             </div>
           )}

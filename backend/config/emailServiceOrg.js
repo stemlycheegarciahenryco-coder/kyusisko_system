@@ -94,8 +94,16 @@ const sendRejectionEmail = async (email, orgName, reason, orgId) => {
   await transporter.sendMail(mailOptions);
 };
 // 4. REQUEST SPECIFIC REQUIREMENTS (NEW)
-const sendRequirementsEmail = async (email, orgName, requirementsListHtml, orgId) => {
+const sendRequirementsEmail = async (email, orgName, requirementsArray, orgId) => {
   const complianceLink = `http://localhost:5173/compliance/${orgId}`;
+
+  // FIX: Dynamically construct safe HTML list components from string arrays
+  const formattedListItems = Array.isArray(requirementsArray)
+    ? requirementsArray.map(item => `
+        <li style="margin-bottom: 8px; font-size: 13px; font-weight: 600; color: #1e293b;">
+          ${item}
+        </li>`).join('')
+    : `<li style="font-size: 13px; font-weight: 600; color: #1e293b;">${requirementsArray}</li>`;
 
   const mailOptions = {
     from: `"KyusISKO Portal" <${process.env.EMAIL_USER}>`,
@@ -112,10 +120,11 @@ const sendRequirementsEmail = async (email, orgName, requirementsListHtml, orgId
           Thank you for registering with KyusISKO. To proceed with the approval of your organization's account, our review team requires the following specific documents:
         </p>
 
-        <!-- Requirements Checklist Box -->
-        <div style="background: #EEF2FF; border: 1px solid #c7d2fe; border-radius: 16px; padding: 16px; margin: 24px 0;">
-          <p style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #3730a3; margin: 0 0 8px 0;">Requested Documents:</p>
-          ${requirementsListHtml}
+        <div style="background: #EEF2FF; border: 1px solid #c7d2fe; border-radius: 16px; padding: 20px; margin: 24px 0;">
+          <p style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #3730a3; margin: 0 0 10px 0;">Requested Documents Checklist:</p>
+          <ul style="margin: 0; padding-left: 20px; line-height: 1.6;">
+            ${formattedListItems}
+          </ul>
         </div>
 
         <p style="font-size: 13px; font-weight: 500; line-height: 1.6; color: #64748b; margin-bottom: 24px;">
@@ -135,13 +144,13 @@ const sendRequirementsEmail = async (email, orgName, requirementsListHtml, orgId
       </div>
     `,
   };
+
   await transporter.sendMail(mailOptions);
 };
 
-// Update your exports at the bottom of the file to include the new function!
 module.exports = { 
   sendOrgOTPEmail,
   sendApprovalEmail, 
   sendRejectionEmail,
-  sendRequirementsEmail // <--- Added here
+  sendRequirementsEmail 
 };
