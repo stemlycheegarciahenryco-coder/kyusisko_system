@@ -31,7 +31,9 @@ const server = http.createServer(app);
 // List your allowed origins here. 
 // Once you deploy your Static Site, add that new URL to this array.
 const allowedOrigins = [
-  'http://localhost:5173', 
+  'http://localhost:5173',
+  'https://kyusisko.com',  // <--- ADD THIS
+  'https://www.kyusisko.com',  // <--- ADD THIS
   'https://kyusisko-system.onrender.com' // <--- REPLACE THIS WITH YOUR ACTUAL STATIC SITE URL
 ];
 
