@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
-const cookieParser = require('cookie-parser'); //
+const cookieParser = require('cookie-parser');
+// ... (Your other imports remain the same)
 const subAdminRoutes = require('./routes/subAdminRoutes');
 const authRoutes = require('./routes/authRoutes');
 const RegStudentRoutes = require('./routes/RegStudentRoutes');
@@ -17,7 +18,6 @@ const searchRoutes = require('./routes/searchRoutes');
 const lookupRouter = require('./routes/lookup');
 const systemAdminRouter = require('./routes/systemadmin');
 
-
 const http = require('http');
 const path = require('path');
 const { Server } = require('socket.io');
@@ -27,11 +27,13 @@ const app = express();
 const server = http.createServer(app);
 
 // --- 1. WebSocket & CORS ---
-// Keep this configuration for local development and safety
+
+// List your allowed origins here. 
+// Once you deploy your Static Site, add that new URL to this array.
 const allowedOrigins = [
-  'http://localhost:5173', // Needed for local dev
-  process.env.RENDER_EXTERNAL_URL // Automatically uses your Render URL if provided
-].filter(Boolean); // Removes null/undefined values
+  'http://localhost:5173', 
+  'https://kyusisko-system.onrender.com' // <--- REPLACE THIS WITH YOUR ACTUAL STATIC SITE URL
+];
 
 const io = new Server(server, {
   cors: {
@@ -54,22 +56,20 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-
-app.use(cookieParser()); // REQUIRED: Allows Express to read req.cookies
+app.use(cookieParser());
 app.use(express.json());
 
 // --- 3. Static Files & Routes ---
 const uploadsPath = path.resolve(__dirname, 'uploads');
 app.use('/uploads', express.static(uploadsPath));
 
-app.use('/api/onboarding-orgs', subAdminRoutes);       // Matches /api/onboarding-orgs/profile
-app.use('/api/organizations', orgRoutes);         // Matches /api/organizations/profile/:id
+app.use('/api/onboarding-orgs', subAdminRoutes);
+app.use('/api/organizations', orgRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/security', securityRoutes);
-app.use('/api/notif', notifRoutes);               // Matches /api/notif/mark-read
-// Keep these only if the routes inside them don't have their own prefixes
-app.use('/api', authRoutes);                 // Example: if routes are /login, /register
-app.use('/api/scholarships', scholarshipRoutes);  // Matches /api/scholarships/...
+app.use('/api/notif', notifRoutes);
+app.use('/api', authRoutes);
+app.use('/api/scholarships', scholarshipRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/renewals', renewRoutes);
 app.use('/api/messages', messageRoutes);
@@ -77,17 +77,9 @@ app.use('/api/system-admin', systemAdminRouter);
 app.use('/api/search', searchRoutes);
 app.use('/api/lookup', lookupRouter);
 app.use('/api', RegStudentRoutes);
+
 app.get('/test', (req, res) => res.send("Server is reaching this point!"));
 
-
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../frontend/dist')));
-
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/dist', 'index.html'));
-  });
-}
 // --- 4. Start Server ---
 const PORT = process.env.PORT || 5000;
-// CRITICAL: Use server.listen, not app.listen, or Socket.io won't work!
-server.listen(PORT, () => console.log(`🚀 Server & WebSocket running on port ${PORT}`));
+server.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server & WebSocket running on port ${PORT}`));
