@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
-const transporter = require ('../config/mailer');
+const transporter = require ('../config/mailer_resend');
 const bcrypt = require('bcrypt');
 const path = require('path');
 

@@ -1,5 +1,5 @@
 const pool = require('../config/db');
-const { get } = require('../config/mailer');
+const { get } = require('../config/mailer_resend');
 
 
 //this is the logic for the matching the criteria 

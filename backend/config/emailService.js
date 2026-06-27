@@ -1,4 +1,4 @@
-const transporter = require('./mailer'); // Adjust path to your mailer.js
+const transporter = require('./mailer_resend'); // Adjust path to your mailer.js
 
 const sendEmailOTP = async (targetEmail, otpCode) => {
   try {

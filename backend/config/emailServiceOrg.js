@@ -1,4 +1,4 @@
-const transporter = require('../config/mailer'); 
+const transporter = require('./mailer_resend'); 
 
 // 1. OTP VERIFICATION
 const sendOrgOTPEmail = async (email, otp) => {

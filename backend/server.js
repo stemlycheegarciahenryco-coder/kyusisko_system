@@ -24,30 +24,25 @@ const { Server } = require('socket.io');
 require('dotenv').config();
 
 const app = express();
-
-// --- 1. WebSocket & Server Setup ---
-// We use 'server' instead of 'app' to allow Socket.io to hook into the HTTP traffic
 const server = http.createServer(app);
+
+// --- 1. WebSocket & CORS ---
+// Keep this configuration for local development and safety
+const allowedOrigins = [
+  'http://localhost:5173', // Needed for local dev
+  process.env.RENDER_EXTERNAL_URL // Automatically uses your Render URL if provided
+].filter(Boolean); // Removes null/undefined values
+
 const io = new Server(server, {
-  cors: { 
-    origin: [
-      'http://localhost:5173', 
-      'https://kyusisko-frontend.vercel.app'
-    ],
-    credentials: true 
+  cors: {
+    origin: allowedOrigins,
+    credentials: true
   }
 });
 
-// --- 2. Middleware Configuration ---
-// CRITICAL: CORS must allow credentials for HttpOnly cookies to work
-const allowedOrigins = [
-  'http://localhost:5173',
-  'https://kyusisko-frontend.vercel.app'
-];
-
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, Postman)
+    // Allow if no origin (tools like Postman) or if it's in our allowed list
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -84,6 +79,14 @@ app.use('/api/lookup', lookupRouter);
 app.use('/api', RegStudentRoutes);
 app.get('/test', (req, res) => res.send("Server is reaching this point!"));
 
+
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/dist', 'index.html'));
+  });
+}
 // --- 4. Start Server ---
 const PORT = process.env.PORT || 5000;
 // CRITICAL: Use server.listen, not app.listen, or Socket.io won't work!

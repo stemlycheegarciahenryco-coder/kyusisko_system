@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const pool = require('../config/db');
 //const security = require('./securityController'); // Import your new security logic
-const transporter = require('../config/mailer'); // For sending emails
+const transporter = require('../config/mailer_resend'); // For sending emails
 
 
 

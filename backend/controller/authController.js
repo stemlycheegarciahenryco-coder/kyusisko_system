@@ -1,5 +1,5 @@
 const pool = require('../config/db');
-const transporter = require('../config/mailer');
+const transporter = require('../config/mailer_resend');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
