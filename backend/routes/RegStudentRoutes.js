@@ -172,16 +172,24 @@ router.post('/send-registration-otp', async (req, res) => {
             [email, otp, expiresAt]
         );
 
-        await transporter.sendMail({
+        // FIX: Respond to the client immediately once the OTP is safely saved.
+        // The frontend no longer waits on the Gmail SMTP round-trip (which can
+        // take several seconds) before the "processing" state clears.
+        res.json({ message: "Verification code sent." });
+
+        // Fire-and-forget the actual email send. Errors are logged but can no
+        // longer fail the HTTP response, since the client has already moved on.
+        transporter.sendMail({
             from: process.env.EMAIL_USER,
             to: email,
             subject: "KyusISKO | Verification Code",
             html: `<h3>Welcome to KyusISKO!</h3>
                    <p>Please use the code below to verify your email and continue your registration:</p>
                    <h2 style="color: #2563eb; letter-spacing: 4px;">${otp}</h2>`
+        }).catch(err => {
+            console.error("MAILER ERROR (async send failed for", email, "):", err.message);
         });
 
-        res.json({ message: "Verification code sent." });
     } catch (err) {
         console.error("MAILER ERROR", err);
         res.status(500).json({ error: "Failed to send email." });
