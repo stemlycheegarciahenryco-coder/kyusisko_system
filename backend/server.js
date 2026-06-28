@@ -32,29 +32,38 @@ const server = http.createServer(app);
 // Once you deploy your Static Site, add that new URL to this array.
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://kyusisko.com',  // <--- ADD THIS
-  'https://www.kyusisko.com',  // <--- ADD THIS
-  'https://kyusisko-system.onrender.com' // <--- REPLACE THIS WITH YOUR ACTUAL STATIC SITE URL
+  'https://kyusisko.com',
+  'https://www.kyusisko.com',
+  'https://kyusisko-system.onrender.com'
 ];
 
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      // Check if origin is in allowed list
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true
   }
 });
 
 app.use(cors({
-  origin: function (origin, callback) {
-    // Allow if no origin (tools like Postman) or if it's in our allowed list
-    if (!origin || allowedOrigins.includes(origin)) {
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], // Added OPTIONS
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
