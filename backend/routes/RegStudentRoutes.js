@@ -5,16 +5,6 @@ const transporter = require ('../config/mailer_resend');
 const bcrypt = require('bcrypt');
 const path = require('path');
 
-// 1. IMPORT YOUR CENTRALIZED MIDDLEWARE
-//const upload = require('../middleware/multerConfig'); 
-
-// 2. USE THE IMPORTED 'upload' INSTEAD OF REDEFINING IT
-/*const registerUpload = upload.fields([
-    { name: 'document', maxCount: 1 }, 
-    { name: 'coe', maxCount: 1 },
-    { name: 'reportCard', maxCount: 1 },
-    { name: 'goodMoral', maxCount: 1 }
-]);*/
 
 router.post('/register', async (req, res) => {
     const client = await pool.connect();
@@ -180,7 +170,11 @@ router.post('/send-registration-otp', async (req, res) => {
         // Fire-and-forget the actual email send. Errors are logged but can no
         // longer fail the HTTP response, since the client has already moved on.
         transporter.sendMail({
-            from: process.env.EMAIL_USER,
+            // FIX: Was process.env.EMAIL_USER (old Gmail address) — Resend
+            // rejected this with a 403 because it tried to verify "gmail.com"
+            // as the sending domain, which isn't yours to verify. Now uses
+            // RESEND_FROM_EMAIL, which is under your verified kyusisko.com domain.
+            from: `"KyusISKO" <${process.env.RESEND_FROM_EMAIL}>`,
             to: email,
             subject: "KyusISKO | Verification Code",
             html: `<h3>Welcome to KyusISKO!</h3>

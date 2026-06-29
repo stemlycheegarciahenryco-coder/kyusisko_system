@@ -95,3 +95,5 @@ exports.verifyOTP = async (req, res) => {
         res.status(500).json({ error: 'Server Error during verification.' });
     }
 };
+
+//EMAIL CHECK EXISTING 

@@ -3,7 +3,11 @@ const transporter = require('./mailer_resend'); // Adjust path to your mailer.js
 const sendEmailOTP = async (targetEmail, otpCode) => {
   try {
     const mailOptions = {
-      from: `"KyusISKO Security" <${process.env.EMAIL_USER}>`,
+      // FIX: Was hardcoded to process.env.EMAIL_USER (your old Gmail address).
+      // Resend rejected this with a 403 because it tried to verify "gmail.com"
+      // as the sending domain, which you don't own and can't verify.
+      // Now uses RESEND_FROM_EMAIL, which is under your verified kyusisko.com domain.
+      from: `"KyusISKO Security" <${process.env.RESEND_FROM_EMAIL}>`,
       to: targetEmail,
       subject: 'Your Verification Code - KyusISKO',
       // Plain text version for old email apps
@@ -22,7 +26,7 @@ const sendEmailOTP = async (targetEmail, otpCode) => {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('Email sent: ' + info.response);
+    console.log('Email sent:', info);
     return { success: true };
   } catch (error) {
     console.error('Email Error:', error);

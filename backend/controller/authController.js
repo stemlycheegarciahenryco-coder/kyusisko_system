@@ -226,7 +226,7 @@ exports.forgotPassword = async (req, res) => {
         );
 
         await transporter.sendMail({
-            from: `"KyusISKO" <${process.env.EMAIL_USER}>`,
+            from: `"KyusISKO" <${process.env.RESEND_FROM_EMAIL}>`,
             to: email,
             subject: 'Your Verification Code — KyusISKO',
             html: `
