@@ -166,7 +166,7 @@ export default function StudentTopNav() {
                 {/* Cleaned: Removed border-[#093fb4] in favor of modern slate border styling */}
                 <div className="h-9 w-9 rounded-xl border border-slate-300 overflow-hidden bg-slate-50">
                   {student?.sprofile_pic ? (
-                    <img src={`http://localhost:5000/uploads/${student.sprofile_pic}`} className="w-full h-full object-cover" alt="Profile" />
+                    <img src={student.sprofile_pic} className="w-full h-full object-cover" alt="Profile" />
                   ) : (
                     <div className="flex items-center justify-center h-full font-black text-[#093fb4] text-xs">
                       {student?.sfirst_name?.[0] || 'S'}

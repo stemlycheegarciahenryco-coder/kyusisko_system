@@ -5,6 +5,16 @@ const transporter = require ('../config/mailer_resend');
 const bcrypt = require('bcrypt');
 const path = require('path');
 
+// 1. IMPORT YOUR CENTRALIZED MIDDLEWARE
+//const upload = require('../middleware/multerConfig'); 
+
+// 2. USE THE IMPORTED 'upload' INSTEAD OF REDEFINING IT
+/*const registerUpload = upload.fields([
+    { name: 'document', maxCount: 1 }, 
+    { name: 'coe', maxCount: 1 },
+    { name: 'reportCard', maxCount: 1 },
+    { name: 'goodMoral', maxCount: 1 }
+]);*/
 
 router.post('/register', async (req, res) => {
     const client = await pool.connect();
@@ -16,6 +26,23 @@ router.post('/register', async (req, res) => {
             gender, birthDate, contactNumber,
             district, barangay, street, zipCode // New address fields from frontend
         } = req.body;
+
+        // FIX: Cross-table email uniqueness check. Previously this route only
+        // checked the `students` table, so the same email could already exist
+        // as an org (sub_admins) or system admin (users) without being caught —
+        // leading to one email resolving to the wrong role at login. Safety net
+        // here in case /send-registration-otp's check was bypassed or raced.
+        const crossCheck = await client.query(
+            `SELECT 'org' AS source FROM sub_admins WHERE sub_email = $1
+             UNION ALL
+             SELECT 'admin' AS source FROM users WHERE email = $1
+             LIMIT 1`,
+            [email]
+        );
+        if (crossCheck.rows.length > 0) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: "This email is already registered under a different account type." });
+        }
 
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
@@ -144,15 +171,26 @@ router.post('/send-registration-otp', async (req, res) => {
     const expiresAt = new Date(Date.now() + 2 * 60 * 1000); // 10 mins
 
     try {
+        // FIX: Previously only checked `students`. Now also checks `sub_admins`
+        // (orgs) and `users` (system admins) so the same email can't be used to
+        // register under a different role — this was the root cause of logins
+        // resolving to the wrong account type when the same email existed twice.
         const checkUser = await pool.query(
-            'SELECT id FROM students WHERE student_email = $1', 
+            `SELECT 'student' AS source FROM students WHERE student_email = $1
+             UNION ALL
+             SELECT 'org' AS source FROM sub_admins WHERE sub_email = $1
+             UNION ALL
+             SELECT 'admin' AS source FROM users WHERE email = $1
+             LIMIT 1`,
             [email]
         );
 
         if (checkUser.rows.length > 0) {
-            return res.status(400).json({ 
-                error: "This email is already registered. Please log in or use a different email." 
-            });
+            const source = checkUser.rows[0].source;
+            const message = source === 'student'
+                ? "This email is already registered. Please log in or use a different email."
+                : "This email is already registered under a different account type. Please use a different email.";
+            return res.status(400).json({ error: message });
         }
         // Upsert logic: If the email already has an OTP, update it.
         await pool.query(

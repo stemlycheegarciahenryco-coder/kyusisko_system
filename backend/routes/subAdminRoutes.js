@@ -41,6 +41,20 @@ router.post('/register-organization', async (req, res) => {
   } = req.body;
 
   try {
+    // FIX: Safety net — re-check cross-table uniqueness right before insert,
+    // in case the email was registered elsewhere between the OTP step and
+    // final submission (race condition), or the OTP step was bypassed.
+    const crossCheck = await pool.query(
+      `SELECT 'student' AS source FROM students WHERE student_email = $1
+       UNION ALL
+       SELECT 'admin' AS source FROM users WHERE email = $1
+       LIMIT 1`,
+      [sub_email]
+    );
+    if (crossCheck.rows.length > 0) {
+      return res.status(400).json({ error: "This email is already registered under a different account type." });
+    }
+
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(sub_password, salt);
 
@@ -395,11 +409,25 @@ router.post('/comply/:id', upload.any(), async (req, res) => {
 router.post('/request-otp', async (req, res) => {
     const { email } = req.body;
     try {
-        const checkUser = await pool.query('SELECT id FROM sub_admins WHERE sub_email = $1', [email]);
+        // FIX: Previously only checked `sub_admins`. Now also checks `students`
+        // and `users` so the same email can't register as an org if it already
+        // belongs to a student or system admin account — mirrors the same fix
+        // applied on the student registration side.
+        const checkUser = await pool.query(
+            `SELECT 'org' AS source FROM sub_admins WHERE sub_email = $1
+             UNION ALL
+             SELECT 'student' AS source FROM students WHERE student_email = $1
+             UNION ALL
+             SELECT 'admin' AS source FROM users WHERE email = $1
+             LIMIT 1`,
+            [email]
+        );
         if (checkUser.rows.length > 0) {
-            return res.status(400).json({ 
-                error: "This email is already registered to an organization." 
-            });
+            const source = checkUser.rows[0].source;
+            const message = source === 'org'
+                ? "This email is already registered to an organization."
+                : "This email is already registered under a different account type.";
+            return res.status(400).json({ error: message });
         }
 
         const generatedCode = Math.floor(100000 + Math.random() * 900000).toString();

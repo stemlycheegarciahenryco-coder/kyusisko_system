@@ -72,6 +72,8 @@ app.use(express.json());
 
 // --- 3. Static Files & Routes ---
 const uploadsPath = path.resolve(__dirname, 'uploads');
+
+//uploads
 app.use('/uploads', express.static(uploadsPath));
 
 app.use('/api/onboarding-orgs', subAdminRoutes);

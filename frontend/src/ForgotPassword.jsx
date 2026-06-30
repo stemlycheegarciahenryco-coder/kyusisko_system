@@ -1,12 +1,46 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from './api';
-import { IconMail, IconX, IconAlertTriangle } from '@tabler/icons-react';
+import { IconMail, IconX, IconAlertTriangle, IconUserExclamation } from '@tabler/icons-react';
+
+// NEW: Dialog shown when the entered email isn't found in the system,
+// instead of a plain inline error message.
+function NotRegisteredModal({ isOpen, email, onClose, onTryAgain }) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#093fb4]/20 backdrop-blur-md font-sans">
+      <div className="w-full max-w-sm bg-white rounded-[2rem] p-8 text-center shadow-2xl border border-slate-100/50">
+        <div className="w-16 h-16 bg-red-50 text-[#FF1E1E] rounded-2xl flex items-center justify-center mx-auto mb-5">
+          <IconUserExclamation size={32} stroke={2} />
+        </div>
+        <h2 className="text-lg font-black text-slate-900 mb-2 uppercase tracking-tight">Email Not Found</h2>
+        <p className="text-slate-500 text-xs font-bold leading-relaxed mb-6">
+          We couldn't find an account registered with <span className="text-slate-800">{email}</span>. Please check the email address and try again.
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all"
+          >
+            Close
+          </button>
+          <button
+            onClick={onTryAgain}
+            className="flex-1 py-3 bg-[#093fb4] hover:bg-blue-800 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showNotRegistered, setShowNotRegistered] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -17,7 +51,13 @@ export default function ForgotPassword() {
       await api.post('/auth/forgot-password', { email });
       navigate(`/verify-reset?email=${encodeURIComponent(email)}`);
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to send code.");
+      // NEW: A 404 specifically means the email isn't registered — show the
+      // dialog instead of (or in addition to) the inline error message.
+      if (err.response?.status === 404) {
+        setShowNotRegistered(true);
+      } else {
+        setError(err.response?.data?.error || "Failed to send code.");
+      }
     } finally {
       setLoading(false);
     }
@@ -107,6 +147,16 @@ export default function ForgotPassword() {
           </div>
         </div>
       </div>
+
+      <NotRegisteredModal
+        isOpen={showNotRegistered}
+        email={email}
+        onClose={() => setShowNotRegistered(false)}
+        onTryAgain={() => {
+          setShowNotRegistered(false);
+          setEmail('');
+        }}
+      />
     </div>
   );
 }

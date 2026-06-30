@@ -95,7 +95,7 @@ export default function StudentProfile() {
                 className="w-24 h-24 rounded-xl bg-[#093fb4]/5 border-2 border-[#093fb4]/15 overflow-hidden flex items-center justify-center transition-all active:scale-95 relative"
               >
                 {student?.sprofile_pic ? (
-                  <img src={`http://localhost:5000/uploads/${student.sprofile_pic}`} className="w-full h-full object-cover" alt="Profile" />
+                  <img src={student.sprofile_pic} className="w-full h-full object-cover" alt="Profile" />
                 ) : <User size={36} className="text-[#093fb4]/30" />}
                 <div className="absolute inset-0 bg-[#093fb4]/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                   <Camera className="text-white" size={20} />

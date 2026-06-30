@@ -1,15 +1,9 @@
-
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const pool = require('../config/db');
 //const security = require('./securityController'); // Import your new security logic
 const transporter = require('../config/mailer_resend'); // For sending emails
-
-
-
-
-
-
+const { supabase } = require('../config/supabaseClient'); // ✅ Fixed and completed initialization
 
 // Get specific student profile by ID
 // GET /api/students/:id
@@ -94,7 +88,6 @@ exports.updateStudentStatus = async (req, res) => {
     }
 };
 
-//profile student achievemets
 // Profile student achievements & academic updates
 exports.updatePortfolio = async (req, res) => {
   const { 
@@ -131,26 +124,26 @@ exports.updatePortfolio = async (req, res) => {
       [bio || null, student_id]
     );
 
-    // 4. ✅ FIXED: Smart cross-clearing CASE WHEN logic to handle toggling between formal IDs and custom text statuses
+    // 4. Smart cross-clearing CASE WHEN logic to handle toggling between formal IDs and custom text statuses
     await pool.query(
       `UPDATE student_onboarding_profiles 
        SET college_id = CASE 
                WHEN $1::integer IS NOT NULL THEN $1::integer 
-               WHEN $3::text IS NOT NULL THEN NULL          -- If they wrote a custom school/status, clear formal ID
+               WHEN $3::text IS NOT NULL THEN NULL          
                ELSE college_id 
            END, 
            course_id = CASE 
                WHEN $2::integer IS NOT NULL THEN $2::integer 
-               WHEN $4::text IS NOT NULL THEN NULL          -- If they wrote a custom degree, clear formal ID
+               WHEN $4::text IS NOT NULL THEN NULL          
                ELSE course_id 
            END, 
            other_school = CASE 
-               WHEN $1::integer IS NOT NULL THEN NULL       -- If they selected a standard college (Ateneo), WIPE OUT "Currently Not Enrolled"!
+               WHEN $1::integer IS NOT NULL THEN NULL       
                WHEN $3::text IS NOT NULL THEN $3::text 
                ELSE other_school 
            END, 
            other_degree_program = CASE 
-               WHEN $2::integer IS NOT NULL THEN NULL       -- If they selected a standard course, clear custom degree text
+               WHEN $2::integer IS NOT NULL THEN NULL       
                WHEN $4::text IS NOT NULL THEN $4::text 
                ELSE other_degree_program 
            END, 
@@ -167,7 +160,7 @@ exports.updatePortfolio = async (req, res) => {
       ]
     );
 
-    // 5. Handle portfolio document uploads if attached
+    // 5. ✅ FIXED: Asynchronously upload portfolio files to Supabase Storage Bucket
     if (req.files && req.files.length > 0) {
       const studentQuery = await pool.query('SELECT portfolio_data FROM students WHERE id = $1', [student_id]);
       const currentPortfolio = studentQuery.rows[0]?.portfolio_data || [];
@@ -175,14 +168,37 @@ exports.updatePortfolio = async (req, res) => {
       const titlesArray = Array.isArray(req.body.titles) ? req.body.titles : [req.body.titles];
       const typesArray = Array.isArray(req.body.types) ? req.body.types : [req.body.types];
 
-      req.files.forEach((file, index) => {
+      // Using for...of loop to handle asynchronous await functions properly
+      for (let index = 0; index < req.files.length; index++) {
+        const file = req.files[index];
+        const fileExtension = file.originalname.split('.').pop();
+        const filePath = `portfolio/student_${student_id}/${Date.now()}_${index}.${fileExtension}`;
+
+        // 5a. Upload document stream buffer to your private 'org-complied-docs' bucket
+        const { data, error: uploadError } = await supabase.storage
+          .from('org-complied-docs')
+          .upload(filePath, file.buffer, {
+            contentType: file.mimetype,
+            upsert: true
+          });
+
+        if (uploadError) throw uploadError;
+
+        // 5b. Generate long-lived (1 year) secure signed URL for private access
+        const { data: signedUrlData, error: urlError } = await supabase.storage
+          .from('org-complied-docs')
+          .createSignedUrl(filePath, 31536000); // 31536000 seconds = 1 year
+
+        if (urlError) throw urlError;
+
         const newEntry = {
           type: typesArray[index] || 'Certificate',
           title: titlesArray[index] || 'Untitled Document',
-          url: file.path 
+          file_path: filePath, // Storing path mapping helps if you need to delete it later
+          url: signedUrlData.signedUrl 
         };
         currentPortfolio.push(newEntry);
-      });
+      }
 
       await pool.query(
         'UPDATE students SET portfolio_data = $1 WHERE id = $2', 
@@ -239,24 +255,46 @@ exports.getFullProfile = async (req, res) => {
 };
 
 
-
+// ✅ FIXED: Updated to upload directly to Supabase Public 'profile-images' bucket
 exports.updateProfilePic = async (req, res) => {
   const { id } = req.params;
   
-  // Check if a file was actually uploaded
+  // Check if a file was actually uploaded via multer
   if (!req.file) {
     return res.status(400).json({ error: "No image provided" });
   }
 
-  const profilePicPath = req.file.filename; 
-
   try {
+    const fileExtension = req.file.originalname.split('.').pop();
+    const filePath = `profiles/student_${id}_${Date.now()}.${fileExtension}`;
+
+    // 1. Upload the raw image buffer to your public bucket
+    const { data, error: uploadError } = await supabase.storage
+      .from('profile-images')
+      .upload(filePath, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: true
+      });
+
+    if (uploadError) {
+      console.error("Supabase Profile Storage Error:", uploadError);
+      return res.status(500).json({ error: "Failed to upload image to storage" });
+    }
+
+    // 2. Fetch the permanent public url structure
+    const { data: urlData } = supabase.storage
+      .from('profile-images')
+      .getPublicUrl(filePath);
+
+    const publicUrl = urlData.publicUrl;
+
+    // 3. Save full URL back to 'sprofile_pic' database column
     const result = await pool.query(
       `UPDATE students 
        SET sprofile_pic = $1 
        WHERE id = $2 
        RETURNING sprofile_pic`,
-      [profilePicPath, id]
+      [publicUrl, id]
     );
 
     if (result.rowCount === 0) {
@@ -274,7 +312,6 @@ exports.updateProfilePic = async (req, res) => {
 };
 
 exports.update2FA = async (req, res) => {
-    // You can get studentId from a hidden input, query param, or JWT
     const { studentId, two_factor_enabled, preferred_2fa_method } = req.body;
 
     try {
@@ -342,8 +379,7 @@ exports.getMyScholarships = async (req, res) => {
   }
 };
 
-//Parents Profile
-
+// Parents Profile
 exports.saveOrUpdateParentProfile = async (req, res) => {
     const { studentId } = req.params;
     const {
@@ -353,11 +389,9 @@ exports.saveOrUpdateParentProfile = async (req, res) => {
         house_address
     } = req.body;
 
-    // Helper function to turn empty form inputs ("") into clean database NULLs
     const sanitize = (val) => (val && val.trim() !== "" ? val.trim() : null);
 
     try {
-        // 1. Verify the student onboarding profile actually exists first
         const studentCheck = await pool.query(
             `SELECT student_id FROM student_onboarding_profiles WHERE student_id = $1`,
             [studentId]
@@ -367,7 +401,6 @@ exports.saveOrUpdateParentProfile = async (req, res) => {
             return res.status(404).json({ success: false, error: "Student onboarding profile not found." });
         }
 
-        // 2. Run the UPSERT SQL Query
         const upsertQuery = `
             INSERT INTO student_parents (
                 student_id, 
@@ -410,7 +443,6 @@ exports.saveOrUpdateParentProfile = async (req, res) => {
     } catch (err) {
         console.error("Parent Profile Save Error:", err);
         
-        // Catch our custom database constraint fail if they left absolutely everything blank
         if (err.constraint === 'at_least_one_caregiver') {
             return res.status(400).json({ 
                 success: false, 
@@ -421,5 +453,3 @@ exports.saveOrUpdateParentProfile = async (req, res) => {
         return res.status(500).json({ success: false, error: "Internal server error saving family details." });
     }
 };
-
-

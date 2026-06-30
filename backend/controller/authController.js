@@ -206,7 +206,9 @@ exports.forgotPassword = async (req, res) => {
                 actionType: 'FORGOT_PASSWORD_FAIL', ipAddress: ip, email: email,
                 message: `Password reset requested for non-existent email address.`
             });
-            return res.json({ message: "If that email exists, a verification code has been sent." });
+            // FIX: Explicitly tells the user the email isn't registered, per
+            // product decision to favor clear UX over email-enumeration protection.
+            return res.status(404).json({ error: "This email is not registered in our system." });
         }
 
         let userId = null;
@@ -246,7 +248,7 @@ exports.forgotPassword = async (req, res) => {
             message: `Verification code successfully generated and emailed to the account.`
         });
 
-        res.json({ message: "If that email exists, a verification code has been sent." });
+        res.json({ message: "A verification code has been sent to your email." });
     } catch (err) {
         console.error("Forgot Pass Error:", err.message);
         res.status(500).json({ error: "Server Error" });

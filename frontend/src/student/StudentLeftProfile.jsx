@@ -50,7 +50,7 @@ export default function StudentLeftProfile() {
         >
           {student.sprofile_pic ? (
             <img
-              src={`http://localhost:5000/uploads/${student.sprofile_pic}`}
+              src={student.sprofile_pic}
               className="w-full h-full object-cover"
               alt="Profile"
             />
