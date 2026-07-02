@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import {supabase} from '../supabaseClient';
 import {
   IconCheck, IconX, IconLock, IconLockOpen, IconFileText,
   IconMail, IconPhone, IconMapPin, IconWorld, IconBuilding,
@@ -294,11 +295,12 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
                 <InfoCard icon={<IconUser size={14} className="text-[#093fb4]" />} label="Provider ID"
                   value={org.provider_code} />
               )}
-              <InfoCard icon={<IconUser size={14} className="text-[#093fb4]" />} label="Full name"
-                value={`${org.first_name || ''} ${org.middle_name || ''} ${org.last_name || ''}`.trim()} />
+             
               <InfoCard icon={<IconMail size={14} className="text-[#093fb4]" />} label="Email" value={org.sub_email} />
               <InfoCard icon={<IconPhone size={14} className="text-[#093fb4]" />} label="Contact number"
                 value={org.contact_number ? `+63 ${org.contact_number}` : '—'} />
+                <InfoCard icon={<IconPhone size={14} className="text-[#093fb4]" />} label="Telephone number"
+                value={org.tel_number ? ` ${org.tel_number}` : '—'} />
               <InfoCard icon={<IconBuilding size={14} className="text-[#093fb4]" />} label="Provider type"
                 value={org.provider_type || '—'} />
             </div>

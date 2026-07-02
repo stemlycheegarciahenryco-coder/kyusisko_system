@@ -3,7 +3,7 @@ const transporter = require('./mailer_resend');
 // 1. OTP VERIFICATION
 const sendOrgOTPEmail = async (email, otp) => {
   const mailOptions = {
-    from: `"KyusISKO Portal" <${process.env.EMAIL_USER}>`,
+    from: `"KyusISKO Portal" <${process.env.RESEND_FROM_EMAIL}>`,
     to: email,
     subject: `${otp} is your Organization Verification Code`,
     html: `
@@ -26,7 +26,7 @@ const sendOrgOTPEmail = async (email, otp) => {
 // 2. APPROVAL
 const sendApprovalEmail = async (email, orgName) => {
   const mailOptions = {
-    from: `"KyusISKO Portal" <${process.env.EMAIL_USER}>`,
+    from: `"KyusISKO Portal" <${process.env.RESEND_FROM_EMAIL}>`,
     to: email,
     subject: 'Congratulations! Your Organization is Approved',
     html: `
@@ -48,7 +48,7 @@ const sendRejectionEmail = async (email, orgName, reason, orgId) => {
   const complianceLink = `http://localhost:5173/compliance/${orgId}`;
 
   const mailOptions = {
-    from: `"KyusISKO Portal" <${process.env.EMAIL_USER}>`,
+    from: `"KyusISKO Portal" <${process.env.RESEND_FROM_EMAIL}>`,
     to: email,
     subject: 'Action Required: Re-submit Requirements for KyusISKO Registration',
     html: `
@@ -106,7 +106,7 @@ const sendRequirementsEmail = async (email, orgName, requirementsArray, orgId) =
     : `<li style="font-size: 13px; font-weight: 600; color: #1e293b;">${requirementsArray}</li>`;
 
   const mailOptions = {
-    from: `"KyusISKO Portal" <${process.env.EMAIL_USER}>`,
+    from: `"KyusISKO Portal" <${process.env.RESEND_FROM_EMAIL}>`,
     to: email,
     subject: 'Action Required: Submit Additional Documents for KyusISKO',
     html: `
@@ -156,7 +156,7 @@ const sendApprovalCredentialsEmail = async (email, orgName, providerCode, passwo
   const loginLink = `http://localhost:5173/rootlogin`;
 
   const mailOptions = {
-    from: `"KyusISKO Portal" <${process.env.EMAIL_USER}>`,
+    from: `"KyusISKO Portal" <${process.env.RESEND_FROM_EMAIL}>`,
     to: email,
     subject: 'Your KyusISKO Provider Login Credentials',
     html: `
