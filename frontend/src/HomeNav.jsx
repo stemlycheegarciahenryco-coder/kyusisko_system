@@ -55,7 +55,7 @@ const HomeNav = () => {
           : 'bg-transparent border-b border-white/10'
       }`}
     >
-      <div className="w-full px-12 h-16 flex items-center justify-between">
+      <div className="w-full px-4 sm:px-6 lg:px-12 h-16 flex items-center justify-between">
         
         {/* Logo */}
         <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>

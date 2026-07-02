@@ -99,30 +99,30 @@ export default function RenewCompliance({ applicationId, onSuccess }) {
     return (
       <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 text-center">
         <CheckCircle2 size={20} className="text-emerald-500 mx-auto mb-2" />
-        <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Renewal Submitted</p>
+        <p className="text-[11px] font-black uppercase tracking-widest text-emerald-600">Renewal Submitted</p>
       </div>
     );
   }
 
-  if (loading) return <div className="text-center p-4 animate-pulse text-amber-500 text-[10px] font-black uppercase">Loading Requirements...</div>;
+  if (loading) return <div className="text-center p-4 animate-pulse text-amber-500 text-[11px] font-black uppercase">Loading Requirements...</div>;
   if (!compliance) return null;
 
   return (
     <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-4">
       <div className="flex items-center gap-2">
         <AlertCircle size={14} className="text-amber-600" />
-        <p className="text-[10px] font-black uppercase tracking-widest text-amber-600">Renewal Action Required</p>
+        <p className="text-[11px] font-black uppercase tracking-widest text-amber-600">Renewal Action Required</p>
       </div>
 
       <div className="bg-white rounded-xl p-3 border border-amber-100 space-y-3">
-        <p className="text-[9px] font-black uppercase text-slate-400">Message</p>
+        <p className="text-[10px] font-black uppercase text-slate-400">Message</p>
         <p className="text-xs font-medium text-slate-700">{compliance.reason}</p>
       </div>
 
       <div className="space-y-3">
         {docList.map((doc, i) => (
           <div key={i} className="space-y-1">
-            <p className="text-[10px] font-black text-slate-600 flex items-center gap-2">
+            <p className="text-[11px] font-black text-slate-600 flex items-center gap-2">
                <span className="w-4 h-4 bg-amber-400 text-white rounded-full flex items-center justify-center text-[8px]">{i+1}</span>
                {doc}
             </p>
@@ -136,12 +136,12 @@ export default function RenewCompliance({ applicationId, onSuccess }) {
                 <div className={`p-2 rounded-lg ${fileMap[doc] ? 'bg-emerald-100' : 'bg-amber-100'}`}>
                   {fileMap[doc] ? <CheckCircle2 size={14} className="text-emerald-600" /> : <Upload size={14} className="text-amber-600" />}
                 </div>
-                <p className="text-[11px] font-bold text-slate-500 truncate">
+                <p className="text-[12px] font-bold text-slate-500 truncate">
                   {fileMap[doc] ? fileMap[doc].name : 'Click to upload'}
                 </p>
               </div>
             </div>
-            {sizeErrors[doc] && <p className="text-[9px] text-red-500 font-bold">{sizeErrors[doc]}</p>}
+            {sizeErrors[doc] && <p className="text-[10px] text-red-500 font-bold">{sizeErrors[doc]}</p>}
           </div>
         ))}
       </div>
@@ -149,7 +149,7 @@ export default function RenewCompliance({ applicationId, onSuccess }) {
       <button 
         onClick={handleSubmit} 
         disabled={submitting || !allFilled} 
-        className="w-full bg-amber-500 hover:bg-amber-600 text-white font-black py-3.5 rounded-xl flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest transition-colors disabled:opacity-40"
+        className="w-full bg-amber-500 hover:bg-amber-600 text-white font-black py-3.5 rounded-xl flex items-center justify-center gap-2 uppercase text-[11px] tracking-widest transition-colors disabled:opacity-40"
       >
         {submitting ? <Clock size={14} className="animate-spin" /> : <Upload size={14} />} 
         {submitting ? "Submitting..." : "Submit All Renewal Docs"}

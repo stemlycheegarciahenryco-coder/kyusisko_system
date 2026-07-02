@@ -29,7 +29,7 @@ export default function StudentAddress({ regform, setRegForm, handleChange }) {
     }, [regform.district, allBarangays]);
 
     const Label = ({ text, required }) => (
-        <label className="text-[11px] font-bold text-black uppercase tracking-widest ml-1">
+        <label className="text-[12px] font-bold text-black uppercase tracking-widest ml-1">
             {text} {required && <span className="text-[#FF1E1E]">*</span>}
         </label>
     );
@@ -38,7 +38,7 @@ export default function StudentAddress({ regform, setRegForm, handleChange }) {
 
     return (
         <div className="pt-4 border-t border-slate-100">
-            <p className="text-[13px] font-bold text-blue-900 uppercase tracking-widest mb-4">
+            <p className="text-[14px] font-bold text-blue-900 uppercase tracking-widest mb-4">
                 Permanent Address (Quezon City)
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

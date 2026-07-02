@@ -60,7 +60,8 @@ export default function StudentSettings() {
   if (loading) return <div className="p-10 text-white text-center">Loading Security...</div>;
 
   return (
-    <div className="max-w-2xl mx-auto py-8">
+    // jek: full width, responsive padding for all devices
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
       <div className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-slate-200">
         <h2 className="text-3xl font-black text-slate-900 tracking-tighter mb-2">Security</h2>
         <p className="text-slate-400 text-xs font-black uppercase tracking-[0.2em] mb-10">Two-Step Verification</p>
@@ -85,13 +86,13 @@ export default function StudentSettings() {
 
             {is2FAEnabled && (
               <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Method</p>
+                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Select Method</p>
                 <div className="grid grid-cols-2 gap-4">
                   <button 
                     onClick={() => handleMethodChange('email')}
                     className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all ${method === 'email' ? 'border-blue-600 bg-white text-blue-600' : 'border-transparent bg-white/50 text-slate-400'}`}
                   >
-                    <Mail size={18} /> <span className="text-xs font-black">GMAIL</span>
+                    <Mail size={20} /> <span className="text-sm font-black">GMAIL</span>
                   </button>
                   
                   {/*<button 

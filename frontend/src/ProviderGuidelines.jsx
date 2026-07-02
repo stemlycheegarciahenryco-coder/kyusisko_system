@@ -49,7 +49,7 @@ export default function ProviderGuidelines() {
       
       {/* Header */}
       <header className="bg-white/95 backdrop-blur-md border-b border-slate-100 sticky top-0 z-50 shadow-sm">
-        <div className="max-w-5xl mx-auto px-6 h-24 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-24 flex items-center justify-between">
           <button 
             onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-slate-500 hover:text-[#093fb4] font-bold text-sm transition-colors"
@@ -76,7 +76,7 @@ export default function ProviderGuidelines() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 pt-12 relative z-10">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-12 relative z-10">
         {/* Intro */}
         <div className="text-center mb-16">
           <h3 className="text-slate-700 font-medium leading-relaxed max-w-3xl mx-auto text-base

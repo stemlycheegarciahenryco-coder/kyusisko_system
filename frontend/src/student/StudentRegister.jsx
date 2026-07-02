@@ -123,7 +123,7 @@ export default function StudentRegister() {
     };
 
     const Label = ({ text, required }) => (
-        <label className="text-[11px] font-bold text-black uppercase tracking-widest ml-1">
+        <label className="text-[12px] font-bold text-black uppercase tracking-widest ml-1">
             {text} {required && <span className="text-[#FF1E1E]">*</span>}
         </label>
     );
@@ -145,10 +145,10 @@ export default function StudentRegister() {
 
                 <div className="text-center mb-8">
                     <img src="/logo.png" alt="KyusISKO Logo" className="w-24 mx-auto mb-4" />
-                    <h1 className="text-black text-[12px] font-bold uppercase tracking-widest">Student Account Registration</h1>
+                    <h1 className="text-black text-[13px] font-bold uppercase tracking-widest">Student Account Registration</h1>
                 </div>
 
-                <p className="text-[13px] font-bold text-blue-900 uppercase tracking-widest mb-4">Personal Information</p>
+                <p className="text-[14px] font-bold text-blue-900 uppercase tracking-widest mb-4">Personal Information</p>
                 
                 <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
                     
@@ -258,7 +258,7 @@ export default function StudentRegister() {
             error={showMismatch} // This turns the field red
         />
         {showMismatch && (
-            <span className="text-[9px] font-black text-red-500 uppercase tracking-tighter ml-2">
+            <span className="text-[10px] font-black text-red-500 uppercase tracking-tighter ml-2">
                 Passwords do not match
             </span>
         )}

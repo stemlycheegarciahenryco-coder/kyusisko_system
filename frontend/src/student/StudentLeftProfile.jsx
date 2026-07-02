@@ -66,7 +66,7 @@ export default function StudentLeftProfile() {
           </h2>
           
           {/* Degree/Course matching 'course_name' or 'other_degree_program' */}
-          <p className="text-[#093fb4] text-[9px] font-black uppercase tracking-widest leading-normal">
+          <p className="text-[#093fb4] text-[10px] font-black uppercase tracking-widest leading-normal">
             {displayCourse}
           </p>
 
@@ -81,10 +81,10 @@ export default function StudentLeftProfile() {
 
           {/* Address Data Row */}
           <div className="flex items-start gap-2.5">
-            <MapPin size={14} className="text-black/30 shrink-0 mt-0.5" />
+            <MapPin size={16} className="text-black/30 shrink-0 mt-0.5" />
             <div className="min-w-0">
-              <p className="text-[10px] font-black text-black/50 uppercase mb-0.5">Address</p>
-              <p className="text-[12px] font-bold text-black uppercase leading-snug break-words">
+              <p className="text-[11px] font-black text-black/50 uppercase mb-0.5">Address</p>
+              <p className="text-[14px] font-bold text-black uppercase leading-snug break-words">
                 {student.sstreet}, {student.sbarangay}, {student.sdistrict}
               </p>
             </div>
@@ -92,27 +92,27 @@ export default function StudentLeftProfile() {
 
           {/* Phone Data Row */}
           <div className="flex items-start gap-2.5">
-            <Phone size={14} className="text-black/30 shrink-0 mt-0.5" />
+            <Phone size={16} className="text-black/30 shrink-0 mt-0.5" />
             <div>
-              <p className="text-[10px] font-black text-black/50 uppercase mb-0.5">Contact Number</p>
-              <p className="text-[12px] font-bold text-black uppercase">{student.scontact_number || 'N/A'}</p>
+              <p className="text-[11px] font-black text-black/50 uppercase mb-0.5">Contact Number</p>
+              <p className="text-[14px] font-bold text-black uppercase">{student.scontact_number || 'N/A'}</p>
             </div>
           </div>
 
           {/* Email Data Row */}
           <div className="flex items-start gap-2.5">
-            <Mail size={14} className="text-black/30 shrink-0 mt-0.5" />
+            <Mail size={16} className="text-black/30 shrink-0 mt-0.5" />
             <div className="min-w-0">
-              <p className="text-[10px] font-black text-black/50 uppercase mb-0.5">Email</p>
-              <p className="text-[12px] font-bold text-black truncate lowercase">{student.student_email}</p>
+              <p className="text-[11px] font-black text-black/50 uppercase mb-0.5">Email</p>
+              <p className="text-[14px] font-bold text-black truncate lowercase">{student.student_email}</p>
             </div>
           </div>
 
           {/* Bio Section Row */}
           {student.bio && (
             <div className="pt-3 border-t border-slate-100">
-              <p className="text-[10px] font-black text-black/50 uppercase mb-1.5">Bio</p>
-              <p className="text-[11px] font-medium text-black/70 leading-relaxed break-words">
+              <p className="text-[11px] font-black text-black/50 uppercase mb-1.5">Bio</p>
+              <p className="text-[12px] font-medium text-black/70 leading-relaxed break-words">
                 {student.bio}
               </p>
             </div>

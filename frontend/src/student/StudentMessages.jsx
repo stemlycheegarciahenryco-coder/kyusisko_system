@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mail, Send, ShieldAlert, ArrowLeft, Clock, MessageSquare } from 'lucide-react';
+import { Mail, Send, ShieldAlert, ArrowLeft, Clock, MessageSquare, Search } from 'lucide-react';
 import api from '../api';
 
 const BASE_URL = 'http://localhost:5000';
@@ -13,6 +13,7 @@ export default function StudentMessages() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [threadStatus, setThreadStatus] = useState(null);
   const [statusLoading, setStatusLoading] = useState(false);
+  const [providerSearch, setProviderSearch] = useState(''); // jek: search providers of approved applications
 
   const messagesEndRef = useRef(null);
   const studentId = parseInt(localStorage.getItem('userId') || localStorage.getItem('studentId'));
@@ -120,8 +121,20 @@ export default function StudentMessages() {
     return `${BASE_URL}/${picPath}`;
   };
 
+  // jek: filter threads by provider/org name, limited to approved (or renewal) applications
+  const filteredThreads = threads.filter((t) => {
+    const status = (t.application_status || '').toLowerCase();
+    const isApproved = ['approved', 'renewal'].includes(status);
+    if (!isApproved) return false;
+    const q = providerSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (t.partner_name || '').toLowerCase().includes(q);
+  });
+
   return (
-    <div className="h-[82vh] bg-white rounded-2xl shadow-sm border border-slate-100 font-['Inter'] flex overflow-hidden">
+    // jek: full width, responsive padding for all devices
+    <div className="w-full px-4 sm:px-6 lg:px-8">
+      <div className="h-[82vh] bg-white rounded-2xl shadow-sm border border-slate-100 font-['Inter'] flex overflow-hidden">
 
       {/* LEFT SIDEBAR */}
       <div className={`w-full md:w-64 border-r border-slate-100 flex flex-col h-full bg-white ${activeThread ? 'hidden md:flex' : 'flex'}`}>
@@ -130,16 +143,28 @@ export default function StudentMessages() {
         <div className="px-4 py-4 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 bg-[#093fb4]/10 rounded-lg flex items-center justify-center shrink-0">
-              <MessageSquare size={14} className="text-[#093fb4]" />
+              <MessageSquare size={16} className="text-[#093fb4]" />
             </div>
             <div>
               <h1 className="text-sm font-black text-slate-900 tracking-tight uppercase leading-none">
                 Inbox
               </h1>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
                 Scholarship Messages
               </p>
             </div>
+          </div>
+
+          {/* jek: search providers (organizations) of approved applications */}
+          <div className="relative mt-3">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search provider..."
+              value={providerSearch}
+              onChange={(e) => setProviderSearch(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-100 focus:border-[#093fb4]/30 focus:bg-white text-[12px] font-bold text-slate-800 placeholder-slate-300 pl-9 pr-3 py-2 rounded-xl transition-all outline-none"
+            />
           </div>
         </div>
 
@@ -157,16 +182,30 @@ export default function StudentMessages() {
                 </div>
               ))}
             </div>
-          ) : threads.length === 0 ? (
+          ) : filteredThreads.length === 0 ? (
             <div className="text-center py-12 px-4 m-2 bg-slate-50 rounded-xl border border-dashed border-slate-200">
               <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center mx-auto mb-2">
-                <Mail size={18} className="text-slate-300" />
+                {providerSearch.trim() ? (
+                  <Search size={18} className="text-slate-300" />
+                ) : (
+                  <Mail size={18} className="text-slate-300" />
+                )}
               </div>
-              <p className="text-xs font-bold text-slate-400 uppercase">No messages yet</p>
-              <p className="text-[10px] text-slate-300 mt-1">Organizations will appear here once they reach out.</p>
+              {/* jek: distinguish no-search-match from no-approved-providers */}
+              {providerSearch.trim() ? (
+                <>
+                  <p className="text-xs font-bold text-slate-400 uppercase">No provider found</p>
+                  <p className="text-[11px] text-slate-300 mt-1">Try a different provider name.</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs font-bold text-slate-400 uppercase">No messages yet</p>
+                  <p className="text-[11px] text-slate-300 mt-1">Approved providers will appear here.</p>
+                </>
+              )}
             </div>
           ) : (
-            threads.map((t) => {
+            filteredThreads.map((t) => {
               const uniqueKey = t.thread_id ? `active-${t.thread_id}` : `new-${t.partner_id}`;
               const isActive = activeThread?.thread_id === t.thread_id && t.thread_id !== null;
               const picUrl = getPicUrl(t.partner_pic);
@@ -187,7 +226,7 @@ export default function StudentMessages() {
                       {picUrl ? (
                         <img src={picUrl} alt={t.partner_name} className="w-full h-full object-cover" />
                       ) : (
-                        <span className="text-sm font-black text-[#093fb4]">
+<span className="text-base font-black text-[#093fb4]">
                           {t.partner_name?.charAt(0).toUpperCase()}
                         </span>
                       )}
@@ -198,11 +237,11 @@ export default function StudentMessages() {
                         <h4 className={`font-black text-xs uppercase tracking-tight truncate leading-none ${isActive ? 'text-[#093fb4]' : 'text-slate-800'}`}>
                           {t.partner_name}
                         </h4>
-                        <span className="text-[9px] font-semibold text-slate-300 whitespace-nowrap shrink-0">
+                        <span className="text-[10px] font-semibold text-slate-300 whitespace-nowrap shrink-0">
                           {t.updated_at ? new Date(t.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'New'}
                         </span>
                       </div>
-                      <p className="text-[10px] text-slate-400 truncate mt-1 leading-none">
+                      <p className="text-[11px] text-slate-400 truncate mt-1 leading-none">
                         {t.last_message || "No messages yet"}
                       </p>
                     </div>
@@ -236,7 +275,7 @@ export default function StudentMessages() {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <span className="text-sm font-black text-[#093fb4]">
+                  <span className="text-base font-black text-[#093fb4]">
                     {activeThread.partner_name?.charAt(0).toUpperCase()}
                   </span>
                 )}
@@ -247,12 +286,12 @@ export default function StudentMessages() {
                   {activeThread.partner_name}
                 </h2>
                 <div className="flex items-center gap-2 mt-1">
-                  <p className="text-[10px] font-semibold text-slate-400 flex items-center gap-1">
+                  <p className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
                     <Clock size={9} /> Scholar Office Handler
                   </p>
                   {/* Per-thread status pill */}
                   {!statusLoading && threadStatus && (
-                    <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border ${
+                    <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border ${
                       isEligible
                         ? 'bg-green-50 text-green-600 border-green-100'
                         : 'bg-amber-50 text-amber-600 border-amber-100'
@@ -280,7 +319,7 @@ export default function StudentMessages() {
                     <MessageSquare size={16} className="text-slate-300" />
                   </div>
                   <p className="text-xs font-bold text-slate-300 uppercase tracking-wider">No messages yet</p>
-                  <p className="text-[10px] text-slate-300 mt-1">Say hello to get the conversation started!</p>
+                  <p className="text-[11px] text-slate-300 mt-1">Say hello to get the conversation started!</p>
                 </div>
               ) : (
                 messages.map(msg => {
@@ -295,7 +334,7 @@ export default function StudentMessages() {
                         <p className="font-medium leading-relaxed break-words whitespace-pre-line">
                           {msg.message_text}
                         </p>
-                        <p className={`text-[9px] font-semibold mt-1.5 text-right ${isMe ? 'text-white/40' : 'text-slate-300'}`}>
+                        <p className={`text-[10px] font-semibold mt-1.5 text-right ${isMe ? 'text-white/40' : 'text-slate-300'}`}>
                           {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
@@ -335,7 +374,7 @@ export default function StudentMessages() {
                 </div>
                 <div>
                   <p className="text-xs font-black text-amber-700 uppercase tracking-wide">Messaging Unavailable</p>
-                  <p className="text-[11px] text-amber-500 font-medium mt-0.5 leading-snug">
+                  <p className="text-[12px] text-amber-500 font-medium mt-0.5 leading-snug">
                     Your application with this organization is currently{' '}
                     <span className="font-black capitalize">{threadStatus}</span>.
                     Only approved or renewal scholars can send messages.
@@ -348,7 +387,7 @@ export default function StudentMessages() {
           /* Empty state */
           <div className="text-center p-8 max-w-xs">
             <div className="w-12 h-12 bg-[#093fb4]/5 border border-[#093fb4]/10 rounded-2xl flex items-center justify-center mx-auto mb-3">
-              <MessageSquare size={20} className="text-[#093fb4]/40" />
+              <MessageSquare size={22} className="text-[#093fb4]/40" />
             </div>
             <h3 className="font-black text-slate-700 text-sm uppercase tracking-tight">Select a Thread</h3>
             <p className="text-xs text-slate-400 font-medium mt-1.5 leading-relaxed">
@@ -356,6 +395,7 @@ export default function StudentMessages() {
             </p>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

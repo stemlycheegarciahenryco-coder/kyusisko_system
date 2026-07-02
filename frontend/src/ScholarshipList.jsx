@@ -262,7 +262,7 @@ export default function ScholarshipList() {
         </div>
       )}
 
-      <div className="w-full max-w-[1280px] mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-[260px_1fr_260px] gap-6 items-start">
+      <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-[280px_1fr_280px] gap-6 items-start">
         <div className="w-full lg:sticky lg:top-24">
           <StudentLeftProfile />
         </div>

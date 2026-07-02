@@ -74,7 +74,7 @@ export default function SearchBar() {
           <div className="absolute left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-black/5 p-3 z-50 max-h-96 overflow-y-auto scrollbar-thin">
             
             {/* 🎛️ Filter Switch Tabs */}
-            <div className="flex bg-slate-100 p-1 rounded-xl mb-3 text-[10px] font-black uppercase tracking-wider">
+            <div className="flex bg-slate-100 p-1 rounded-xl mb-3 text-[11px] font-black uppercase tracking-wider">
               <button 
                 onClick={() => setSearchFilter('all')}
                 className={`flex-1 py-1.5 rounded-lg text-center transition-all ${searchFilter === 'all' ? 'bg-white text-[#093fb4] shadow-xs' : 'text-slate-400 hover:text-slate-600'}`}
@@ -96,15 +96,15 @@ export default function SearchBar() {
             </div>
 
             {isSearching ? (
-              <p className="text-[10px] font-black text-slate-400 text-center py-4 uppercase tracking-wider animate-pulse">Searching catalog...</p>
+              <p className="text-[11px] font-black text-slate-400 text-center py-4 uppercase tracking-wider animate-pulse">Searching catalog...</p>
             ) : hasResults ? (
               <div className="space-y-4">
                 {/* Scholarships Segment */}
                 {searchResults.scholarships?.length > 0 && (
                   <div>
-                    <h4 className="text-[10px] font-black text-black/40 uppercase tracking-wider mb-1 px-1 flex items-center gap-1">
-                      <GraduationCap size={12} /> Scholarships
-                    </h4>
+<h4 className="text-[11px] font-black text-black/40 uppercase tracking-wider mb-1 px-1 flex items-center gap-1">
+<GraduationCap size={13} /> Scholarships
+</h4>
                     <div className="space-y-0.5">
                       {searchResults.scholarships.map(prog => (
                         <div
@@ -118,7 +118,7 @@ export default function SearchBar() {
                           className="p-2 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors"
                         >
                           <p className="text-xs font-black text-slate-900 truncate">{prog.title}</p>
-                          <p className="text-[11px] text-slate-500 font-medium truncate">{prog.description}</p>
+                          <p className="text-[12px] text-slate-500 font-medium truncate">{prog.description}</p>
                         </div>
                       ))}
                     </div>
@@ -128,9 +128,9 @@ export default function SearchBar() {
                 {/* Organizations Segment */}
                 {searchResults.organizations?.length > 0 && (
                   <div className="border-t border-slate-100 pt-2">
-                    <h4 className="text-[10px] font-black text-black/40 uppercase tracking-wider mb-1 px-1 flex items-center gap-1">
-                      <Building2 size={11} /> Organizations
-                    </h4>
+<h4 className="text-[11px] font-black text-black/40 uppercase tracking-wider mb-1 px-1 flex items-center gap-1">
+<Building2 size={12} /> Organizations
+</h4>
                     <div className="space-y-0.5">
                       {searchResults.organizations.map(org => (
                         <div
@@ -199,17 +199,17 @@ export default function SearchBar() {
                 
                 <div className="mt-6 space-y-4 text-left">
                   <div>
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Description</h4>
+                    <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-wider">Description</h4>
                     <p className="text-xs text-slate-700 font-medium mt-1 leading-relaxed bg-black/5 p-3 rounded-xl">{selectedItem.description || 'No description provided.'}</p>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3">
                     <div className="bg-slate-50 p-3 rounded-xl border border-black/5">
-                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1"><DollarSign size={12}/> Grant Amount</h4>
+                      <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1"><DollarSign size={13}/> Grant Amount</h4>
                       <p className="text-xs font-black text-slate-900 mt-1">{selectedItem.amount_range || 'Variable Allowance'}</p>
                     </div>
                     <div className="bg-slate-50 p-3 rounded-xl border border-black/5">
-                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1"><Award size={12}/> Target Criteria</h4>
+                      <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1"><Award size={13}/> Target Criteria</h4>
                       <p className="text-xs font-extrabold text-slate-900 mt-1 truncate">
                         {Array.isArray(selectedItem.criteria) ? selectedItem.criteria.join(', ') : selectedItem.criteria || 'General Academic'}
                       </p>
@@ -247,7 +247,7 @@ export default function SearchBar() {
                     <div className="flex items-center gap-3 p-2.5 bg-slate-50 rounded-xl border border-black/5">
                       <Mail size={14} className="text-slate-400" />
                       <div>
-                        <h5 className="text-[9px] font-black text-slate-400 uppercase leading-none">Email Address</h5>
+                        <h5 className="text-[10px] font-black text-slate-400 uppercase leading-none">Email Address</h5>
                         <p className="text-xs font-bold text-slate-900 mt-0.5">{selectedItem.sub_email}</p>
                       </div>
                     </div>
@@ -255,7 +255,7 @@ export default function SearchBar() {
                       <div className="flex items-center gap-3 p-2.5 bg-slate-50 rounded-xl border border-black/5">
                         <Phone size={14} className="text-slate-400" />
                         <div>
-                          <h5 className="text-[9px] font-black text-slate-400 uppercase leading-none">Contact Number</h5>
+                          <h5 className="text-[10px] font-black text-slate-400 uppercase leading-none">Contact Number</h5>
                           <p className="text-xs font-bold text-slate-900 mt-0.5">{selectedItem.contact_number}</p>
                         </div>
                       </div>
@@ -268,7 +268,7 @@ export default function SearchBar() {
             <div className="mt-8">
               <button
                 onClick={() => { setSelectedItem(null); setModalType(null); }}
-                className="w-full bg-slate-900 text-white font-black py-3.5 rounded-xl hover:bg-slate-800 transition-colors uppercase text-[10px] tracking-[0.15em] cursor-pointer"
+                className="w-full bg-slate-900 text-white font-black py-3.5 rounded-xl hover:bg-slate-800 transition-colors uppercase text-[11px] tracking-[0.15em] cursor-pointer"
               >
                 Close View
               </button>

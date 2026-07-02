@@ -117,7 +117,7 @@ export default function ApplicationForm() {
   return (
     <div className="min-h-screen bg-slate-50 font-['Inter'] antialiased">
       <nav className="bg-[#FFFCFB] border-b border-black/5 px-6 py-4 sticky top-0 z-30">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
           <button
             onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-500 hover:text-[#093fb4] transition-colors"
@@ -128,7 +128,7 @@ export default function ApplicationForm() {
         </div>
       </nav>
 
-      <div className="max-w-4xl mx-auto px-6 py-8 space-y-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
         
         {/* ── HERO BANNER ── */}
         <div className="bg-[#093fb4] rounded-3xl overflow-hidden shadow-xl shadow-blue-900/10 relative">

@@ -95,7 +95,7 @@ export default function EditProfileModal({ onClose, studentData, setBioState }) 
               <div className="flex justify-between items-center mb-6">
                 <div>
                   <h2 className="text-lg font-bold text-black uppercase tracking-tight">Edit Academic Profile</h2>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Keep your account context up to date</p>
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Keep your account context up to date</p>
                 </div>
                 <button type="button" onClick={onClose} className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:text-[#093fb4] hover:border-[#093fb4] transition-all">
                   <X size={14} />
@@ -104,7 +104,7 @@ export default function EditProfileModal({ onClose, studentData, setBioState }) 
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-[10px] font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">About Yourself (Bio)</label>
+                  <label className="block text-[11px] font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">About Yourself (Bio)</label>
                   <textarea
                     placeholder="Write a short summary about yourself..."
                     className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:border-[#093fb4] outline-none text-sm text-black font-medium transition-all resize-none min-h-[80px]"
@@ -114,7 +114,7 @@ export default function EditProfileModal({ onClose, studentData, setBioState }) 
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">Current College / University</label>
+                  <label className="block text-[11px] font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">Current College / University</label>
                   <select
                     className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:border-[#093fb4] outline-none text-sm font-medium text-slate-800 cursor-pointer transition-all"
                     value={form.college_id}
@@ -138,7 +138,7 @@ export default function EditProfileModal({ onClose, studentData, setBioState }) 
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">Degree Program / Course</label>
+                  <label className="block text-[11px] font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">Degree Program / Course</label>
                   <select
                     className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:border-[#093fb4] outline-none text-sm font-medium text-slate-800 cursor-pointer transition-all"
                     value={form.course_id}
@@ -162,7 +162,7 @@ export default function EditProfileModal({ onClose, studentData, setBioState }) 
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">Sports Interests</label>
+                  <label className="block text-[11px] font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">Sports Interests</label>
                   <input
                     type="text"
                     placeholder="Basketball, Volleyball, Chess (Comma separated)"

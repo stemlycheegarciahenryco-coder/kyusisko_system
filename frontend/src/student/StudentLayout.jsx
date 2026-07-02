@@ -8,7 +8,8 @@ export default function StudentLayout() {
 
       {/* Main Content Area - pt-16 matches the nav height */}
       <main className="pt-16 min-h-screen">
-        <div className="max-w-6xl mx-auto py-6">
+        {/* jek: full width, responsive padding for all devices */}
+        <div className="max-w-[90%] mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
           <Outlet />
         </div>
       </main>

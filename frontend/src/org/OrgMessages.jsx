@@ -126,7 +126,7 @@ export default function OrgMessages() {
   );
 
   return (
-    <div className="h-[82vh] bg-[#FFFCFB] rounded-2xl shadow-sm border border-black/5 font-['Inter'] flex overflow-hidden">
+    <div className="h-full bg-[#FFFCFB] rounded-2xl shadow-sm border border-black/5 font-['Inter'] flex overflow-hidden">
 
       {/* LEFT COLUMN: Threads Sidebar — narrow */}
       <div className={`w-full md:w-64 border-r border-slate-100 flex flex-col h-full bg-[#FFFCFB] ${activeThread ? 'hidden md:flex' : 'flex'}`}>
@@ -302,7 +302,7 @@ export default function OrgMessages() {
 
             {/* Send Panel */}
             {statusLoading ? (
-              <div className="p-3 border-t border-slate-100 bg-[#FFFCFB]">
+              <div className="h-full w-full p-6">
                 <div className="h-9 bg-slate-100 rounded-xl animate-pulse" />
               </div>
             ) : isEligible ? (
