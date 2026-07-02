@@ -152,6 +152,26 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
     }
   };
 
+  // FETCH SECURE BUCKET URL
+  const handleDownload = (pathString) => {
+    try {
+      // 1. Use getPublicUrl instead of createSignedUrl for public buckets
+      const { data } = supabase.storage
+        .from('org-complied-docs')
+        .getPublicUrl(pathString);
+        
+      if (!data || !data.publicUrl) {
+        throw new Error("Failed to generate public URL reference string.");
+      }
+
+      // 2. Launch the public asset link directly
+      window.open(data.publicUrl, '_blank');
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Error', 'Could not retrieve file.', 'error');
+    }
+  };
+
   return (
     <div
       className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-['Inter',_sans-serif]"
@@ -295,12 +315,11 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
                 <InfoCard icon={<IconUser size={14} className="text-[#093fb4]" />} label="Provider ID"
                   value={org.provider_code} />
               )}
-             
               <InfoCard icon={<IconMail size={14} className="text-[#093fb4]" />} label="Email" value={org.sub_email} />
-              <InfoCard icon={<IconPhone size={14} className="text-[#093fb4]" />} label="Contact number"
+              <InfoCard icon={<IconPhone size={14} className="text-[#093fb4]" />} label="Telephone number"
+                value={org.tel_number ? `+02 ${org.tel_number}` : '—'} />
+                <InfoCard icon={<IconPhone size={14} className="text-[#093fb4]" />} label="Contact number"
                 value={org.contact_number ? `+63 ${org.contact_number}` : '—'} />
-                <InfoCard icon={<IconPhone size={14} className="text-[#093fb4]" />} label="Telephone number"
-                value={org.tel_number ? ` ${org.tel_number}` : '—'} />
               <InfoCard icon={<IconBuilding size={14} className="text-[#093fb4]" />} label="Provider type"
                 value={org.provider_type || '—'} />
             </div>
@@ -351,12 +370,11 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
                   const ext = rawFileName.split('.').pop()?.toUpperCase() || 'FILE';
 
                   return (
-                    <a
+                    <button
                       key={idx}
-                      href={`http://localhost:5000/${pathString}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-xl px-3.5 py-3 hover:bg-[#EEF2FF] hover:border-[#093fb4]/20 transition-all group"
+                      type="button"
+                      onClick={() => handleDownload(file.path)}
+                      className="w-full text-left flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-xl px-3.5 py-3 hover:bg-[#EEF2FF] hover:border-[#093fb4]/20 transition-all group"
                     >
                       <div className="w-8 h-8 rounded-lg bg-[#093fb4] flex items-center justify-center shrink-0">
                         <IconFileText size={14} className="text-white" />
@@ -370,7 +388,7 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
                         </p>
                       </div>
                       <IconExternalLink size={12} className="text-slate-300 group-hover:text-[#093fb4] transition-colors shrink-0" />
-                    </a>
+                    </button>
                   );
                 })}
               </div>

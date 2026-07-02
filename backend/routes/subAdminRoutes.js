@@ -4,7 +4,9 @@ const pool = require('../config/db');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const upload = require('../middleware/multerConfig');
+const {createClient} = require('@supabase/supabase-js');
 const { verifyToken } = require('../middleware/auth');
+const {supabaseAdmin} = require('../config/supabaseClient');
 const { sendApprovalEmail, sendRejectionEmail, sendOrgOTPEmail, sendRequirementsEmail, sendApprovalCredentialsEmail } = require('../config/emailServiceOrg');
 
 /**
@@ -317,60 +319,69 @@ router.get('/compliance-details/:id', async (req, res) => {
  */
 router.post('/comply/:id', upload.any(), async (req, res) => {
   const { id } = req.params;
-  const uploadedFiles = req.files || [];
-
-  // Structure the detailed file data for proof_files column (with storage paths)
-  const dynamicFileData = uploadedFiles.map(file => ({
-    document_name: file.fieldname, // E.g., "Mayor's Business Permit"
-    file_path: file.path           // E.g., "uploads/compliance-17194.png"
-  }));
-
-  // Map the text strings of the uploaded items to store inside required_fields
-  const uploadedFieldNames = uploadedFiles.map(file => file.fieldname); // E.g., ["Mayor's Business Permit"]
+  const uploadedFiles = req.files || []; // Array of files captured in RAM buffer by Multer
 
   try {
-    // FIX: also pull existing proof_files AND required_fields so we can MERGE
-    // rather than overwrite either of them.
+    // 1. Double check organization context status before doing cloud operations
     const orgCheck = await pool.query('SELECT provider_type, status, proof_files, required_fields FROM sub_admins WHERE id = $1', [id]);
     if (orgCheck.rows.length === 0) {
       return res.status(404).json({ error: "Organization records do not exist." });
     }
 
-    // FIX: Rejection is final. Once status = 'rejected', no further compliance
-    // resubmission is allowed for this organization.
     if (orgCheck.rows[0].status === 'rejected') {
       return res.status(403).json({ error: "This application has been rejected and can no longer submit compliance documents." });
     }
 
-    // Parse whatever is already stored (string, object, null, or empty)
+    // 2. Iterate over raw memory buffers and push them to your bucket storage
+    const dynamicFileData = [];
+    
+    for (const file of uploadedFiles) {
+      const fileExt = file.originalname.split('.').pop();
+      // Generates a clean internal bucket path: "orgId/timestamp-randomstring.ext"
+      const fileName = `${id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+      // Upload directly using your super-admin credentials
+      const { data, error } = await supabaseAdmin.storage
+        .from('org-complied-docs')
+        .upload(fileName, file.buffer, { // Streams the raw RAM buffer cleanly
+          contentType: file.mimetype,
+          upsert: true
+        });
+
+      if (error) {
+        console.error("Supabase Storage Error:", error.message);
+        throw new Error(`Failed uploading file [${file.fieldname}] to Supabase bucket storage.`);
+      }
+
+      // Add the valid internal path reference string returned by Supabase
+      dynamicFileData.push({
+        document_name: file.fieldname, 
+        file_path: data.path // This saves the path tracking reference to your database!
+      });
+    }
+
+    // Fallback verification 
+    if (dynamicFileData.length === 0) {
+      return res.status(400).json({ error: "No files were processed. Please make sure file keys match your forms." });
+    }
+
+    // 3. Parse and safely merge payload structures so historic data isn't dropped
     let existingProof = {};
     try {
       const raw = orgCheck.rows[0].proof_files;
       existingProof = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : {};
     } catch (parseErr) {
-      console.warn("Could not parse existing proof_files, starting fresh:", parseErr.message);
       existingProof = {};
     }
 
-    // FIX: parse the ORIGINAL checklist the admin sent (e.g. "MOA"). This is what
-    // was getting blown away — required_fields was being replaced with
-    // uploadedFieldNames, which is empty/partial whenever the org skips a field
-    // or a file input's fieldname doesn't exactly match the requirement string.
     let originalRequiredFields = [];
     try {
       const rawReq = orgCheck.rows[0].required_fields;
-      originalRequiredFields = rawReq
-        ? (typeof rawReq === 'string' ? JSON.parse(rawReq) : rawReq)
-        : [];
-      if (!Array.isArray(originalRequiredFields)) originalRequiredFields = [];
+      originalRequiredFields = rawReq ? (typeof rawReq === 'string' ? JSON.parse(rawReq) : rawReq) : [];
     } catch (parseErr) {
-      console.warn("Could not parse existing required_fields:", parseErr.message);
       originalRequiredFields = [];
     }
 
-    // FIX: append new compliance docs to any previously uploaded ones instead of
-    // discarding them. This was the cause of documents "disappearing" in RootOrgView —
-    // every resubmission replaced proof_files entirely instead of adding to it.
     const previousComplianceDocs = Array.isArray(existingProof.new_compliance_docs)
       ? existingProof.new_compliance_docs
       : [];
@@ -380,15 +391,12 @@ router.post('/comply/:id', upload.any(), async (req, res) => {
       new_compliance_docs: [...previousComplianceDocs, ...dynamicFileData]
     };
 
-    // Move status back to 'pending'. This triggers 'isResubmitted' on your frontend automatically!
-    // FIX: required_fields now keeps the ADMIN'S ORIGINAL checklist (e.g. "MOA") intact.
-    // We no longer overwrite it with uploadedFieldNames, since that list is empty/partial
-    // whenever an org skips a field — which was collapsing required_fields to [].
+    // 4. Record updates back down to your PostgreSQL relational schema
     await pool.query(
       `UPDATE sub_admins 
        SET status = 'pending', 
-           proof_files = $1,        -- Merged: keeps old + new file references intact
-           required_fields = $2,    -- Preserved: admin's original checklist, never derived from uploads
+           proof_files = $1,        
+           required_fields = $2,    
            rejection_reason = NULL
        WHERE id = $3`,
       [
@@ -401,9 +409,13 @@ router.post('/comply/:id', upload.any(), async (req, res) => {
     res.json({ message: "Compliance documents submitted successfully! Transferred back to pending review." });
   } catch (err) {
     console.error("COMPLIANCE SUBMISSION ERROR:", err.message);
-    res.status(500).json({ error: "Submission processing dropped." });
+    res.status(500).json({ error: err.message || "Submission processing dropped." });
   }
 });
+
+
+
+
 
 // Request Registration OTP
 router.post('/request-otp', async (req, res) => {

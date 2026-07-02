@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const pool = require('../config/db');
 //const security = require('./securityController'); // Import your new security logic
 const transporter = require('../config/mailer_resend'); // For sending emails
-const { supabase } = require('../config/supabaseClient'); // ✅ Fixed and completed initialization
+const { supabaseAdmin } = require('../config/supabaseClient'); // ✅ Fixed and completed initialization
 
 // Get specific student profile by ID
 // GET /api/students/:id
@@ -269,7 +269,7 @@ exports.updateProfilePic = async (req, res) => {
     const filePath = `profiles/student_${id}_${Date.now()}.${fileExtension}`;
 
     // 1. Upload the raw image buffer to your public bucket
-    const { data, error: uploadError } = await supabase.storage
+    const { data, error: uploadError } = await supabaseAdmin.storage
       .from('profile-images')
       .upload(filePath, req.file.buffer, {
         contentType: req.file.mimetype,
@@ -282,7 +282,7 @@ exports.updateProfilePic = async (req, res) => {
     }
 
     // 2. Fetch the permanent public url structure
-    const { data: urlData } = supabase.storage
+    const { data: urlData } = supabaseAdmin.storage
       .from('profile-images')
       .getPublicUrl(filePath);
 
