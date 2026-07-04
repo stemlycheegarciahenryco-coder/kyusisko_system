@@ -1,81 +1,157 @@
 const pool = require('../config/db');
-const { get } = require('../config/mailer_resend');
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SCORING ENGINE
+// Each entry maps a criteria string (as stored in scholarships.criteria JSON
+// array) to the student_onboarding_profiles field that satisfies it, and the
+// weight awarded for a match. Score % = (earned / possible) * 100, capped at 100.
+// Scholarships with no criteria are open to all — baseline 50%.
+// ─────────────────────────────────────────────────────────────────────────────
+const CRITERIA_WEIGHTS = {
+  'PWD':              { field: 'is_pwd',            type: 'bool',   weight: 25 },
+  'Indigenous':       { field: 'is_indigenous',      type: 'bool',   weight: 25 },
+  'Working Student':  { field: 'is_working_student', type: 'bool',   weight: 25 },
+  'Athlete':          { field: 'is_athlete',         type: 'bool',   weight: 25 },
+  'Poverty Program':  { field: 'is_poverty_program', type: 'bool',   weight: 25 },
+  '4Ps':              { field: 'is_poverty_program', type: 'bool',   weight: 25 },
+  'Religion':         { field: 'religion',           type: 'exists', weight: 15 },
+  'College Specific': { field: 'college_id',         type: 'exists', weight: 15 },
+  'Course Specific':  { field: 'course_id',          type: 'exists', weight: 15 },
+};
 
-//this is the logic for the matching the criteria 
-const getRecommendedScholarships = async (req, res) => {
-    const { studentId } = req.params;
+const BEST_MATCH_THRESHOLD = 60; // % and above = "Top Match"
+const GOOD_MATCH_THRESHOLD = 30; // % and above = "Good Match"
 
-    try {
-        const profileResult = await pool.query(
-            `SELECT * FROM student_onboarding_profiles WHERE student_id = $1`,
-            [studentId]
-        );
+function scoreScholarship(scholarship, profile) {
+  let criteria = [];
+  try {
+    criteria = Array.isArray(scholarship.criteria)
+      ? scholarship.criteria
+      : JSON.parse(scholarship.criteria || '[]');
+  } catch {
+    criteria = [];
+  }
 
-        if (profileResult.rows.length === 0) {
-            return res.status(404).json({ error: "Profile not found." });
-        }
+  // No criteria = open to all students — give baseline score
+  if (criteria.length === 0) {
+    return { match_score: 50, matched_criteria: [], unmatched_criteria: [], is_open_to_all: true };
+  }
 
-        const profile = profileResult.rows[0];
+  let earned = 0;
+  let possible = 0;
+  const matched_criteria = [];
+  const unmatched_criteria = [];
 
-        // 1. We use IN ('open', 'published') to catch both possible 'live' statuses.
-        // 2. We use the @> operator if criteria is a JSONB array, 
-        //    OR continue using ILIKE if it's a string/text. 
-        //    Below is the version compatible with JSONB arrays (recommended):
-       const matchQuery = `
-    SELECT 
-        sch.*, 
-        sa.org_name AS org_name,
-        sa.org_pic AS donor_photo,
-        (
-            10 +  -- Base score so every open scholarship appears
-            (CASE WHEN sch.gwa_requirement >= 1.0 THEN 40 ELSE 0 END) +
-            (CASE WHEN $1 = true AND 'Athlete' = ANY(sch.criteria) THEN 30 ELSE 0 END) +
-            (CASE WHEN $2 = true AND 'PWD' = ANY(sch.criteria) THEN 30 ELSE 0 END) +
-            (CASE WHEN $3 = true AND 'Working Student' = ANY(sch.criteria) THEN 30 ELSE 0 END)
-        ) AS match_score
-    FROM scholarships sch
-    LEFT JOIN sub_admins sa ON sch.sub_admin_id = sa.id
-    WHERE sch.status IN ('open')
-    AND sch.deadline::date > CURRENT_DATE  -- 💡 Force explicit date-only comparison
-    AND sch.taken_down = FALSE
-    AND NOT EXISTS (
-        SELECT 1 FROM applications a 
-        WHERE a.scholarship_id = sch.id 
-        AND a.student_id = $4
-    )
-    ORDER BY match_score DESC
-`;
+  criteria.forEach(criterion => {
+    const rule = CRITERIA_WEIGHTS[criterion];
+    if (!rule) return;
 
-        const scholarships = await pool.query(matchQuery, [
-            profile.is_athlete,
-            profile.is_pwd,
-            profile.is_working_student,
-            studentId
-        ]);
+    possible += rule.weight;
+    const val = profile[rule.field];
+    const matches = rule.type === 'bool'
+      ? val === true
+      : val !== null && val !== undefined && val !== '';
 
-        res.status(200).json({
-            success: true,
-            recommendations: scholarships.rows
-        });
-
-    } catch (err) {
-        console.error("Scoring Engine Error:", err.message);
-        res.status(500).json({ error: "Recommendation system unavailable." });
+    if (matches) {
+      earned += rule.weight;
+      matched_criteria.push(criterion);
+    } else {
+      unmatched_criteria.push(criterion);
     }
+  });
+
+  // GWA check — only adds bonus points if student's GWA actually meets the requirement
+  // (Layer 2: skipped for now since GWA isn't collected yet — placeholder for future)
+  // if (scholarship.gwa_requirement && profile.gwa) {
+  //   if (parseFloat(profile.gwa) <= parseFloat(scholarship.gwa_requirement)) {
+  //     earned += 20; possible += 20;
+  //   } else {
+  //     possible += 20; // student doesn't meet GWA — penalizes score correctly
+  //   }
+  // }
+
+  const match_score = possible > 0 ? Math.min(100, Math.round((earned / possible) * 100)) : 0;
+
+  return { match_score, matched_criteria, unmatched_criteria, is_open_to_all: false };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /recommendations/:studentId
+// Returns all active scholarships scored against the student's profile,
+// sorted by match_score descending.
+// ─────────────────────────────────────────────────────────────────────────────
+const getRecommendedScholarships = async (req, res) => {
+  const { studentId } = req.params;
+
+  try {
+    const profileResult = await pool.query(
+      `SELECT * FROM student_onboarding_profiles WHERE student_id = $1`,
+      [studentId]
+    );
+
+    if (profileResult.rows.length === 0) {
+      return res.status(404).json({ error: "Profile not found." });
+    }
+
+    const profile = profileResult.rows[0];
+
+    const scholarshipResult = await pool.query(
+      `SELECT 
+        sch.*, 
+        sa.org_name,
+        sa.org_pic AS donor_photo
+       FROM scholarships sch
+       LEFT JOIN sub_admins sa ON sch.sub_admin_id = sa.id
+       WHERE sch.status IN ('open')
+       AND sch.deadline::date > CURRENT_DATE
+       AND sch.taken_down = FALSE
+       AND NOT EXISTS (
+         SELECT 1 FROM applications a 
+         WHERE a.scholarship_id = sch.id AND a.student_id = $1
+       )`,
+      [studentId]
+    );
+
+    const scored = scholarshipResult.rows.map(scholarship => {
+      const { match_score, matched_criteria, unmatched_criteria, is_open_to_all } = scoreScholarship(scholarship, profile);
+      return {
+        ...scholarship,
+        match_score,
+        matched_criteria,
+        unmatched_criteria,
+        is_open_to_all,
+        is_best_match: match_score >= BEST_MATCH_THRESHOLD,
+        is_good_match: match_score >= GOOD_MATCH_THRESHOLD && match_score < BEST_MATCH_THRESHOLD,
+      };
+    });
+
+    // Sort: best matches first, then by score desc
+    scored.sort((a, b) => b.match_score - a.match_score);
+
+    res.status(200).json({ success: true, recommendations: scored });
+  } catch (err) {
+    console.error("Scoring Engine Error:", err.message);
+    res.status(500).json({ error: "Recommendation system unavailable." });
+  }
 };
 
 
 
-//scholarshipList student view
+//scholarshipList student view — now includes match scores for each scholarship
 const getAllScholarships = async (req, res) => {
     try {
-        // Safety check: if middleware failed or isn't there
         if (!req.user || !req.user.id) {
             return res.status(401).json({ success: false, error: "Unauthorized: No student ID found." });
         }
 
-        const studentId = req.user.id; 
+        const studentId = req.user.id;
+
+        // Fetch student profile for scoring
+        const profileResult = await pool.query(
+            `SELECT * FROM student_onboarding_profiles WHERE student_id = $1`,
+            [studentId]
+        );
+        const profile = profileResult.rows[0] || null;
 
         const query = `
     SELECT 
@@ -93,7 +169,7 @@ const getAllScholarships = async (req, res) => {
     LEFT JOIN sub_admins sa ON sch.sub_admin_id = sa.id
     WHERE sch.status IN ('open', 'published') 
     AND sch.status != 'closed'                
-    AND sch.deadline::date > CURRENT_DATE  -- 💡 Explicitly keeps today's deadlines alive
+    AND sch.deadline::date > CURRENT_DATE
     AND sch.taken_down = FALSE
     AND NOT EXISTS (
         SELECT 1 FROM applications a 
@@ -101,9 +177,29 @@ const getAllScholarships = async (req, res) => {
         AND a.student_id = $1
     )
 `;
-        
+
         const result = await pool.query(query, [studentId]);
-        res.status(200).json({ success: true, data: result.rows });
+
+        // Score each scholarship if the student has a profile
+        const scored = result.rows.map(scholarship => {
+            if (!profile) {
+                return { ...scholarship, match_score: null, matched_criteria: [], unmatched_criteria: [], is_best_match: false, is_open_to_all: false };
+            }
+            const { match_score, matched_criteria, unmatched_criteria, is_open_to_all } = scoreScholarship(scholarship, profile);
+            return {
+                ...scholarship,
+                match_score,
+                matched_criteria,
+                unmatched_criteria,
+                is_open_to_all,
+                is_best_match: match_score >= BEST_MATCH_THRESHOLD,
+            };
+        });
+
+        // Sort best matches to the top
+        scored.sort((a, b) => (b.match_score || 0) - (a.match_score || 0));
+
+        res.status(200).json({ success: true, data: scored });
     } catch (err) {
         console.error("Database Error:", err.message);
         res.status(500).json({ success: false, error: err.message });

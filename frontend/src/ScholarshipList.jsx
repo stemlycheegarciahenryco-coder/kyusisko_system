@@ -108,22 +108,33 @@ export default function ScholarshipList() {
           return (
             <div
               key={s.id}
-              className="bg-white rounded-3xl border border-black/5 shadow-sm p-6 transition-all hover:shadow-md relative overflow-hidden"
+              className={`bg-white rounded-3xl border shadow-sm p-6 transition-all hover:shadow-md relative overflow-hidden ${
+                s.is_best_match ? 'border-[#093fb4]/30 shadow-blue-900/5' : 'border-black/5'
+              }`}
             >
+              {/* Best match banner */}
+              {s.is_best_match && (
+                <div className="absolute top-0 left-0 right-0 bg-[#093fb4] px-5 py-1.5 flex items-center gap-2">
+                  <span className="text-[9px] font-black text-white uppercase tracking-[0.2em]">
+                    ✦ Best Match — {s.match_score}% Profile Match
+                  </span>
+                </div>
+              )}
+
               <button 
                 onClick={() => setReportModal({ open: true, id: s.id, reason: '' })} 
-                className="absolute top-6 right-6 p-2 rounded-xl bg-slate-50 text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all z-10"
+                className={`absolute right-6 p-2 rounded-xl bg-slate-50 text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all z-10 ${s.is_best_match ? 'top-14' : 'top-6'}`}
                 title="Report this scholarship"
               >
                 <AlertTriangle size={18} />
               </button>
 
-              <div className="flex flex-col gap-5">
+              <div className={`flex flex-col gap-5 ${s.is_best_match ? 'mt-6' : ''}`}>
                 {/* Org header */}
                 <div className="flex items-start gap-4">
                   <div className="w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center bg-white border border-slate-100 shadow-sm shrink-0">
                     {s.org_pic ? (
-                      <img src={`http://localhost:5000/${s.org_pic}`} alt="" className="w-full h-full object-cover" />
+                      <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/${s.org_pic}`} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-lg font-black text-slate-300">
                         {s.org_name?.substring(0, 2).toUpperCase()}
@@ -152,15 +163,34 @@ export default function ScholarshipList() {
                   </h3>
                   {criteriaList.length > 0 && (
                     <div className="flex flex-wrap justify-center gap-1.5">
-                      {criteriaList.slice(0, 4).map((tag, idx) => (
-                        <span
-                          key={idx}
-                          className="flex items-center gap-1 px-3 py-1 bg-blue-50 border border-blue-100 rounded-full text-[9px] font-black text-[#093fb4] uppercase"
-                        >
-                          <CheckCircle2 size={10} strokeWidth={3} className="shrink-0" /> {tag}
-                        </span>
-                      ))}
+                      {criteriaList.slice(0, 4).map((tag, idx) => {
+                        const isMatched = s.matched_criteria?.includes(tag);
+                        return (
+                          <span
+                            key={idx}
+                            className={`flex items-center gap-1 px-3 py-1 rounded-full text-[9px] font-black uppercase border ${
+                              isMatched
+                                ? 'bg-green-50 border-green-100 text-green-700'
+                                : 'bg-slate-50 border-slate-100 text-slate-400'
+                            }`}
+                          >
+                            <CheckCircle2 size={10} strokeWidth={3} className="shrink-0" /> {tag}
+                          </span>
+                        );
+                      })}
                     </div>
+                  )}
+                  {/* Match score pill */}
+                  {s.match_score !== null && (
+                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                      s.match_score >= 60
+                        ? 'bg-[#093fb4]/10 text-[#093fb4]'
+                        : s.match_score >= 30
+                        ? 'bg-amber-50 text-amber-600'
+                        : 'bg-slate-100 text-slate-500'
+                    }`}>
+                      {s.is_open_to_all ? 'Open to All' : `${s.match_score}% Profile Match`}
+                    </span>
                   )}
                 </div>
 

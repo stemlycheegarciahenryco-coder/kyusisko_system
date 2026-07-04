@@ -35,8 +35,8 @@ const StudentRecommendations = () => {
   fetchRecommendations();
 }, []);
 
-  const topMatches = scholarships.filter(s => s.match_score >= 50);
-const goodMatches = scholarships.filter(s => s.match_score >= 10 && s.match_score < 50);
+  const topMatches = scholarships.filter(s => s.match_score >= 60);
+  const goodMatches = scholarships.filter(s => s.match_score >= 30 && s.match_score < 60);
 
   const visibleTop = showAll ? topMatches : topMatches.slice(0, 5);
   const visibleGood = showAll ? goodMatches : goodMatches.slice(0, 5);
@@ -52,7 +52,7 @@ const goodMatches = scholarships.filter(s => s.match_score >= 10 && s.match_scor
       <div className="w-9 h-9 rounded-full bg-slate-100 border border-black/5 shrink-0 overflow-hidden flex items-center justify-center">
         {scholarship.donor_photo ? (
           <img
-            src={`http://localhost:5000/${scholarship.donor_photo}`}
+            src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/${scholarship.donor_photo}`}
             alt={scholarship.org_name}
             className="w-full h-full object-cover"
           />
@@ -72,13 +72,17 @@ const goodMatches = scholarships.filter(s => s.match_score >= 10 && s.match_scor
         </p>
       </div>
 
-      {scholarship.match_score >= 40 ? (
+      {scholarship.match_score >= 60 ? (
         <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-50 text-green-700">
-          Top match
+          {scholarship.match_score}% match
+        </span>
+      ) : scholarship.match_score >= 30 ? (
+        <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">
+          {scholarship.match_score}% match
         </span>
       ) : (
-        <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">
-          Good match
+        <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+          Open
         </span>
       )}
     </div>

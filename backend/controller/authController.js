@@ -131,7 +131,21 @@ exports.portalLogin = async (req, res) => {
                 maxAge: 24 * 60 * 60 * 1000
             });
 
-            return res.json({ token, role: 'sub_admin', data: { id: sub.id, email: sub.sub_email } });
+            return res.json({
+                token,
+                role: 'sub_admin',
+                data: {
+                    id: sub.id,
+                    email: sub.sub_email,
+                    // FIX: Tell the frontend whether this org still needs to
+                    // complete their mandatory first password change, and whether
+                    // they are a main org account or a co-admin (co-admins cannot
+                    // add further co-admins).
+                    isPasswordChanged: sub.is_password_changed === true,
+                    accountType: sub.account_type || 'main',
+                    parentOrgId: sub.parent_org_id || null
+                }
+            });
         }
 
         // Strategy B: Fallback and check if input matches a Student account registration

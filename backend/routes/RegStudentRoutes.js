@@ -234,29 +234,32 @@ router.post('/verify-registration-otp', async (req, res) => {
     const { email, otp } = req.body; 
     
     try {
-        // Change 'org_reg' to 'email' to match your student send logic
+        // 1. Look for matching records with EITHER 'email' or 'org_reg' methods
         const result = await pool.query(
             `SELECT * FROM otp_codes 
              WHERE email = $1 
              AND code = $2 
-             AND method = 'email' 
+             AND method IN ('email', 'org_reg') -- 👈 Accepts both method types dynamically
              AND expires_at > NOW()`,
             [email, otp]
         );
 
         if (result.rows.length === 0) {
-            return res.status(400).json({ error: "Invalid or expired student verification code." });
+            return res.status(400).json({ error: "Invalid or expired verification code." });
         }
 
-        // Cleanup specifically for this email and method
+        // Capture the specific method found so we delete the exact one used
+        const verifiedMethod = result.rows[0].method;
+
+        // 2. Cleanup specifically for this email and the matched method
         await pool.query(
-            `DELETE FROM otp_codes WHERE email = $1 AND method = 'email'`, 
-            [email]
+            `DELETE FROM otp_codes WHERE email = $1 AND method = $2`, 
+            [email, verifiedMethod]
         );
         
         res.json({ success: true });
     } catch (err) {
-        console.error("Student OTP Verification Error:", err.message);
+        console.error("OTP Verification Error:", err.message);
         res.status(500).json({ error: "Server error during verification." });
     }
 });

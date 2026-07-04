@@ -54,6 +54,13 @@ export default function LogIn() {
       } else if (role === 'sub_admin') {
         localStorage.setItem('orgId', data.id); 
         localStorage.setItem('adminEmail', data.email);
+        // Store the new fields so OrgDashboard knows whether to show the
+        // forced password change modal and whether this is a main or co-admin account
+        localStorage.setItem('orgInfo', JSON.stringify({
+          isPasswordChanged: data.isPasswordChanged,
+          accountType: data.accountType,
+          parentOrgId: data.parentOrgId
+        }));
         navigate('/OrgDashboard');
       } else if (role === 'student') {
         localStorage.setItem('studentId', data.id);
