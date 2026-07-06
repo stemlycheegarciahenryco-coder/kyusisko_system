@@ -141,7 +141,7 @@ exports.portalLogin = async (req, res) => {
                     // complete their mandatory first password change, and whether
                     // they are a main org account or a co-admin (co-admins cannot
                     // add further co-admins).
-                    isPasswordChanged: sub.is_password_changed === true,
+                    isPasswordChanged: sub.account_type === 'co_admin' ? true : (sub.is_password_changed === true),
                     accountType: sub.account_type || 'main',
                     parentOrgId: sub.parent_org_id || null
                 }

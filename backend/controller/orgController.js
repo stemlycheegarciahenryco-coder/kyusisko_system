@@ -227,7 +227,7 @@ const monitorApplications = async (req, res) => {
 // ─── PASSWORD CHANGE (Forced on first login after approval) ──────────────────
 
 const changePassword = async (req, res) => {
-    const orgId = req.user.id;
+    const requesterId = req.user.id; // Could be a main account ID or a co_admin ID
     const { currentPassword, newPassword } = req.body;
 
     if (!currentPassword || !newPassword) {
@@ -238,16 +238,21 @@ const changePassword = async (req, res) => {
     }
 
     try {
-        const result = await pool.query(
-            'SELECT sub_password FROM sub_admins WHERE id = $1',
-            [orgId]
+        // 1. Fetch the account trying to change the password
+        const accountCheck = await pool.query(
+            'SELECT id, sub_password, account_type, parent_org_id FROM sub_admins WHERE id = $1',
+            [requesterId]
         );
-        if (result.rows.length === 0) {
+        
+        if (accountCheck.rows.length === 0) {
             return res.status(404).json({ error: "Account not found." });
         }
 
+        const userAccount = accountCheck.rows[0];
+
+        // 2. Verify the current password against the requester's record
         const bcrypt = require('bcryptjs');
-        const isMatch = await bcrypt.compare(currentPassword, result.rows[0].sub_password);
+        const isMatch = await bcrypt.compare(currentPassword, userAccount.sub_password);
         if (!isMatch) {
             return res.status(401).json({ error: "Current password is incorrect." });
         }
@@ -258,20 +263,35 @@ const changePassword = async (req, res) => {
 
         const hashed = await bcrypt.hash(newPassword, 10);
 
+        // 3. DETERMINISTIC ROUTING: Find who actually owns the master record
+        // If a co-admin is updating, we target their parent_org_id. Otherwise, they are the main account.
+        const targetOrgId = userAccount.account_type === 'co_admin' 
+            ? userAccount.parent_org_id 
+            : userAccount.id;
+
+        // 4. Update the main organization password and set its flag
         await pool.query(
             `UPDATE sub_admins 
              SET sub_password = $1, is_password_changed = TRUE 
              WHERE id = $2`,
-            [hashed, orgId]
+            [hashed, targetOrgId]   
         );
 
-        res.json({ success: true, message: "Password updated successfully." });
+        // 5. CASCADE EFFECT: Synchronize all associated co-admins to match the new master password
+        // Also update their 'is_password_changed' status so they don't get stuck in modal loops
+        await pool.query(
+            `UPDATE sub_admins 
+             SET sub_password = $1, is_password_changed = TRUE 
+             WHERE parent_org_id = $2 OR id = $2`,
+            [hashed, targetOrgId]
+        );
+
+        res.json({ success: true, message: "Password updated successfully across all organization accounts." });
     } catch (err) {
         console.error("Change Password Error:", err.message);
         res.status(500).json({ error: "Failed to update password." });
     }
 };
-
 // ─── CO-ADMIN MANAGEMENT ─────────────────────────────────────────────────────
 
 const addCoAdmin = async (req, res) => {
@@ -342,8 +362,8 @@ const addCoAdmin = async (req, res) => {
             subject: `You've been added as a Co-Admin for ${org_name} — KyusISKO`,
             html: `
               <div style="font-family:'Inter',sans-serif; max-width:550px; background:#FFFCFB; border:1px solid #e2e8f0; border-radius:24px; padding:32px; color:#1e293b; margin:auto;">
-                <p style="font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:0.2em; color:#093fb4; margin:0 0 4px 0;">Co-Admin Invitation</p>
-                <h2 style="font-size:22px; font-weight:900; text-transform:uppercase; letter-spacing:-0.02em; color:#0f172a; margin:0 0 16px 0; font-style:italic;">You've Been Added</h2>
+                <p style="font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:0.2em; color:#093fb4; margin:0 0 4px 0;">Co-Administration Invitation</p>
+                <h2 style="font-size:22px; font-weight:900; text-transform:uppercase; letter-spacing:-0.02em; color:#0f172a; margin:0 0 16px 0; font-style:italic;">You have Been Added as a Co-Admin on Kyusisko Provider</h2>
                 <p style="font-size:14px; font-weight:500; line-height:1.6; color:#64748b;">
                   Hello <strong>${firstName} ${lastName}</strong>,<br/><br/>
                   You have been added as a Co-Admin for <strong>${org_name}</strong> on the KyusISKO Scholarship Portal.
@@ -356,7 +376,7 @@ const addCoAdmin = async (req, res) => {
                 </div>
                 <div style="text-align:center; margin-bottom:24px;">
                   <a href="${loginUrl}" style="display:inline-block; background:#093fb4; color:#fff; text-decoration:none; padding:14px 32px; border-radius:12px; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:0.15em;">
-                    Log In to Dashboard
+                   Join  this Organization
                   </a>
                 </div>
                 <hr style="border:0; border-top:1px solid #f1f5f9; margin-bottom:16px;"/>
