@@ -7,17 +7,11 @@ const backendURL = import.meta.env.DEV
 
 const api = axios.create({
   baseURL: `${backendURL}/api`,
-  withCredentials: true
+  withCredentials: true // 🔥 Crucial: Lets cookies attach automatically
 });
 
-// Attach token from localStorage to every request
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// 💡 The request interceptor attaching headers can be completely removed 
+// because req.cookies.token will be picked up by your backend auth.js fallback!
 
 api.interceptors.response.use(
   (response) => response,

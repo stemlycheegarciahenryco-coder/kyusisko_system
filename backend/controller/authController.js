@@ -81,8 +81,8 @@ exports.portalLogin = async (req, res) => {
             
             res.cookie('token', token, {
                 httpOnly: true,
-                secure: true,
-                sameSite: 'None',
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
                 maxAge: 24 * 60 * 60 * 1000
             });
 
@@ -142,8 +142,8 @@ exports.portalLogin = async (req, res) => {
                     // they are a main org account or a co-admin (co-admins cannot
                     // add further co-admins).
                     isPasswordChanged: sub.account_type === 'co_admin' ? true : (sub.is_password_changed === true),
-                    accountType: sub.account_type || 'main',
-                    parentOrgId: sub.parent_org_id || null
+                    accountType: sub.account_type || 'main'
+                    
                 }
             });
         }
