@@ -41,10 +41,10 @@ export default function LogIn() {
         password 
       });
       
-      const { token, role, data } = response.data; 
+      const {  role, data } = response.data; 
 
-      
-   
+     
+      localStorage.setItem('userRole', role); 
       
       // 🚀 Dynamic RBAC Client-Side Routing
       if (role === 'root_admin' || role === 'co_admin') {

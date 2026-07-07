@@ -1,25 +1,36 @@
 import axios from 'axios';
 
-// Use LOCAL when in development, Render when in production
 const backendURL = import.meta.env.DEV 
   ? (import.meta.env.VITE_LOCAL_API_URL || 'http://localhost:5000')
   : (import.meta.env.VITE_API_URL || 'http://localhost:5000');
 
 const api = axios.create({
   baseURL: `${backendURL}/api`,
-  withCredentials: true // 🔥 Crucial: Lets cookies attach automatically
+  withCredentials: true
 });
 
-// 💡 The request interceptor attaching headers can be completely removed 
-// because req.cookies.token will be picked up by your backend auth.js fallback!
+// Attach token from localStorage to every request
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      const isLoginRequest = error.config.url.includes('/login');
-      const isPublicPage = ['/', '/studentlogin', '/rootlogin', '/Home'].includes(window.location.pathname);
+      // ✅ FIXED: Checks for 'login' anywhere in the URL string safely (catches portal-login)
+      const isLoginRequest = error.config.url.includes('login');
+      
+      // ✅ FIXED: Include your public pages
+      const isPublicPage = ['/', '/studentlogin', '/rootlogin', '/Home', '/login'].includes(window.location.pathname);
+      
       if (!isLoginRequest && !isPublicPage) {
+        console.log("Wiping storage because 401 hit on non-public page:", window.location.pathname);
         localStorage.clear();
         window.location.href = '/Home';
       }
