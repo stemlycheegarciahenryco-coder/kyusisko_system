@@ -288,7 +288,7 @@ export default function ApplicationForm() {
             <div className="border-b border-slate-100 pb-5">
               <div className="flex items-center gap-3">
                 <div className="w-2 h-6 bg-[#093fb4] rounded-full" />
-                <h2 className="text-[12px] font-black uppercase tracking-[0.2em] text-[#093fb4]">Application Submissions Questionnaire</h2>
+                <h2 className="text-[12px] font-black uppercase tracking-[0.2em] text-[#093fb4]">Application Submissions</h2>
               </div>
               <p className="text-xs text-slate-500 font-bold mt-1.5 pl-5">Please complete all fields below accurately.</p>
             </div>

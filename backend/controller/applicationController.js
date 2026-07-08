@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const {supabaseAdmin} = require('../config/supabaseClient');
 
 // POST /scholarship/:id/apply
 // student submits an application with responses to all fields
@@ -86,21 +87,40 @@ const applyScholarship = async (req, res) => {
     const application_id = application.rows[0].id;
 
     // 6. SAVE EACH RESPONSE
-    // ✅ Fixed: was 'application_responses'/'form_field_id', 
-    //           actual table is 'application_submissions'/'requirement_id'
+    // ✅ Fixed: was 'application_responses'/'form_field_id',
+    // 6. SAVE EACH RESPONSE
     for (const response of responses) {
-      const requirement_id = response.form_field_id; // frontend sends form_field_id
-
-      // Check if a file was uploaded for this field
+      const requirement_id = response.form_field_id; 
       let file_path = null;
       let text_value = null;
 
       if (req.files) {
-        const uploadedFile = req.files.find(
-          f => f.fieldname === String(requirement_id)
-        );
+        const uploadedFile = req.files.find(f => f.fieldname === String(requirement_id));
+        
         if (uploadedFile) {
-          file_path = uploadedFile.path.replace(/\\/g, '/').replace(/^uploads\//, '');
+          const fileExtension = uploadedFile.originalname.split('.').pop();
+          // Create a clean path structure in the bucket: app_123/1689..._req_5.pdf
+          const bucketPath = `app_${application_id}/${Date.now()}_req_${requirement_id}.${fileExtension}`;
+
+          // ☁️ 1. Upload directly to Supabase from memory buffer
+          const { error: uploadError } = await supabaseAdmin.storage
+            .from('application-scholarship-document')
+            .upload(bucketPath, uploadedFile.buffer, {
+              contentType: uploadedFile.mimetype,
+              upsert: true
+            });
+
+          if (uploadError) throw uploadError;
+
+          // 🔒 2. Generate a 1-year secure signed URL for the database
+          const { data: signedUrlData, error: urlError } = await supabaseAdmin.storage
+            .from('application-scholarship-document')
+            .createSignedUrl(bucketPath, 31536000); // 1 year expiration
+
+          if (urlError) throw urlError;
+
+          // Save the signed URL instead of the local hard drive path
+          file_path = signedUrlData.signedUrl; 
         }
       }
 
@@ -216,7 +236,7 @@ const getScholarshipApplications = async (req, res) => {
           s.scontact_number,
           s.student_email,
           s.sprofile_pic
-        
+
        FROM applications a
        JOIN students s ON s.id = a.student_id
        WHERE a.scholarship_id = $1
@@ -501,12 +521,32 @@ const submitComplianceDocuments = async (req, res) => {
 
     // Save uploaded files as new application_submissions
     if (req.files && req.files.length > 0) {
-      for (const file of req.files) {
-        const filePath = file.path.replace(/\\/g, '/').replace(/^uploads\//, '');
+      for (let index = 0; index < req.files.length; index++) {
+        const file = req.files[index];
+        const fileExtension = file.originalname.split('.').pop();
+        const bucketPath = `compliance_app_${appId}/${Date.now()}_${index}.${fileExtension}`;
+
+        // ☁️ 1. Upload to Supabase
+        const { error: uploadError } = await supabaseAdmin.storage
+          .from('application-scholarship-document')
+          .upload(bucketPath, file.buffer, {
+            contentType: file.mimetype,
+            upsert: true
+          });
+
+        if (uploadError) throw uploadError;
+
+        // 🔒 2. Generate signed URL
+        const { data: signedUrlData, error: urlError } = await supabaseAdmin.storage
+          .from('application-scholarship-document')
+          .createSignedUrl(bucketPath, 31536000);
+
+        if (urlError) throw urlError;
+
         await client.query(
-          `INSERT INTO application_submissions (application_id, requirement_id, file_path,source)
+          `INSERT INTO application_submissions (application_id, requirement_id, file_path, source)
            VALUES ($1, NULL, $2, 'compliance')`,
-          [appId, filePath]
+          [appId, signedUrlData.signedUrl]
         );
       }
     }

@@ -4,6 +4,7 @@ import api from '../api';
 import EditProfileModal from './EditProfileModal'; 
 import AddPortfolioModal from './AddPortfolioModal'; 
 import StudentParent from './StudentParent';
+import EditPersonalInfoModal from './EditPersonalInfoModal';
 
 export default function StudentProfile() {
   const [student, setStudent] = useState(null);
@@ -11,6 +12,9 @@ export default function StudentProfile() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isPortfolioModalOpen, setIsPortfolioModalOpen] = useState(false);
   const [bio, setBio] = useState('');
+  //personal edit info 
+  const [isPersonalInfoModalOpen, setIsPersonalInfoModalOpen] = useState(false);
+
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -159,15 +163,28 @@ export default function StudentProfile() {
 
         {/* ── 3. PERSONAL INFORMATION ── */}
         <div className="bg-white rounded-3xl p-8 mb-6 shadow-[0_2px_20px_rgb(9,63,180,0.04)] border border-[#093fb4]/10">
-          <SectionLabel icon={<Shield size={14} />} title="Personal Information" />
-          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-8 gap-x-6">
-            <InfoItem icon={<Phone />} label="Contact Number" value={student?.scontact_number} />
-            <InfoItem icon={<MapPin />} label="Home Address" value={[student?.sstreet, student?.sbarangay].filter(Boolean).join(', ') || "Not provided"} />
-            <InfoItem icon={<User />} label="Gender" value={student?.sgender} />
-            <InfoItem icon={<Award />} label="Religion" value={student?.religion === "Others" ? student?.other_religion : student?.religion} />
-            <InfoItem icon={<Award />} label="Sports Interest" value={displaySports()} />
-          </div>  
-        </div>
+  
+  {/* 🚀 ADDED THE FLEX HEADER AND EDIT BUTTON HERE */}
+  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+    <div className="flex-1 w-full sm:w-auto">
+      <SectionLabel icon={<Shield size={14} />} title="Personal Information" />
+    </div>
+    <button
+      onClick={() => setIsPersonalInfoModalOpen(true)}
+      className="flex items-center justify-center gap-2 text-xs font-black uppercase bg-[#093fb4]/10 text-[#093fb4] px-5 py-2.5 rounded-xl hover:bg-[#093fb4] hover:text-white transition-colors active:scale-95 w-full sm:w-auto"
+    >
+      <Edit2 size={14} /> Edit Info
+    </button>
+  </div>
+
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-8 gap-x-6">
+    <InfoItem icon={<Phone />} label="Contact Number" value={student?.scontact_number} />
+    <InfoItem icon={<MapPin />} label="Home Address" value={[student?.sstreet, student?.sbarangay].filter(Boolean).join(', ') || "Not provided"} />
+    <InfoItem icon={<User />} label="Gender" value={student?.sgender} />
+    <InfoItem icon={<Award />} label="Religion" value={student?.religion === "Others" ? student?.other_religion : student?.religion} />
+    <InfoItem icon={<Award />} label="Sports Interest" value={displaySports()} />
+  </div>  
+</div>
 
         <div className="mb-6">
            <StudentParent student={student} onRefresh={() => window.location.reload()} />
@@ -229,6 +246,12 @@ export default function StudentProfile() {
       {isPortfolioModalOpen && (
         <AddPortfolioModal
           onClose={() => setIsPortfolioModalOpen(false)}
+          studentData={student}
+        />
+      )}
+      {isPersonalInfoModalOpen && (
+        <EditPersonalInfoModal
+          onClose={() => setIsPersonalInfoModalOpen(false)}
           studentData={student}
         />
       )}

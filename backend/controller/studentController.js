@@ -73,6 +73,7 @@ exports.getAllStudents = async (req, res) => {
     }
 };
 
+
 exports.updateStudentStatus = async (req, res) => {
     const { id } = req.params;
     const { activeStatus } = req.body; // Expecting true or false
@@ -87,6 +88,7 @@ exports.updateStudentStatus = async (req, res) => {
         res.status(500).json({ error: "Failed to update security status" });
     }
 };
+
 
 // Profile student achievements & academic updates
 exports.updatePortfolio = async (req, res) => {
@@ -174,9 +176,9 @@ exports.updatePortfolio = async (req, res) => {
         const fileExtension = file.originalname.split('.').pop();
         const filePath = `portfolio/student_${student_id}/${Date.now()}_${index}.${fileExtension}`;
 
-        // 5a. Upload document stream buffer to your private 'org-complied-docs' bucket
-        const { data, error: uploadError } = await supabase.storage
-          .from('org-complied-docs')
+        // 5a. Upload document stream buffer to your private 'student-portfolio' bucket
+        const { data, error: uploadError } = await supabaseAdmin.storage
+          .from('student-portfolio')
           .upload(filePath, file.buffer, {
             contentType: file.mimetype,
             upsert: true
@@ -185,8 +187,8 @@ exports.updatePortfolio = async (req, res) => {
         if (uploadError) throw uploadError;
 
         // 5b. Generate long-lived (1 year) secure signed URL for private access
-        const { data: signedUrlData, error: urlError } = await supabase.storage
-          .from('org-complied-docs')
+        const { data: signedUrlData, error: urlError } = await supabaseAdmin.storage
+          .from('student-portfolio')
           .createSignedUrl(filePath, 31536000); // 31536000 seconds = 1 year
 
         if (urlError) throw urlError;
@@ -213,6 +215,44 @@ exports.updatePortfolio = async (req, res) => {
   }
 };
 
+
+
+
+//PERSONAL EDIT INFO UPDATE
+exports.updatePersonalInfo = async (req, res) => {
+  const { id } = req.params;
+  const { scontact_number, sstreet, sbarangay, sgender, religion, other_religion } = req.body;
+
+  try {
+    // 1. Update core demographic fields in the students table
+    await pool.query(
+      `UPDATE students 
+       SET scontact_number = COALESCE($1, scontact_number),
+           sstreet = COALESCE($2, sstreet),
+           sbarangay = COALESCE($3, sbarangay),
+           sgender = COALESCE($4, sgender)
+       WHERE id = $5`,
+      [scontact_number, sstreet, sbarangay, sgender, id]
+    );
+
+    // 2. Update extended onboarding fields (Religion)
+    await pool.query(
+      `UPDATE student_onboarding_profiles 
+       SET religion = COALESCE($1, religion),
+           other_religion = $2
+       WHERE student_id = $3`,
+      [religion, religion === 'Others' ? other_religion : null, id]
+    );
+
+    res.json({ success: true, message: "Personal information updated successfully!" });
+  } catch (err) {
+    console.error("Personal Info Update Error:", err.message);
+    res.status(500).json({ error: "Failed to update personal information." });
+  }
+};
+
+
+//getting the full profile information
 exports.getFullProfile = async (req, res) => {
   const { id } = req.params;
   try {
@@ -311,6 +351,7 @@ exports.updateProfilePic = async (req, res) => {
   }
 };
 
+//update two factor authentication settings for student
 exports.update2FA = async (req, res) => {
     const { studentId, two_factor_enabled, preferred_2fa_method } = req.body;
 
