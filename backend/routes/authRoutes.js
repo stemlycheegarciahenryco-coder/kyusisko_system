@@ -24,7 +24,7 @@ router.post('/auth/portal-login', authCtrl.portalLogin);
 router.post('/auth/forgot-password', authCtrl.forgotPassword);
 router.post('/auth/reset-password', authCtrl.resetPassword);
 router.get('/auth/login-attempts', authCtrl.getLogInAttempt); 
-
+router.post('/auth/logout', authCtrl.logout);
 
 // ==========================================
 // 2. STUDENT ACCOUNT MANAGEMENT

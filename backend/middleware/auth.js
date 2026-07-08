@@ -2,11 +2,14 @@
 const jwt = require('jsonwebtoken');
 
 const verifyToken = (req, res, next) => {
-  // Check Authorization header first, then fall back to cookie
+  // FIX: Cookie is the primary auth mechanism for the browser frontend.
+  // The httpOnly cookie cannot be read by JavaScript (XSS-safe), and is
+  // attached automatically on every request via withCredentials:true in api.js.
+  // Bearer header is kept as a fallback ONLY for non-browser API clients
+  // (e.g. Postman, mobile apps, server-to-server calls).
   const authHeader = req.headers.authorization;
-  const token = (authHeader && authHeader.startsWith('Bearer '))
-    ? authHeader.split(' ')[1]
-    : req.cookies.token;
+  const token = req.cookies?.token
+    || (authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null);
 
   if (!token) {
     return res.status(403).json({ error: "Access denied. Please log in." });

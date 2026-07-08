@@ -41,21 +41,23 @@ export default function LogIn() {
         password 
       });
       
-      const {  role, data } = response.data; 
+      const { token, role, data } = response.data; 
 
-     
-      localStorage.setItem('userRole', role); 
-      
-      // 🚀 Dynamic RBAC Client-Side Routing
+      // FIX: Do NOT store the JWT token in localStorage — it's already set as
+      // an httpOnly cookie by the backend (see authController.js res.cookie call).
+      // The browser attaches it automatically on every request via withCredentials:true.
+      // Storing it in localStorage exposes it to XSS attacks.
+      // Only store non-sensitive routing identifiers here.
+
       if (role === 'root_admin' || role === 'co_admin') {
         localStorage.setItem('systemUid', data.uid);
         localStorage.setItem('adminEmail', data.email);
+        localStorage.setItem('userRole', role);
         navigate('/RootDashboard');
       } else if (role === 'sub_admin') {
         localStorage.setItem('orgId', data.id); 
         localStorage.setItem('adminEmail', data.email);
-        // Store the new fields so OrgDashboard knows whether to show the
-        // forced password change modal and whether this is a main or co-admin account
+        localStorage.setItem('userRole', role);
         localStorage.setItem('orgInfo', JSON.stringify({
           isPasswordChanged: data.isPasswordChanged,
           accountType: data.accountType,
@@ -64,9 +66,8 @@ export default function LogIn() {
         navigate('/OrgDashboard');
       } else if (role === 'student') {
         localStorage.setItem('studentId', data.id);
+        localStorage.setItem('userRole', role);
         localStorage.setItem('studentInfo', JSON.stringify(data));
-        // New students (profile not yet completed) land on onboarding first;
-        // returning students with a completed profile go straight to scholarships.
         if (!data.isProfileComplete) {
           navigate('/student-onboard');
         } else {

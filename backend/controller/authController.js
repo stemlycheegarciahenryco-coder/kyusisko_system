@@ -351,3 +351,17 @@ exports.getLogInAttempt = async (req, res) => {
         }); 
     }
 };
+// ==========================================
+// 5. LOGOUT — clears the httpOnly cookie server-side
+// ==========================================
+exports.logout = (req, res) => {
+    // FIX: Clearing the cookie server-side is the only way to truly invalidate
+    // the session. If we only cleared localStorage on the frontend, the httpOnly
+    // cookie would persist and still authenticate future requests.
+    res.clearCookie('token', {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'None'
+    });
+    res.json({ success: true, message: "Logged out successfully." });
+};
