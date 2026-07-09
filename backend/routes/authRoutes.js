@@ -40,7 +40,7 @@ router.get('/students/profile-full/:id', stdCtrl.getFullProfile);
 router.get('/students/my-scholarships', verifyToken, isStudent, stdCtrl.getMyScholarships);
 router.get('/students/:id', stdCtrl.getStudentById);
 router.patch('/students/update-portfolio', verifyToken, isStudent, upload.array('files', 10), stdCtrl.updatePortfolio);
-router.put('/update-profile/:id', upload.single('profile_image'), stdCtrl.updateProfilePic);
+router.put('/upload-profile/:id', upload.single('profile_image'), stdCtrl.updateProfilePic);
 router.put('/students/parent-profile/:studentId', stdCtrl.saveOrUpdateParentProfile);
 router.put('/students/personal-info/:studentId', verifyToken, isStudent, stdCtrl.updatePersonalInfo);
 

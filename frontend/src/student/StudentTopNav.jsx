@@ -50,32 +50,39 @@ export default function StudentTopNav() {
     }
   };
 
+  const fetchNavData = async () => {
+    try {
+      if (!studentId) return;
+      const res = await api.get(`/students/profile-full/${studentId}`);
+      setStudent(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
-    const fetchNavData = async () => {
+    const fetchUnread = async () => {
       try {
-        if (!studentId) return;
-        const res = await api.get(`/students/profile-full/${studentId}`);
-        setStudent(res.data);
+        const res = await api.get('/notif/notifications/unread-count');
+        setUnreadCount(Number(res.data.count) || 0);
       } catch (err) {
         console.error(err);
       }
     };
+    fetchUnread();
+  }, []);
+
+  // 2. Fetch data on initial mount
+  useEffect(() => {
     fetchNavData();
   }, [studentId]);
 
-  // Click Outside hooks
+  // 3. 🔥 Listen for the avatar update event and instantly re-fetch navbar details
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        dropdownRef.current && !dropdownRef.current.contains(event.target) &&
-        notifRef.current && !notifRef.current.contains(event.target)
-      ) {
-        setShowDropdown(false);
-        setShowNotif(false);
-      }
+    window.addEventListener('profilePicUpdated', fetchNavData);
+    return () => {
+      window.removeEventListener('profilePicUpdated', fetchNavData);
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   // Removed Settings from this row to place it inside the profile burger dropdown

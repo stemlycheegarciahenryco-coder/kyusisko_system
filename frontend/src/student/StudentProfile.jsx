@@ -23,7 +23,7 @@ export default function StudentProfile() {
   const location = useLocation();
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
-  
+ 
   // Modal Triggers
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isPortfolioModalOpen, setIsPortfolioModalOpen] = useState(false);
@@ -63,12 +63,13 @@ export default function StudentProfile() {
     if (!file) return;
 
     const formData = new FormData();
-    formData.append('profile_pic', file);
+    formData.append('profile_image', file);
 
     try {
       const id = localStorage.getItem('studentId');
-      await api.post(`/students/upload-profile/${id}`, formData);
+      await api.put(`/upload-profile/${id}`, formData);
       fetchData(); // Refresh info
+      window.dispatchEvent(new Event('profilePicUpdated'));
     } catch (err) {
       console.error("Avatar upload failed:", err);
     }
@@ -151,7 +152,7 @@ export default function StudentProfile() {
           <div className="relative group cursor-pointer shrink-0" onClick={handleAvatarClick}>
             <div className="w-24 h-24 rounded-xl bg-slate-50 border border-slate-200 overflow-hidden flex items-center justify-center shadow-sm">
               {student.sprofile_pic ? (
-                <img src={student.sprofile_pic} className="w-full h-full object-cover" alt="Avatar" />
+                <img src={student.sprofile_pic} className="w-full h-full object-cover" alt="Profile" />
               ) : (
                 <User size={44} className="text-slate-300" />
               )}
