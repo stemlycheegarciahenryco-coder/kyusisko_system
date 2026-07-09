@@ -157,7 +157,7 @@ const StudentOnboarding = () => {
 
       if (res.status === 201 || res.data.success) {
         localStorage.setItem('isProfileComplete', 'true');
-        navigate('/scholarships');
+        navigate('/StudentProfile', { state: { justOnboarded: true }, replace: true });
       }
     } catch (err) {
       console.error("Submission failed:", err.response?.data || err.message);

@@ -190,7 +190,7 @@ export default function ApplicantDocs({
                           key={idx}
                           href={`${backendURL}/uploads/${doc.file_path}`}
                           target="_blank" rel="noreferrer"
-                          className="text-xs font-semibold text-amber-600 hover:underline flex items-center gap-1"
+                          className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#FFBF00] bg-amber-20/20 border border-[#FFBF00]/20 rounded hover:bg-amber-100 hover:border-[#FFBF00]/40 transition-all"
                         >
                           View File {idx + 1} <ExternalLink size={10} />
                         </a>

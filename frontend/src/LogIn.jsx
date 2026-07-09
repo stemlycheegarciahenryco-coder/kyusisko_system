@@ -68,11 +68,12 @@ export default function LogIn() {
         localStorage.setItem('studentId', data.id);
         localStorage.setItem('userRole', role);
         localStorage.setItem('studentInfo', JSON.stringify(data));
-        if (!data.isProfileComplete) {
-          navigate('/student-onboard');
-        } else {
+        if (data.isProfileComplete) {
           navigate('/scholarships');
+        }else {
+          navigate('/student-onboard', { state: { targetDestination: '/StudentProfile' } });
         }
+      
       }
     } catch (err) {
       const errorData = err.response?.data;
