@@ -91,7 +91,7 @@ export default function OrgRightBar({ recentApplications = [] }) {
       {/* Conflicts Layout Section */}
       <section className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex flex-col">
         <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2 select-none">
-          <ShieldAlert size={16} className="text-red-500" /> Conflicts
+          <ShieldAlert size={16} className="text-red-500" /> Student Monitored Applications
         </h3>
 
         {loadingConflicts ? (
@@ -119,7 +119,7 @@ export default function OrgRightBar({ recentApplications = [] }) {
         ) : (
           <div className="text-center py-8 bg-slate-50/50 rounded-xl border border-dashed border-slate-200 flex flex-col items-center justify-center">
             <CheckCircle size={28} className="text-emerald-500 mb-2 opacity-85" />
-            <p className="text-xs font-bold text-slate-400">No organizational conflicts</p>
+            <p className="text-xs font-bold text-slate-400">No Scholarship Application conflicts</p>
           </div>
         )}
       </section>

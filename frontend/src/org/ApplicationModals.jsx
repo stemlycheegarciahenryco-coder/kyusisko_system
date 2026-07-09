@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import { CheckCircle, XCircle, Clock } from 'lucide-react';
-//COMPLIANCE MODAL AND REASON 
+
 export function StatusBadge({ status }) {
   const map = {
-    pending:      { label: 'Pending',        cls: 'bg-amber-50 text-amber-600 border-amber-200' },
-    approved:     { label: 'Approved',        cls: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
-    not_eligible: { label: 'Not Eligible',    cls: 'bg-[#FF1E1E]/10 text-[#FF1E1E] border-[#FF1E1E]/20' },
-    under_review: { label: 'For Compliance',  cls: 'bg-amber-50 text-amber-600 border-amber-200' },
+    pending:      { label: 'Pending',        cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+    approved:     { label: 'Approved',        cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    not_eligible: { label: 'Not Eligible',    cls: 'bg-red-50 text-red-700 border-red-200' },
+    under_review: { label: 'For Compliance',  cls: 'bg-amber-50 text-amber-700 border-amber-200' },
   };
-  const { label, cls } = map[status] || { label: status, cls: 'bg-black/5 text-black/40 border-black/10' };
+  const { label, cls } = map[status] || { label: status, cls: 'bg-slate-50 text-slate-600 border-slate-200' };
   return (
-    <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border ${cls}`}>
+    <span className={`text-xs font-semibold px-3 py-1 rounded-full border ${cls}`}>
       {label}
     </span>
   );
@@ -22,54 +22,54 @@ export function ActionConfirmModal({ isOpen, onClose, onConfirm, status }) {
   const config = {
     approved: {
       title: 'Confirm Approval',
-      sub: 'Student will be marked as eligible and notified immediately.',
-      icon: <CheckCircle size={30} className="text-[#093fb4]" />,
-      iconBg: 'bg-[#093fb4]/10',
-      btnCls: 'bg-[#093fb4] hover:bg-[#093fb4]/90',
+      sub: 'The student applicant will be officially marked as eligible and notified immediately.',
+      icon: <CheckCircle size={28} className="text-[#093fb4]" />,
+      iconBg: 'bg-blue-50 border border-blue-100',
+      btnCls: 'bg-[#093fb4] hover:bg-[#093fb4]/90 text-white',
     },
     under_review: {
-      title: 'Send Compliance Notice',
-      sub: 'Student will be notified to submit required documents.',
-      icon: <Clock size={30} className="text-amber-500" />,
-      iconBg: 'bg-amber-50',
-      btnCls: 'bg-amber-500 hover:bg-amber-600',
+      title: 'Request Compliance Notice',
+      sub: 'The student will be prompted to supply additional required configurations and records.',
+      icon: <Clock size={28} className="text-amber-600" />,
+      iconBg: 'bg-amber-50 border border-amber-100',
+      btnCls: 'bg-amber-600 hover:bg-amber-700 text-white',
     },
     not_eligible: {
-      title: 'Mark Not Eligible',
-      sub: 'Student will be informed they do not qualify for this scholarship.',
-      icon: <XCircle size={30} className="text-[#FF1E1E]" />,
-      iconBg: 'bg-[#FF1E1E]/10',
-      btnCls: 'bg-[#FF1E1E] hover:bg-[#FF1E1E]/90',
+      title: 'Mark as Not Eligible',
+      sub: 'This actions logs that the student does not qualify under the current program guidelines.',
+      icon: <XCircle size={28} className="text-red-600" />,
+      iconBg: 'bg-red-50 border border-red-100',
+      btnCls: 'bg-red-600 hover:bg-red-700 text-white',
     },
     terminated: {
-      title: 'Terminate Agreement',
-      sub: 'This will close the scholarship agreement. This action cannot be undone.',
-      icon: <XCircle size={30} className="text-[#FF1E1E]" />,
-      iconBg: 'bg-[#FF1E1E]/10',
-      btnCls: 'bg-[#FF1E1E] hover:bg-[#FF1E1E]/90',
+      title: 'Terminate Scholarship',
+      sub: 'This closes the active agreement setup. This structural action cannot be reverted.',
+      icon: <XCircle size={28} className="text-red-600" />,
+      iconBg: 'bg-red-50 border border-red-100',
+      btnCls: 'bg-red-600 hover:bg-red-700 text-white',
     },
   };
 
   const c = config[status] || config.not_eligible;
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="w-full max-w-sm bg-[#FFFCFB] rounded-2xl p-8 text-center shadow-2xl">
-        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5 ${c.iconBg}`}>
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <div className="w-full max-w-sm bg-white rounded-xl p-6 text-center shadow-xl border border-slate-100">
+        <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 ${c.iconBg}`}>
           {c.icon}
         </div>
-        <h2 className="text-base font-black text-black uppercase tracking-tight mb-2">{c.title}</h2>
-        <p className="text-sm text-black/50 font-medium mb-6 leading-relaxed">{c.sub}</p>
+        <h2 className="text-base font-bold text-slate-800 uppercase tracking-wide mb-1.5">{c.title}</h2>
+        <p className="text-sm text-slate-500 font-medium mb-5 leading-relaxed">{c.sub}</p>
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 py-3 bg-black/5 text-black font-black uppercase text-[10px] tracking-widest hover:bg-black/10 rounded-xl transition-colors"
+            className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-semibold text-sm hover:bg-slate-200 rounded-lg transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className={`flex-1 py-3 text-white rounded-xl font-black uppercase text-[10px] tracking-widest transition-colors ${c.btnCls}`}
+            className={`flex-1 py-2.5 rounded-lg font-semibold text-sm transition-colors ${c.btnCls}`}
           >
             Confirm
           </button>
@@ -83,18 +83,15 @@ export function FeedbackModal({ isOpen, onClose, type, message }) {
   if (!isOpen) return null;
   const isSuccess = type === 'success';
   return (
-    <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="w-full max-w-sm bg-[#FFFCFB] rounded-2xl p-8 text-center shadow-2xl">
-        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 ${isSuccess ? 'bg-emerald-50' : 'bg-[#FF1E1E]/10'}`}>
-          {isSuccess
-            ? <CheckCircle size={30} className="text-emerald-500" />
-            : <XCircle size={30} className="text-[#FF1E1E]" />
-          }
+    <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <div className="w-full max-w-sm bg-white rounded-xl p-6 text-center shadow-xl border border-slate-100">
+        <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 ${isSuccess ? 'bg-emerald-50 border border-emerald-100' : 'bg-red-50 border border-red-100'}`}>
+          {isSuccess ? <CheckCircle size={28} className="text-emerald-600" /> : <XCircle size={28} className="text-red-600" />}
         </div>
-        <p className="text-sm font-black text-black uppercase tracking-tight mb-5">{message}</p>
+        <p className="text-sm font-semibold text-slate-800 mb-5">{message}</p>
         <button
           onClick={onClose}
-          className="w-full py-3 bg-[#093fb4] text-white rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-[#093fb4]/90 transition-colors"
+          className="w-full py-2.5 bg-[#093fb4] text-white rounded-lg font-semibold text-sm hover:bg-[#093fb4]/90 transition-colors shadow-sm"
         >
           Close
         </button>
@@ -103,12 +100,9 @@ export function FeedbackModal({ isOpen, onClose, type, message }) {
   );
 }
 
-//Compliance Modal -------------------------------------------------------------------------------------------------------------
 export function ComplianceModal({ isOpen, onClose, onSend, mode = 'compliance' }) {
   const [reason, setReason] = useState('');
   const [sending, setSending] = useState(false);
-  
-  // Checkbox State Management
   const [selectedDocs, setSelectedDocs] = useState([]);
   const [otherDoc, setOtherDoc] = useState('');
 
@@ -123,41 +117,31 @@ export function ComplianceModal({ isOpen, onClose, onSend, mode = 'compliance' }
     "Certificate of Indigency"
   ];
 
-  // Dynamic Check: Are all common documents currently selected?
   const isAllSelected = selectedDocs.length === commonDocuments.length;
 
-  // Handle Select All Toggling
   const handleSelectAllToggle = () => {
     if (isAllSelected) {
-      setSelectedDocs([]); // Clear all
+      setSelectedDocs([]);
     } else {
-      setSelectedDocs([...commonDocuments]); // Select all
+      setSelectedDocs([...commonDocuments]);
     }
   };
 
   const handleCheckboxChange = (doc) => {
-    setSelectedDocs(prev => 
-      prev.includes(doc) 
-        ? prev.filter(item => item !== doc) 
-        : [...prev, doc]
-    );
+    setSelectedDocs(prev => prev.includes(doc) ? prev.filter(item => item !== doc) : [...prev, doc]);
   };
 
   const handleSend = async () => {
     const finalDocsList = [...selectedDocs];
-    if (otherDoc.trim()) {
-      finalDocsList.push(otherDoc.trim());
-    }
+    if (otherDoc.trim()) finalDocsList.push(otherDoc.trim());
 
     const requiredDocsString = finalDocsList.join('\n');
-
     if (!reason.trim() || !requiredDocsString) return;
     
     setSending(true);
     await onSend(reason, requiredDocsString);
     setSending(false);
     
-    // Reset state after sending
     setReason('');
     setSelectedDocs([]);
     setOtherDoc('');
@@ -166,102 +150,94 @@ export function ComplianceModal({ isOpen, onClose, onSend, mode = 'compliance' }
   const hasRequirements = selectedDocs.length > 0 || otherDoc.trim().length > 0;
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="w-full max-w-md bg-[#FFFCFB] rounded-2xl shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <div className="w-full max-w-md bg-white rounded-xl shadow-xl overflow-hidden border border-slate-100">
 
-        <div className={`px-6 py-4 flex items-center justify-between ${isRenew ? 'bg-[#093fb4]' : 'bg-amber-500'}`}>
-           <div className="flex items-center gap-2">
-            <Clock size={18} className="text-white" />
-            <h2 className="text-sm font-black text-white uppercase tracking-widest">
+        <div className={`px-6 py-4 flex items-center justify-between text-white ${isRenew ? 'bg-[#093fb4]' : 'bg-amber-600'}`}>
+          <div className="flex items-center gap-2">
+            <Clock size={16} />
+            <h2 className="text-sm font-semibold uppercase tracking-wider">
               {isRenew ? 'Renewal Requirements' : 'Compliance Request'}
             </h2>
           </div>
-          <button onClick={onClose} className="text-white/70 hover:text-white transition-colors">
+          <button onClick={onClose} className="text-white/80 hover:text-white transition-colors">
             <XCircle size={20} />
           </button>
         </div>
 
-        <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto scrollbar-thin">
-          
-          {/* Reason Field */}
+        <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
           <div>
-            <label className="text-[11px] font-black uppercase tracking-widest text-black/50 mb-2 block">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5 block">
               {isRenew ? 'Reason for Renewal' : 'Reason for Compliance'}
             </label>
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="e.g. Missing grade certificate, Incomplete personal information..."
+              placeholder="Provide clean instructions on what needs updating..."
               rows={2}
-              className="w-full bg-black/[0.03] border border-black/10 rounded-xl px-4 py-3 text-sm text-black outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent resize-none transition-all"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-[#093fb4] resize-none transition-all"
             />
           </div>
 
-          {/* Dynamic Checkbox Requirements */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-[11px] font-black uppercase tracking-widest text-black/50 block">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Select Required Documents
               </label>
-              
-              {/* 🔄 NEW: Select All Checkbox */}
               <label className="flex items-center gap-1.5 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={isAllSelected}
                   onChange={handleSelectAllToggle}
-                  className="w-3.5 h-3.5 rounded text-amber-500 focus:ring-amber-500 cursor-pointer"
+                  className="w-3.5 h-3.5 rounded text-[#093fb4] focus:ring-[#093fb4] cursor-pointer"
                 />
-                <span className="text-[10px] font-black uppercase tracking-wider text-black/40">Select All</span>
+                <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Select All</span>
               </label>
             </div>
 
-            <div className="space-y-2 mb-3">
+            <div className="space-y-1.5 mb-3">
               {commonDocuments.map((doc) => (
-                <label key={doc} className="flex items-center gap-3 p-2.5 rounded-lg border border-black/5 hover:bg-black/[0.02] cursor-pointer transition-colors">
+                <label key={doc} className="flex items-center gap-3 p-2 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-slate-50 cursor-pointer transition-colors">
                   <input
                     type="checkbox"
                     checked={selectedDocs.includes(doc)}
                     onChange={() => handleCheckboxChange(doc)}
-                    className="w-4 h-4 rounded text-amber-500 focus:ring-amber-500 cursor-pointer"
+                    className="w-4 h-4 rounded text-[#093fb4] focus:ring-[#093fb4] cursor-pointer"
                   />
-                  <span className="text-sm font-semibold text-black/70">{doc}</span>
+                  <span className="text-sm font-medium text-slate-700">{doc}</span>
                 </label>
               ))}
             </div>
 
-            {/* Custom "Other" Field */}
-            <label className="text-[10px] font-black uppercase tracking-widest text-black/40 mb-1.5 block">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1 block">
               Other Requirement (Optional)
             </label>
             <input
               type="text"
               value={otherDoc}
               onChange={(e) => setOtherDoc(e.target.value)}
-              placeholder="e.g. Barangay Clearance..."
-              className="w-full bg-black/[0.03] border border-black/10 rounded-xl px-4 py-3 text-sm text-black outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all"
+              placeholder="Enter custom requirement line item..."
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-[#093fb4] transition-all"
             />
           </div>
 
-          {/* System Warning/Notice */}
-          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-            <p className="text-[11px] font-bold text-amber-700 leading-relaxed">
-              The student will be notified and each selected document above will automatically generate a dedicated upload field in their portal.
+          <div className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5">
+            <p className="text-xs font-medium text-slate-500 leading-normal">
+              Note: Explicit reasons and requirement listings guide transparent evaluation workflows.
             </p>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-1">
+          <div className="flex gap-3 pt-2 border-t border-slate-100">
             <button
               onClick={onClose}
-              className="flex-1 py-3 bg-black/5 text-black rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-black/10 transition-colors"
+              className="flex-1 py-2.5 bg-slate-100 text-slate-700 rounded-lg font-semibold text-sm hover:bg-slate-200 transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleSend}
               disabled={sending || !reason.trim() || !hasRequirements}
-              className="flex-1 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-black uppercase text-[10px] tracking-widest transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 bg-[#093fb4] hover:bg-[#093fb4]/90 text-white rounded-lg font-semibold text-sm transition-colors disabled:opacity-40 flex items-center justify-center gap-2 shadow-sm"
             >
               {sending ? <Clock size={14} className="animate-spin" /> : <CheckCircle size={14} />}
               Send Notice
