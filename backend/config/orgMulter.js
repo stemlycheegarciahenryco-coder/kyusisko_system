@@ -1,7 +1,7 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-
+const upload = multer({storage: multer.memoryStorage()}); // Use memory storage for processing before saving to Supabase
 // Specialized folder for Org Profiles to keep them separate from student docs
 const uploadDir = 'uploads/profiles/';
 if (!fs.existsSync(uploadDir)) {
@@ -40,10 +40,10 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
-const uploadOrgPic = multer({ 
+const uploadOrgPic = multer.memoryStorage({ 
     storage: storage,
     fileFilter: fileFilter,
     limits: { fileSize: 2 * 1024 * 1024 } // 2MB is plenty for a logo
 });
 
-module.exports = uploadOrgPic;
+module.exports = upload.single('org_pic');

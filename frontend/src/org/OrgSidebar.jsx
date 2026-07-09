@@ -61,7 +61,7 @@ export default function OrgSidebar() {
     <div className="w-full h-full rounded-2xl border-4 border-[#093fb4]/10 overflow-hidden bg-white shadow-md">
       {orgData?.org_pic ? (
         <img 
-          src={`http://localhost:5000/${orgData.org_pic}`} 
+          src={orgData.org_pic} 
           className="w-full h-full object-cover"
         />
       ) : (
