@@ -17,3 +17,5 @@ const generalLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
 });
+
+module.exports = {generalLimiter};
