@@ -1,10 +1,9 @@
-import React from 'react';
-import { FileText, ExternalLink, RefreshCw, History, FileCheck } from 'lucide-react';
+import React, { useState } from 'react';
+import { FileText, ExternalLink, RefreshCw, History, FileCheck, X, Download } from 'lucide-react';
 
 const backendURL = "http://localhost:5000";
 
 // --- Helper Components for the Table Layout ---
-
 function TableCard({ icon, title, accentClass, children }) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
@@ -49,7 +48,6 @@ function StatusBadge({ status }) {
 }
 
 // --- Main Component ---
-
 export default function ApplicantDocs({
   responses,
   compliance_docs,
@@ -58,7 +56,25 @@ export default function ApplicantDocs({
   renewal_requirements,
   renewal_history,
 }) {
-  // Format Date Helper to match screenshot: "July 9, 2026 — 09:15 AM"
+  // Modal tracking state for global iframe doc previewing
+  const [viewingDoc, setViewingDoc] = useState(null);
+
+  // Dynamic URL parser that intelligently handles Supabase vs Local upload storage
+  const getFileUrl = (filePath) => {
+    if (!filePath) return '#';
+    const cleanPath = filePath.trim().replace(/\\/g, '/');
+    
+    // Check if path is already a full remote link (Supabase)
+    if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
+      return cleanPath;
+    }
+    // Handle standard relative storage files
+    if (cleanPath.startsWith('uploads/')) {
+      return `${backendURL}/${cleanPath}`;
+    }
+    return `${backendURL}/uploads/${cleanPath}`;
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return '—';
     const d = new Date(dateString);
@@ -82,7 +98,7 @@ export default function ApplicantDocs({
   })();
 
   return (
-    <div className="w-full mt-2">
+    <div className="w-full mt-2 relative">
       
       {/* 1. APPLICATION DOCUMENTS */}
       <TableCard 
@@ -113,7 +129,6 @@ export default function ApplicantDocs({
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  {/* Defaulting to Required for demonstration, you can map this to actual schema if available */}
                   <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
                     Required
                   </span>
@@ -123,14 +138,12 @@ export default function ApplicantDocs({
                 </td>
                 <td className="px-6 py-4 text-right">
                   {ans.field_type === 'file' ? (
-                    <a
-                      href={`${backendURL}/uploads/${(ans.file_path || '').replace(/^uploads[\\/]/, '')}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#093fb4] bg-blue-50/50 border border-[#093fb4]/20 rounded hover:bg-blue-100 hover:border-[#093fb4]/40 transition-all"
+                    <button
+                      onClick={() => setViewingDoc({ url: getFileUrl(ans.file_path), title: ans.field_label })}
+                      className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#093fb4] bg-blue-50/50 border border-[#093fb4]/20 rounded hover:bg-blue-100 hover:border-[#093fb4]/40 transition-all cursor-pointer"
                     >
                       View File <ExternalLink size={12} />
-                    </a>
+                    </button>
                   ) : (
                     <span className="text-sm font-medium text-slate-800 bg-slate-50 border border-slate-200 rounded px-2.5 py-1">
                       {ans.text_value || '—'}
@@ -186,14 +199,13 @@ export default function ApplicantDocs({
                     <div className="flex flex-col items-end gap-2">
                       <StatusBadge status={hasDocs ? 'Submitted' : 'Pending'} />
                       {hasDocs && docsForReq.map((doc, idx) => (
-                        <a
+                        <button
                           key={idx}
-                          href={`${backendURL}/uploads/${doc.file_path}`}
-                          target="_blank" rel="noreferrer"
-                          className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#FFBF00] bg-amber-20/20 border border-[#FFBF00]/20 rounded hover:bg-amber-100 hover:border-[#FFBF00]/40 transition-all"
+                          onClick={() => setViewingDoc({ url: getFileUrl(doc.file_path), title: `Compliance Doc ${idx + 1}` })}
+                          className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#FFBF00] bg-amber-20/20 border border-[#FFBF00]/20 rounded hover:bg-amber-100 hover:border-[#FFBF00]/40 transition-all cursor-pointer"
                         >
                           View File {idx + 1} <ExternalLink size={10} />
-                        </a>
+                        </button>
                       ))}
                     </div>
                   </td>
@@ -242,14 +254,13 @@ export default function ApplicantDocs({
                     {hasDocs ? (
                        <div className="flex flex-wrap gap-2">
                          {cycle.docs.map((doc, idx) => (
-                            <a
+                            <button
                               key={idx}
-                              href={`${backendURL}/uploads/${doc.file_path}`}
-                              target="_blank" rel="noreferrer"
-                              className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-[#093fb4] bg-blue-50/50 border border-[#093fb4]/20 rounded hover:bg-blue-100 transition-all"
+                              onClick={() => setViewingDoc({ url: getFileUrl(doc.file_path), title: `Renewal Doc ${idx + 1}` })}
+                              className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-[#093fb4] bg-blue-50/50 border border-[#093fb4]/20 rounded hover:bg-blue-100 transition-all cursor-pointer"
                             >
                               File {idx + 1} <ExternalLink size={10} />
-                            </a>
+                            </button>
                          ))}
                        </div>
                     ) : (
@@ -267,6 +278,55 @@ export default function ApplicantDocs({
           )}
         </tbody>
       </TableCard>
+
+      {/* ─── DYNAMIC DOCUMENT VIEWING IFRAME MODAL WITH DOWNLOAD CAPABILITIES ─── */}
+      {viewingDoc && (
+        <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-5xl h-[85vh] rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            
+            {/* Modal Navigation Control Header bar */}
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm font-black text-slate-900 truncate uppercase tracking-wide">
+                  {viewingDoc.title || 'Document Preview'}
+                </h3>
+                <p className="text-[11px] text-slate-400 font-medium truncate mt-0.5">{viewingDoc.url}</p>
+              </div>
+              
+              <div className="flex items-center gap-3 shrink-0 ml-4">
+                {/* 📥 Native Download Action Link Button */}
+                <a
+                  href={viewingDoc.url}
+                  download
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-[#093fb4] hover:bg-[#093fb4]/95 rounded-xl transition-all shadow-md shadow-[#093fb4]/10"
+                >
+                  <Download size={14} /> Download
+                </a>
+                
+                {/* Close Drawer Button */}
+                <button
+                  onClick={() => setViewingDoc(null)}
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 rounded-xl transition-colors cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Embedded Target Iframe Sandbox Area */}
+            <div className="flex-1 bg-slate-800 p-2 relative">
+              <iframe
+                src={viewingDoc.url}
+                title="Document Workspace Preview"
+                className="w-full h-full rounded-lg border-0 bg-white shadow-inner"
+              />
+            </div>
+            
+          </div>
+        </div>
+      )}
 
     </div>
   );
