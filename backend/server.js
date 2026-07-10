@@ -2,6 +2,11 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const { generalLimiter } = require('./middleware/rateLimiter');
+const { createClient } = require('redis');
+const { createAdapter } = require('@socket.io/redis-adapter');
+
+const pubClient = createClient({ url: process.env.REDIS_URL });
+const subClient = pubClient.duplicate();
 // ... (Your other imports remain the same)
 const subAdminRoutes = require('./routes/subAdminRoutes');
 const authRoutes = require('./routes/authRoutes');
@@ -27,6 +32,11 @@ require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
+
+Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
+    io.adapter(createAdapter(pubClient, subClient));
+});
+
 
 app.set('trust proxy', 1);
 // --- 1. WebSocket & CORS ---
