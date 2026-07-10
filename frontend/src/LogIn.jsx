@@ -1,6 +1,7 @@
 import api from './api';
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { connectSocket } from './socket';
 import { 
   IconMail, 
   IconKey, 
@@ -44,15 +45,13 @@ export default function LogIn() {
       const { token, role, data } = response.data; 
 
       // FIX: Do NOT store the JWT token in localStorage — it's already set as
-      // an httpOnly cookie by the backend (see authController.js res.cookie call).
-      // The browser attaches it automatically on every request via withCredentials:true.
-      // Storing it in localStorage exposes it to XSS attacks.
-      // Only store non-sensitive routing identifiers here.
+      // an httpOnly cookie by the backend. Only store non-sensitive routing identifiers.
 
       if (role === 'root_admin' || role === 'co_admin') {
         localStorage.setItem('systemUid', data.uid);
         localStorage.setItem('adminEmail', data.email);
         localStorage.setItem('userRole', role);
+        connectSocket(data.id || data.uid, role); // register for real-time
         navigate('/RootDashboard');
       } else if (role === 'sub_admin') {
         localStorage.setItem('orgId', data.id); 
@@ -63,17 +62,18 @@ export default function LogIn() {
           accountType: data.accountType,
           parentOrgId: data.parentOrgId
         }));
+        connectSocket(data.id, role); // register for real-time
         navigate('/OrgDashboard');
       } else if (role === 'student') {
         localStorage.setItem('studentId', data.id);
         localStorage.setItem('userRole', role);
         localStorage.setItem('studentInfo', JSON.stringify(data));
-        if (data.isProfileComplete) {
+        connectSocket(data.id, role); // register for real-time
+        if (!data.isProfileComplete) {
+          navigate('/student-onboard');
+        } else {
           navigate('/scholarships');
-        }else {
-          navigate('/student-onboard', { state: { targetDestination: '/StudentProfile' } });
         }
-      
       }
     } catch (err) {
       const errorData = err.response?.data;

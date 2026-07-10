@@ -4,7 +4,9 @@ import { LayoutDashboard, Bell, User2Icon, LogOut, ChevronDown, University,
   Settings2Icon, AlertCircle, CheckCircle2, XCircle, Info, Mails 
 } from 'lucide-react';
 import api from '../api';
-import SearchBar from './SearchBar'; // Import clean search engine component
+import SearchBar from './SearchBar';
+import useSocket from '../hook/useSocket';
+import { disconnectSocket } from '../socket';
 
 export default function StudentTopNav() {
   const navigate = useNavigate();
@@ -93,9 +95,27 @@ export default function StudentTopNav() {
     { name: 'Messages', icon: <Mails size={18} />, path: '/StudentMessages' },
   ];
 
-  const handleLogout = () => {
-    localStorage.clear();
-    window.location.href = '/';
+  // REAL-TIME: incoming notification — increment badge and prepend to list
+  useSocket('new_notification', (notif) => {
+    setUnreadCount(prev => prev + 1);
+    setNotifications(prev => [notif, ...prev]);
+  });
+
+  // REAL-TIME: all notifications marked as read from another tab/device
+  useSocket('notifications_cleared', ({ unreadCount }) => {
+    setUnreadCount(unreadCount);
+  });
+
+  const handleLogout = async () => {
+    try {
+      await api.post('/auth/logout'); // clears httpOnly cookie server-side
+    } catch (err) {
+      console.error("Logout error:", err);
+    } finally {
+      disconnectSocket(); // cleanly disconnect socket
+      localStorage.clear();
+      window.location.href = '/';
+    }
   };
 
   return (

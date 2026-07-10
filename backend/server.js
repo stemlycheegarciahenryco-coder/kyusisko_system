@@ -21,6 +21,7 @@ const systemAdminRouter = require('./routes/systemadmin');
 const http = require('http');
 const path = require('path');
 const { Server } = require('socket.io');
+const socketManager = require('./config/socketManager');
 require('dotenv').config();
 
 const app = express();
@@ -40,10 +41,7 @@ const allowedOrigins = [
 const io = new Server(server, {
   cors: {
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
-      
-      // Check if origin is in allowed list
       if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
@@ -53,6 +51,11 @@ const io = new Server(server, {
     credentials: true
   }
 });
+
+// FIX: Initialize the socket manager with the io instance.
+// This makes io available to any controller via socketManager.emitToUser() etc.
+// without passing io around as a parameter everywhere.
+socketManager.init(io);
 
 app.use(cors({
   origin: (origin, callback) => {
