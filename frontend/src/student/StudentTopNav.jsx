@@ -120,7 +120,7 @@ export default function StudentTopNav() {
                 {({ isActive }) => (
                   <>
                     {item.icon}
-                    <span className="text-[9px] font-black uppercase mt-1 hidden lg:block tracking-tight">
+                    <span className="text-[10px] font-black uppercase mt-1 hidden lg:block tracking-tight">
                       {item.name}
                     </span>
                     {isActive && <div className="absolute bottom-0 h-1 w-full bg-[#093fb4]" />}

@@ -74,7 +74,7 @@ export default function ScholarshipList() {
           <p className="text-slate-400 text-xs max-w-xs">{error}</p>
           <button
             onClick={fetchScholarships}
-            className="mt-2 px-6 py-2.5 bg-[#093fb4] text-white font-black rounded-xl uppercase text-[10px] tracking-widest hover:bg-[#FF1E1E] transition-all"
+            className="mt-2 px-6 py-2.5 bg-[#093fb4] text-white font-black rounded-xl uppercase text-[12px] tracking-widest hover:bg-[#FF1E1E] transition-all"
           >
             Retry
           </button>
@@ -113,7 +113,7 @@ export default function ScholarshipList() {
               {/* Best match banner */}
               {s.is_best_match && (
                 <div className="absolute top-0 left-0 right-0 bg-[#093fb4] px-5 py-1.5 flex items-center gap-2">
-                  <span className="text-[9px] font-black text-white uppercase tracking-[0.2em]">
+                  <span className="text-[11px] font-black text-white uppercase tracking-[0.2em]">
                     ✦ Best Match — {s.match_score}% Profile Match
                   </span>
                 </div>
@@ -132,7 +132,7 @@ export default function ScholarshipList() {
                 <div className="flex items-start gap-4">
                   <div className="w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center bg-white border border-slate-100 shadow-sm shrink-0">
                     {s.org_pic ? (
-                      <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/${s.org_pic}`} alt="" className="w-full h-full object-cover" />
+                      <img src={s.org_pic} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-lg font-black text-slate-300">
                         {s.org_name?.substring(0, 2).toUpperCase()}
@@ -144,11 +144,11 @@ export default function ScholarshipList() {
                       {s.org_name}
                     </h1>
                     <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
-                      <div className="flex items-center gap-1.5 text-slate-700 font-bold text-[12px]">
-                        <Mail size={12} className="text-[#093fb4]" /> {s.org_email || 'N/A'}
+                      <div className="flex items-center gap-1.5 text-slate-700 font-bold text-sm">
+                        <Mail size={14} className="text-[#093fb4]" /> {s.org_email || 'N/A'}
                       </div>
-                      <div className="flex items-center gap-1.5 text-slate-700 font-bold text-[12px]">
-                        <Phone size={12} className="text-[#093fb4]" /> {s.org_contact || 'N/A'}
+                      <div className="flex items-center gap-1.5 text-slate-700 font-bold text-sm">
+                        <Phone size={14} className="text-[#093fb4]" /> {s.org_contact || 'N/A'}
                       </div>
                     </div>
                   </div>
@@ -166,13 +166,13 @@ export default function ScholarshipList() {
                         return (
                           <span
                             key={idx}
-                            className={`flex items-center gap-1 px-3 py-1 rounded-full text-[9px] font-black uppercase border ${
+                            className={`flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-black uppercase border ${
                               isMatched
                                 ? 'bg-green-50 border-green-100 text-green-700'
                                 : 'bg-slate-50 border-slate-100 text-slate-400'
                             }`}
                           >
-                            <CheckCircle2 size={10} strokeWidth={3} className="shrink-0" /> {tag}
+                            <CheckCircle2 size={14} strokeWidth={3} className="shrink-0" /> {tag}
                           </span>
                         );
                       })}
@@ -180,7 +180,7 @@ export default function ScholarshipList() {
                   )}
                   {/* Match score pill */}
                   {s.match_score !== null && (
-                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                    <span className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${
                       s.match_score >= 60
                         ? 'bg-[#093fb4]/10 text-[#093fb4]'
                         : s.match_score >= 30
@@ -201,7 +201,7 @@ export default function ScholarshipList() {
 
                 {/* Deadline */}
                 <div className="flex items-center justify-center py-2 border-y border-dashed border-slate-200">
-                  <div className="flex items-center gap-2 text-[#FF1E1E] font-black text-[10px] uppercase tracking-[0.15em]">
+                  <div className="flex items-center gap-2 text-[#FF1E1E] font-black text-[12px] uppercase tracking-[0.15em]">
                     <Calendar size={14} />
                     Deadline: {new Date(s.deadline).toLocaleDateString('en-US', {
                       month: 'long', day: 'numeric', year: 'numeric'
@@ -213,7 +213,7 @@ export default function ScholarshipList() {
                 <div className="flex gap-3">
                   <button 
                     onClick={() => handleSaveToggle(s.id, s.is_saved)}
-                    className={`flex-none px-8 py-4 font-black rounded-2xl flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest transition-all ${
+                    className={`flex-none px-8 py-4 font-black rounded-2xl flex items-center justify-center gap-2 uppercase text-[12px] tracking-widest transition-all ${
                       s.is_saved 
                         ? 'bg-[#093fb4] text-white shadow-lg shadow-blue-900/20' 
                         : 'bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-[#093fb4]'
@@ -229,7 +229,7 @@ export default function ScholarshipList() {
                   
                   <button 
                     onClick={() => navigate(`/apply/${s.id}`)}
-                    className="flex-1 bg-[#093fb4] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest hover:bg-[#FF1E1E] transition-all shadow-lg shadow-blue-900/10"
+                    className="flex-1 bg-[#093fb4] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 uppercase text-[12px] tracking-widest hover:bg-[#FF1E1E] transition-all shadow-lg shadow-blue-900/10"
                   >
                     Apply Now <ArrowRight size={14} />
                   </button>
@@ -273,13 +273,13 @@ export default function ScholarshipList() {
             <div className="flex gap-3">
               <button 
                 onClick={() => setReportModal({ open: false, id: null, reason: '' })}
-                className="flex-1 py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all"
+                className="flex-1 py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[12px] tracking-widest hover:bg-slate-200 transition-all"
               >
                 Cancel
               </button>
               <button 
                 onClick={submitReport}
-                className="flex-[2] py-4 bg-red-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-900/20"
+                className="flex-[2] py-4 bg-red-600 text-white font-black rounded-2xl uppercase text-[12px] tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-900/20"
               >
                 Submit Report
               </button>

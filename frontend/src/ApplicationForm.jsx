@@ -146,7 +146,7 @@ export default function ApplicationForm() {
           <div className="px-10 py-10 flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-8 pr-24">
             <div className="w-24 h-24 rounded-3xl overflow-hidden bg-white/20 shrink-0 border-2 border-white/30 flex items-center justify-center shadow-2xl">
               {scholarship?.org_pic ? (
-                <img src={`http://localhost:5000/${scholarship.org_pic}`} alt={scholarship.org_name} className="w-full h-full object-cover" />
+                <img src={scholarship.org_pic} alt={scholarship.org_name} className="w-full h-full object-cover" />
               ) : (
                 <span className="text-white font-black text-3xl">
                   {scholarship?.org_name?.substring(0, 2).toUpperCase() || '??'}

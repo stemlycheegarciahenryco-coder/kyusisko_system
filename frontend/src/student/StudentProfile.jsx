@@ -13,9 +13,9 @@ const backendURL = "http://localhost:5000";
 // --- Inline Utility Sub-components for Structural Uniformity ---
 function ProfileInfoRow({ label, value }) {
   return (
-    <div className="flex justify-between items-center py-2 border-b border-slate-100 last:border-0 text-sm">
-      <span className="text-slate-400 font-medium">{label}</span>
-      <span className="text-slate-800 font-semibold truncate max-w-[220px]">{value || '—'}</span>
+    <div className="flex justify-between items-center py-2.5 border-b border-slate-100 last:border-0 text-sm">
+      <span className="text-black font-semibold">{label}</span>
+      <span className="text-slate-600 font-semibold truncate max-w-[220px]">{value || '—'}</span>
     </div>
   );
 }
@@ -166,7 +166,7 @@ export default function StudentProfile() {
                 onClick={() => setIsProfileModalOpen(true)}
                 className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-slate-500 hover:text-[#093fb4] bg-slate-50 border border-slate-200 rounded-lg hover:border-[#093fb4]/20 transition-all shadow-sm"
               >
-                <Edit2 size={12} /> Edit Course / Bio
+                <Edit2 size={14} /> Edit Course / Bio
               </button>
             </div>
 
@@ -221,7 +221,7 @@ export default function StudentProfile() {
               onClick={() => setIsPersonalInfoModalOpen(true)}
               className="text-[#093fb4] hover:underline flex items-center gap-1 normal-case text-xs font-bold"
             >
-              Edit <Edit2 size={10} />
+              Edit <Edit2 size={12} />
             </button>
           </div>
           <div className="bg-slate-50/50 border border-slate-100 rounded-xl p-4 space-y-0.5">
@@ -258,23 +258,23 @@ export default function StudentProfile() {
             onClick={() => setIsFamilyModalOpen(true)}
             className="text-[#093fb4] hover:underline flex items-center gap-1 normal-case text-xs font-bold"
           >
-            Edit Settings <Edit2 size={10} />
+            Edit Settings <Edit2 size={12} />
           </button>
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50/50 border border-slate-100 rounded-xl p-4 text-sm">
           <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Caretaker Name</p>
-            <p className="font-bold text-slate-700">{parentName}</p>
+            <p className="text-xs font-bold text-black uppercase tracking-wider mb-1">Caretaker Name</p>
+            <p className="font-semibold text-slate-600">{parentName}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Relationship</p>
-            <p className="font-bold text-slate-700">{parentRelationship}</p>
+            <p className="text-xs font-bold text-black uppercase tracking-wider mb-1">Relationship</p>
+            <p className="font-semibold text-slate-600">{parentRelationship}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Contact Link</p>
-            <p className="font-bold text-slate-700 flex items-center gap-1.5">
-              <Phone size={12} className="text-slate-400" /> {parentContact}
+            <p className="text-xs font-bold text-black uppercase tracking-wider mb-1">Contact Link</p>
+            <p className="font-semibold text-slate-600 flex items-center gap-1.5">
+              <Phone size={14} className="text-slate-400" /> {parentContact}
             </p>
           </div>
         </div>
@@ -322,9 +322,9 @@ export default function StudentProfile() {
                     <p className="text-xs font-bold text-slate-700 truncate group-hover:text-[#093fb4] transition-colors">
                       {itemTitle}
                     </p>
-                    <p className="text-[10px] text-slate-400 mt-0.5 font-medium">Digital Copy • Attached</p>
+                    <p className="text-xs text-slate-400 mt-0.5 font-medium">Digital Copy • Attached</p>
                   </div>
-                  <ExternalLink size={11} className="text-slate-300 group-hover:text-slate-400 shrink-0 ml-1" />
+                  <ExternalLink size={13} className="text-slate-300 group-hover:text-slate-400 shrink-0 ml-1" />
                 </a>
               );
             })}

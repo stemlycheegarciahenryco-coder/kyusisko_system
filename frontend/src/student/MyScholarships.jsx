@@ -55,7 +55,7 @@ function ScholarshipProgressTrack({ status, appliedAt }) {
 
   return (
     <div className="pt-2 pb-4 space-y-6">
-      <p className="text-[10px] font-black uppercase tracking-widest text-[#093fb4]">
+      <p className="text-[12px] font-black uppercase tracking-widest text-[#093fb4]">
         {isRenewalPipeline ? "Renewal Progress" : "Application Progress"}
       </p>
 
@@ -83,12 +83,12 @@ function ScholarshipProgressTrack({ status, appliedAt }) {
 
               {/* Step Dynamic Metadata Text */}
               <div className="mt-3 space-y-0.5">
-                <p className={`text-[10px] font-black leading-tight max-w-[110px] mx-auto ${
+                <p className={`text-[12px] font-black leading-tight max-w-[110px] mx-auto ${
                   done || active ? 'text-slate-800' : 'text-slate-400'
                 }`}>
                   {step.label}
                 </p>
-                <p className={`text-[9px] font-medium tracking-wide ${
+                <p className={`text-[11px] font-medium tracking-wide ${
                   active ? 'text-[#093fb4] font-bold animate-pulse' : 'text-slate-400'
                 }`}>
                   {done && active ? "Completed" : step.subtext}
@@ -148,7 +148,7 @@ export default function MyScholarships() {
     <div className="flex items-center justify-center min-h-screen bg-slate-50">
       <div className="flex flex-col items-center gap-3">
         <div className="w-10 h-10 border-4 border-[#093fb4] border-t-transparent rounded-full animate-spin" />
-        <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">Loading...</p>
+        <p className="text-[13px] font-black uppercase tracking-widest text-slate-400">Loading...</p>
       </div>
     </div>
   );
@@ -200,10 +200,10 @@ export default function MyScholarships() {
               >
                 <div className="flex flex-col items-center gap-1">
                   {tab.icon}
-                  <span className="text-[10px] uppercase tracking-wider block leading-tight">{tab.label}</span>
+                  <span className="text-[12px] uppercase tracking-wider block leading-tight">{tab.label}</span>
                 </div>
                 {count > 0 && (
-                  <span className={`text-[9px] font-black px-2 py-0.5 rounded-full mt-1 ${
+                  <span className={`text-[11px] font-black px-2 py-0.5 rounded-full mt-1 ${
                     isActive ? 'bg-white/20 text-white' : 'bg-[#093fb4]/10 text-[#093fb4]'
                   }`}>
                     {count}
@@ -214,7 +214,7 @@ export default function MyScholarships() {
           })}
         </div>
 
-        <p className="text-[10px] font-bold text-black/30 uppercase tracking-widest mb-4">
+        <p className="text-[12px] font-bold text-black/30 uppercase tracking-widest mb-4">
           {TABS.find(t => t.key === activeTab)?.desc}
         </p>
 
@@ -224,7 +224,7 @@ export default function MyScholarships() {
               <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
                 <Bookmark size={24} className="text-slate-300" />
               </div>
-              <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">No saved scholarships</p>
+              <p className="text-[13px] font-black uppercase tracking-widest text-slate-400">No saved scholarships</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -246,7 +246,7 @@ export default function MyScholarships() {
               <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
                 <University size={24} className="text-slate-300" />
               </div>
-              <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">
+              <p className="text-[13px] font-black uppercase tracking-widest text-slate-400">
                 Nothing here yet
               </p>
             </div>
@@ -274,14 +274,14 @@ function ScholarshipCard({ s, isExpanded, onToggle, onStatusUpdate }) {
   const currentStatus = s.display_status || s.status;
 
   const statusConfig = {
-    approved:        { label: 'Approved',          cls: 'bg-emerald-50 text-emerald-600 border-emerald-200',   icon: <CheckCircle2 size={11} /> },
-    active:          { label: 'Active Scholar',    cls: 'bg-emerald-50 text-emerald-600 border-emerald-200',   icon: <CheckCircle2 size={11} /> },
-    not_eligible:    { label: 'Not Eligible',      cls: 'bg-[#FF1E1E]/10 text-[#FF1E1E] border-[#FF1E1E]/20', icon: <XCircle size={11} /> },
-    terminated:      { label: 'Terminated',        cls: 'bg-[#FF1E1E]/10 text-[#FF1E1E] border-[#FF1E1E]/20', icon: <XCircle size={11} /> },
-    pending:         { label: 'Pending',           cls: 'bg-amber-50 text-amber-600 border-amber-200',         icon: <Clock size={11} /> },
-    under_review:    { label: 'For Compliance',    cls: 'bg-[#093fb4]/10 text-[#093fb4] border-[#093fb4]/20',  icon: <Clock size={11} /> },
-    renewing:        { label: 'Renewal Required',  cls: 'bg-amber-100 text-amber-700 border-amber-300',        icon: <AlertCircle size={11} /> },
-    renewal_pending: { label: 'Renewal Submitted', cls: 'bg-emerald-50 text-emerald-600 border-emerald-200',   icon: <CheckCircle2 size={11} /> },
+    approved:        { label: 'Approved',          cls: 'bg-emerald-50 text-emerald-600 border-emerald-200',   icon: <CheckCircle2 size={13} /> },
+    active:          { label: 'Active Scholar',    cls: 'bg-emerald-50 text-emerald-600 border-emerald-200',   icon: <CheckCircle2 size={13} /> },
+    not_eligible:    { label: 'Not Eligible',      cls: 'bg-[#FF1E1E]/10 text-[#FF1E1E] border-[#FF1E1E]/20', icon: <XCircle size={13} /> },
+    terminated:      { label: 'Terminated',        cls: 'bg-[#FF1E1E]/10 text-[#FF1E1E] border-[#FF1E1E]/20', icon: <XCircle size={13} /> },
+    pending:         { label: 'Pending',           cls: 'bg-amber-50 text-amber-600 border-amber-200',         icon: <Clock size={13} /> },
+    under_review:    { label: 'For Compliance',    cls: 'bg-[#093fb4]/10 text-[#093fb4] border-[#093fb4]/20',  icon: <Clock size={13} /> },
+    renewing:        { label: 'Renewal Required',  cls: 'bg-amber-100 text-amber-700 border-amber-300',        icon: <AlertCircle size={13} /> },
+    renewal_pending: { label: 'Renewal Submitted', cls: 'bg-emerald-50 text-emerald-600 border-emerald-200',   icon: <CheckCircle2 size={13} /> },
   };
 
   const sc = statusConfig[currentStatus] || statusConfig.pending;
@@ -291,27 +291,27 @@ function ScholarshipCard({ s, isExpanded, onToggle, onStatusUpdate }) {
       <div className="p-5 flex items-center gap-4">
         <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 flex items-center justify-center">
           {s.org_pic ? (
-            <img src={`${backendURL}/${s.org_pic}`} className="w-full h-full object-cover" alt={s.org_name} />
+            <img src={s.org_pic} className="w-full h-full object-cover" alt={s.org_name} />
           ) : (
             <span className="text-lg font-black text-slate-400">{s.org_name?.substring(0, 2).toUpperCase()}</span>
           )}
         </div>
         <div className="flex-1 min-w-0">
           <h2 className="text-sm font-black text-black uppercase leading-tight truncate">{s.title}</h2>
-          <p className="text-[10px] font-black text-[#093fb4] uppercase tracking-widest mt-0.5">{s.org_name}</p>
-          <p className="text-[9px] font-bold text-slate-400 mt-0.5">
+          <p className="text-[12px] font-black text-[#093fb4] uppercase tracking-widest mt-0.5">{s.org_name}</p>
+          <p className="text-[11px] font-bold text-slate-400 mt-0.5">
             Applied: {new Date(s.applied_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
           </p>
         </div>
         <div className="flex flex-col items-end gap-2 shrink-0">
-          <span className={`flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${sc.cls}`}>
+          <span className={`flex items-center gap-1 text-[11px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${sc.cls}`}>
             {sc.icon} {sc.label}
           </span>
           <button
             onClick={onToggle}
-            className="text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-[#093fb4] flex items-center gap-1 transition-colors"
+            className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-[#093fb4] flex items-center gap-1 transition-colors"
           >
-            {isExpanded ? <><ChevronUp size={12} /> Less Details</> : <><ChevronDown size={12} /> View Details</>}
+            {isExpanded ? <><ChevronUp size={14} /> Less Details</> : <><ChevronDown size={14} /> View Details</>}
           </button>
         </div>
       </div>
@@ -319,32 +319,32 @@ function ScholarshipCard({ s, isExpanded, onToggle, onStatusUpdate }) {
       {isExpanded && (
         <div className="border-t border-black/5 px-5 pb-5 pt-4 space-y-5">
           {s.description && (
-            <p className="text-[11px] text-slate-500 leading-relaxed break-words">{s.description}</p>
+            <p className="text-[13px] text-slate-500 leading-relaxed break-words">{s.description}</p>
           )}
 
           {/* Quick metadata category tag row */}
           <div className="flex flex-wrap gap-2">
             {s.amount_range && (
               <div className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">
-                <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Amount</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Amount</p>
                 <p className="text-xs font-black text-[#093fb4]">{s.amount_range}</p>
               </div>
             )}
             {s.fund_type && (
               <div className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">
-                <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Fund Type</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Fund Type</p>
                 <p className="text-xs font-black text-black capitalize">{s.fund_type}</p>
               </div>
             )}
             {s.gwa_requirement && (
               <div className="bg-[#093fb4]/5 border border-[#093fb4]/10 rounded-xl px-3 py-2">
-                <p className="text-[8px] font-black uppercase tracking-widest text-[#093fb4]/60">Min. GWA</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-[#093fb4]/60">Min. GWA</p>
                 <p className="text-xs font-black text-[#093fb4]">{s.gwa_requirement}</p>
               </div>
             )}
             {s.deadline && (
               <div className="bg-[#FF1E1E]/5 border border-[#FF1E1E]/10 rounded-xl px-3 py-2">
-                <p className="text-[8px] font-black uppercase tracking-widest text-[#FF1E1E]/60">Deadline</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-[#FF1E1E]/60">Deadline</p>
                 <p className="text-xs font-black text-[#FF1E1E]">
                   {new Date(s.deadline).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
                 </p>
@@ -360,10 +360,10 @@ function ScholarshipCard({ s, isExpanded, onToggle, onStatusUpdate }) {
                   <Clock size={16} />
                 </div>
                 <div>
-                  <p className="text-[11px] font-black uppercase tracking-wider text-[#093fb4]">
+                  <p className="text-[13px] font-black uppercase tracking-wider text-[#093fb4]">
                     Renewal Documents Submitted
                   </p>
-                  <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+                  <p className="text-[12px] text-slate-500 font-medium mt-0.5">
                     Waiting for the organization to review your submitted documents.
                   </p>
                 </div>
@@ -372,7 +372,7 @@ function ScholarshipCard({ s, isExpanded, onToggle, onStatusUpdate }) {
               {/* Folder/Document layout visualization stack from the image */}
               <div className="hidden sm:flex relative items-center justify-center pr-2 shrink-0">
                 <div className="w-10 h-8 bg-[#093fb4] rounded-lg relative flex items-center justify-center shadow-md">
-                  <FileText size={12} className="text-white" />
+                  <FileText size={14} className="text-white" />
                   <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center">
                     <Check size={8} className="text-white" strokeWidth={4} />
                   </div>
@@ -401,22 +401,22 @@ function ScholarshipCard({ s, isExpanded, onToggle, onStatusUpdate }) {
 
           {(currentStatus === 'approved' || currentStatus === 'active') && (
             <div className="bg-[#093fb4]/5 border border-[#093fb4]/10 rounded-xl px-4 py-4">
-              <p className="text-[9px] font-black uppercase tracking-widest text-[#093fb4] mb-3">Contact Organization</p>
+              <p className="text-[11px] font-black uppercase tracking-widest text-[#093fb4] mb-3">Contact Organization</p>
               <div className="space-y-2">
                 {s.sub_email && (
-                  <a href={`mailto:${s.sub_email}`} className="flex items-center gap-2.5 text-[11px] font-bold text-slate-600 hover:text-[#093fb4]">
-                    <Mail size={12} className="text-[#093fb4]" /> {s.sub_email}
+                  <a href={`mailto:${s.sub_email}`} className="flex items-center gap-2.5 text-[13px] font-bold text-slate-600 hover:text-[#093fb4]">
+                    <Mail size={14} className="text-[#093fb4]" /> {s.sub_email}
                   </a>
                 )}
                 {s.contact_number && (
-                  <div className="flex items-center gap-2.5 text-[11px] font-bold text-slate-600">
-                    <Phone size={12} className="text-[#093fb4]" /> {s.contact_number}
+                  <div className="flex items-center gap-2.5 text-[13px] font-bold text-slate-600">
+                    <Phone size={14} className="text-[#093fb4]" /> {s.contact_number}
                   </div>
                 )}
                 {s.website && (
                   <a href={s.website} target="_blank" rel="noreferrer"
-                    className="flex items-center gap-2.5 text-[11px] font-bold text-[#093fb4] hover:underline">
-                    <Globe size={12} /> {s.website}
+                    className="flex items-center gap-2.5 text-[13px] font-bold text-[#093fb4] hover:underline">
+                    <Globe size={14} /> {s.website}
                   </a>
                 )}
               </div>
@@ -424,19 +424,19 @@ function ScholarshipCard({ s, isExpanded, onToggle, onStatusUpdate }) {
           )}
 
           {currentStatus === 'pending' && (
-            <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-center text-[10px] font-black uppercase text-amber-600">
+            <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-center text-[12px] font-black uppercase text-amber-600">
               Your application is pending review.
             </div>
           )}
 
           {currentStatus === 'not_eligible' && (
-            <div className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-center text-[10px] font-black uppercase text-slate-400">
+            <div className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-center text-[12px] font-black uppercase text-slate-400">
               This application was marked as not eligible.
             </div>
           )}
 
           {currentStatus === 'terminated' && (
-            <div className="bg-[#FF1E1E]/5 border border-[#FF1E1E]/10 rounded-xl px-4 py-3 text-center text-[10px] font-black uppercase text-[#FF1E1E]">
+            <div className="bg-[#FF1E1E]/5 border border-[#FF1E1E]/10 rounded-xl px-4 py-3 text-center text-[12px] font-black uppercase text-[#FF1E1E]">
               This scholarship agreement has been terminated.
             </div>
           )}
@@ -452,11 +452,11 @@ function SavedScholarshipCard({ s, onUnsave }) {
     <div className="bg-[#FFFCFB] rounded-2xl border border-black/8 p-4 flex items-center justify-between gap-4">
       <div>
         <h3 className="text-xs font-black uppercase tracking-wide text-slate-800">{s.title}</h3>
-        <p className="text-[10px] font-bold text-[#093fb4] mt-0.5">{s.org_name}</p>
+        <p className="text-[12px] font-bold text-[#093fb4] mt-0.5">{s.org_name}</p>
       </div>
       <button 
         onClick={onUnsave}
-        className="text-[10px] font-black text-red-500 hover:underline bg-red-50 px-2.5 py-1 rounded-md border border-red-100"
+        className="text-[12px] font-black text-red-500 hover:underline bg-red-50 px-2.5 py-1 rounded-md border border-red-100"
       >
         Remove
       </button>

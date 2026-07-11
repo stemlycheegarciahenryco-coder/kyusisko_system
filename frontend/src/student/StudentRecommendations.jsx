@@ -54,36 +54,36 @@ const StudentRecommendations = () => {
       <div className="w-9 h-9 rounded-full bg-slate-100 border border-black/5 shrink-0 overflow-hidden flex items-center justify-center">
         {scholarship.donor_photo ? (
           <img
-            src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/${scholarship.donor_photo}`}
+            src={scholarship.donor_photo}
             alt={scholarship.org_name}
             className="w-full h-full object-cover"
           />
         ) : (
-          <span className="text-[10px] font-bold text-black/40">
+          <span className="text-[12px] font-bold text-black/40">
             {getInitials(scholarship.org_name)}
           </span>
         )}
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="text-[13px] font-semibold text-black truncate leading-tight">
+        <p className="text-sm font-semibold text-black truncate leading-tight">
           {scholarship.title}
         </p>
-        <p className="text-[11px] text-black/50 truncate">
+        <p className="text-[13px] text-black/50 truncate">
           {scholarship.org_name}
         </p>
       </div>
 
       {scholarship.match_score >= 60 ? (
-        <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-50 text-green-700">
+        <span className="shrink-0 text-[12px] font-semibold px-2 py-0.5 rounded-full bg-green-50 text-green-700">
           {scholarship.match_score}% match
         </span>
       ) : scholarship.match_score >= 30 ? (
-        <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">
+        <span className="shrink-0 text-[12px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">
           {scholarship.match_score}% match
         </span>
       ) : (
-        <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+        <span className="shrink-0 text-[12px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
           Open
         </span>
       )}
@@ -92,7 +92,7 @@ const StudentRecommendations = () => {
 
   return (
     <div className="bg-white rounded-2xl border border-black/8 shadow-sm p-5 w-full">
-      <h2 className="text-[11px] font-black text-black/60 mb-3 uppercase tracking-widest">
+      <h2 className="text-[13px] font-black text-black/60 mb-3 uppercase tracking-widest">
         Other Scholarships
       </h2>
 
@@ -112,7 +112,7 @@ const StudentRecommendations = () => {
       {(topMatches.length + goodMatches.length > 4) && (
         <button
           onClick={() => setShowAll(prev => !prev)}
-          className="mt-3 w-full text-[11px] font-semibold text-black/40 hover:text-black/60 py-1.5 rounded-lg hover:bg-slate-50 transition-all flex items-center justify-center gap-1.5"
+          className="mt-3 w-full text-[13px] font-semibold text-black/40 hover:text-black/60 py-1.5 rounded-lg hover:bg-slate-50 transition-all flex items-center justify-center gap-1.5"
         >
           {showAll
             ? '↑ Show less'
