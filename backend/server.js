@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
-const { generalLimiter } = require('./middleware/rateLimiter');
+const { authLimiter, generalLimiter } = require('./middleware/rateLimiter');
 const { createClient } = require('redis');
 const { createAdapter } = require('@socket.io/redis-adapter');
 
@@ -84,7 +84,7 @@ app.use(cors({
 
 app.use(cookieParser());
 app.use(express.json());
-app.use(generalLimiter);
+
 
 // --- 3. Static Files & Routes ---
 const uploadsPath = path.resolve(__dirname, 'uploads');
@@ -94,10 +94,10 @@ app.use('/uploads', express.static(uploadsPath));
 
 app.use('/api/onboarding-orgs', subAdminRoutes);
 app.use('/api/organizations', orgRoutes);
-app.use('/api/recommendations', recommendationRoutes);
+app.use('/api/recommendations',  recommendationRoutes);
 app.use('/api/security', securityRoutes);
-app.use('/api/notif', notifRoutes);
-app.use('/api', authRoutes);
+app.use('/api/notif',  notifRoutes);
+app.use('/api', authLimiter, authRoutes);
 app.use('/api/scholarships', scholarshipRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/renewals', renewRoutes);

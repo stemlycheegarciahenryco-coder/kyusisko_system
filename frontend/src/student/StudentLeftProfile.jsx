@@ -1,26 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import {useStudent} from './StudentContext';
 import { User2Icon, MapPin, Mail, Phone, GraduationCap } from 'lucide-react';
 import api from '../api';
 
 export default function StudentLeftProfile() {
-  const [student, setStudent] = useState(null);
-  const [loading, setLoading] = useState(true);
+const {student, loading} = useStudent();
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const studentId = localStorage.getItem('studentId');
-        if (!studentId) return;
-        const res = await api.get(`/students/profile-full/${studentId}`);
-        setStudent(res.data);
-      } catch (err) {
-        console.error("Profile Fetch Error:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProfile();
-  }, []);
+  
 
   if (loading) {
     return <div className="w-full h-[420px] bg-white rounded-2xl animate-pulse shadow-sm border border-slate-200" />;

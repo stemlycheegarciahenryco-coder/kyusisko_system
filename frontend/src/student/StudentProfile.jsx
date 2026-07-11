@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useStudent } from './StudentContext';
 import { Camera, User, MapPin, Phone, Mail, Plus, Award, FileText, GraduationCap, School, Users, Calendar, Edit2, ExternalLink, ShieldAlert } from 'lucide-react';
 import api from '../api';
 import EditProfileModal from './EditProfileModal'; 
@@ -21,8 +22,7 @@ function ProfileInfoRow({ label, value }) {
 
 export default function StudentProfile() {
   const location = useLocation();
-  const [student, setStudent] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { student, loading, refreshProfile } = useStudent();
  
   // Modal Triggers
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -34,24 +34,6 @@ export default function StudentProfile() {
   const [showWelcomeModal, setShowWelcomeModal] = useState(location.state?.justOnboarded || false);
   
   const fileInputRef = useRef(null);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const id = localStorage.getItem('studentId');
-      if (!id) return;
-      const res = await api.get(`/students/profile-full/${id}`);
-      setStudent(res.data);
-    } catch (err) {
-      console.error("Profile Load Error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
 
   // Avatar Upload Handler
   const handleAvatarClick = () => {
@@ -68,7 +50,7 @@ export default function StudentProfile() {
     try {
       const id = localStorage.getItem('studentId');
       await api.put(`/upload-profile/${id}`, formData);
-      fetchData(); // Refresh info
+      refreshProfile(); // Refresh info
       window.dispatchEvent(new Event('profilePicUpdated'));
     } catch (err) {
       console.error("Avatar upload failed:", err);
@@ -357,16 +339,16 @@ export default function StudentProfile() {
 
       {/* --- WORKFLOW PROFILE MANAGEMENT MODALS --- */}
       {isProfileModalOpen && (
-        <EditProfileModal onClose={() => { setIsProfileModalOpen(false); fetchData(); }} studentData={student} />
+        <EditProfileModal onClose={() => { setIsProfileModalOpen(false); refreshProfile(); }} studentData={student} />
       )}
       {isPortfolioModalOpen && (
-        <AddPortfolioModal onClose={() => { setIsPortfolioModalOpen(false); fetchData(); }} studentData={student} />
+        <AddPortfolioModal onClose={() => { setIsPortfolioModalOpen(false); refreshProfile(); }} studentData={student} />
       )}
       {isPersonalInfoModalOpen && (
-        <EditPersonalInfoModal onClose={() => { setIsPersonalInfoModalOpen(false); fetchData(); }} studentData={student} />
+        <EditPersonalInfoModal onClose={() => { setIsPersonalInfoModalOpen(false); refreshProfile(); }} studentData={student} />
       )}
       {isFamilyModalOpen && (
-        <EditFamilyModal onClose={() => { setIsFamilyModalOpen(false); fetchData(); }} studentData={student} onRefresh={fetchData} />
+        <EditFamilyModal onClose={() => { setIsFamilyModalOpen(false); refreshProfile(); }} studentData={student} onRefresh={refreshProfile} />
       )}
 
     </div>

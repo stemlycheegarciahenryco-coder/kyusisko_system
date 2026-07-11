@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useStudent } from './StudentContext';
 import { LayoutDashboard, Bell, User2Icon, LogOut, ChevronDown, University, 
   Settings2Icon, AlertCircle, CheckCircle2, XCircle, Info, Mails 
 } from 'lucide-react';
@@ -10,30 +11,19 @@ import { disconnectSocket } from '../socket';
 
 export default function StudentTopNav() {
   const navigate = useNavigate();
+  // 📥 Destructure refreshProfile from your global student context
+  const { student, loading, refreshProfile } = useStudent();
+
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
-
-  // Profile & Notifications States
-  const [student, setStudent] = useState(null);
+ 
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
 
   const dropdownRef = useRef(null);
   const notifRef = useRef(null);
   const studentId = localStorage.getItem('studentId');
-
-  useEffect(() => {
-    const fetchUnread = async () => {
-      try {
-        const res = await api.get('/notif/notifications/unread-count');
-        setUnreadCount(Number(res.data.count) || 0);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    fetchUnread();
-  }, []);
 
   const handleToggleNotif = async () => {
     const willOpen = !showNotif;
@@ -52,16 +42,7 @@ export default function StudentTopNav() {
     }
   };
 
-  const fetchNavData = async () => {
-    try {
-      if (!studentId) return;
-      const res = await api.get(`/students/profile-full/${studentId}`);
-      setStudent(res.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
+  // Fetch unread notifications count on mount
   useEffect(() => {
     const fetchUnread = async () => {
       try {
@@ -71,23 +52,19 @@ export default function StudentTopNav() {
         console.error(err);
       }
     };
-    fetchUnread();
-  }, []);
-
-  // 2. Fetch data on initial mount
-  useEffect(() => {
-    fetchNavData();
+    if (studentId) {
+      fetchUnread();
+    }
   }, [studentId]);
 
-  // 3. 🔥 Listen for the avatar update event and instantly re-fetch navbar details
+  // 🔄 Listen for the avatar update event and trigger a clean global context refresh
   useEffect(() => {
-    window.addEventListener('profilePicUpdated', fetchNavData);
+    window.addEventListener('profilePicUpdated', refreshProfile);
     return () => {
-      window.removeEventListener('profilePicUpdated', fetchNavData);
+      window.removeEventListener('profilePicUpdated', refreshProfile);
     };
-  }, []);
+  }, [refreshProfile]);
 
-  // Removed Settings from this row to place it inside the profile burger dropdown
   const menuItems = [
     { name: 'Home', icon: <LayoutDashboard size={18} />, path: '/scholarships' },
     { name: 'My Scholarships', icon: <University size={18} />, path: '/MyScholarships' },
@@ -108,11 +85,11 @@ export default function StudentTopNav() {
 
   const handleLogout = async () => {
     try {
-      await api.post('/auth/logout'); // clears httpOnly cookie server-side
+      await api.post('/auth/logout');
     } catch (err) {
       console.error("Logout error:", err);
     } finally {
-      disconnectSocket(); // cleanly disconnect socket
+      disconnectSocket();
       localStorage.clear();
       window.location.href = '/';
     }
@@ -128,7 +105,7 @@ export default function StudentTopNav() {
             <img src="/logo.png" alt="Logo" className="h-12 w-14 object-contain" />
           </div>
 
-          {/* 🔍 GLOBAL SEARCH BAR COMPONENT */}
+          {/* GLOBAL SEARCH BAR */}
           <SearchBar />
 
           {/* NAV LINKS */}
@@ -190,7 +167,6 @@ export default function StudentTopNav() {
                 }}
                 className="flex items-center gap-1.5 p-1 rounded-xl hover:bg-black/5 cursor-pointer"
               >
-                {/* Cleaned: Removed border-[#093fb4] in favor of modern slate border styling */}
                 <div className="h-9 w-9 rounded-xl border border-slate-300 overflow-hidden bg-slate-50">
                   {student?.sprofile_pic ? (
                     <img src={student.sprofile_pic} className="w-full h-full object-cover" alt="Profile" />
@@ -211,7 +187,6 @@ export default function StudentTopNav() {
                     </p>
                   </div>
                   
-                  {/* Settings Tab Moved Here inside Burger/Profile Options List */}
                   <button
                     onClick={() => {
                       setShowDropdown(false);

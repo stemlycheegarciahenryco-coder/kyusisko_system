@@ -15,7 +15,7 @@ export default function StudentMessages() {
   const [statusLoading, setStatusLoading] = useState(false);
 
   const messagesEndRef = useRef(null);
-  const studentId = parseInt(localStorage.getItem('userId') || localStorage.getItem('studentId'));
+  const studentId = parseInt(localStorage.getItem('studentId'));
 
   const isEligible = ['approved', 'renewal'].includes(threadStatus);
 
@@ -23,10 +23,12 @@ export default function StudentMessages() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Automatically scroll down only when a new message actually arrives
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
+  // Fetch all active message threads/inbox lists
   const fetchThreads = async (showLoading = true) => {
     if (showLoading) setLoadingThreads(true);
     try {
@@ -45,6 +47,7 @@ export default function StudentMessages() {
     }
   };
 
+  // Fetch the conversational messages inside a thread
   const fetchMessages = async (threadId, showLoading = false) => {
     if (!threadId || threadId === 'NaN' || isNaN(Number(threadId))) {
       setMessages([]);
@@ -53,7 +56,16 @@ export default function StudentMessages() {
     if (showLoading) setLoadingMessages(true);
     try {
       const res = await api.get(`/messages/thread/${threadId}`);
-      setMessages(res.data.data);
+      const incomingData = res.data.data || [];
+
+      // Smart Update: Only update state if something actually changed.
+      // This stops unnecessary layout shifts and scroll snapping.
+      setMessages(prev => {
+        if (JSON.stringify(prev) === JSON.stringify(incomingData)) {
+          return prev; 
+        }
+        return incomingData;
+      });
     } catch (err) {
       console.error("Error loading chat conversation history:", err);
     } finally {
@@ -61,26 +73,39 @@ export default function StudentMessages() {
     }
   };
 
+  // Hook 1: Poll inbox threads every 5 seconds securely
   useEffect(() => {
-    fetchThreads();
+    fetchThreads(true);
+
     const interval = setInterval(() => {
-      fetchThreads(false);
-      if (activeThread && activeThread.thread_id) {
-        fetchMessages(activeThread.thread_id, false);
-      }
-    }, 10000);
+        fetchThreads(false); 
+    }, 5000);
+
     return () => clearInterval(interval);
-  }, [activeThread]);
+  }, []);
+
+  // Hook 2: Poll active thread messages every 4 seconds for real-time conversation sync
+  useEffect(() => {
+    if (!activeThread?.thread_id) return;
+
+    const msgInterval = setInterval(() => {
+      fetchMessages(activeThread.thread_id, false);
+    }, 4000);
+
+    return () => clearInterval(msgInterval);
+  }, [activeThread?.thread_id]);
 
   const handleSelectThread = async (thread) => {
     setActiveThread(thread);
     setThreadStatus(null);
     setStatusLoading(true);
+    
     if (thread.thread_id) {
       fetchMessages(thread.thread_id, true);
     } else {
       setMessages([]);
     }
+
     try {
       const res = await api.get(`/messages/my-status/${thread.partner_id}`);
       setThreadStatus(res.data.status?.toLowerCase());
@@ -105,6 +130,7 @@ export default function StudentMessages() {
         const savedMsg = res.data.data;
         setMessages(prev => [...prev, savedMsg]);
         setNewMessage('');
+        
         if (!activeThread.thread_id) {
           setActiveThread(prev => ({ ...prev, thread_id: savedMsg.thread_id }));
         }
@@ -264,7 +290,7 @@ export default function StudentMessages() {
               </div>
             </div>
 
-            {/* Messages */}
+            {/* Messages Content */}
             <div className="flex-1 overflow-y-auto px-5 py-5 space-y-3 bg-slate-50/40">
               {loadingMessages ? (
                 <div className="space-y-3">

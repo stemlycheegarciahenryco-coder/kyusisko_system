@@ -38,6 +38,8 @@ const StudentRecommendations = () => {
   const topMatches = scholarships.filter(s => s.match_score >= 60);
   const goodMatches = scholarships.filter(s => s.match_score >= 30 && s.match_score < 60);
 
+  if (topMatches.length + goodMatches.length === 0) return null;
+
   const visibleTop = showAll ? topMatches : topMatches.slice(0, 5);
   const visibleGood = showAll ? goodMatches : goodMatches.slice(0, 5);
 
@@ -87,8 +89,6 @@ const StudentRecommendations = () => {
       )}
     </div>
   );
-
-  if (scholarships.length === 0) return null;
 
   return (
     <div className="bg-white rounded-2xl border border-black/8 shadow-sm p-5 w-full">

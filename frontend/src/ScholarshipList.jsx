@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'; 
 import api from './api';
 import { ArrowRight, Bookmark, AlertTriangle, CheckCircle2, Mail, Phone, Calendar, X } from 'lucide-react';
-import StudentTopNav from './student/StudentTopNav';
-import StudentLeftProfile from './student/StudentLeftProfile';
 import StudentRecommendations from './student/StudentRecommendations';
 
 export default function ScholarshipList() {
@@ -245,9 +243,7 @@ export default function ScholarshipList() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 font-['Inter']">
-      <StudentTopNav />
-
+    <>
       {/* REPORT MODAL */}
       {reportModal.open && (
         <div 
@@ -292,17 +288,14 @@ export default function ScholarshipList() {
         </div>
       )}
 
-      <div className="w-full max-w-[1280px] mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-[260px_1fr_260px] gap-6 items-start">
-        <div className="w-full lg:sticky lg:top-24">
-          <StudentLeftProfile />
-        </div>
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_260px] gap-6 items-start w-full">
         <main className="w-full min-w-0">
           {renderContent()}
         </main>
-        <div className="hidden lg:block w-full self-start lg:sticky lg:top-24">
+        <div className="hidden xl:block w-full self-start xl:sticky xl:top-24">
           <StudentRecommendations />
         </div>
       </div>
-    </div>
+    </>
   );
 }
