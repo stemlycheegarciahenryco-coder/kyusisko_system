@@ -10,6 +10,7 @@ export default function ApplicationDetailsRightAction({
   isFinalized, 
   handleAction 
 }) {
+  
   const status = detail.status || 'pending';
 
   // State Banner Stylings handling standard and renewal flows

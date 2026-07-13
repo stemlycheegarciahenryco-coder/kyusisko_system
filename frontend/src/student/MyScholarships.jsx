@@ -10,10 +10,11 @@ import RenewCompliance from './RenewCompliance';
 
 const backendURL = 'http://localhost:5000';
 
+// 🚀 FIXED: Added 'renewal_approved' to the active array group mapping
 const getTabGroup = (status) => {
   if (['pending', 'not_eligible'].includes(status)) return 'pending';
-  if (['under_review', 'submitted'].includes(status)) return 'compliance'; 
-  if (['approved', 'active', 'terminated'].includes(status)) return 'active';
+  if (['under_review', 'compliance', 'need_changes', 'submitted'].includes(status)) return 'compliance'; 
+  if (['approved', 'active', 'terminated', 'renewal_approved'].includes(status)) return 'active';
   if (['renewing', 'renewal_pending'].includes(status)) return 'renewal'; 
   return 'pending';
 };
@@ -26,29 +27,49 @@ const TABS = [
   { key: 'saved', label: 'Saved', icon: <Bookmark size={14} />, desc: 'Saved scholarships' },
 ];
 
-// --- 1. PROGRESS TRACKING SUB-COMPONENT (MATCHING image_26567b.png) ---
-function ScholarshipProgressTrack({ status, appliedAt }) {
-  const isRenewalPipeline = ['renewing', 'renewal_pending'].includes(status);
+// --- 1. PROGRESS TRACKING SUB-COMPONENT ---
+// --- 1. PROGRESS TRACKING SUB-COMPONENT ---
+// ==========================================
+// 1. PROGRESS TRACKING SUB-COMPONENT (FOOLPROOF VERSION)
+// ==========================================
+function ScholarshipProgressTrack({ s }) {
+  if (!s) return null;
+
+  // Extract raw fields straight from the object to prevent cross-wiring
+  const rawStatus = s.status || '';
+  const displayStatus = s.display_status || '';
+  const appliedAt = s.applied_at;
+
+  // The ultimate truth: If backend status is approved or active, the pipeline is complete!
+  const isFullyApproved = ['approved', 'active', 'renewal_approved'].includes(rawStatus);
+
+  // Fallback chain for evaluation state
+  const checkStatus = isFullyApproved ? rawStatus : (displayStatus || rawStatus);
+
+  // Check if this record is running through a renewal timeline
+  const isRenewalPipeline = ['renewing', 'renewal_pending', 'renewal_approved'].includes(displayStatus) || 
+                            ['renewing', 'renewal_pending', 'renewal_approved'].includes(rawStatus);
   
   const formattedDate = appliedAt 
     ? new Date(appliedAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
     : '—';
 
-  // Configured states matching the exact timelines
+  // Renewal progress path steps
   const renewalSteps = [
-    { label: "Renewal Started",      subtext: formattedDate,   isDone: (s) => ['renewing', 'renewal_pending'].includes(s) },
-    { label: "Requirements Submitted", subtext: formattedDate, isDone: (s) => s === 'renewal_pending' },
-    { label: "Under Review",         subtext: "In Progress",   isActive: (s) => s === 'renewal_pending', isDone: (s) => false },
-    { label: "Decision",             subtext: "Pending",       isActive: (s) => false, isDone: (s) => false },
-    { label: "Renewal Completed",    subtext: "Pending",       isActive: (s) => false, isDone: (s) => false },
+    { label: "Renewal Started",      subtext: formattedDate,   isDone: (st) => isFullyApproved || ['renewing', 'renewal_pending', 'approved', 'active', 'renewal_approved'].includes(st) },
+    { label: "Requirements Submitted", subtext: formattedDate, isDone: (st) => isFullyApproved || ['renewal_pending', 'approved', 'active', 'renewal_approved'].includes(st) },
+    { label: "Under Review",         subtext: "Completed",     isActive: (st) => !isFullyApproved && st === 'renewal_pending', isDone: (st) => isFullyApproved || ['approved', 'active', 'renewal_approved'].includes(st) },
+    { label: "Decision",             subtext: "Approved",      isActive: (st) => false, isDone: (st) => isFullyApproved || ['approved', 'active', 'renewal_approved'].includes(st) },
+    { label: "Renewal Completed",    subtext: "Completed",     isActive: (st) => false, isDone: (st) => isFullyApproved || ['approved', 'active', 'renewal_approved'].includes(st) },
   ];
 
+  // Initial application progress path steps
   const applicationSteps = [
-    { label: "Application Started",  subtext: formattedDate,   isDone: (s) => true },
-    { label: "Documents Submitted",  subtext: "Completed",     isDone: (s) => ['under_review', 'approved', 'active'].includes(s) },
-    { label: "Under Review",         subtext: "In Progress",   isActive: (s) => s === 'under_review', isDone: (s) => ['approved', 'active'].includes(s) },
-    { label: "Decision",             subtext: "Pending",       isActive: (s) => s === 'pending', isDone: (s) => ['approved', 'active'].includes(s) },
-    { label: "Scholar Activated",    subtext: "Pending",       isActive: (s) => false, isDone: (s) => ['approved', 'active'].includes(s) },
+    { label: "Application Started",  subtext: formattedDate,   isDone: (st) => true },
+    { label: "Documents Submitted",  subtext: "Completed",     isDone: (st) => isFullyApproved || ['under_review', 'submitted', 'approved', 'active'].includes(st) },
+    { label: "Under Review",         subtext: "In Progress",   isActive: (st) => !isFullyApproved && st === 'under_review', isDone: (st) => isFullyApproved || ['submitted', 'approved', 'active'].includes(st) },
+    { label: "Decision",             subtext: "Pending",       isActive: (st) => !isFullyApproved && (st === 'submitted' || st === 'pending'), isDone: (st) => isFullyApproved || ['approved', 'active'].includes(st) },
+    { label: "Scholar Activated",    subtext: "Completed",     isActive: (st) => false, isDone: (st) => isFullyApproved || ['approved', 'active'].includes(st) },
   ];
 
   const steps = isRenewalPipeline ? renewalSteps : applicationSteps;
@@ -60,17 +81,17 @@ function ScholarshipProgressTrack({ status, appliedAt }) {
       </p>
 
       <div className="relative flex justify-between items-start w-full">
-        {/* Progress Background Connecting Bar */}
+        {/* Background Connecting Bar */}
         <div className="absolute top-4 left-0 right-0 h-[2px] bg-slate-100 -z-10" />
         
         {steps.map((step, index) => {
-          const done = step.isDone(status);
-          const active = step.isActive ? step.isActive(status) : false;
+          const done = step.isDone(checkStatus);
+          const active = step.isActive ? step.isActive(checkStatus) : false;
 
           return (
             <div key={index} className="flex flex-col items-center flex-1 text-center relative px-1">
               
-              {/* Step Node Bubble */}
+              {/* Step Node Circle */}
               <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${
                 done 
                   ? 'bg-[#093fb4] text-white shadow-sm shadow-[#093fb4]/20' 
@@ -81,7 +102,7 @@ function ScholarshipProgressTrack({ status, appliedAt }) {
                 {done ? <Check size={14} strokeWidth={3} /> : <span>{index + 1}</span>}
               </div>
 
-              {/* Step Dynamic Metadata Text */}
+              {/* Step Text Labels */}
               <div className="mt-3 space-y-0.5">
                 <p className={`text-[12px] font-black leading-tight max-w-[110px] mx-auto ${
                   done || active ? 'text-slate-800' : 'text-slate-400'
@@ -91,7 +112,7 @@ function ScholarshipProgressTrack({ status, appliedAt }) {
                 <p className={`text-[11px] font-medium tracking-wide ${
                   active ? 'text-[#093fb4] font-bold animate-pulse' : 'text-slate-400'
                 }`}>
-                  {done && active ? "Completed" : step.subtext}
+                  {done && !active ? "Completed" : step.subtext}
                 </p>
               </div>
 
@@ -103,6 +124,178 @@ function ScholarshipProgressTrack({ status, appliedAt }) {
   );
 }
 
+
+// ==========================================
+// 2. DYNAMIC CARD DISPLAY SUB-MODULE
+// ==========================================
+function ScholarshipCard({ s, isExpanded, onToggle, onStatusUpdate }) {
+  
+  // Guard check if cleanStatus hits active/approved
+  const cleanStatus = ['approved', 'active', 'renewal_approved'].includes(s.status)
+    ? s.status
+    : (s.display_status || s.status);
+
+  const statusConfig = {
+    approved:        { label: 'Approved',          cls: 'bg-emerald-50 text-emerald-600 border-emerald-200',   icon: <CheckCircle2 size={13} /> },
+    active:          { label: 'Active Scholar',    cls: 'bg-emerald-50 text-emerald-600 border-emerald-200',   icon: <CheckCircle2 size={13} /> },
+    renewal_approved:{ label: 'Active Scholar',    cls: 'bg-emerald-50 text-emerald-600 border-emerald-200',   icon: <CheckCircle2 size={13} /> },
+    not_eligible:    { label: 'Not Eligible',      cls: 'bg-[#FF1E1E]/10 text-[#FF1E1E] border-[#FF1E1E]/20', icon: <XCircle size={13} /> },
+    terminated:      { label: 'Terminated',        cls: 'bg-[#FF1E1E]/10 text-[#FF1E1E] border-[#FF1E1E]/20', icon: <XCircle size={13} /> },
+    pending:         { label: 'Pending',           cls: 'bg-amber-50 text-amber-600 border-amber-200',         icon: <Clock size={13} /> },
+    under_review:    { label: 'For Compliance',    cls: 'bg-[#093fb4]/10 text-[#093fb4] border-[#093fb4]/20',  icon: <Clock size={13} /> },
+    submitted:       { label: 'Submitted',         cls: 'bg-emerald-50 text-emerald-600 border-emerald-200',   icon: <CheckCircle2 size={13} /> },
+    renewing:        { label: 'Renewal Required',  cls: 'bg-amber-100 text-amber-700 border-amber-300',        icon: <AlertCircle size={13} /> },
+    renewal_pending: { label: 'Renewal Submitted', cls: 'bg-emerald-50 text-emerald-600 border-emerald-200',   icon: <CheckCircle2 size={13} /> },
+  };
+
+  const sc = statusConfig[cleanStatus] || statusConfig.pending;
+
+  return (
+    <div className="bg-[#FFFCFB] rounded-2xl border border-black/8 shadow-sm overflow-hidden">
+      <div className="p-5 flex items-center gap-4">
+        <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 flex items-center justify-center">
+          {s.org_pic ? (
+            <img src={s.org_pic} className="w-full h-full object-cover" alt={s.org_name} />
+          ) : (
+            <span className="text-lg font-black text-slate-400">{s.org_name?.substring(0, 2).toUpperCase()}</span>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-sm font-black text-black uppercase leading-tight truncate">{s.title}</h2>
+          <p className="text-[12px] font-black text-[#093fb4] uppercase tracking-widest mt-0.5">{s.org_name}</p>
+          <p className="text-[11px] font-bold text-slate-400 mt-0.5">
+            Applied: {new Date(s.applied_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+          </p>
+        </div>
+        <div className="flex flex-col items-end gap-2 shrink-0">
+          <span className={`flex items-center gap-1 text-[11px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${sc.cls}`}>
+            {sc.icon} {sc.label}
+          </span>
+          <button
+            onClick={onToggle}
+            className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-[#093fb4] flex items-center gap-1 transition-colors"
+          >
+            {isExpanded ? <><ChevronUp size={14} /> Less Details</> : <><ChevronDown size={14} /> View Details</>}
+          </button>
+        </div>
+      </div>
+
+      {isExpanded && (
+        <div className="border-t border-black/5 px-5 pb-5 pt-4 space-y-5">
+          {s.description && (
+            <p className="text-[13px] text-slate-500 leading-relaxed break-words">{s.description}</p>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            {s.amount_range && (
+              <div className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Amount</p>
+                <p className="text-xs font-black text-[#093fb4]">{s.amount_range}</p>
+              </div>
+            )}
+            {s.fund_type && (
+              <div className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Fund Type</p>
+                <p className="text-xs font-black text-black capitalize">{s.fund_type}</p>
+              </div>
+            )}
+            {s.gwa_requirement && (
+              <div className="bg-[#093fb4]/5 border border-[#093fb4]/10 rounded-xl px-3 py-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[#093fb4]/60">Min. GWA</p>
+                <p className="text-xs font-black text-[#093fb4]">{s.gwa_requirement}</p>
+              </div>
+            )}
+            {s.deadline && (
+              <div className="bg-[#FF1E1E]/5 border border-[#FF1E1E]/10 rounded-xl px-3 py-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[#FF1E1E]/60">Deadline</p>
+                <p className="text-xs font-black text-[#FF1E1E]">
+                  {new Date(s.deadline).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {cleanStatus === 'submitted' && (
+            <div className="bg-gradient-to-r from-emerald-50/70 to-emerald-50/20 border border-emerald-100 rounded-xl px-4 py-4 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-emerald-100/80 flex items-center justify-center text-emerald-600 shrink-0">
+                  <Clock size={16} />
+                </div>
+                <div>
+                  <p className="text-[13px] font-black uppercase tracking-wider text-emerald-600">
+                    Compliance Documents Submitted
+                  </p>
+                  <p className="text-[12px] text-slate-500 font-medium mt-0.5">
+                    Waiting for the organization to verify your submitted requirements.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {cleanStatus === 'renewal_pending' && (
+            <div className="bg-gradient-to-r from-blue-50/70 to-blue-50/20 border border-blue-100 rounded-xl px-4 py-4 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-blue-100/80 flex items-center justify-center text-[#093fb4] shrink-0">
+                  <Clock size={16} />
+                </div>
+                <div>
+                  <p className="text-[13px] font-black uppercase tracking-wider text-[#093fb4]">
+                    Renewal Documents Submitted
+                  </p>
+                  <p className="text-[12px] text-slate-500 font-medium mt-0.5">
+                    Waiting for the organization to review your submitted documents.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 🚀 FOOLPROOF CORRECTION: We pass the whole object directly to avoid any state desync */}
+          <ScholarshipProgressTrack s={s} />
+
+          {cleanStatus === 'under_review' && (
+            <MyCompliance 
+              applicationId={s.application_id} 
+              onSuccess={() => onStatusUpdate(s.application_id, 'submitted')}
+            />
+          )}
+
+          {cleanStatus === 'renewing' && (
+            <RenewCompliance 
+              applicationId={s.application_id} 
+              onSuccess={() => onStatusUpdate(s.application_id, 'renewal_pending')}
+            />
+          )}
+
+          {['approved', 'active', 'renewal_approved'].includes(cleanStatus) && (
+            <div className="bg-[#093fb4]/5 border border-[#093fb4]/10 rounded-xl px-4 py-4">
+              <p className="text-[11px] font-black uppercase tracking-widest text-[#093fb4] mb-3">Contact Organization</p>
+              <div className="space-y-2">
+                {s.sub_email && (
+                  <a href={`mailto:${s.sub_email}`} className="flex items-center gap-2.5 text-[13px] font-bold text-slate-600 hover:text-[#093fb4]">
+                    <Mail size={14} className="text-[#093fb4]" /> {s.sub_email}
+                  </a>
+                )}
+                {s.contact_number && (
+                  <div className="flex items-center gap-2.5 text-[13px] font-bold text-slate-600">
+                    <Phone size={14} className="text-[#093fb4]" /> {s.contact_number}
+                  </div>
+                )}
+                {s.website && (
+                  <a href={s.website} target="_blank" rel="noreferrer"
+                    className="flex items-center gap-2.5 text-[13px] font-bold text-[#093fb4] hover:underline">
+                    <Globe size={14} /> {s.website}
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 // --- 2. MAIN CONTAINER CONTROLLER ---
 export default function MyScholarships() {
   const [scholarships, setScholarships] = useState([]);
@@ -153,7 +346,13 @@ export default function MyScholarships() {
     </div>
   );
 
-  const currentStatus = (s) => s.display_status || s.status;
+  // 🚀 FIXED: If core status reflects approval, bypass display_status check to break out of tab loops
+  const currentStatus = (s) => {
+    if (['approved', 'active', 'renewal_approved'].includes(s.status)) {
+      return s.status;
+    }
+    return s.display_status || s.status;
+  };
 
   const grouped = {
     pending: scholarships.filter(s => getTabGroup(currentStatus(s)) === 'pending'),
@@ -180,7 +379,6 @@ export default function MyScholarships() {
       <StudentTopNav />
       <div className="max-w-4xl mx-auto px-4 pt-24 pb-10">
 
-        {/* Tab Selection Filter Blocks Layout */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-6">
           {TABS.map(tab => {
             const count = tabItems[tab.key]?.length || 0;
@@ -269,184 +467,8 @@ export default function MyScholarships() {
   );
 }
 
-// --- 3. DYNAMIC CARD DISPLAY SUB-MODULE ---
-function ScholarshipCard({ s, isExpanded, onToggle, onStatusUpdate }) {
-  const currentStatus = s.display_status || s.status;
 
-  const statusConfig = {
-    approved:        { label: 'Approved',          cls: 'bg-emerald-50 text-emerald-600 border-emerald-200',   icon: <CheckCircle2 size={13} /> },
-    active:          { label: 'Active Scholar',    cls: 'bg-emerald-50 text-emerald-600 border-emerald-200',   icon: <CheckCircle2 size={13} /> },
-    not_eligible:    { label: 'Not Eligible',      cls: 'bg-[#FF1E1E]/10 text-[#FF1E1E] border-[#FF1E1E]/20', icon: <XCircle size={13} /> },
-    terminated:      { label: 'Terminated',        cls: 'bg-[#FF1E1E]/10 text-[#FF1E1E] border-[#FF1E1E]/20', icon: <XCircle size={13} /> },
-    pending:         { label: 'Pending',           cls: 'bg-amber-50 text-amber-600 border-amber-200',         icon: <Clock size={13} /> },
-    under_review:    { label: 'For Compliance',    cls: 'bg-[#093fb4]/10 text-[#093fb4] border-[#093fb4]/20',  icon: <Clock size={13} /> },
-    renewing:        { label: 'Renewal Required',  cls: 'bg-amber-100 text-amber-700 border-amber-300',        icon: <AlertCircle size={13} /> },
-    renewal_pending: { label: 'Renewal Submitted', cls: 'bg-emerald-50 text-emerald-600 border-emerald-200',   icon: <CheckCircle2 size={13} /> },
-  };
 
-  const sc = statusConfig[currentStatus] || statusConfig.pending;
-
-  return (
-    <div className="bg-[#FFFCFB] rounded-2xl border border-black/8 shadow-sm overflow-hidden">
-      <div className="p-5 flex items-center gap-4">
-        <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 flex items-center justify-center">
-          {s.org_pic ? (
-            <img src={s.org_pic} className="w-full h-full object-cover" alt={s.org_name} />
-          ) : (
-            <span className="text-lg font-black text-slate-400">{s.org_name?.substring(0, 2).toUpperCase()}</span>
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h2 className="text-sm font-black text-black uppercase leading-tight truncate">{s.title}</h2>
-          <p className="text-[12px] font-black text-[#093fb4] uppercase tracking-widest mt-0.5">{s.org_name}</p>
-          <p className="text-[11px] font-bold text-slate-400 mt-0.5">
-            Applied: {new Date(s.applied_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
-          </p>
-        </div>
-        <div className="flex flex-col items-end gap-2 shrink-0">
-          <span className={`flex items-center gap-1 text-[11px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${sc.cls}`}>
-            {sc.icon} {sc.label}
-          </span>
-          <button
-            onClick={onToggle}
-            className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-[#093fb4] flex items-center gap-1 transition-colors"
-          >
-            {isExpanded ? <><ChevronUp size={14} /> Less Details</> : <><ChevronDown size={14} /> View Details</>}
-          </button>
-        </div>
-      </div>
-
-      {isExpanded && (
-        <div className="border-t border-black/5 px-5 pb-5 pt-4 space-y-5">
-          {s.description && (
-            <p className="text-[13px] text-slate-500 leading-relaxed break-words">{s.description}</p>
-          )}
-
-          {/* Quick metadata category tag row */}
-          <div className="flex flex-wrap gap-2">
-            {s.amount_range && (
-              <div className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Amount</p>
-                <p className="text-xs font-black text-[#093fb4]">{s.amount_range}</p>
-              </div>
-            )}
-            {s.fund_type && (
-              <div className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Fund Type</p>
-                <p className="text-xs font-black text-black capitalize">{s.fund_type}</p>
-              </div>
-            )}
-            {s.gwa_requirement && (
-              <div className="bg-[#093fb4]/5 border border-[#093fb4]/10 rounded-xl px-3 py-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-[#093fb4]/60">Min. GWA</p>
-                <p className="text-xs font-black text-[#093fb4]">{s.gwa_requirement}</p>
-              </div>
-            )}
-            {s.deadline && (
-              <div className="bg-[#FF1E1E]/5 border border-[#FF1E1E]/10 rounded-xl px-3 py-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-[#FF1E1E]/60">Deadline</p>
-                <p className="text-xs font-black text-[#FF1E1E]">
-                  {new Date(s.deadline).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* --- RENEWAL DOCUMENTS SUBMITTED BANNER CALLOUT (MATCHING image_26567b.png) --- */}
-          {currentStatus === 'renewal_pending' && (
-            <div className="bg-gradient-to-r from-blue-50/70 to-blue-50/20 border border-blue-100 rounded-xl px-4 py-4 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-blue-100/80 flex items-center justify-center text-[#093fb4] shrink-0">
-                  <Clock size={16} />
-                </div>
-                <div>
-                  <p className="text-[13px] font-black uppercase tracking-wider text-[#093fb4]">
-                    Renewal Documents Submitted
-                  </p>
-                  <p className="text-[12px] text-slate-500 font-medium mt-0.5">
-                    Waiting for the organization to review your submitted documents.
-                  </p>
-                </div>
-              </div>
-              
-              {/* Folder/Document layout visualization stack from the image */}
-              <div className="hidden sm:flex relative items-center justify-center pr-2 shrink-0">
-                <div className="w-10 h-8 bg-[#093fb4] rounded-lg relative flex items-center justify-center shadow-md">
-                  <FileText size={14} className="text-white" />
-                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center">
-                    <Check size={8} className="text-white" strokeWidth={4} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* --- LIVE WORKFLOW PROGRESS TIMELINE LINE --- */}
-          <ScholarshipProgressTrack status={currentStatus} appliedAt={s.applied_at} />
-
-          {/* Core Interactive Action Modules */}
-          {currentStatus === 'under_review' && (
-            <MyCompliance 
-              applicationId={s.application_id} 
-              onSuccess={() => onStatusUpdate(s.application_id, 'submitted')}
-            />
-          )}
-
-          {currentStatus === 'renewing' && (
-            <RenewCompliance 
-              applicationId={s.application_id} 
-              onSuccess={() => onStatusUpdate(s.application_id, 'renewal_pending')}
-            />
-          )}
-
-          {(currentStatus === 'approved' || currentStatus === 'active') && (
-            <div className="bg-[#093fb4]/5 border border-[#093fb4]/10 rounded-xl px-4 py-4">
-              <p className="text-[11px] font-black uppercase tracking-widest text-[#093fb4] mb-3">Contact Organization</p>
-              <div className="space-y-2">
-                {s.sub_email && (
-                  <a href={`mailto:${s.sub_email}`} className="flex items-center gap-2.5 text-[13px] font-bold text-slate-600 hover:text-[#093fb4]">
-                    <Mail size={14} className="text-[#093fb4]" /> {s.sub_email}
-                  </a>
-                )}
-                {s.contact_number && (
-                  <div className="flex items-center gap-2.5 text-[13px] font-bold text-slate-600">
-                    <Phone size={14} className="text-[#093fb4]" /> {s.contact_number}
-                  </div>
-                )}
-                {s.website && (
-                  <a href={s.website} target="_blank" rel="noreferrer"
-                    className="flex items-center gap-2.5 text-[13px] font-bold text-[#093fb4] hover:underline">
-                    <Globe size={14} /> {s.website}
-                  </a>
-                )}
-              </div>
-            </div>
-          )}
-
-          {currentStatus === 'pending' && (
-            <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-center text-[12px] font-black uppercase text-amber-600">
-              Your application is pending review.
-            </div>
-          )}
-
-          {currentStatus === 'not_eligible' && (
-            <div className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-center text-[12px] font-black uppercase text-slate-400">
-              This application was marked as not eligible.
-            </div>
-          )}
-
-          {currentStatus === 'terminated' && (
-            <div className="bg-[#FF1E1E]/5 border border-[#FF1E1E]/10 rounded-xl px-4 py-3 text-center text-[12px] font-black uppercase text-[#FF1E1E]">
-              This scholarship agreement has been terminated.
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Simple fallback structure for saved listings
 function SavedScholarshipCard({ s, onUnsave }) {
   return (
     <div className="bg-[#FFFCFB] rounded-2xl border border-black/8 p-4 flex items-center justify-between gap-4">

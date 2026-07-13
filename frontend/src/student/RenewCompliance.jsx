@@ -4,7 +4,6 @@ import { CheckCircle2, AlertCircle, Clock, Upload } from 'lucide-react';
 
 const MAX_FILE_SIZE_MB = 5;
 
-// Added onSuccess prop to notify parent of successful submission
 export default function RenewCompliance({ applicationId, onSuccess }) {
   const [compliance, setCompliance] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -34,7 +33,6 @@ export default function RenewCompliance({ applicationId, onSuccess }) {
       try {
         const res = await api.get(`/renewals/${applicationId}/renewal-compliance`);
         setCompliance(res.data.data);
-        // Sync layout if status matches submission variants
         if (res.data.data?.status === 'submitted' || res.data.data?.status === 'renewal_pending') {
           setSubmitted(true);
         }
@@ -49,7 +47,7 @@ export default function RenewCompliance({ applicationId, onSuccess }) {
 
   const handleFileChange = (docLabel, file) => {
     if (file && file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      setSizeErrors(prev => ({ ...prev, [docLabel]: `Exceeds ${MAX_FILE_SIZE_MB}MB` }));
+      setSizeErrors(prev => ({ ...prev, [docLabel]: `Exceeds ${MAX_FILE_SIZE_MB}MB limit.` }));
       setFileMap(prev => ({ ...prev, [docLabel]: null }));
       return;
     }
@@ -58,9 +56,10 @@ export default function RenewCompliance({ applicationId, onSuccess }) {
   };
 
   const allFilled = docList.length > 0 && docList.every(d => fileMap[d]);
+  const hasErrors = Object.values(sizeErrors).some(Boolean); // 🚀 ADDED: Block operations if validation fails
 
   const handleSubmit = async () => {
-    if (!allFilled) return;
+    if (!allFilled || hasErrors) return;
     setSubmitting(true);
     try {
       const formData = new FormData();
@@ -83,7 +82,6 @@ export default function RenewCompliance({ applicationId, onSuccess }) {
       
       setSubmitted(true);
       
-      // Notify parent to mutate status values directly without a hard reload
       if (onSuccess) {
         onSuccess();
       }
@@ -126,17 +124,21 @@ export default function RenewCompliance({ applicationId, onSuccess }) {
                <span className="w-4 h-4 bg-amber-400 text-white rounded-full flex items-center justify-center text-[8px]">{i+1}</span>
                {doc}
             </p>
-            <div className="relative border-2 border-dashed border-amber-200 rounded-xl p-3 bg-white hover:border-amber-400 transition-colors">
+            {/* 🚀 FIXED: Dynamic wrapper background border logic matched with standard file rules */}
+            <div className={`relative border-2 border-dashed rounded-xl p-3 flex items-center gap-3 transition-colors ${
+              sizeErrors[doc] ? 'border-red-400 bg-red-50' : fileMap[doc] ? 'border-emerald-400 bg-emerald-50' : 'border-amber-200 bg-white hover:border-amber-400'
+            }`}>
               <input 
                 type="file" 
-                className="absolute inset-0 opacity-0 cursor-pointer" 
+                accept=".pdf,.doc,.docx"
+                className="absolute inset-0 opacity-0 cursor-pointer z-10" 
                 onChange={(e) => handleFileChange(doc, e.target.files[0])}
               />
               <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${fileMap[doc] ? 'bg-emerald-100' : 'bg-amber-100'}`}>
-                  {fileMap[doc] ? <CheckCircle2 size={14} className="text-emerald-600" /> : <Upload size={14} className="text-amber-600" />}
+                <div className={`p-2 rounded-lg ${sizeErrors[doc] ? 'bg-red-100' : fileMap[doc] ? 'bg-emerald-100' : 'bg-amber-100'}`}>
+                  {fileMap[doc] ? <CheckCircle2 size={14} className="text-emerald-600" /> : <Upload size={14} className={sizeErrors[doc] ? 'text-red-500' : 'text-amber-600'} />}
                 </div>
-                <p className="text-[11px] font-bold text-slate-500 truncate">
+                <p className={`text-[11px] font-bold truncate ${fileMap[doc] ? 'text-emerald-700' : 'text-slate-500'}`}>
                   {fileMap[doc] ? fileMap[doc].name : 'Click to upload'}
                 </p>
               </div>
@@ -148,7 +150,7 @@ export default function RenewCompliance({ applicationId, onSuccess }) {
 
       <button 
         onClick={handleSubmit} 
-        disabled={submitting || !allFilled} 
+        disabled={submitting || !allFilled || hasErrors} 
         className="w-full bg-amber-500 hover:bg-amber-600 text-white font-black py-3.5 rounded-xl flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest transition-colors disabled:opacity-40"
       >
         {submitting ? <Clock size={14} className="animate-spin" /> : <Upload size={14} />} 

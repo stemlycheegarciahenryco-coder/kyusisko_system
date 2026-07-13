@@ -4,11 +4,27 @@ import api from './api';
 import { ArrowRight, Bookmark, AlertTriangle, CheckCircle2, Mail, Phone, Calendar, X } from 'lucide-react';
 import StudentRecommendations from './student/StudentRecommendations';
 
+// 📋 Pre-defined lists of report reasons
+const PREDEFINED_REPORTS = [
+  "Suspicious Scholarship Program",
+  "The Provider or Program required have a membership payment amount first",
+  "Scam/ Fraud Account Provider or Program",
+  "Social Media or Website information is not legitimate",
+  "Unverified Contact Information"
+];
+
 export default function ScholarshipList() {
   const [scholarships, setScholarships] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [reportModal, setReportModal] = useState({ open: false, id: null, reason: '' });
+  
+  // ⚙️ State structure to handle multiple checkboxes and other reasons
+  const [reportModal, setReportModal] = useState({ 
+    open: false, 
+    id: null, 
+    selectedReasons: [], 
+    otherReason: '' 
+  });
   const navigate = useNavigate();
 
   const fetchScholarships = async () => {
@@ -45,14 +61,48 @@ export default function ScholarshipList() {
     }
   };
 
+  // 🔄 Handles toggling individual reason checkboxes
+  const handleCheckboxChange = (reason) => {
+    setReportModal(prev => {
+      const exists = prev.selectedReasons.includes(reason);
+      const updated = exists 
+        ? prev.selectedReasons.filter(r => r !== reason) 
+        : [...prev.selectedReasons, reason];
+      return { ...prev, selectedReasons: updated };
+    });
+  };
+
+  // 🟦 Handles the embedded Select All checkbox toggle
+  const handleSelectAll = () => {
+    if (reportModal.selectedReasons.length === PREDEFINED_REPORTS.length) {
+      setReportModal(prev => ({ ...prev, selectedReasons: [] }));
+    } else {
+      setReportModal(prev => ({ ...prev, selectedReasons: [...PREDEFINED_REPORTS] }));
+    }
+  };
+
+  // 🚀 Combines checkboxes + text area details and submits report
   const submitReport = async () => {
-    if (!reportModal.reason.trim()) return;
+    const finalReasons = [...reportModal.selectedReasons];
+    if (reportModal.otherReason.trim()) {
+      finalReasons.push(reportModal.otherReason.trim());
+    }
+
+    if (finalReasons.length === 0) {
+      alert("Please select at least one reason or type an explanation.");
+      return;
+    }
+
+    // Join with a recognizable separator bar
+    const combinedReason = finalReasons.join(' | ');
+
     try {
-      await api.post(`/recommendations/${reportModal.id}/report`, { reason: reportModal.reason });
+      await api.post(`/recommendations/${reportModal.id}/report`, { reason: combinedReason });
       alert("Report submitted successfully.");
-      setReportModal({ open: false, id: null, reason: '' });
+      setReportModal({ open: false, id: null, selectedReasons: [], otherReason: '' });
     } catch (err) {
       console.error("Report error:", err);
+      alert("Failed to submit report. Please try again.");
     }
   };
 
@@ -65,7 +115,6 @@ export default function ScholarshipList() {
       );
     }
 
-    // 👇 NOW YOU CAN SEE WHAT WENT WRONG
     if (error) {
       return (
         <div className="flex flex-col items-center gap-3 py-20 text-center">
@@ -119,8 +168,9 @@ export default function ScholarshipList() {
                 </div>
               )}
 
+              {/* Open modal structure */}
               <button 
-                onClick={() => setReportModal({ open: true, id: s.id, reason: '' })} 
+                onClick={() => setReportModal({ open: true, id: s.id, selectedReasons: [], otherReason: '' })} 
                 className={`absolute right-6 p-2 rounded-xl bg-slate-50 text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all z-10 ${s.is_best_match ? 'top-14' : 'top-6'}`}
                 title="Report this scholarship"
               >
@@ -242,37 +292,94 @@ export default function ScholarshipList() {
     );
   };
 
+  const isAllSelected = reportModal.selectedReasons.length === PREDEFINED_REPORTS.length;
+
   return (
     <>
-      {/* REPORT MODAL */}
+      {/* 🛡️ MULTI-CHECKBOX REPORT MODAL */}
       {reportModal.open && (
         <div 
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-          onClick={() => setReportModal({ open: false, id: null, reason: '' })}
+          onClick={() => setReportModal({ open: false, id: null, selectedReasons: [], otherReason: '' })}
         >
           <div 
-            className="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl animate-in fade-in zoom-in duration-200"
+            className="bg-white w-full max-w-lg rounded-3xl p-8 shadow-2xl animate-in fade-in zoom-in duration-200"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-center mb-5">
               <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Report Program</h2>
               <button 
-                onClick={() => setReportModal({ open: false, id: null, reason: '' })} 
+                onClick={() => setReportModal({ open: false, id: null, selectedReasons: [], otherReason: '' })} 
                 className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
               >
                 <X size={20} className="text-slate-700" />
               </button>
             </div>
-            <p className="text-slate-700 text-xs mb-4 font-bold uppercase tracking-wider">Reason for reporting</p>
+
+            {/* Checklist Label Header */}
+            <div className="mb-3 pb-2 border-b border-slate-100">
+              <p className="text-slate-700 text-[11px] font-black uppercase tracking-wider">Select reasons for reporting</p>
+            </div>
+
+            {/* Interactive Checkbox Layout List */}
+            <div className="space-y-2 mb-5 max-h-[250px] overflow-y-auto pr-1">
+              
+              {/* 🔄 Embedded Select All Checkbox Row */}
+              <label 
+                className={`flex items-start gap-3 p-3 rounded-xl border text-xs font-black cursor-pointer transition-all ${
+                  isAllSelected 
+                    ? 'bg-[#093fb4]/5 border-[#093fb4] text-[#093fb4]' 
+                    : 'bg-slate-50 border-slate-200 text-slate-800 hover:border-slate-300'
+                }`}
+              >
+                <input 
+                  type="checkbox" 
+                  checked={isAllSelected}
+                  onChange={handleSelectAll}
+                  className="mt-0.5 rounded border-slate-300 text-[#093fb4] focus:ring-[#093fb4] h-4 w-4 shrink-0 cursor-pointer"
+                />
+                <span className="leading-tight select-none uppercase tracking-wider text-[11px]">Select All Reasons</span>
+              </label>
+
+              {/* Decorative dividing line beneath the control checkbox */}
+              <div className="border-t border-slate-100 my-1" />
+
+              {PREDEFINED_REPORTS.map((reason, index) => {
+                const isChecked = reportModal.selectedReasons.includes(reason);
+                return (
+                  <label 
+                    key={index} 
+                    className={`flex items-start gap-3 p-3 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+                      isChecked 
+                        ? 'bg-blue-50/40 border-[#093fb4] text-[#093fb4]' 
+                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300'
+                    }`}
+                  >
+                    <input 
+                      type="checkbox" 
+                      checked={isChecked}
+                      onChange={() => handleCheckboxChange(reason)}
+                      className="mt-0.5 rounded border-slate-300 text-[#093fb4] focus:ring-[#093fb4] h-4 w-4 shrink-0 cursor-pointer"
+                    />
+                    <span className="leading-tight select-none">{reason}</span>
+                  </label>
+                );
+              })}
+            </div>
+
+            {/* Optional Additional Textarea description */}
+            <p className="text-slate-700 text-[11px] font-black uppercase tracking-wider mb-2">Other Details / Specific Reasons</p>
             <textarea 
-              className="w-full h-32 p-4 rounded-2xl bg-slate-50 border border-slate-200 focus:ring-2 focus:ring-red-500 focus:outline-none text-sm font-semibold mb-6 resize-none"
-              placeholder="e.g. This scholarship is already closed or contains suspicious links..."
-              value={reportModal.reason}
-              onChange={(e) => setReportModal({ ...reportModal, reason: e.target.value })}
+              className="w-full h-24 p-4 rounded-2xl bg-slate-50 border border-slate-200 focus:ring-2 focus:ring-[#093fb4] focus:outline-none text-sm font-semibold mb-6 resize-none"
+              placeholder="Provide additional details or specify other reasons here..."
+              value={reportModal.otherReason}
+              onChange={(e) => setReportModal({ ...reportModal, otherReason: e.target.value })}
             />
+
+            {/* Form actions */}
             <div className="flex gap-3">
               <button 
-                onClick={() => setReportModal({ open: false, id: null, reason: '' })}
+                onClick={() => setReportModal({ open: false, id: null, selectedReasons: [], otherReason: '' })}
                 className="flex-1 py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[12px] tracking-widest hover:bg-slate-200 transition-all"
               >
                 Cancel

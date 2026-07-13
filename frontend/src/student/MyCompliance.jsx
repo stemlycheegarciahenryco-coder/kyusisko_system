@@ -1,11 +1,11 @@
-// MyCompliance.jsx
 import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { CheckCircle2, AlertCircle, Clock, Upload } from 'lucide-react';
 
 const MAX_FILE_SIZE_MB = 5;
 
-export default function MyCompliance({ applicationId }) {
+// 🚀 FIXED: Added onSuccess to properties destructuring to bridge context to MyScholarships
+export default function MyCompliance({ applicationId, onSuccess }) {
   const [compliance, setCompliance] = useState(null);
   const [loadingCompliance, setLoadingCompliance] = useState(true);
   const [fileMap, setFileMap] = useState({});
@@ -30,7 +30,6 @@ export default function MyCompliance({ applicationId }) {
     const fetchCompliance = async () => {
       setLoadingCompliance(true);
       try {
-        // This component now ONLY handles standard application compliance
         const res = await api.get(`/applications/${applicationId}/compliance`);
         setCompliance(res.data.data);
         if (res.data.data?.status === 'submitted') setSubmitted(true);
@@ -73,7 +72,6 @@ export default function MyCompliance({ applicationId }) {
         }
       });
 
-      // Send labels so backend can map them to requirement IDs
       formData.append('requirement_labels', JSON.stringify(labelsSent));
       if (compliance?.id) formData.append('compliance_id', compliance.id);
 
@@ -82,6 +80,11 @@ export default function MyCompliance({ applicationId }) {
       });
       
       setSubmitted(true);
+
+      // 🚀 FIXED: Call parent refresh layout trigger
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (err) {
       console.error("Submission error:", err);
       setError('Failed to submit. Please try again.');
