@@ -36,7 +36,7 @@ export default function OrgSidebar() {
     { name: 'Applicants', icon: <Form size={20} />, path: '/OrgApplicantPrograms' }, 
     { name: ' Messages', icon: <Mails size={20} />, path: '/OrgMessages' },
     { name: 'Profile', icon: <User size={20} />, path: '/OrgProfile' }, 
-    { name: ' Program Archive', icon: <Archive size={20} />, path: '/OrgHistory' },
+    { name: ' Audit Log', icon: <Archive size={20} />, path: '/OrgLogs' },
 
   ];
 

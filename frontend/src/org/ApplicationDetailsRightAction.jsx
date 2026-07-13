@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, AlertCircle, Clock, XCircle, Calendar, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Clock, XCircle, Calendar, ShieldCheck, RefreshCw } from 'lucide-react';
 
 export default function ApplicationDetailsRightAction({ 
   detail, 
@@ -12,7 +12,7 @@ export default function ApplicationDetailsRightAction({
 }) {
   const status = detail.status || 'pending';
 
-  // State Banner Stylings matching image_81799d.jpg
+  // State Banner Stylings handling standard and renewal flows
   const getStatusBanner = () => {
     switch(status) {
       case 'approved':
@@ -20,10 +20,26 @@ export default function ApplicationDetailsRightAction({
         return {
           bg: 'bg-emerald-50/60 border border-emerald-100',
           icon: <CheckCircle2 size={22} className="text-emerald-600 shrink-0" />,
-          title: 'APPROVED',
+          title: 'APPROVED / ACTIVE',
           sub: 'Student is eligible for the scholarship.'
         };
+      case 'submitted':
+        return {
+          bg: 'bg-blue-50/60 border border-blue-100',
+          icon: <RefreshCw size={22} className="text-blue-600 shrink-0 animate-pulse" />,
+          title: 'RENEWAL SUBMITTED',
+          sub: 'Student has submitted documents for renewal review.'
+        };
+      case 'renewing':
+        return {
+          bg: 'bg-purple-50/60 border border-purple-100',
+          icon: <Clock size={22} className="text-purple-600 shrink-0" />,
+          title: 'UNDER RENEWAL REVIEW',
+          sub: 'Renewal requirements are currently being evaluated.'
+        };
       case 'under_review':
+      case 'compliance':
+      case 'need_changes':
         return {
           bg: 'bg-amber-50/60 border border-amber-100',
           icon: <Clock size={22} className="text-amber-600 shrink-0" />,
@@ -32,11 +48,12 @@ export default function ApplicationDetailsRightAction({
         };
       case 'not_eligible':
       case 'terminated':
+      case 'rejected':
         return {
           bg: 'bg-red-50/60 border border-red-100',
           icon: <XCircle size={22} className="text-red-600 shrink-0" />,
-          title: 'NOT ELIGIBLE',
-          sub: 'Application has been turned down.'
+          title: 'NOT ELIGIBLE / TERMINATED',
+          sub: 'Application has been turned down or scholar terminated.'
         };
       default:
         return {
@@ -50,8 +67,11 @@ export default function ApplicationDetailsRightAction({
 
   const banner = getStatusBanner();
 
-  // Mock timeline generation matching image_81799d.jpg dates structure
-  const trackingTime = detail.submitted_at || detail.created_at || new Date().toISOString();
+  // Determine if this applicant is under a renewal cycle
+  const isRenewalFlow = ['submitted', 'renewing'].includes(status);
+
+  // Check if current state allows manager pipeline evaluations
+  const isActionable = ['pending', 'under_review', 'compliance', 'need_changes', 'submitted', 'renewing'].includes(status);
 
   return (
     <div className="space-y-4 lg:sticky lg:top-6 w-full">
@@ -80,13 +100,13 @@ export default function ApplicationDetailsRightAction({
           {/* Node 1: Submitted */}
           <div className="relative text-xs">
             <div className="absolute -left-[20px] top-1 w-2.5 h-2.5 rounded-full bg-slate-400 ring-4 ring-white" />
-            <p className="font-bold text-slate-700">Submitted</p>
+            <p className="font-bold text-slate-700">{isRenewalFlow ? 'Renewal Requested' : 'Submitted'}</p>
             <p className="text-slate-400 font-medium mt-0.5">July 5, 2026 — 05:12 AM</p>
           </div>
 
           {/* Node 2: Under Review */}
           <div className="relative text-xs">
-            <div className={`absolute -left-[20px] top-1 w-2.5 h-2.5 rounded-full ring-4 ring-white ${status !== 'pending' ? 'bg-slate-400' : 'bg-slate-300'}`} />
+            <div className={`absolute -left-[20px] top-1 w-2.5 h-2.5 rounded-full ring-4 ring-white ${status !== 'pending' && status !== 'submitted' ? 'bg-slate-400' : 'bg-slate-300'}`} />
             <p className="font-bold text-slate-700">Under Review</p>
             <p className="text-slate-400 font-medium mt-0.5">July 7, 2026 — 10:45 AM</p>
           </div>
@@ -94,7 +114,7 @@ export default function ApplicationDetailsRightAction({
           {/* Node 3: Current State */}
           <div className="relative text-xs">
             <div className={`absolute -left-[20px] top-1 w-2.5 h-2.5 rounded-full ring-4 ring-white ${
-              status === 'approved' ? 'bg-emerald-500 ring-emerald-100' : status === 'not_eligible' ? 'bg-red-500 ring-red-100' : 'bg-slate-300'
+              ['approved', 'active'].includes(status) ? 'bg-emerald-500 ring-emerald-100' : ['not_eligible', 'terminated', 'rejected'].includes(status) ? 'bg-red-500 ring-red-100' : 'bg-slate-300'
             }`} />
             <p className="font-bold text-slate-700 capitalize">{status.replace('_', ' ')}</p>
             <p className="text-slate-400 font-medium mt-0.5">July 9, 2026 — 02:19 PM</p>
@@ -106,13 +126,13 @@ export default function ApplicationDetailsRightAction({
         <div className="pt-2 space-y-2.5">
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Actions</p>
           
-          {status === 'pending' || status === 'under_review' ? (
+          {isActionable ? (
             <>
               <button
                 onClick={() => setConfirmModal({ open: true, status: 'approved' })}
                 className="w-full bg-[#093fb4] hover:bg-[#093fb4]/90 text-white font-bold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 text-xs transition-colors shadow-sm"
               >
-                ✓ Approve Application
+                ✓ {isRenewalFlow ? 'Approve Renewal' : 'Approve Application'}
               </button>
               
               <button
@@ -123,10 +143,10 @@ export default function ApplicationDetailsRightAction({
               </button>
 
               <button
-                onClick={() => setConfirmModal({ open: true, status: 'not_eligible' })}
+                onClick={() => setConfirmModal({ open: true, status: isRenewalFlow ? 'terminated' : 'not_eligible' })}
                 className="w-full bg-white text-red-500 hover:bg-red-50 border border-red-200 font-bold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 text-xs transition-colors"
               >
-                ✕ Mark Not Eligible
+                ✕ {isRenewalFlow ? 'Terminate Scholar' : 'Mark Not Eligible'}
               </button>
             </>
           ) : (

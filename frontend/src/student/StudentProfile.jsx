@@ -3,10 +3,8 @@ import { useLocation } from 'react-router-dom';
 import { useStudent } from './StudentContext';
 import { Camera, User, MapPin, Phone, Mail, Plus, Award, FileText, GraduationCap, School, Users, Calendar, Edit2, ExternalLink, ShieldAlert } from 'lucide-react';
 import api from '../api';
-import EditProfileModal from './EditProfileModal'; 
 import AddPortfolioModal from './AddPortfolioModal'; 
-import EditPersonalInfoModal from './EditPersonalInfoModal';
-import EditFamilyModal from './EditFamilyModal';
+import StudentEditProfile from './StudentEditProfile';
 
 const backendURL = "http://localhost:5000";
 
@@ -25,10 +23,8 @@ export default function StudentProfile() {
   const { student, loading, refreshProfile } = useStudent();
  
   // Modal Triggers
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [editTab, setEditTab] = useState(null); // null | 'academic' | 'personal' | 'family'
   const [isPortfolioModalOpen, setIsPortfolioModalOpen] = useState(false);
-  const [isPersonalInfoModalOpen, setIsPersonalInfoModalOpen] = useState(false);
-  const [isFamilyModalOpen, setIsFamilyModalOpen] = useState(false);
   
   // ─── 1. ADDED STATE FOR FRIENDLY DIALOG OVERLAY ───
   const [showWelcomeModal, setShowWelcomeModal] = useState(location.state?.justOnboarded || false);
@@ -163,7 +159,7 @@ export default function StudentProfile() {
                 </p>
               </div>
               <button 
-                onClick={() => setIsProfileModalOpen(true)}
+                onClick={() => setEditTab('academic')}
                 className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-slate-500 hover:text-[#093fb4] bg-slate-50 border border-slate-200 rounded-lg hover:border-[#093fb4]/20 transition-all shadow-sm"
               >
                 <Edit2 size={14} /> Edit Course / Bio
@@ -218,7 +214,7 @@ export default function StudentProfile() {
               <span>Personal Details</span>
             </div>
             <button 
-              onClick={() => setIsPersonalInfoModalOpen(true)}
+              onClick={() => setEditTab('personal')}
               className="text-[#093fb4] hover:underline flex items-center gap-1 normal-case text-xs font-bold"
             >
               Edit <Edit2 size={12} />
@@ -255,7 +251,7 @@ export default function StudentProfile() {
             <span>Family & Caretaker Information</span>
           </div>
           <button 
-            onClick={() => setIsFamilyModalOpen(true)}
+            onClick={() => setEditTab('family')}
             className="text-[#093fb4] hover:underline flex items-center gap-1 normal-case text-xs font-bold"
           >
             Edit Settings <Edit2 size={12} />
@@ -338,17 +334,16 @@ export default function StudentProfile() {
       </div>
 
       {/* --- WORKFLOW PROFILE MANAGEMENT MODALS --- */}
-      {isProfileModalOpen && (
-        <EditProfileModal onClose={() => { setIsProfileModalOpen(false); refreshProfile(); }} studentData={student} />
+      {editTab && (
+        <StudentEditProfile
+          initialTab={editTab}
+          studentData={student}
+          onClose={() => setEditTab(null)}
+          onRefresh={refreshProfile}
+        />
       )}
       {isPortfolioModalOpen && (
         <AddPortfolioModal onClose={() => { setIsPortfolioModalOpen(false); refreshProfile(); }} studentData={student} />
-      )}
-      {isPersonalInfoModalOpen && (
-        <EditPersonalInfoModal onClose={() => { setIsPersonalInfoModalOpen(false); refreshProfile(); }} studentData={student} />
-      )}
-      {isFamilyModalOpen && (
-        <EditFamilyModal onClose={() => { setIsFamilyModalOpen(false); refreshProfile(); }} studentData={student} onRefresh={refreshProfile} />
       )}
 
     </div>

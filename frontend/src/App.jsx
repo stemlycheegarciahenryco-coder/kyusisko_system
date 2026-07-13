@@ -38,7 +38,9 @@ import OrgDashboard from './org/OrgDashboard';
 import ApplicationDetails from './org/ApplicationDetails';
 import OrgProfile from './org/OrgProfile';
 import ProtectedRoutes from './ProtectedRoutes'; // Import the guard
-import OrgHistory from './org/OrgHistory';
+
+//might delete this 
+import OrgLogs from './org/OrgLogs';
 import CreateScholarship from './component/CreateScholarship';
 import OrgMessages from './org/OrgMessages';
 import {CompliancePage} from './CompliancePage';
@@ -101,7 +103,7 @@ export default function App() {
         <Route path="/ProgramView" element={<ProgramView />} />
           <Route path="/OrgMessages" element={<OrgMessages />} />
         <Route path="/OrgProfile" element={<OrgProfile />} />
-        <Route path="/OrgHistory" element={<OrgHistory />} />
+        <Route path="/OrgLogs" element={<OrgLogs />} />
         <Route path="/create-scholarship" element={<CreateScholarship />} />
        
       </Route>

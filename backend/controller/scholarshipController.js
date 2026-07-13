@@ -92,18 +92,7 @@ const createScholarship = async (req, res) => {
   }
 };
 
-// GET /api/scholarships
-const getScholarships = async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT * FROM scholarships WHERE sub_admin_id = $1 ORDER BY created_at DESC`,
-      [req.user.id]
-    );
-    res.status(200).json({ success: true, data: result.rows });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
+
 
 // GET /api/scholarships/view-details/:id
 const getScholarshipById = async (req, res) => {
@@ -215,15 +204,7 @@ const updateScholarshipStatus = async (req, res) => {
   }
 };
 
-// DELETE /api/scholarships/:id
-const deleteScholarship = async (req, res) => {
-  try {
-    await pool.query(`DELETE FROM scholarships WHERE id = $1 AND sub_admin_id = $2`, [req.params.id, req.user.id]);
-    res.status(200).json({ success: true, message: 'Deleted' });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
+
 
 // GET /api/scholarships/:id/requirements
 const getRequirements = async (req, res) => {
@@ -240,10 +221,8 @@ const getRequirements = async (req, res) => {
 
 module.exports = {
   createScholarship,
-  getScholarships,
   getScholarshipById,
   updateScholarshipStatus,
-  deleteScholarship,
   updateScholarship,
   getRequirements
 };

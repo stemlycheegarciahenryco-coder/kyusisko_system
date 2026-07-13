@@ -325,7 +325,9 @@ const StudentOnboarding = () => {
                   <div className="space-y-2">
                     <select value={formData.program_type} onChange={(e) => setFormData({...formData, program_type: e.target.value, other_program: ''})} className={inputStyle}>
                       <option value="">Select Program...</option>
-                      {['4PS (Pantawid Pamilyang Pilipino Program)', 'AKAP', 'AICS', 'SLP', '4PH', 'Others'].map(p => <option key={p} value={p}>{p}</option>)}
+                      {['4PS (Pantawid Pamilyang Pilipino Program)', 'AKAP (Ayuda para sa Kapos Ang Kita Program)'
+                        , ' AICS (Assistance to Individuals in Crisis Situations)', 'SLP (Sustainable Livelihood Program)',
+                         'MaPa Program (Masayang Pamilya Para sa Batang Pilipino)', 'Others'].map(p => <option key={p} value={p}>{p}</option>)}
                     </select>
                     {formData.program_type === 'Others' && (
                       <input type="text" placeholder="Specify program name" className={inputStyle} value={formData.other_program} onChange={(e) => setFormData({...formData, other_program: e.target.value})} />
