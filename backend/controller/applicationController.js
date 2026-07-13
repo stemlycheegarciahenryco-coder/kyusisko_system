@@ -1,74 +1,55 @@
 const pool = require('../config/db');
 const {supabaseAdmin} = require('../config/supabaseClient');
+const {applicationQueue} = require ('../queues/applicationQueue');
 
 // POST /scholarship/:id/apply
 // student submits an application with responses to all fields
 const applyScholarship = async (req, res) => {
-  const client = await pool.connect(); 
   try {
     const { id } = req.params;
     const student_id = req.user.id;
     
     let { responses } = req.body; 
     if (typeof responses === 'string') {
-      try {
-        responses = JSON.parse(responses);
-      } catch (e) {
-        client.release();
-        return res.status(400).json({ success: false, message: 'Invalid responses format' });
-      }
+      try { responses = JSON.parse(responses); } 
+      catch (e) { return res.status(400).json({ success: false, message: 'Invalid responses format' }); }
     }
 
-    await client.query('BEGIN');
-
-    // 1. CHECK SCHOLARSHIP EXISTS AND IS OPEN
-    const scholarship = await client.query(
-      `SELECT status, deadline FROM scholarships WHERE id = $1`,
-      [id]
+    // 1. QUICK PRE-VALIDATIONS (Bypass heavy connection locks)
+    const scholarshipCheck = await pool.query(
+      `SELECT status, deadline, title, sub_admin_id FROM scholarships WHERE id = $1`, [id]
     );
 
-    if (scholarship.rows.length === 0) {
-      await client.query('ROLLBACK');
+    if (scholarshipCheck.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Scholarship not found' });
     }
 
-    if (scholarship.rows[0].status !== 'open') {
-      await client.query('ROLLBACK');
+    const scholarship = scholarshipCheck.rows[0];
+
+    if (scholarship.status !== 'open') {
       return res.status(400).json({ success: false, message: 'Scholarship is not open for applications' });
     }
 
-    // 2. CHECK DEADLINE
-    const deadline = scholarship.rows[0].deadline;
-    if (deadline && new Date() > new Date(deadline)) {
-      await client.query('ROLLBACK');
+    if (scholarship.deadline && new Date() > new Date(scholarship.deadline)) {
       return res.status(400).json({ success: false, message: 'Application deadline has passed' });
     }
 
-    // 3. CHECK DUPLICATE APPLICATION
-    const existing = await client.query(
-      `SELECT id FROM applications WHERE scholarship_id = $1 AND student_id = $2`,
-      [id, student_id]
+    // Check Duplicate
+    const existing = await pool.query(
+      `SELECT id FROM applications WHERE scholarship_id = $1 AND student_id = $2`, [id, student_id]
     );
     if (existing.rows.length > 0) {
-      await client.query('ROLLBACK');
       return res.status(409).json({ success: false, message: 'You already applied to this scholarship' });
     }
 
-    // 4. VALIDATE REQUIRED FIELDS
-    // ✅ Fixed: was 'form_fields', actual table is 'scholarship_requirements'
-    const requiredFields = await client.query(
-      `SELECT id, field_label FROM scholarship_requirements 
-       WHERE scholarship_id = $1 AND is_required = TRUE`,
-      [id]
+    // Validate Required Fields
+    const requiredFields = await pool.query(
+      `SELECT id, field_label FROM scholarship_requirements WHERE scholarship_id = $1 AND is_required = TRUE`, [id]
     );
-
     const answeredIds = (responses || []).map(r => Number(r.form_field_id));
-    const missingFields = requiredFields.rows.filter(
-      field => !answeredIds.includes(field.id)
-    );
+    const missingFields = requiredFields.rows.filter(field => !answeredIds.includes(field.id));
 
     if (missingFields.length > 0) {
-      await client.query('ROLLBACK');
       return res.status(400).json({
         success: false,
         message: 'Missing required fields',
@@ -76,20 +57,9 @@ const applyScholarship = async (req, res) => {
       });
     }
 
-    // 5. CREATE APPLICATION
-    const application = await client.query(
-      `INSERT INTO applications (scholarship_id, student_id, status)
-       VALUES ($1, $2, 'pending')
-       RETURNING *`,
-      [id, student_id]
-    );
-
-    const application_id = application.rows[0].id;
-
-    // 6. SAVE EACH RESPONSE
-    // ✅ Fixed: was 'application_responses'/'form_field_id',
-    // 6. SAVE EACH RESPONSE
-    for (const response of responses) {
+    // 2. CONCURRENT SUPABASE UPLOADS (Runs outside of a DB transaction!)
+    // We transform responses into a safe text-only structure for Redis
+    const queuedResponses = await Promise.all(responses.map(async (response) => {
       const requirement_id = response.form_field_id; 
       let file_path = null;
       let text_value = null;
@@ -99,10 +69,10 @@ const applyScholarship = async (req, res) => {
         
         if (uploadedFile) {
           const fileExtension = uploadedFile.originalname.split('.').pop();
-          // Create a clean path structure in the bucket: app_123/1689..._req_5.pdf
-          const bucketPath = `app_${application_id}/${Date.now()}_req_${requirement_id}.${fileExtension}`;
+          // Safe naming utilizing student and scholarship parameters
+          const bucketPath = `student_${student_id}/sch_${id}/${Date.now()}_req_${requirement_id}.${fileExtension}`;
 
-          // ☁️ 1. Upload directly to Supabase from memory buffer
+          // Upload buffer from memoryStorage
           const { error: uploadError } = await supabaseAdmin.storage
             .from('application-scholarship-document')
             .upload(bucketPath, uploadedFile.buffer, {
@@ -112,52 +82,45 @@ const applyScholarship = async (req, res) => {
 
           if (uploadError) throw uploadError;
 
-          // 🔒 2. Generate a 1-year secure signed URL for the database
+          // Generate a secure signed URL
           const { data: signedUrlData, error: urlError } = await supabaseAdmin.storage
             .from('application-scholarship-document')
-            .createSignedUrl(bucketPath, 31536000); // 1 year expiration
+            .createSignedUrl(bucketPath, 31536000); // 1 year
 
           if (urlError) throw urlError;
-
-          // Save the signed URL instead of the local hard drive path
           file_path = signedUrlData.signedUrl; 
         }
       }
 
-      // If no file, use the text value
       if (!file_path) {
         text_value = response.response_value || null;
       }
 
-      await client.query(
-        `INSERT INTO application_submissions 
-           (application_id, requirement_id, file_path, text_value)
-         VALUES ($1, $2, $3, $4)`,
-        [application_id, requirement_id, file_path, text_value]
-      );
-    }
+      return {
+        requirement_id,
+        file_path,
+        text_value
+      };
+    }));
 
-    await client.query('COMMIT');
-
-    // 7. AUDIT TRAIL
-    await pool.query(
-                    //!audit
-      'INSERT INTO audit_trails (user_id, action_type, details) VALUES ($1, $2, $3)',
-      [req.user.id, 'STUDENT_APPLY', `Student applied for Scholarship (ID: ${id})`]
-    );
-
-    res.status(201).json({
-      success: true,
-      message: 'Application submitted successfully',
-      data: application.rows[0]
+    // 3. HAND OFF TO THE BULLMQ BACKGROUND WORKER
+    await applicationQueue.add('submitJob', {
+      id,
+      student_id,
+      responses: queuedResponses, // Safe text data layout with absolute file URLs!
+      scholarshipTitle: scholarship.title,
+      sub_admin_id: scholarship.sub_admin_id
     });
-    
+
+    // 4. INSTANT RESPOND (Blocks bottlenecks completely)
+    return res.status(202).json({
+      success: true,
+      message: 'Your application is being processed successfully.'
+    });
+
   } catch (err) {
-    if (client) await client.query('ROLLBACK');
-    console.error("Apply Error:", err);
+    console.error("Apply Queue Error:", err);
     res.status(500).json({ success: false, message: err.message });
-  } finally {
-    client.release();
   }
 };
 

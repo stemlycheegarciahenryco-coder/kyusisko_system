@@ -4,10 +4,21 @@ const cookieParser = require('cookie-parser');
 const { authLimiter, generalLimiter } = require('./middleware/rateLimiter');
 const { createClient } = require('redis');
 const { createAdapter } = require('@socket.io/redis-adapter');
+const http = require('http');
+const path = require('path');
+const { Server } = require('socket.io');
+const socketManager = require('./config/socketManager');
+require('dotenv').config();
 
+// 🚀 1. BOOT UP THE BULLMQ BACKGROUND WORKER PROCESS
+// This wakes up your worker file so it listens to Redis queue jobs and fires socket events
+require('./queues/applicationQueue');
+
+// Initialize Redis Pub/Sub Clients
 const pubClient = createClient({ url: process.env.REDIS_URL });
 const subClient = pubClient.duplicate();
-// ... (Your other imports remain the same)
+
+// Route Imports
 const subAdminRoutes = require('./routes/subAdminRoutes');
 const authRoutes = require('./routes/authRoutes');
 const RegStudentRoutes = require('./routes/RegStudentRoutes');
@@ -24,25 +35,13 @@ const searchRoutes = require('./routes/searchRoutes');
 const lookupRouter = require('./routes/lookup');
 const systemAdminRouter = require('./routes/systemadmin');
 
-const http = require('http');
-const path = require('path');
-const { Server } = require('socket.io');
-const socketManager = require('./config/socketManager');
-require('dotenv').config();
-
 const app = express();
 const server = http.createServer(app);
 
-Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
-    io.adapter(createAdapter(pubClient, subClient));
-});
-
-
 app.set('trust proxy', 1);
-// --- 1. WebSocket & CORS ---
 
-// List your allowed origins here. 
-// Once you deploy your Static Site, add that new URL to this array.
+// --- 2. WebSocket & CORS Initialization ---
+
 const allowedOrigins = [
   'http://localhost:5173',
   'https://kyusisko.com',
@@ -50,6 +49,7 @@ const allowedOrigins = [
   'https://kyusisko-system.onrender.com'
 ];
 
+// Initialize Socket.io instance FIRST so it exists when Redis connects
 const io = new Server(server, {
   cors: {
     origin: (origin, callback) => {
@@ -64,11 +64,18 @@ const io = new Server(server, {
   }
 });
 
-// FIX: Initialize the socket manager with the io instance.
-// This makes io available to any controller via socketManager.emitToUser() etc.
-// without passing io around as a parameter everywhere.
+// Attach the Redis Adapter safely now that `io` is initialized
+Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
+    io.adapter(createAdapter(pubClient, subClient));
+    console.log("↔️ Redis Socket.io Adapter connected successfully");
+}).catch(err => {
+    console.error("❌ Redis Adapter Connection Failed:", err);
+});
+
+// Initialize the socket manager singleton with the verified io instance
 socketManager.init(io);
 
+// Express Middleware Configuration
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
@@ -78,18 +85,15 @@ app.use(cors({
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], // Added OPTIONS
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(cookieParser());
 app.use(express.json());
 
-
 // --- 3. Static Files & Routes ---
 const uploadsPath = path.resolve(__dirname, 'uploads');
-
-//uploads
 app.use('/uploads', express.static(uploadsPath));
 
 app.use('/api/onboarding-orgs', subAdminRoutes);

@@ -1,7 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from './api';
-import { ArrowLeft, Upload, Send, Loader2, Mail, Globe, MapPin, Phone, CheckCircle2, AlertCircle, FileText, X, Eye, Download } from 'lucide-react';
+import { ArrowLeft, Upload, UploadCloud, Send, Loader2, Mail, Globe, MapPin, Phone, CheckCircle2, AlertCircle, FileText, X, Eye, Download, Bookmark, BookOpen, FilePlus2, Quote, Info, ShieldCheck, Accessibility, Flag, GraduationCap, Wallet, Star, Ban } from 'lucide-react';
+
+const getCriteriaIcon = (label = '') => {
+  const l = label.toLowerCase();
+  if (l.includes('pwd') || l.includes('disab')) return Accessibility;
+  if (l.includes('citizen') || l.includes('filipino')) return Flag;
+  if (l.includes('resident')) return Bookmark;
+  if (l.includes('enroll') || l.includes('college') || l.includes('student')) return GraduationCap;
+  if (l.includes('moral') || l.includes('character')) return ShieldCheck;
+  if (l.includes('financial') || l.includes('income') || l.includes('need')) return Wallet;
+  if (l.includes('gwa') || l.includes('grade') || l.includes('average')) return Star;
+  if (l.includes('no existing') || l.includes('without') || l.includes('not enjoying')) return Ban;
+  return CheckCircle2;
+};
+
+function SectionHeader({ icon: Icon, title, subtitle }) {
+  return (
+    <div className="flex items-start gap-4 mb-6">
+      <div className="w-11 h-11 rounded-2xl bg-blue-50 text-[#093fb4] flex items-center justify-center shrink-0">
+        <Icon size={20} />
+      </div>
+      <div>
+        <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight">{title}</h2>
+        {subtitle && <p className="text-sm text-slate-500 font-medium mt-0.5">{subtitle}</p>}
+      </div>
+    </div>
+  );
+}
 
 export default function ApplicationForm() {
   const { id } = useParams();
@@ -144,11 +171,11 @@ export default function ApplicationForm() {
           )}
 
           <div className="px-10 py-10 flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-8 pr-24">
-            <div className="w-24 h-24 rounded-3xl overflow-hidden bg-white/20 shrink-0 border-2 border-white/30 flex items-center justify-center shadow-2xl">
+            <div className="w-24 h-24 rounded-3xl overflow-hidden bg-white shrink-0 border-2 border-white/40 flex items-center justify-center shadow-2xl p-2">
               {scholarship?.org_pic ? (
-                <img src={scholarship.org_pic} alt={scholarship.org_name} className="w-full h-full object-cover" />
+                <img src={scholarship.org_pic} alt={scholarship.org_name} className="w-full h-full object-contain" />
               ) : (
-                <span className="text-white font-black text-3xl">
+                <span className="text-[#093fb4] font-black text-3xl">
                   {scholarship?.org_name?.substring(0, 2).toUpperCase() || '??'}
                 </span>
               )}
@@ -171,14 +198,14 @@ export default function ApplicationForm() {
                   Amount: {scholarship?.amount_range || 'Vary'}
                 </div>
                 <div className="inline-flex items-center gap-2 bg-white/10 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full backdrop-blur-md">
-                  {scholarship?.fund_type || 'General'}
+                  Type: {scholarship?.fund_type || 'General'}
                 </div>
               </div>
             </div>
           </div>
 
           {/* Contact Details Footer Section */}
-          <div className="bg-white/5 border-t border-white/10 px-10 py-5 flex flex-col gap-y-3 sm:flex-row sm:flex-wrap justify-center md:justify-start sm:gap-x-8">
+          <div className="bg-white/5 border-t border-white/10 px-10 py-6 grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-3">
             {fullAddress && (
               <div className="flex items-center gap-2.5 text-sm font-medium text-white">
                 <MapPin size={16} className="text-white/80 shrink-0" />
@@ -209,22 +236,24 @@ export default function ApplicationForm() {
         {/* ── UNIFIED APPLICATION INTERFACE ── */}
         <div className="space-y-8">
           
-          {/* 1. Eligibility Section */}
+          {/* 1. Criteria Section */}
           {criteria.length > 0 && (
             <section className="bg-white rounded-3xl border border-black/5 p-8 shadow-sm">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-2 h-6 bg-[#093fb4] rounded-full" />
-                <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Requirements & Eligibility</h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {criteria.map((c, i) => (
-                  <div key={i} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                    <div className="w-8 h-8 rounded-full bg-[#093fb4] flex items-center justify-center shrink-0">
-                      <CheckCircle2 size={16} className="text-white" />
+              <SectionHeader
+                icon={Bookmark}
+                title="Criteria"
+                subtitle="You must meet all of the following criteria to be eligible."
+              />
+              <div className="flex flex-wrap gap-3">
+                {criteria.map((c, i) => {
+                  const Icon = getCriteriaIcon(c);
+                  return (
+                    <div key={i} className="flex items-center gap-2.5 px-4 py-2.5 bg-blue-50/40 border border-blue-100 rounded-xl">
+                      <Icon size={16} className="text-[#093fb4] shrink-0" />
+                      <span className="text-sm font-bold text-slate-700">{c}</span>
                     </div>
-                    <span className="text-[13px] text-slate-700 font-black uppercase tracking-tight">{c}</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
           )}
@@ -232,23 +261,29 @@ export default function ApplicationForm() {
           {/* 2. Program Overview Section */}
           {scholarship?.description && (
             <section className="bg-white rounded-3xl border border-black/5 p-8 shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-2 h-6 bg-[#093fb4] rounded-full" />
-                <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Program Overview</h2>
+              <SectionHeader
+                icon={BookOpen}
+                title="Program Overview"
+                subtitle="Learn more about this program."
+              />
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 flex items-start gap-4">
+                <Quote size={22} className="text-[#093fb4]/30 shrink-0 -scale-x-100 mt-0.5" />
+                <p className="text-sm text-slate-600 leading-[1.8] font-medium italic break-words flex-1">
+                  {scholarship.description}
+                </p>
+                <Quote size={22} className="text-[#093fb4]/30 shrink-0 self-end" />
               </div>
-              <p className="text-[14px] text-slate-600 leading-[1.8] font-medium italic break-words px-2">
-                "{scholarship.description}"
-              </p>
             </section>
           )}
 
           {/* 3. Reference Downloads Section */}
           {scholarship?.attachments && scholarship.attachments.length > 0 && (
             <section className="bg-white rounded-3xl border border-black/5 p-8 shadow-sm">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-2 h-6 bg-[#093fb4] rounded-full" />
-                <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Reference Documents</h2>
-              </div>
+              <SectionHeader
+                icon={FileText}
+                title="Reference Documents"
+                subtitle="Download these files for additional program details."
+              />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {scholarship.attachments.map((file, i) => (
                   <div key={i} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl group transition-all hover:bg-white hover:border-[#093fb4]/20 hover:shadow-md">
@@ -285,46 +320,65 @@ export default function ApplicationForm() {
 
           {/* 4. Complete Questionnaire Section */}
           <form onSubmit={handleSubmit} className="bg-white rounded-3xl border border-black/5 p-8 shadow-sm space-y-8">
-            <div className="border-b border-slate-100 pb-5">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-6 bg-[#093fb4] rounded-full" />
-                <h2 className="text-[12px] font-black uppercase tracking-[0.2em] text-[#093fb4]">Application Submissions</h2>
-              </div>
-              <p className="text-xs text-slate-500 font-bold mt-1.5 pl-5">Please complete all fields below accurately.</p>
+            <div className="border-b border-slate-100 pb-6">
+              <SectionHeader
+                icon={FilePlus2}
+                title="Application Submissions"
+                subtitle="Please complete all fields below accurately."
+              />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-8">
               {fields.map((field, idx) => (
-                <div key={field.id} className="space-y-2.5">
-                  <label className="flex items-center gap-2 text-[10px] font-black text-slate-600 uppercase tracking-widest">
-                    <span className="text-[#093fb4]">0{idx + 1}.</span>
-                    {field.field_label}
-                    {field.is_required && <span className="text-[#FF1E1E]">*</span>}
-                  </label>
+                <div key={field.id} className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-lg bg-[#093fb4] text-white text-xs font-black flex items-center justify-center shrink-0">
+                      {String(idx + 1).padStart(2, '0')}
+                    </span>
+                    <label className="text-sm font-black text-slate-900 uppercase tracking-wide">
+                      {field.field_label}
+                      {field.is_required && <span className="text-[#FF1E1E] ml-1">*</span>}
+                    </label>
+                  </div>
 
                   {field.field_type === 'file' ? (
-                    <div className="relative group">
-                      <input
-                        type="file"
-                        accept=".pdf,.doc,.docx"
-                        onChange={(e) => handleInputChange(field.id, e.target.files[0], field.field_type)}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
-                        required={field.is_required}
-                      />
-                      <div className={`border-2 border-dashed rounded-2xl p-5 flex flex-col items-center justify-center min-h-[110px] text-center gap-2 transition-all ${
-                        formData[field.id] ? 'border-[#093fb4] bg-blue-50/50' : 'border-slate-200 bg-slate-50 group-hover:border-[#093fb4]/30'
-                      }`}>
-                        <Upload size={20} className={formData[field.id] ? 'text-[#093fb4]' : 'text-slate-400'} />
-                        <span className={`text-[11px] font-black truncate w-full px-4 uppercase ${formData[field.id] ? 'text-[#093fb4]' : 'text-slate-600'}`}>
-                          {formData[field.id] ? formData[field.id].name : 'Click or Drag to Upload File'}
-                        </span>
-                        <span className="text-[9px] text-slate-500 font-bold uppercase tracking-tight">Accepted formats: PDF, DOCX</span>
+                    <div className="space-y-3">
+                      <div className="relative group">
+                        <input
+                          type="file"
+                          accept=".pdf,.doc,.docx"
+                          onChange={(e) => handleInputChange(field.id, e.target.files[0], field.field_type)}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+                          required={field.is_required}
+                        />
+                        <div className={`border-2 border-dashed rounded-2xl py-10 flex flex-col items-center justify-center text-center gap-2 transition-all ${
+                          formData[field.id] ? 'border-[#093fb4] bg-blue-50/50' : 'border-slate-200 bg-slate-50 group-hover:border-[#093fb4]/30'
+                        }`}>
+                          <UploadCloud size={32} className={formData[field.id] ? 'text-[#093fb4]' : 'text-slate-400'} />
+                          {formData[field.id] ? (
+                            <span className="text-sm font-black text-[#093fb4] truncate max-w-[80%]">{formData[field.id].name}</span>
+                          ) : (
+                            <>
+                              <span className="text-sm font-black text-slate-900">Drag & drop your file here</span>
+                              <span className="text-xs text-slate-400 font-semibold">or click to browse</span>
+                            </>
+                          )}
+                          <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-tight mt-1">
+                            Accepted formats: PDF, DOCX &nbsp;•&nbsp; Max file size: 10MB
+                          </span>
+                        </div>
                       </div>
                       {errors[field.id] && (
-                        <p className="text-[10px] text-[#FF1E1E] font-bold uppercase mt-1 flex items-center gap-1">
+                        <p className="text-[10px] text-[#FF1E1E] font-bold uppercase flex items-center gap-1">
                           <AlertCircle size={12} /> {errors[field.id]}
                         </p>
                       )}
+                      <div className="flex items-center gap-2.5 bg-blue-50/60 border border-blue-100 rounded-xl px-4 py-3">
+                        <Info size={16} className="text-[#093fb4] shrink-0" />
+                        <p className="text-xs text-slate-600 font-semibold">
+                          Please upload a clear and complete copy of your official {field.field_label.toLowerCase()}.
+                        </p>
+                      </div>
                     </div>
                   ) : (
                     <input
@@ -339,17 +393,30 @@ export default function ApplicationForm() {
               ))}
             </div>
 
-            <div className="pt-4 border-t border-slate-100 flex justify-end">
+            <div className="pt-4 border-t border-slate-100">
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full md:w-auto md:px-12 bg-[#093fb4] hover:bg-[#FF1E1E] text-white font-black py-5 rounded-2xl flex items-center justify-center gap-3 uppercase text-[11px] tracking-[0.2em] transition-all active:scale-[0.98] shadow-lg shadow-blue-900/10"
+                className="w-full bg-[#093fb4] hover:bg-[#FF1E1E] text-white font-black py-5 rounded-2xl flex items-center justify-center gap-3 uppercase text-[11px] tracking-[0.2em] transition-all active:scale-[0.98] shadow-lg shadow-blue-900/10"
               >
                 {submitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
                 {submitting ? 'Processing Application...' : 'Submit Complete Application'}
               </button>
             </div>
           </form>
+
+          {/* 5. Trust / Security Banner */}
+          <div className="bg-blue-50/60 border border-blue-100 rounded-3xl px-8 py-6 flex items-center gap-5">
+            <div className="w-14 h-14 rounded-2xl bg-[#093fb4] text-white flex items-center justify-center shrink-0 shadow-lg shadow-blue-900/20">
+              <ShieldCheck size={26} />
+            </div>
+            <div>
+              <h3 className="text-base font-black text-slate-900">Your Information is Safe</h3>
+              <p className="text-sm text-slate-500 font-medium mt-0.5">
+                All documents and information you provide are secure and will only be used for this application.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 

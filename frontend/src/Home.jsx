@@ -151,7 +151,7 @@ const ScholarshipCarousel = () => {
             {/* Header Content Top */}
             <div>
               {/* Media Container with Dynamic Fallback Overlay */}
-              <div className="h-32 bg-slate-50 flex items-center justify-center overflow-hidden relative border-b border-slate-50">
+              <div className="h-36 bg-slate-50 flex items-center justify-center overflow-hidden relative border-b border-slate-50">
                 <img
                   src={program.img}
                   alt={program.provider}
@@ -162,11 +162,11 @@ const ScholarshipCarousel = () => {
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90"
                 />
                 <div className="hidden w-full h-full absolute inset-0 items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100">
-                  <Building2 size={40} className="text-[#093FB4]/30" strokeWidth={1.5} />
+                  <Building2 size={44} className="text-[#093FB4]/30" strokeWidth={1.5} />
                 </div>
                 {/* Custom Label Category Pill Tag */}
                 <div className="absolute top-4 left-4">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-white bg-[#093FB4] shadow-md px-2.5 py-1 rounded-md">
+                  <span className="text-[11px] font-black uppercase tracking-widest text-white bg-[#093FB4] shadow-md px-2.5 py-1 rounded-md">
                     {program.tag}
                   </span>
                 </div>
@@ -175,10 +175,10 @@ const ScholarshipCarousel = () => {
               {/* Text Core Content details body info elements */}
               <div className="p-6 space-y-4">
                 <div>
-                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-wide truncate mb-0.5">
+                  <p className="text-[13px] font-black text-slate-400 uppercase tracking-wide truncate mb-0.5">
                     {program.provider}
                   </p>
-                  <h4 className="text-[16px] font-black text-slate-900 leading-snug line-clamp-2 group-hover:text-[#093FB4] transition-colors h-12">
+                  <h4 className="text-lg font-black text-slate-900 leading-snug line-clamp-2 group-hover:text-[#093FB4] transition-colors h-12">
                     {program.title}
                   </h4>
                 </div>
@@ -186,22 +186,22 @@ const ScholarshipCarousel = () => {
                 <hr className="border-slate-100" />
 
                 {/* Info specifications breakdown blocks section */}
-                <div className="space-y-2.5 text-[12px] font-medium text-slate-600">
+                <div className="space-y-2.5 text-sm font-medium text-slate-600">
                   <div className="flex items-center gap-2.5">
                     <div className="w-5 h-5 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                      <GraduationCap size={12} strokeWidth={2.5} />
+                      <GraduationCap size={14} strokeWidth={2.5} />
                     </div>
                     <span className="truncate"><strong>Coverage:</strong> {program.coverage}</span>
                   </div>
                   <div className="flex items-center gap-2.5">
                     <div className="w-5 h-5 rounded bg-blue-50 text-[#093FB4] flex items-center justify-center flex-shrink-0">
-                      <Layers size={12} strokeWidth={2.5} />
+                      <Layers size={14} strokeWidth={2.5} />
                     </div>
                     <span className="truncate"><strong>Criteria:</strong> {program.criteria}</span>
                   </div>
                   <div className="flex items-center gap-2.5">
                     <div className="w-5 h-5 rounded bg-red-50 text-[#FF1E1E] flex items-center justify-center flex-shrink-0">
-                      <Calendar size={12} strokeWidth={2.5} />
+                      <Calendar size={14} strokeWidth={2.5} />
                     </div>
                     <span><strong>Deadline:</strong> <span className="text-red-600 font-bold">{program.deadline}</span></span>
                   </div>
@@ -213,9 +213,9 @@ const ScholarshipCarousel = () => {
             <div className="p-6 pt-0">
               <button
                 onClick={() => navigate('/student-login')}
-                className="w-full py-2.5 bg-slate-50 border border-slate-100 group-hover:bg-[#093FB4] group-hover:text-white group-hover:border-[#093FB4] rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-700 transition-all flex items-center justify-center gap-2"
+                className="w-full py-2.5 bg-slate-50 border border-slate-100 group-hover:bg-[#093FB4] group-hover:text-white group-hover:border-[#093FB4] rounded-xl text-[13px] font-black uppercase tracking-widest text-slate-700 transition-all flex items-center justify-center gap-2"
               >
-                Apply Now <ArrowRight size={13} strokeWidth={3} />
+                Apply Now <ArrowRight size={15} strokeWidth={3} />
               </button>
             </div>
           </div>
@@ -228,7 +228,7 @@ const ScholarshipCarousel = () => {
           onClick={prev}
           className="p-2.5 rounded-full bg-white border border-slate-200 hover:bg-[#093FB4] hover:text-white hover:border-[#093FB4] transition-all shadow"
         >
-          <ChevronLeft size={18} strokeWidth={2.5} />
+          <ChevronLeft size={20} strokeWidth={2.5} />
         </button>
         <div className="flex gap-2">
           {SCHOLARSHIPS.map((_, i) => (
@@ -245,7 +245,7 @@ const ScholarshipCarousel = () => {
           onClick={next}
           className="p-2.5 rounded-full bg-white border border-slate-200 hover:bg-[#093FB4] hover:text-white hover:border-[#093FB4] transition-all shadow"
         >
-          <ChevronRight size={18} strokeWidth={2.5} />
+          <ChevronRight size={20} strokeWidth={2.5} />
         </button>
       </div>
     </div>
@@ -309,17 +309,17 @@ const FAQItem = ({ q, a, index }) => {
           onClick={() => setOpen(!open)}
           className="w-full flex items-center justify-between px-7 py-5 text-left bg-white group"
         >
-          <span className={`text-[15px] font-black tracking-tight transition-colors ${open ? 'text-[#093FB4]' : 'text-slate-900 group-hover:text-[#093FB4]'}`}>
+          <span className={`text-[17px] font-black tracking-tight transition-colors ${open ? 'text-[#093FB4]' : 'text-slate-900 group-hover:text-[#093FB4]'}`}>
             {q}
           </span>
           <ChevronDown
-            size={18}
+            size={20}
             strokeWidth={2.5}
             className={`flex-shrink-0 ml-4 transition-all duration-300 ${open ? 'rotate-180 text-[#093FB4]' : 'text-slate-400'}`}
           />
         </button>
         <div className={`overflow-hidden transition-all duration-300 ease-in-out ${open ? 'max-h-48' : 'max-h-0'}`}>
-          <p className="px-7 pb-6 text-[14px] text-slate-600 leading-relaxed font-medium bg-white">
+          <p className="px-7 pb-6 text-base text-slate-600 leading-relaxed font-medium bg-white">
             {a}
           </p>
         </div>
@@ -370,11 +370,11 @@ export default function Home() {
                 <ScrollReveal>
                   <div className="space-y-7">
                     <div className="flex flex-wrap gap-2">
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/15 backdrop-blur-sm text-white rounded-lg text-[10px] font-black tracking-[0.2em] uppercase border border-white/30">
-                        <CheckCircle2 size={13} strokeWidth={3} /> 100% Free
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/15 backdrop-blur-sm text-white rounded-lg text-[12px] font-black tracking-[0.2em] uppercase border border-white/30">
+                        <CheckCircle2 size={15} strokeWidth={3} /> 100% Free
                       </div>
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#093FB4]/80 backdrop-blur-sm text-white rounded-lg text-[10px] font-black tracking-[0.2em] uppercase border border-[#093FB4]">
-                        <Sparkles size={13} strokeWidth={3} className="text-blue-200" /> Vetted Scholarship Providers
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#093FB4]/80 backdrop-blur-sm text-white rounded-lg text-[12px] font-black tracking-[0.2em] uppercase border border-[#093FB4]">
+                        <Sparkles size={15} strokeWidth={3} className="text-blue-200" /> Vetted Scholarship Providers
                       </div>
                     </div>
 
@@ -392,13 +392,13 @@ export default function Home() {
                     <div className="flex flex-wrap gap-4 pt-2">
                       <button
                         onClick={() => navigate('/student-register')}
-                        className="px-9 py-4 bg-[#093FB4] text-white font-black rounded-xl shadow-2xl hover:bg-[#0731a8] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 group text-[11px] uppercase tracking-[0.2em]"
+                        className="px-10 py-5 bg-[#093FB4] text-white font-black rounded-xl shadow-2xl hover:bg-[#0731a8] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 group text-[13px] uppercase tracking-[0.2em]"
                       >
-                        Get Started <ArrowRight size={16} strokeWidth={3} className="group-hover:translate-x-1 transition-transform" />
+                        Get Started <ArrowRight size={18} strokeWidth={3} className="group-hover:translate-x-1 transition-transform" />
                       </button>
                       <button
                         onClick={() => document.getElementById('scholarships')?.scrollIntoView({ behavior: 'smooth' })}
-                        className="px-9 py-4 bg-white/15 backdrop-blur-sm text-white font-black rounded-xl border border-white/40 hover:bg-white/25 transition-all text-[11px] uppercase tracking-[0.2em]"
+                        className="px-10 py-5 bg-white/15 backdrop-blur-sm text-white font-black rounded-xl border border-white/40 hover:bg-white/25 transition-all text-[13px] uppercase tracking-[0.2em]"
                       >
                         Browse Scholarships
                       </button>
@@ -424,7 +424,7 @@ export default function Home() {
           <div className="max-w-6xl mx-auto">
             <ScrollReveal>
               <div className="text-center mb-16 space-y-4">
-                <span className="text-[#FF1E1E] text-[10px] font-black uppercase tracking-[0.5em]">Active Openings</span>
+                <span className="text-[#FF1E1E] text-[12px] font-black uppercase tracking-[0.5em]">Active Openings</span>
                 <h3 className="text-4xl lg:text-6xl font-black text-slate-900 tracking-tighter uppercase">
                   Featured <span className="text-[#093FB4]">Scholarships</span>
                 </h3>
@@ -442,7 +442,7 @@ export default function Home() {
               <div className="text-center mt-12">
                 <button
                   onClick={() => navigate('/scholarships')}
-                  className="px-10 py-4 border-2 border-[#093FB4] text-[#093FB4] text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-[#093FB4] hover:text-white transition-all"
+                  className="px-10 py-5 border-2 border-[#093FB4] text-[#093FB4] text-[13px] font-black uppercase tracking-widest rounded-xl hover:bg-[#093FB4] hover:text-white transition-all"
                 >
                   View All Scholarships
                 </button>
@@ -459,7 +459,7 @@ export default function Home() {
           <div className="max-w-6xl mx-auto relative z-10">
             <ScrollReveal>
               <div className="text-center mb-16 space-y-4">
-                <span className="text-[#FF1E1E] text-[10px] font-black uppercase tracking-[0.5em]">Simple Process</span>
+                <span className="text-[#FF1E1E] text-[12px] font-black uppercase tracking-[0.5em]">Simple Process</span>
                 <h3 className="text-4xl lg:text-6xl font-black text-slate-900 tracking-tighter uppercase">
                   How to <span className="text-[#093FB4]">Get Started</span>
                 </h3>
@@ -473,7 +473,7 @@ export default function Home() {
               <div>
                 <ScrollReveal>
                   <div className="flex items-center gap-3 mb-9">
-                    <span className="px-5 py-2 bg-[#093FB4] text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-[#093FB4]/20">
+                    <span className="px-5 py-2 bg-[#093FB4] text-white text-[12px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-[#093FB4]/20">
                       For Students
                     </span>
                   </div>
@@ -483,12 +483,12 @@ export default function Home() {
                     <ScrollReveal key={i} delay={i * 80}>
                       <div className="flex items-start gap-5 p-6 bg-white border border-slate-200 rounded-2xl hover:border-[#093FB4]/40 hover:shadow-lg transition-all duration-300 group">
                         <div className="flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-xl bg-[#093FB4]/10 text-[#093FB4] group-hover:bg-[#093FB4] group-hover:text-white transition-all">
-                          <step.icon size={20} strokeWidth={2.5} />
+                          <step.icon size={22} strokeWidth={2.5} />
                         </div>
                         <div>
-                          <span className="text-[10px] font-black text-[#093FB4] uppercase tracking-widest">Step {i + 1}</span>
-                          <p className="text-[15px] font-black text-slate-900 mt-0.5">{step.label}</p>
-                          <p className="text-[13px] text-slate-500 mt-1 leading-relaxed font-medium">{step.desc}</p>
+                          <span className="text-[12px] font-black text-[#093FB4] uppercase tracking-widest">Step {i + 1}</span>
+                          <p className="text-[17px] font-black text-slate-900 mt-0.5">{step.label}</p>
+                          <p className="text-[15px] text-slate-500 mt-1 leading-relaxed font-medium">{step.desc}</p>
                         </div>
                       </div>
                     </ScrollReveal>
@@ -497,9 +497,9 @@ export default function Home() {
                 <ScrollReveal delay={400}>
                   <button
                     onClick={() => navigate('/student-register')}
-                    className="mt-7 px-7 py-3.5 bg-[#093FB4] text-white text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-[#0731a8] transition-all flex items-center gap-2.5 group shadow-lg shadow-[#093FB4]/20"
+                    className="mt-7 px-8 py-4 bg-[#093FB4] text-white text-[13px] font-black uppercase tracking-widest rounded-xl hover:bg-[#0731a8] transition-all flex items-center gap-2.5 group shadow-lg shadow-[#093FB4]/20"
                   >
-                    Register as Student <ArrowRight size={15} strokeWidth={3} className="group-hover:translate-x-1 transition-transform" />
+                    Register as Student <ArrowRight size={17} strokeWidth={3} className="group-hover:translate-x-1 transition-transform" />
                   </button>
                 </ScrollReveal>
               </div>
@@ -507,7 +507,7 @@ export default function Home() {
               <div>
                 <ScrollReveal>
                   <div className="flex items-center gap-3 mb-9">
-                    <span className="px-5 py-2 bg-[#FF1E1E] text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-[#FF1E1E]/20">
+                    <span className="px-5 py-2 bg-[#FF1E1E] text-white text-[12px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-[#FF1E1E]/20">
                       For Providers
                     </span>
                   </div>
@@ -517,12 +517,12 @@ export default function Home() {
                     <ScrollReveal key={i} delay={i * 80}>
                       <div className="flex items-start gap-5 p-6 bg-white border border-slate-200 rounded-2xl hover:border-[#FF1E1E]/40 hover:shadow-lg transition-all duration-300 group">
                         <div className="flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-xl bg-[#FF1E1E]/10 text-[#FF1E1E] group-hover:bg-[#FF1E1E] group-hover:text-white transition-all">
-                          <step.icon size={20} strokeWidth={2.5} />
+                          <step.icon size={22} strokeWidth={2.5} />
                         </div>
                         <div>
-                          <span className="text-[10px] font-black text-[#FF1E1E] uppercase tracking-widest">Step {i + 1}</span>
-                          <p className="text-[15px] font-black text-slate-900 mt-0.5">{step.label}</p>
-                          <p className="text-[13px] text-slate-500 mt-1 leading-relaxed font-medium">{step.desc}</p>
+                          <span className="text-[12px] font-black text-[#FF1E1E] uppercase tracking-widest">Step {i + 1}</span>
+                          <p className="text-[17px] font-black text-slate-900 mt-0.5">{step.label}</p>
+                          <p className="text-[15px] text-slate-500 mt-1 leading-relaxed font-medium">{step.desc}</p>
                         </div>
                       </div>
                     </ScrollReveal>
@@ -531,9 +531,9 @@ export default function Home() {
                 <ScrollReveal delay={400}>
                   <button
                     onClick={() => navigate('/organization-register')}
-                    className="mt-7 px-7 py-3.5 bg-[#FF1E1E] text-white text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-[#d91a1a] transition-all flex items-center gap-2.5 group shadow-lg shadow-[#FF1E1E]/20"
+                    className="mt-7 px-8 py-4 bg-[#FF1E1E] text-white text-[13px] font-black uppercase tracking-widest rounded-xl hover:bg-[#d91a1a] transition-all flex items-center gap-2.5 group shadow-lg shadow-[#FF1E1E]/20"
                   >
-                    Register as Provider <ArrowRight size={15} strokeWidth={3} className="group-hover:translate-x-1 transition-transform" />
+                    Register as Provider <ArrowRight size={17} strokeWidth={3} className="group-hover:translate-x-1 transition-transform" />
                   </button>
                 </ScrollReveal>
               </div>
@@ -546,7 +546,7 @@ export default function Home() {
           <div className="max-w-4xl mx-auto">
             <ScrollReveal>
               <div className="text-center mb-16 space-y-4">
-                <span className="text-[#FF1E1E] text-[10px] font-black uppercase tracking-[0.5em]">Got Questions?</span>
+                <span className="text-[#FF1E1E] text-[12px] font-black uppercase tracking-[0.5em]">Got Questions?</span>
                 <h3 className="text-4xl lg:text-6xl font-black text-slate-900 tracking-tighter uppercase">
                   Frequently Asked <span className="text-[#093FB4]">Questions</span>
                 </h3>
@@ -564,10 +564,10 @@ export default function Home() {
 
             <ScrollReveal delay={400}>
               <div className="text-center mt-14">
-                <p className="text-slate-500 text-[13px] font-semibold mb-5">Still have questions?</p>
+                <p className="text-slate-500 text-[15px] font-semibold mb-5">Still have questions?</p>
                 <button
                   onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="px-8 py-3.5 border-2 border-[#093FB4] text-[#093FB4] text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-[#093FB4] hover:text-white transition-all"
+                  className="px-9 py-4 border-2 border-[#093FB4] text-[#093FB4] text-[13px] font-black uppercase tracking-widest rounded-xl hover:bg-[#093FB4] hover:text-white transition-all"
                 >
                   Contact Us
                 </button>
@@ -582,15 +582,15 @@ export default function Home() {
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <ScrollReveal>
                 <div className="space-y-7">
-                  <span className="text-[#FF1E1E] text-[10px] font-black uppercase tracking-[0.5em]">The Mission</span>
+                  <span className="text-[#FF1E1E] text-[12px] font-black uppercase tracking-[0.5em]">The Mission</span>
                   <h4 className="text-4xl lg:text-6xl font-black text-slate-900 tracking-tighter uppercase">
                     About Kyus<span className="text-[#093FB4]">ISKO</span>
                   </h4>
-                  <p className="text-[15px] text-slate-600 leading-relaxed font-medium">
+                  <p className="text-[17px] text-slate-600 leading-relaxed font-medium">
                     KyusISKO is a platform that helps students find seamlessly and discover College Scholarships across Quezon City.
                     Our mission is to bridge the gap between financial constraints and educational dreams through technology.
                   </p>
-                  <p className="text-[15px] text-slate-600 leading-relaxed font-medium">
+                  <p className="text-[17px] text-slate-600 leading-relaxed font-medium">
                     We partner with government agencies, private corporations, and foundations to ensure every deserving student
                     has access to funding opportunities — all in one place, completely free.
                   </p>
@@ -602,7 +602,7 @@ export default function Home() {
                     ].map(stat => (
                       <div key={stat.label} className="bg-[#093FB4]/5 border border-[#093FB4]/15 rounded-2xl p-5 text-center">
                         <p className="text-3xl font-black text-[#093FB4]">{stat.value}</p>
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">{stat.label}</p>
+                        <p className="text-[12px] font-black text-slate-500 uppercase tracking-widest mt-1">{stat.label}</p>
                       </div>
                     ))}
                   </div>
@@ -630,17 +630,17 @@ export default function Home() {
         <div className="max-w-6xl mx-auto">
           <div className="grid md:grid-cols-3 gap-12 mb-10">
             <div className="space-y-4">
-              <img src="/logo.png" alt="Logo" className="h-8 w-auto brightness-0 invert opacity-70" />
-              <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-widest leading-relaxed max-w-[200px]">
+              <img src="/logo.png" alt="Logo" className="h-10 w-auto brightness-0 invert opacity-70" />
+              <p className="text-[13px] text-slate-400 font-semibold uppercase tracking-widest leading-relaxed max-w-[200px]">
                 Empowering QC students through scholarship access.
               </p>
             </div>
 
             <div>
-              <p className="text-[10px] font-black text-white uppercase tracking-[0.3em] mb-5">Quick Links</p>
+              <p className="text-[12px] font-black text-white uppercase tracking-[0.3em] mb-5">Quick Links</p>
               <div className="space-y-3">
                 {['About Us', 'Scholarships', 'Provider Guidelines', 'Student Login'].map(link => (
-                  <p key={link} className="text-[13px] text-slate-400 hover:text-white transition-colors cursor-pointer font-semibold">
+                  <p key={link} className="text-[15px] text-slate-400 hover:text-white transition-colors cursor-pointer font-semibold">
                     {link}
                   </p>
                 ))}
@@ -648,21 +648,21 @@ export default function Home() {
             </div>
 
             <div>
-              <p className="text-[10px] font-black text-white uppercase tracking-[0.3em] mb-5">Contact Us</p>
+              <p className="text-[12px] font-black text-white uppercase tracking-[0.3em] mb-5">Contact Us</p>
               <div className="space-y-4">
-                <div className="flex items-center gap-3 text-[13px] font-semibold text-slate-400 hover:text-[#4d7fff] transition-colors cursor-pointer">
-                  <Mail size={14} className="text-[#4d7fff]" /> support@kyusisko.ph
+                <div className="flex items-center gap-3 text-[15px] font-semibold text-slate-400 hover:text-[#4d7fff] transition-colors cursor-pointer">
+                  <Mail size={16} className="text-[#4d7fff]" /> support@kyusisko.ph
                 </div>
-                <div className="flex items-center gap-3 text-[13px] font-semibold text-slate-400 hover:text-[#FF1E1E] transition-colors cursor-pointer">
-                  <Phone size={14} className="text-[#FF1E1E]" /> +63 912 345 6789
+                <div className="flex items-center gap-3 text-[15px] font-semibold text-slate-400 hover:text-[#FF1E1E] transition-colors cursor-pointer">
+                  <Phone size={16} className="text-[#FF1E1E]" /> +63 912 345 6789
                 </div>
               </div>
             </div>
           </div>
 
           <div className="border-t border-slate-800 pt-7 flex flex-col md:flex-row justify-between items-center gap-3">
-            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">© 2026 KyusISKO Platform. All rights reserved.</p>
-            <p className="text-[10px] text-slate-600 font-semibold uppercase tracking-widest">Made with ❤ for QC Students</p>
+            <p className="text-[12px] text-slate-500 font-black uppercase tracking-widest">© 2026 KyusISKO Platform. All rights reserved.</p>
+            <p className="text-[12px] text-slate-600 font-semibold uppercase tracking-widest">Made with ❤ for QC Students</p>
           </div>
         </div>
       </footer>
