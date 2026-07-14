@@ -34,7 +34,7 @@ export default function OrgSidebar() {
     { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/OrgDashboard' },
     { name: 'Manage Programs', icon: <LucideScroll size={20} />, path: '/ProgramView' },
     { name: 'Applicants', icon: <Form size={20} />, path: '/OrgApplicantPrograms' }, 
-    { name: ' Messages', icon: <Mails size={20} />, path: '/OrgMessages' },
+,
     { name: 'Profile', icon: <User size={20} />, path: '/OrgProfile' }, 
     { name: ' Audit Log', icon: <Archive size={20} />, path: '/OrgLogs' },
 

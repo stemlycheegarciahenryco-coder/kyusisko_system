@@ -27,7 +27,11 @@ exports.getStudentById = async (req, res) => {
         sstreet, 
         sbarangay, 
         sdistrict, 
-        szip_code
+        szip_code,
+        -- Added for new profile parameters
+        academic_student_id,
+        academic_student_id AS student_id, -- Aliased for seamless frontend parsing
+        year_level
        FROM students 
        WHERE id = $1 LIMIT 1`, 
       [id]
@@ -101,7 +105,9 @@ exports.updatePortfolio = async (req, res) => {
     course_id,   
     other_school, 
     other_degree_program, 
-    sports_interests 
+    sports_interests,
+    academic_student_id, // ✅ Added incoming identifier field from FormData
+    year_level           // ✅ Added incoming choice field from FormData
   } = req.body;
 
   try {
@@ -118,12 +124,14 @@ exports.updatePortfolio = async (req, res) => {
     const finalOtherSchool = other_school && other_school.trim() !== '' ? other_school.trim() : null;
     const finalOtherDegree = other_degree_program && other_degree_program.trim() !== '' ? other_degree_program.trim() : null;
 
-    // 3. Update the 'students' table cleanly
+    // 3. Update the 'students' table cleanly with the new fields included
     await pool.query(
       `UPDATE students 
-       SET bio = COALESCE($1, bio) 
-       WHERE id = $2`,
-      [bio || null, student_id]
+       SET bio = COALESCE($1, bio),
+           academic_student_id = $2,
+           year_level = $3
+       WHERE id = $4`,
+      [bio || null, academic_student_id || null, year_level || null, student_id]
     );
 
     // 4. Smart cross-clearing CASE WHEN logic to handle toggling between formal IDs and custom text statuses
@@ -262,6 +270,10 @@ exports.getFullProfile = async (req, res) => {
         s.scontact_number, s.sbirth_date, s.sprofile_pic,
         s.sstreet, s.sbarangay, s.sdistrict, s.szip_code,
         s.portfolio_data, s.bio,
+        -- Added new fields for layout consumption
+        s.academic_student_id,
+        s.academic_student_id AS student_id, -- Aliased matching state components
+        s.year_level,
         c.name AS college_name, p.other_school, 
         cr.name AS course_name, p.other_degree_program,
         p.religion, p.other_religion,

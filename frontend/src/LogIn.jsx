@@ -1,7 +1,7 @@
 import api from './api';
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { connectSocket } from './socket';
+
 import { 
   IconMail, 
   IconKey, 
@@ -51,7 +51,7 @@ export default function LogIn() {
         localStorage.setItem('systemUid', data.uid);
         localStorage.setItem('adminEmail', data.email);
         localStorage.setItem('userRole', role);
-        connectSocket(data.id || data.uid, role); // register for real-time
+    
         navigate('/RootDashboard');
       } else if (role === 'sub_admin') {
         localStorage.setItem('orgId', data.id); 
@@ -62,13 +62,13 @@ export default function LogIn() {
           accountType: data.accountType,
           parentOrgId: data.parentOrgId
         }));
-        connectSocket(data.id, role); // register for real-time
+        
         navigate('/OrgDashboard');
       } else if (role === 'student') {
         localStorage.setItem('studentId', data.id);
         localStorage.setItem('userRole', role);
         localStorage.setItem('studentInfo', JSON.stringify(data));
-        connectSocket(data.id, role); // register for real-time
+       
         if (!data.isProfileComplete) {
           navigate('/student-onboard');
         } else {

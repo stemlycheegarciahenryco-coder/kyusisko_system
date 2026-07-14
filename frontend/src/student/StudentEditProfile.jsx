@@ -72,10 +72,6 @@ export default function StudentEditProfile({ initialTab = 'academic', studentDat
   );
 }
 
-// ─────────────────────────────────────────────────────────
-// SUCCESS BANNER — shown inline within a section after a save,
-// so the person can keep switching tabs without the modal closing.
-// ─────────────────────────────────────────────────────────
 function SuccessBanner({ message }) {
   return (
     <div className="mb-4 p-3.5 bg-[#093fb4]/10 border border-[#093fb4]/20 text-[#093fb4] text-xs font-bold rounded-xl flex items-center gap-2">
@@ -85,7 +81,7 @@ function SuccessBanner({ message }) {
 }
 
 // ─────────────────────────────────────────────────────────
-// 1. ACADEMIC PROFILE SECTION (was EditProfileModal)
+// 1. ACADEMIC PROFILE SECTION (With Student ID & Education Level Added)
 // ─────────────────────────────────────────────────────────
 function AcademicSection({ studentData, onRefresh }) {
   const [form, setForm] = useState({
@@ -97,6 +93,8 @@ function AcademicSection({ studentData, onRefresh }) {
     sports_interests: Array.isArray(studentData?.sports_interests)
       ? studentData.sports_interests.join(', ')
       : studentData?.sports_interests || '',
+    student_id: studentData?.student_id || '', 
+    year_level: studentData?.year_level || '', 
   });
 
   const [colleges, setColleges] = useState([]);
@@ -127,13 +125,17 @@ function AcademicSection({ studentData, onRefresh }) {
     setErrorMsg('');
 
     const formData = new FormData();
-    formData.append('student_id', localStorage.getItem('studentId'));
+    formData.append('student_id', localStorage.getItem('studentId')); // Lookup reference key
     formData.append('bio', form.bio);
     formData.append('college_id', form.college_id);
     formData.append('course_id', form.course_id);
     formData.append('other_school', form.other_school);
     formData.append('other_degree_program', form.other_degree_program);
     formData.append('sports_interests', form.sports_interests);
+    
+    // Pass the new columns to backend
+    formData.append('academic_student_id', form.student_id); 
+    formData.append('year_level', form.year_level); 
 
     try {
       await api.patch('/students/update-portfolio', formData, {
@@ -158,6 +160,43 @@ function AcademicSection({ studentData, onRefresh }) {
           {errorMsg}
         </div>
       )}
+
+      {/* NEW: Student ID and Year Level Side-By-Side Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">Student ID</label>
+          <input
+            type="text"
+            placeholder="e.g. 2026-00123-MN-0"
+            className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:border-[#093fb4] outline-none text-sm font-medium text-black transition-all"
+            value={form.student_id}
+            onChange={e => {
+              // Allows only letters, numbers, and hyphens (-)
+              const sanitized = e.target.value.replace(/[^a-zA-Z0-9-]/g, '');
+              setForm({ ...form, student_id: sanitized });
+            }}
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">Year / Education Level</label>
+          <select
+            className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:border-[#093fb4] outline-none text-sm font-medium text-slate-800 cursor-pointer transition-all"
+            value={form.year_level}
+            onChange={e => setForm({ ...form, year_level: e.target.value })}
+          >
+            <option value="">Select Education Level</option>
+            <option value="Freshman">Freshman</option>
+            <option value="Sophomore">Sophomore</option>
+            <option value="Junior">Junior</option>
+            <option value="Senior">Senior</option>
+            <option value="Graduate">Graduate</option>
+            <option value="PostGraduate">PostGraduate</option>
+            <option value="Masters">Masters</option>
+            <option value="Doctorate">Doctorate</option>
+          </select>
+        </div>
+      </div>
 
       <div>
         <label className="block text-xs font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">About Yourself (Bio)</label>
@@ -240,7 +279,7 @@ function AcademicSection({ studentData, onRefresh }) {
 }
 
 // ─────────────────────────────────────────────────────────
-// 2. PERSONAL INFO SECTION (was EditPersonalInfoModal)
+// 2. PERSONAL INFO SECTION
 // ─────────────────────────────────────────────────────────
 function PersonalSection({ studentData, onRefresh }) {
   const [form, setForm] = useState({
@@ -381,7 +420,7 @@ function PersonalSection({ studentData, onRefresh }) {
 }
 
 // ─────────────────────────────────────────────────────────
-// 3. FAMILY & CARETAKER SECTION (was EditFamilyModal)
+// 3. FAMILY & CARETAKER SECTION
 // ─────────────────────────────────────────────────────────
 function FamilySection({ studentData, onRefresh }) {
   const [form, setForm] = useState({
@@ -447,7 +486,7 @@ function FamilySection({ studentData, onRefresh }) {
         </div>
       )}
 
-      {/* ── MOTHER SECTION ── */}
+      {/* MOTHER SECTION */}
       <div className="bg-slate-50/60 p-4 rounded-xl border border-slate-100 space-y-3">
         <p className="text-xs font-black text-[#093fb4] uppercase tracking-wider">Mother's Information (Optional)</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -476,7 +515,7 @@ function FamilySection({ studentData, onRefresh }) {
         </div>
       </div>
 
-      {/* ── FATHER SECTION ── */}
+      {/* FATHER SECTION */}
       <div className="bg-slate-50/60 p-4 rounded-xl border border-slate-100 space-y-3">
         <p className="text-xs font-black text-[#093fb4] uppercase tracking-wider">Father's Information (Optional)</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -505,7 +544,7 @@ function FamilySection({ studentData, onRefresh }) {
         </div>
       </div>
 
-      {/* ── GUARDIAN SECTION ── */}
+      {/* GUARDIAN SECTION */}
       <div className="bg-amber-50/40 p-4 rounded-xl border border-amber-100/70 space-y-3">
         <p className="text-xs font-black text-amber-700 uppercase tracking-wider flex items-center gap-1">
           Guardian Backup Details <span className="text-slate-400 font-normal normal-case">(Optional)</span>
@@ -536,7 +575,7 @@ function FamilySection({ studentData, onRefresh }) {
         </div>
       </div>
 
-      {/* ── HOUSING ADDRESS FIELD ── */}
+      {/* HOUSING ADDRESS FIELD */}
       <div>
         <label className="block text-xs font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">Family Household Address</label>
         <textarea

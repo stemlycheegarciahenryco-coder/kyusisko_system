@@ -26,7 +26,7 @@ export default function StudentProfile() {
   const [editTab, setEditTab] = useState(null); // null | 'academic' | 'personal' | 'family'
   const [isPortfolioModalOpen, setIsPortfolioModalOpen] = useState(false);
   
-  // ─── 1. ADDED STATE FOR FRIENDLY DIALOG OVERLAY ───
+  // State for onboarding overlay
   const [showWelcomeModal, setShowWelcomeModal] = useState(location.state?.justOnboarded || false);
   
   const fileInputRef = useRef(null);
@@ -46,7 +46,7 @@ export default function StudentProfile() {
     try {
       const id = localStorage.getItem('studentId');
       await api.put(`/upload-profile/${id}`, formData);
-      refreshProfile(); // Refresh info
+      refreshProfile(); 
       window.dispatchEvent(new Event('profilePicUpdated'));
     } catch (err) {
       console.error("Avatar upload failed:", err);
@@ -86,32 +86,22 @@ export default function StudentProfile() {
   const fullAddress = [student?.sstreet, student?.sbarangay, student?.szip_code].filter(Boolean).join(', ') || "Not provided";
 
   return (
-    // Added "relative" helper class here to cleanly contain overlay bounds securely
     <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6 text-slate-800 antialiased relative">
       
-      {/* ─── 2. PLACED FRIENDLY ONBOARDING COMPLETED DIALOG HERE ─── */}
       {showWelcomeModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-300">
           <div className="bg-white max-w-md w-full rounded-3xl p-6 shadow-2xl border border-black/5 transform scale-100 transition-all duration-300 animate-in fade-in zoom-in-95">
-            
-            {/* KyusIsko Academic Blue Themed Icon Shield Container */}
             <div className="flex justify-center mb-5">
               <div className="w-16 h-16 bg-[#093fb4]/10 rounded-2xl flex items-center justify-center text-[#093fb4]">
                 <GraduationCap size={32} />
               </div>
             </div>
-
-            {/* Header Title Matching KyusIsko Typography Design */}
             <h3 className="text-center text-xs font-black uppercase tracking-[0.2em] text-[#093fb4] mb-3">
               Account Setup
             </h3>
-
-            {/* Friendly Copy encouraging criteria completion */}
             <p className="text-slate-600 text-xs font-medium text-center leading-relaxed px-2 mb-6">
               Setting up your account for academic, professional, and scholarship criteria right now will significantly <span className="text-black font-bold">increase your chances</span> of matching and receiving the perfect scholarship grant!
             </p>
-
-            {/* Premium Interactive Action Button */}
             <button
               onClick={() => setShowWelcomeModal(false)}
               className="w-full bg-[#093fb4] text-white py-3.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-[#093fb4]/90 transition-all shadow-lg shadow-[#093fb4]/20 active:scale-95 flex items-center justify-center gap-2"
@@ -126,7 +116,6 @@ export default function StudentProfile() {
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 relative overflow-hidden">
         <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center">
           
-          {/* Custom Avatar Wrapper with hover trigger matching layout */}
           <div className="relative group cursor-pointer shrink-0" onClick={handleAvatarClick}>
             <div className="w-24 h-24 rounded-xl bg-slate-50 border border-slate-200 overflow-hidden flex items-center justify-center shadow-sm">
               {student.sprofile_pic ? (
@@ -147,7 +136,6 @@ export default function StudentProfile() {
             />
           </div>
 
-          {/* Core metadata stacks */}
           <div className="space-y-1.5 flex-1 w-full min-w-0">
             <div className="flex items-start justify-between w-full">
               <div>
@@ -162,18 +150,16 @@ export default function StudentProfile() {
                 onClick={() => setEditTab('academic')}
                 className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-slate-500 hover:text-[#093fb4] bg-slate-50 border border-slate-200 rounded-lg hover:border-[#093fb4]/20 transition-all shadow-sm"
               >
-                <Edit2 size={14} /> Edit Course / Bio
+                <Edit2 size={14} /> Edit Profile
               </button>
             </div>
 
-            {/* Profile Bio Statement Textbox Block */}
             {student.bio && (
               <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-2xl bg-slate-50/60 p-2.5 rounded-lg border border-slate-100 italic">
                 "{student.bio}"
               </p>
             )}
 
-            {/* Clean inline horizontal status chips layout */}
             <div className="flex flex-wrap gap-2 pt-1">
               <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs font-semibold text-slate-600">
                 <GraduationCap size={13} className="text-slate-400" />
@@ -181,7 +167,7 @@ export default function StudentProfile() {
               </div>
               <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs font-semibold text-slate-600">
                 <School size={13} className="text-slate-400" />
-                <span>Year Level: <strong className="text-slate-800">{student.year_level || '3rd Year'}</strong></span>
+                <span>Year Level: <strong className="text-slate-800">{student.year_level || '—'}</strong></span>
               </div>
             </div>
           </div>
@@ -201,8 +187,6 @@ export default function StudentProfile() {
           <div className="bg-slate-50/50 border border-slate-100 rounded-xl p-4 space-y-0.5">
             <ProfileInfoRow label="Campus / Institution" value={schoolName} />
             <ProfileInfoRow label="Degree Track" value={degreeName} />
-            <ProfileInfoRow label="Current Status" value="Enrolled Regular" />
-            <ProfileInfoRow label="General GWA" value={student.gwa || '1.00'} />
           </div>
         </div>
 
@@ -213,12 +197,6 @@ export default function StudentProfile() {
               <User size={14} className="text-[#093fb4]" />
               <span>Personal Details</span>
             </div>
-            <button 
-              onClick={() => setEditTab('personal')}
-              className="text-[#093fb4] hover:underline flex items-center gap-1 normal-case text-xs font-bold"
-            >
-              Edit <Edit2 size={12} />
-            </button>
           </div>
           <div className="bg-slate-50/50 border border-slate-100 rounded-xl p-4 space-y-0.5">
             <ProfileInfoRow label="Email Address" value={student.student_email} />
@@ -248,14 +226,8 @@ export default function StudentProfile() {
         <div className="flex items-center justify-between pb-2 border-b border-slate-100 text-slate-500 font-bold text-xs uppercase tracking-wider">
           <div className="flex items-center gap-2">
             <Users size={14} className="text-[#093fb4]" />
-            <span>Family & Caretaker Information</span>
+            <span>Family Information</span>
           </div>
-          <button 
-            onClick={() => setEditTab('family')}
-            className="text-[#093fb4] hover:underline flex items-center gap-1 normal-case text-xs font-bold"
-          >
-            Edit Settings <Edit2 size={12} />
-          </button>
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50/50 border border-slate-100 rounded-xl p-4 text-sm">

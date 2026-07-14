@@ -96,11 +96,20 @@ const createScholarship = async (req, res) => {
 const getScholarships = async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT * FROM scholarships WHERE sub_admin_id = $1 ORDER BY created_at DESC`,
+      `SELECT 
+        s.*, 
+        sa.org_pic, 
+        sa.org_name
+       FROM scholarships s
+       LEFT JOIN sub_admins sa ON s.sub_admin_id = sa.id
+       WHERE s.sub_admin_id = $1 
+       ORDER BY s.created_at DESC`,
       [req.user.id]
     );
+
     res.status(200).json({ success: true, data: result.rows });
   } catch (err) {
+    console.error("Database Error:", err.message); // This will print the exact issue to your server console logs!
     res.status(500).json({ success: false, message: err.message });
   }
 };

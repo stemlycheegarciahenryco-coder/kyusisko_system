@@ -4,8 +4,7 @@ import api from '../api';
 import { Users, Calendar as CalendarIcon, GraduationCap, ClipboardCheck, FileText, KeyRound, UserPlus, Trash2, Eye, EyeOff, X, Plus } from 'lucide-react';
 import OrgRightBar from '../component/OrgRightBar';
 
-import useSocket from '../hook/useSocket';
-import {socket} from '../socket';
+
 
 // ─── Forced Password Change Modal ────────────────────────────────────────────
 function ChangePasswordModal({ isOpen }) {

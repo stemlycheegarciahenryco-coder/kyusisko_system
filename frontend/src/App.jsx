@@ -28,7 +28,7 @@ import StudentSettings from './student/StudentSettings';
 import StudentLayout from './student/StudentLayout';
 import StudentOnboarding from './student/StudentOnboarding';
 import MyScholarships from './student/MyScholarships';
-import StudentMessages from './student/StudentMessages';
+
 
 //Sponsors
 import OrgApplicantPrograms from './org/OrgApplicantsPrograms';
@@ -42,7 +42,7 @@ import ProtectedRoutes from './ProtectedRoutes'; // Import the guard
 //might delete this 
 import OrgLogs from './org/OrgLogs';
 import CreateScholarship from './component/CreateScholarship';
-import OrgMessages from './org/OrgMessages';
+
 import {CompliancePage} from './CompliancePage';
 
 import ApplicationForm from './ApplicationForm';
@@ -101,7 +101,8 @@ export default function App() {
        <Route path="/OrgApplicantPrograms" element={<OrgApplicantPrograms />} />
       <Route path="/scholarship-applications/:id/applicants" element={<OrgApplicants />} />
         <Route path="/ProgramView" element={<ProgramView />} />
-          <Route path="/OrgMessages" element={<OrgMessages />} />
+          
+
         <Route path="/OrgProfile" element={<OrgProfile />} />
         <Route path="/OrgLogs" element={<OrgLogs />} />
         <Route path="/create-scholarship" element={<CreateScholarship />} />
@@ -135,7 +136,7 @@ export default function App() {
         <Route path="/StudentSettings" element={<StudentSettings />} />
         <Route path="/apply/:id" element={<ApplicationForm />} />
         <Route path="/student-onboard" element={<StudentOnboarding />} />
-        <Route path="/StudentMessages" element={<StudentMessages />} />
+        
         </Route>
         
       </Route>

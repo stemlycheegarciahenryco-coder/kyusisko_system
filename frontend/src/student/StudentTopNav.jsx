@@ -6,8 +6,8 @@ import { LayoutDashboard, Bell, User2Icon, LogOut, ChevronDown, University,
 } from 'lucide-react';
 import api from '../api';
 import SearchBar from './SearchBar';
-import useSocket from '../hook/useSocket';
-import { disconnectSocket } from '../socket';
+
+
 
 export default function StudentTopNav() {
   const navigate = useNavigate();
@@ -69,19 +69,10 @@ export default function StudentTopNav() {
     { name: 'Home', icon: <LayoutDashboard size={18} />, path: '/scholarships' },
     { name: 'My Scholarships', icon: <University size={18} />, path: '/MyScholarships' },
     { name: 'Profile', icon: <User2Icon size={18} />, path: '/StudentProfile' },
-    { name: 'Messages', icon: <Mails size={18} />, path: '/StudentMessages' },
+
   ];
 
-  // REAL-TIME: incoming notification — increment badge and prepend to list
-  useSocket('new_notification', (notif) => {
-    setUnreadCount(prev => prev + 1);
-    setNotifications(prev => [notif, ...prev]);
-  });
-
-  // REAL-TIME: all notifications marked as read from another tab/device
-  useSocket('notifications_cleared', ({ unreadCount }) => {
-    setUnreadCount(unreadCount);
-  });
+ 
 
   const handleLogout = async () => {
     try {
@@ -89,7 +80,6 @@ export default function StudentTopNav() {
     } catch (err) {
       console.error("Logout error:", err);
     } finally {
-      disconnectSocket();
       localStorage.clear();
       window.location.href = '/';
     }
