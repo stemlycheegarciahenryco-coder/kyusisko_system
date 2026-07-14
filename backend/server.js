@@ -26,6 +26,8 @@ const searchRoutes = require('./routes/searchRoutes');
 const lookupRouter = require('./routes/lookup');
 const systemAdminRouter = require('./routes/systemadmin');
 
+const commentRoutes = require('./routes/commentRoutes');
+
 const app = express();
 
 app.set('trust proxy', 1);
@@ -68,7 +70,7 @@ app.use('/api', authLimiter, authRoutes);
 app.use('/api/scholarships', scholarshipRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/renewals', renewRoutes);
-
+app.use('/api/comments', commentRoutes);
 app.use('/api/system-admin', systemAdminRouter);
 app.use('/api/search', searchRoutes);
 app.use('/api/lookup', lookupRouter);

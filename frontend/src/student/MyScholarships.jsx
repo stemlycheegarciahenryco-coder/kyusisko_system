@@ -7,6 +7,7 @@ import {
 import StudentTopNav from './StudentTopNav';
 import MyCompliance from './MyCompliance';
 import RenewCompliance from './RenewCompliance';
+import ApplicationTimeline from '../component/ApplicationTimeline';
 
 const backendURL = 'http://localhost:5000';
 
@@ -129,7 +130,10 @@ function ScholarshipProgressTrack({ s }) {
 // 2. DYNAMIC CARD DISPLAY SUB-MODULE
 // ==========================================
 function ScholarshipCard({ s, isExpanded, onToggle, onStatusUpdate }) {
-  
+
+  // 🚀 Same auth convention used on the admin side (see ApplicantDocs.jsx)
+  const currentStudentId = localStorage.getItem('studentId');
+
   // Guard check if cleanStatus hits active/approved
   const cleanStatus = ['approved', 'active', 'renewal_approved'].includes(s.status)
     ? s.status
@@ -289,6 +293,21 @@ function ScholarshipCard({ s, isExpanded, onToggle, onStatusUpdate }) {
                   </a>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* 🚀 Messages & Updates: same live timeline the organization sees on their end */}
+          {s.application_id && (
+            <div className="pt-1">
+              <p className="text-[12px] font-black uppercase tracking-widest text-[#093fb4] mb-3">
+                Messages &amp; Updates
+              </p>
+              <ApplicationTimeline
+                applicationId={s.application_id}
+                currentUserRole="student"
+                currentUserId={currentStudentId}
+                height={420}
+              />
             </div>
           )}
         </div>

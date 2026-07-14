@@ -94,6 +94,7 @@ export default function ApplicationDetails() {
         {/* COMPREHENSIVE HORIZONTAL LEDGER ROW TABLES (Bottom Half from image_81799d.jpg) */}
         <div className="w-full">
           <ApplicantDocs 
+            applicationId={appId}
             responses={detail.responses}
             compliance_docs={detail.compliance_docs}
             compliance_history={detail.compliance_history}
