@@ -6,6 +6,8 @@ const orgController = require('../controller/orgController');
 
 // Standardized Routes (All start with /profile/:id or similar)
 router.get('/profile/:id', verifyToken, orgController.getOrgProfile);
+
+//update org profile
 router.patch('/profile/:id', verifyToken, orgController.updateOrgProfile);
 // Change this line in orgRoutes.js:
 router.patch('/profile-picture/:id', verifyToken, uploadOrgPic, orgController.updateProfilePicture);

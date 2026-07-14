@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, FileUp, X, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Loader2, FileUp, X, AlertTriangle, ClipboardList, Folder, Shield, BookOpen, Info, Calendar, DollarSign, GraduationCap, Send } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -42,8 +42,8 @@ const CreateScholarship = () => {
     fund_type: '' 
   });
 
-  const inputStyle = "w-full p-3 bg-black/5 rounded-xl border border-transparent focus:border-black/10 outline-none text-sm transition-all font-['Inter']";
-  const labelStyle = "block text-xs font-black text-black uppercase mb-1 font-['Inter'] tracking-tight";
+  const inputStyle = "w-full pl-10 pr-3 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-[#093fb4] focus:ring-2 focus:ring-[#093fb4]/10 outline-none text-sm transition-all font-medium text-slate-800";
+  const labelStyle = "block text-[11px] font-black text-slate-700 uppercase tracking-wider mb-1.5";
 
   const sanitize = (value) => value.replace(/[<>&"']/g, '');
 
@@ -83,7 +83,6 @@ const CreateScholarship = () => {
 
     setLoading(true);
 
-    // 💡 FIXED: Properly assigning formatted string to variable accessible by FormData append
     let formattedDeadline = formData.deadline;
     if (formData.deadline instanceof Date) {
       const year = formData.deadline.getFullYear();
@@ -93,15 +92,13 @@ const CreateScholarship = () => {
     }
 
     const data = new FormData();
-    
     data.append('title', formData.title);
     data.append('description', formData.description);
-    data.append('deadline', formattedDeadline); // Sends clean "YYYY-MM-DD"
+    data.append('deadline', formattedDeadline);
     data.append('slots', formData.slots || '');
     data.append('gwa', formData.gwa || '');
     data.append('amount_range', formData.amount_range || '');
     data.append('fund_type', formData.fund_type);
-    
     data.append('requirements', JSON.stringify(finalRequirements));
     data.append('criteria', JSON.stringify(criteria));
 
@@ -123,106 +120,153 @@ const CreateScholarship = () => {
   };
 
   return (
-    <div className="p-8 bg-[#FFFCFB] min-h-screen font-['Inter'] relative">
+    <div className="p-8 bg-[#f8fafc] min-h-screen font-['Inter'] relative text-slate-800">
+      {/* Warning Modal */}
       {validationModal.open && (
         <div 
-          className="fixed inset-0 z-[150] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4"
           onClick={() => setValidationModal({ open: false, title: '', message: '' })}
         >
-          <div 
-            className="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl border border-black/5 animate-in zoom-in-95 duration-200 flex flex-col items-center text-center"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-slate-100 flex flex-col items-center text-center animate-in zoom-in-95 duration-150" onClick={(e) => e.stopPropagation()}>
             <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-500 mb-4 border border-amber-100">
-              <AlertTriangle size={24} strokeWidth={2.5} />
+              <AlertTriangle size={22} strokeWidth={2.5} />
             </div>
-            <h3 className="text-base font-black text-slate-900 uppercase tracking-tight mb-2">{validationModal.title}</h3>
-            <p className="text-slate-500 text-xs font-semibold leading-relaxed mb-6 px-2">{validationModal.message}</p>
-            <button 
-              onClick={() => setValidationModal({ open: false, title: '', message: '' })}
-              className="w-full py-3.5 bg-[#093fb4] text-white font-black rounded-xl uppercase text-[10px] tracking-widest hover:bg-[#07369a] transition-all shadow-md shadow-[#093fb4]/10"
-            >
+            <h3 className="text-sm font-black text-slate-950 uppercase tracking-wide mb-1.5">{validationModal.title}</h3>
+            <p className="text-slate-500 text-xs font-medium leading-relaxed mb-6 px-2">{validationModal.message}</p>
+            <button onClick={() => setValidationModal({ open: false, title: '', message: '' })} className="w-full py-3.5 bg-[#093fb4] text-white font-bold rounded-xl uppercase text-[10px] tracking-wider hover:bg-[#07369a] transition-all">
               Understand
             </button>
           </div>
         </div>
       )}
 
-      <div className="max-w-5xl mx-auto">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 mb-6 font-black text-sm uppercase tracking-widest hover:text-[#093fb4] transition-colors">
-          <ArrowLeft size={18} strokeWidth={3} /> Back
-        </button>
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header and Tips Panel Grid */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
+          <div>
+            <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 mb-3 font-bold text-xs text-slate-500 uppercase tracking-wider hover:text-[#093fb4] transition-colors">
+              <ArrowLeft size={14} strokeWidth={2.5} /> Back
+            </button>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-[#093fb4] text-white rounded-2xl flex items-center justify-center shadow-lg shadow-[#093fb4]/20">
+                <GraduationCap size={24} />
+              </div>
+              <div>
+                <h1 className="text-xl font-black tracking-tight text-slate-900">Create Scholarship Program</h1>
+                <p className="text-xs text-slate-400 font-medium mt-0.5">Fill in the program details, requirements and criteria to publish your scholarship.</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-4 max-w-sm flex items-start gap-3">
+            <div className="p-1.5 bg-blue-100/60 rounded-xl text-[#093fb4] shrink-0">
+              <Info size={16} />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-slate-800">Note:</h4>
+              <p className="text-[14px] text-slate-900 font-medium leading-normal mt-0.5">Provide accurate and complete scholarship program information .</p>
+            </div>
+          </div>
+        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-black/5 flex flex-col">
-            <h2 className="text-lg font-black text-black mb-4 tracking-tighter uppercase">Program Info</h2>
+        {/* 3 Column Form Workspace Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          
+          {/* Column 1: Program Information */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col h-full">
+            <div className="flex items-center gap-2.5 pb-4 mb-5 border-b border-slate-100">
+              <div className="p-2 bg-blue-50 rounded-xl text-[#093fb4]"><ClipboardList size={18} /></div>
+              <div>
+                <h2 className="text-sm font-black text-slate-900 uppercase tracking-wide">Program Information</h2>
+                <p className="text-[11px] text-slate-400 font-medium">Basic details about your scholarship program</p>
+              </div>
+            </div>
             
             <div className="space-y-4 flex-grow">
               <div>
-                <label className={labelStyle}>Program Title</label>
-                <input type="text" className={inputStyle} onChange={(e) => setFormData({...formData, title: sanitize(e.target.value)})} />
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="text-[11px] font-black text-slate-700 uppercase tracking-wider">Program Title <span className="text-red-500">*</span></label>
+                  <span className="text-[10px] font-bold text-slate-400">{formData.title.length}/100</span>
+                </div>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400"><ClipboardList size={16} /></div>
+                  <input type="text" maxLength={100} placeholder="Enter program title" className={inputStyle} onChange={(e) => setFormData({...formData, title: sanitize(e.target.value)})} />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className={labelStyle}>Slots</label>
-                  <input type="number" min="0" className={inputStyle} onChange={(e) => setFormData({ ...formData, slots: e.target.value })} />
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400"><span className="text-xs font-bold font-sans">#</span></div>
+                    <input type="number" min="0" placeholder="e.g., 50" className={inputStyle} onChange={(e) => setFormData({ ...formData, slots: e.target.value })} />
+                  </div>
                 </div>
                 <div>
-                  <label className={labelStyle}>Deadline</label>
-                  <DatePicker
-                    selected={formData.deadline ? new Date(formData.deadline) : null}
-                    onChange={(date) => setFormData({...formData, deadline: date})}
-                    dateFormat="yyyy-MM-dd"
-                    placeholderText="Select Date"
-                    minDate={new Date()}
-                    className={inputStyle}
-                    wrapperClassName="w-full"
-                  />
+                  <label className={labelStyle}>Deadline <span className="text-red-500">*</span></label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 z-10"><Calendar size={15} /></div>
+                    <DatePicker
+                      selected={formData.deadline ? new Date(formData.deadline) : null}
+                      onChange={(date) => setFormData({...formData, deadline: date})}
+                      dateFormat="yyyy-MM-dd"
+                      placeholderText="Select deadline"
+                      minDate={new Date()}
+                      className={inputStyle}
+                      wrapperClassName="w-full"
+                    />
+                  </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className={labelStyle}>Amount Range</label>
-                  <input 
-                    type="text" 
-                    placeholder="5000-10000" 
-                    className={inputStyle} 
-                    value={formData.amount_range}
-                    onChange={(e) => setFormData({...formData, amount_range: e.target.value.replace(/[^0-9-]/g, '')})} 
-                  />
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400"><DollarSign size={15} /></div>
+                    <input type="text" placeholder="e.g., 5,000 - 10,000" className={inputStyle} value={formData.amount_range} onChange={(e) => setFormData({...formData, amount_range: e.target.value.replace(/[^0-9\s-]/g, '')})} />
+                  </div>
                 </div>
                 <div>
-                  <label className={labelStyle}> GWA</label>
-                  <input type="number" step="0.01" placeholder="optional" className={inputStyle} onChange={(e) => setFormData({...formData, gwa: e.target.value})} />
+                  <label className={labelStyle}>GWA <span className="text-[10px] font-medium text-slate-400 lowercase">(Optional)</span></label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400"><GraduationCap size={16} /></div>
+                    <input type="number" step="0.01" placeholder="e.g., 2.50 or higher" className={inputStyle} onChange={(e) => setFormData({...formData, gwa: e.target.value})} />
+                  </div>
                 </div>
               </div>
 
               <div>
-                <label className={labelStyle}>Coverage</label>
-                <select className={inputStyle} onChange={(e) => setFormData({...formData, fund_type: e.target.value})}>
-                  <option value="">Select Type</option>
-                  {["Discount", "Full-Tuition", "Financial-Assistance", "Merit-Based", "Semi-Annual", "Stipend", "Voucher"].map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
+                <label className={labelStyle}>Coverage <span className="text-red-500">*</span></label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400"><Shield size={15} /></div>
+                  <select className="w-full pl-10 pr-8 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-[#093fb4] outline-none text-sm font-medium appearance-none text-slate-700" onChange={(e) => setFormData({...formData, fund_type: e.target.value})}>
+                    <option value="">Select coverage type</option>
+                    {["Discount", "Full-Tuition", "Financial-Assistance", "Merit-Based", "Semi-Annual", "Stipend", "Voucher"].map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                  </div>
+                </div>
               </div>
 
-              <div className="pt-4 mt-2 border-t border-black/5">
-                <label className={labelStyle}>Forms to be Downloaded <span className="text-black/30 lowercase font-bold">(Agreement/Forms)</span></label>
-                <div className="space-y-2 mt-2">
+              <div className="pt-4 border-t border-slate-100">
+                <label className="block text-[11px] font-black text-slate-700 uppercase tracking-wider mb-2">Forms to be Downloaded <span className="text-slate-400 font-medium lowercase">(Agreement / Forms)</span></label>
+                <div className="space-y-2">
                   {attachments.map((file, idx) => (
-                    <div key={idx} className="flex items-center justify-between bg-black/5 p-2 rounded-xl border border-black/5">
-                      <span className="text-[10px] font-black text-black truncate max-w-[140px] uppercase pl-1">{file.name}</span>
-                      <button onClick={() => removeAttachment(idx)} className="text-[#FF1E1E] hover:bg-red-50 p-1 rounded-lg transition-colors">
-                        <X size={14} strokeWidth={3} />
+                    <div key={idx} className="flex items-center justify-between bg-slate-50 border border-slate-100 p-2 rounded-xl">
+                      <span className="text-xs font-bold text-slate-700 truncate max-w-[200px] pl-1">{file.name}</span>
+                      <button onClick={() => removeAttachment(idx)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors">
+                        <X size={14} strokeWidth={2.5} />
                       </button>
                     </div>
                   ))}
-                  <label className="flex flex-col items-center justify-center w-full py-4 border-2 border-dashed border-black/10 rounded-[1.5rem] cursor-pointer hover:bg-black/5 transition-all group">
-                    <FileUp size={20} className="text-black/20 group-hover:text-[#093fb4] transition-colors mb-1" />
-                    <p className="text-[9px] font-black text-black/40 uppercase tracking-widest">Attach Files</p>
+                  <label className="flex flex-col items-center justify-center w-full py-5 border-2 border-dashed border-slate-200 hover:border-[#093fb4]/40 rounded-2xl cursor-pointer hover:bg-blue-50/20 transition-all text-center group">
+                    <FileUp size={22} className="text-slate-400 group-hover:text-[#093fb4] transition-colors mb-1.5" />
+                    <p className="text-[11px] font-bold text-slate-700 group-hover:text-[#093fb4]">Drag & drop files here or <span className="text-[#093fb4] underline">click to browse</span></p>
+                    <p className="text-[10px] text-slate-400 font-medium mt-0.5">PDF, DOCX, JPG, PNG (Max. 10MB)</p>
                     <input type="file" className="hidden" multiple onChange={handleFileChange} />
                   </label>
                 </div>
@@ -230,26 +274,46 @@ const CreateScholarship = () => {
             </div>
           </div>
 
+          {/* Column 2: Document Requirements Panel Component */}
           <ScholarshipRequirements reqs={reqs} setReqs={setReqs} checked={checked} setChecked={setChecked} newReq={newReq} setNewReq={setNewReq} />
+          
+          {/* Column 3: Criteria Rules Panel Component */}
           <OrgCriteria criteria={criteria} setCriteria={setCriteria} />
         </div>
 
-        <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-black/5 mb-6">
-          <label className={labelStyle}>Scholarship Description</label>
+        {/* Full Width Block: Description Area */}
+        <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs">
+          <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 bg-blue-50 rounded-xl text-[#093fb4]"><BookOpen size={18} /></div>
+              <div>
+                <h2 className="text-sm font-black text-slate-900 uppercase tracking-wide">Scholarship Description</h2>
+                <p className="text-[11px] text-slate-400 font-medium">Provide a detailed description of your scholarship program</p>
+              </div>
+            </div>
+            <span className="text-[10px] font-bold text-slate-400">{(formData.description || '').length}/2000</span>
+          </div>
           <textarea 
-            className="w-full h-64 p-4 bg-black/5 rounded-2xl outline-none focus:border-2 border-[#093fb4]/20 transition-all font-['Inter'] text-sm"
+            maxLength={2000}
+            className="w-full h-44 p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:bg-white focus:border-[#093fb4] focus:ring-2 focus:ring-[#093fb4]/10 transition-all font-medium text-slate-800 text-sm leading-relaxed placeholder:text-slate-400"
             onChange={(e) => setFormData({...formData, description: sanitize(e.target.value)})}
-            placeholder="Enter at least 50 characters..."
+            placeholder="Enter at least 50 characters outlining qualifications, updates, and milestones..."
           />
         </div>
 
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="w-full bg-[#093fb4] text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-[#07369a] transition-all shadow-lg shadow-[#093fb4]/20 active:scale-95"
-        >
-          {loading ? <Loader2 className="animate-spin mx-auto" /> : "Create Program"}
-        </button>
+        {/* Bottom Workspace Fixed Form Footer Actions Bar */}
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <button type="button" onClick={() => navigate(-1)} className="px-6 py-3.5 bg-slate-100 border border-slate-200 hover:bg-slate-200/70 text-slate-700 rounded-xl font-bold text-xs uppercase tracking-wider transition-all">
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="px-8 py-3.5 bg-[#093fb4] hover:bg-[#07369a] text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-md shadow-[#093fb4]/10 flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="animate-spin w-4 h-4" /> : <><Send size={14} className="-mt-0.5" /> Create Program</>}
+          </button>
+        </div>
       </div>
     </div>
   );
