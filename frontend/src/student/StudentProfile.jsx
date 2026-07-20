@@ -232,7 +232,7 @@ export default function StudentProfile() {
         
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50/50 border border-slate-100 rounded-xl p-4 text-sm">
           <div>
-            <p className="text-xs font-bold text-black uppercase tracking-wider mb-1">Caretaker Name</p>
+            <p className="text-xs font-bold text-black uppercase tracking-wider mb-1">Guardian Name</p>
             <p className="font-semibold text-slate-600">{parentName}</p>
           </div>
           <div>

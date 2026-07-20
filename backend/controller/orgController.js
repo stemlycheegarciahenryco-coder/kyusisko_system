@@ -161,7 +161,7 @@ const getOrgProfilePrograms = async (req, res) => {
              FROM scholarships s
              LEFT JOIN applications a ON a.scholarship_id = s.id
              WHERE s.sub_admin_id = $1 
-               AND COALESCE(s.show_on_profile, true) = true
+               AND s.show_on_profile = true  -- <--- Only fetch programs explicitly set to true
              GROUP BY s.id
              ORDER BY s.created_at DESC`,
             [id]

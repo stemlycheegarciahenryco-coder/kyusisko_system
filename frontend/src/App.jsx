@@ -38,7 +38,7 @@ import OrgDashboard from './org/OrgDashboard';
 import ApplicationDetails from './org/ApplicationDetails';
 import OrgProfile from './org/OrgProfile';
 import ProtectedRoutes from './ProtectedRoutes'; // Import the guard
-
+import OrgSettings from './org/OrgSettings';
 //might delete this 
 import OrgLogs from './org/OrgLogs';
 import CreateScholarship from './component/CreateScholarship';
@@ -105,6 +105,7 @@ export default function App() {
 
         <Route path="/OrgProfile" element={<OrgProfile />} />
         <Route path="/OrgLogs" element={<OrgLogs />} />
+        <Route path="/OrgSettings" element={<OrgSettings />} />
         <Route path="/create-scholarship" element={<CreateScholarship />} />
        
       </Route>

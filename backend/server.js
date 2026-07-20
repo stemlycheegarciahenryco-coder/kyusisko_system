@@ -21,7 +21,7 @@ const securityRoutes = require('./routes/securityRoutes');
 const orgRoutes = require('./routes/orgRoutes');
 const notifRoutes = require('./routes/notifRoutes');
 const renewRoutes = require('./routes/renewRoutes');
-
+const userOrgRoutes = require('./routes/userOrgRoutes');
 const searchRoutes = require('./routes/searchRoutes');
 const lookupRouter = require('./routes/lookup');
 const systemAdminRouter = require('./routes/systemadmin');
@@ -68,6 +68,7 @@ app.use('/api/security', securityRoutes);
 app.use('/api/notif',  notifRoutes);
 app.use('/api', authLimiter, authRoutes);
 app.use('/api/scholarships', scholarshipRoutes);
+app.use('/api/user-org', userOrgRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/renewals', renewRoutes);
 app.use('/api/comments', commentRoutes);
@@ -75,6 +76,7 @@ app.use('/api/system-admin', systemAdminRouter);
 app.use('/api/search', searchRoutes);
 app.use('/api/lookup', lookupRouter);
 app.use('/api', RegStudentRoutes);
+
 
 app.get('/test', (req, res) => res.send("Server is reaching this point!"));
 

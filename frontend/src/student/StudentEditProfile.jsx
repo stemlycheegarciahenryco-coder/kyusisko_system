@@ -13,7 +13,7 @@ function sanitizeContact(rawValue, currentValue) {
 const TABS = [
   { key: 'academic', label: 'Academic Profile', icon: School },
   { key: 'personal', label: 'Personal Info', icon: User },
-  { key: 'family', label: 'Family & Caretaker', icon: Users },
+  { key: 'family', label: 'Family & Guardian', icon: Users },
 ];
 
 export default function StudentEditProfile({ initialTab = 'academic', studentData, onClose, onRefresh }) {
