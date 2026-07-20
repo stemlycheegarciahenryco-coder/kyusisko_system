@@ -264,7 +264,7 @@ export default function OrgDashboard() {
           console.error("No user ID found in storage");
           return;
         }
-
+        //orgRoutes /applicationns endpoint
         const resApps = await api.get('/organizations/applications');
         const allApplications = resApps.data.data;
 

@@ -1,13 +1,13 @@
 const pool = require('../config/db');
 const {supabaseAdmin} = require('../config/supabaseClient');
 
-// 1. Fetch Profile Info
+// Org Profile Info top
 const getOrgProfile = async (req, res) => {
     const { id } = req.params;
     try {
         // Removed 'ability_level' from the query
         const result = await pool.query(
-            'SELECT org_name, sub_email, region, city, street_address, barangay, contact_number, website, org_pic FROM sub_admins WHERE id = $1',
+            'SELECT org_name, sub_email, region, city, street_address, provider_type, barangay, created_at,tel_number, contact_number, website, org_pic FROM sub_admins WHERE id = $1',
             [id]
         );
         
@@ -21,7 +21,7 @@ const getOrgProfile = async (req, res) => {
     }
 };
 
-// 2. Update Text Only (No files here)
+// 2.Updated the info of profile
 const updateOrgProfile = async (req, res) => {
     const { id } = req.params;
     // We destruct to remove keys that don't exist in your DB columns
@@ -42,7 +42,7 @@ const updateOrgProfile = async (req, res) => {
     }
 };
 
-// 3. Update Picture Only
+// 3. Update  Profile Picture Only
 const updateProfilePicture = async (req, res) => {
     const { id } = req.params;
 
@@ -109,6 +109,8 @@ const updateProfilePicture = async (req, res) => {
     }
 };
 
+
+//it is connected in Dashboard
 const getOrgApplications = async (req, res) => {
     try {
         const subAdminId = req.user.id;
@@ -139,7 +141,69 @@ const getOrgApplications = async (req, res) => {
         return res.status(500).json({ success: false, message: err.message });
     }
 };
-//applicants sidebar
+
+//this is for org profile programs
+const getOrgProfilePrograms = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query(
+            `SELECT 
+                s.id, 
+                s.title, 
+                s.status, 
+                s.deadline, 
+                s.slots, 
+                s.description,
+                s.created_at,
+                s.show_on_profile,
+                COUNT(a.id)::int AS total_applicants,
+                COUNT(a.id) FILTER (WHERE a.status IN ('approved', 'active'))::int AS active_scholars
+             FROM scholarships s
+             LEFT JOIN applications a ON a.scholarship_id = s.id
+             WHERE s.sub_admin_id = $1 
+               AND COALESCE(s.show_on_profile, true) = true
+             GROUP BY s.id
+             ORDER BY s.created_at DESC`,
+            [id]
+        );
+        res.status(200).json({ success: true, data: result.rows });
+    } catch (err) {
+        console.error("Get Profile Programs Error:", err.message);
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+
+const toggleProfileProgramVisibility = async (req, res) => {
+    const { programId } = req.params;
+    const orgId = req.user.id;
+    const { show_on_profile } = req.body; // true or false
+
+    try {
+        const result = await pool.query(
+            `UPDATE scholarships
+             SET show_on_profile = $1
+             WHERE id = $2 AND sub_admin_id = $3
+             RETURNING id, show_on_profile`,
+            [show_on_profile, programId, orgId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: "Program not found or unauthorized." });
+        }
+
+        res.status(200).json({ 
+            success: true, 
+            message: show_on_profile ? "Program displayed on profile." : "Program hidden from profile display." 
+        });
+    } catch (err) {
+        console.error("Toggle Profile Visibility Error:", err.message);
+        res.status(500).json({ success: false, message: "Failed to update visibility." });
+    }
+};
+
+
+//applicants sidebar conencted wirj org applicantsProg and Dashboard
 const getOrgPrograms = async (req, res) => {
     try {
         const { id } = req.params;
@@ -158,7 +222,8 @@ const getOrgPrograms = async (req, res) => {
                             'id', st.id,
                             'sfirst_name', COALESCE(st.sfirst_name, ''),
                             'slast_name', COALESCE(st.slast_name, ''),
-                            'sprofile_pic', COALESCE(st.sprofile_pic, '')
+                            'sprofile_pic', COALESCE(st.sprofile_pic, ''),
+                            'application_status', COALESCE(a.status, '')
                         )
                     ) FILTER (WHERE st.id IS NOT NULL), '[]'
                 ) AS applicants
@@ -166,6 +231,7 @@ const getOrgPrograms = async (req, res) => {
              LEFT JOIN applications a ON a.scholarship_id = s.id
              LEFT JOIN students st ON a.student_id = st.id
              WHERE s.sub_admin_id = $1 
+               AND COALESCE(s.taken_down, false) = false
              GROUP BY s.id
              ORDER BY s.created_at DESC`,
             [id]
@@ -176,6 +242,26 @@ const getOrgPrograms = async (req, res) => {
         res.status(500).json({ success: false, message: err.message });
     }
 };
+
+//addpRogram
+const addProgram = async (req, res) => {
+    const { id } = req.params;
+    const { title, description, deadline, slots, status } = req.body;
+    try {
+        const result = await pool.query(
+            `INSERT INTO scholarships (sub_admin_id, title, description, deadline, slots, status)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             RETURNING id, title, description, deadline, slots, status`,
+            [id, title, description || '', deadline || null, slots || 0, status || 'Active']
+        );
+        res.status(201).json({ success: true, data: result.rows[0] });
+    } catch (err) {
+        console.error("Add Program Error:", err.message);
+        res.status(500).json({ success: false, message: "Failed to add program milestone" });
+    }
+};
+
+
 
 //dashboard stats 
 const getDashboardStats = async (req, res) => {
@@ -227,6 +313,7 @@ const getDashboardStats = async (req, res) => {
 };
 
 
+//monitor the applicaiton conflict
 const monitorApplications = async (req, res) => {
     try {
         const subAdminId = parseInt(req.user.id);
@@ -487,11 +574,14 @@ const removeCoAdmin = async (req, res) => {
 // Add to exports:
 module.exports = { 
     getDashboardStats,
+    getOrgProfilePrograms,
     getOrgProfile, 
+    toggleProfileProgramVisibility,
     updateOrgProfile, 
     updateProfilePicture,
     getOrgApplications,
     getOrgPrograms, 
+    addProgram,
     monitorApplications,
     changePassword,
     addCoAdmin,
