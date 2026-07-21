@@ -1,17 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useStudent } from './StudentContext';
-import { LayoutDashboard, Bell, User2Icon, LogOut, ChevronDown, University, 
-  Settings2Icon, AlertCircle, CheckCircle2, XCircle, Info, Mails 
+import { 
+  LayoutDashboard, 
+  Bell, 
+  User2Icon, 
+  LogOut, 
+  ChevronDown, 
+  University, 
+  Settings2Icon, 
+  AlertCircle, 
+  CheckCircle2, 
+  XCircle, 
+  Info 
 } from 'lucide-react';
 import api from '../api';
 import SearchBar from './SearchBar';
 
-
-
 export default function StudentTopNav() {
   const navigate = useNavigate();
-  // 📥 Destructure refreshProfile from your global student context
   const { student, loading, refreshProfile } = useStudent();
 
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -37,7 +44,7 @@ export default function StudentTopNav() {
         const notifRes = await api.get('/notif/notifications');
         setNotifications(notifRes.data.notifications || []);
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching notifications:", err);
       }
     }
   };
@@ -49,7 +56,7 @@ export default function StudentTopNav() {
         const res = await api.get('/notif/notifications/unread-count');
         setUnreadCount(Number(res.data.count) || 0);
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching unread count:", err);
       }
     };
     if (studentId) {
@@ -57,7 +64,7 @@ export default function StudentTopNav() {
     }
   }, [studentId]);
 
-  // 🔄 Listen for the avatar update event and trigger a clean global context refresh
+  // Listen for profile picture updates
   useEffect(() => {
     window.addEventListener('profilePicUpdated', refreshProfile);
     return () => {
@@ -66,13 +73,10 @@ export default function StudentTopNav() {
   }, [refreshProfile]);
 
   const menuItems = [
-    { name: 'Home', icon: <LayoutDashboard size={18} />, path: '/scholarships' },
-    { name: 'My Scholarships', icon: <University size={18} />, path: '/MyScholarships' },
-    { name: 'Profile', icon: <User2Icon size={18} />, path: '/StudentProfile' },
-
+    { name: 'Home', icon: <LayoutDashboard size={20} />, path: '/scholarships' },
+    { name: 'My Scholarships', icon: <University size={20} />, path: '/MyScholarships' },
+    { name: 'Profile', icon: <User2Icon size={20} />, path: '/StudentProfile' },
   ];
-
- 
 
   const handleLogout = async () => {
     try {
@@ -101,16 +105,18 @@ export default function StudentTopNav() {
           {/* NAV LINKS */}
           <div className="flex h-full items-center gap-2 lg:gap-4">
             {menuItems.map((item) => (
-              <NavLink key={item.name} to={item.path}
+              <NavLink 
+                key={item.name} 
+                to={item.path}
                 className={({ isActive }) =>
                   `relative flex flex-col items-center justify-center px-4 h-full transition-all text-center
-                  ${isActive ? 'text-[#093fb4]' : 'text-black/40 hover:text-black hover:bg-black/5'}`
+                  ${isActive ? 'text-[#093fb4]' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'}`
                 }
               >
                 {({ isActive }) => (
                   <>
                     {item.icon}
-                    <span className="text-[10px] font-black uppercase mt-1 hidden lg:block tracking-tight">
+                    <span className="text-xs font-black uppercase mt-1 hidden lg:block tracking-tight">
                       {item.name}
                     </span>
                     {isActive && <div className="absolute bottom-0 h-1 w-full bg-[#093fb4]" />}
@@ -125,23 +131,26 @@ export default function StudentTopNav() {
 
             {/* NOTIFICATIONS */}
             <div className="relative" ref={notifRef}>
-              <button onClick={handleToggleNotif} className="relative p-2 rounded-xl hover:bg-black/5 cursor-pointer">
-                <Bell size={20} />
+              <button 
+                onClick={handleToggleNotif} 
+                className="relative p-2 rounded-xl hover:bg-slate-100 cursor-pointer text-slate-800 transition-colors"
+              >
+                <Bell size={24} />
                 {unreadCount > 0 && (
-                  <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center ring-2 ring-white">
+                  <span className="absolute top-0.5 right-0.5 w-5 h-5 bg-[#FF1E1E] text-white text-[10px] font-black rounded-full flex items-center justify-center ring-2 ring-white">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
               </button>
 
               {showNotif && (
-                <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl p-4 z-50 border border-black/5">
-                  <h3 className="text-xs font-black mb-3 uppercase text-slate-900 tracking-wider">Notifications</h3>
+                <div className="absolute right-0 mt-3 w-80 md:w-96 bg-white rounded-2xl shadow-xl p-4 z-50 border border-slate-200">
+                  <h3 className="text-sm font-black mb-3 uppercase text-slate-900 tracking-wider">Notifications</h3>
                   <div className="max-h-80 overflow-y-auto space-y-2 pr-1 scrollbar-thin">
                     {notifications.length > 0 ? (
                       notifications.map((notif) => <NotifCard key={notif.id} notif={notif} />)
                     ) : (
-                      <p className="text-[10px] text-black/40 text-center py-6 font-bold uppercase">No notifications</p>
+                      <p className="text-xs text-slate-500 text-center py-6 font-bold uppercase">No notifications</p>
                     )}
                   </div>
                 </div>
@@ -155,24 +164,24 @@ export default function StudentTopNav() {
                   setShowDropdown(!showDropdown);
                   setShowNotif(false);
                 }}
-                className="flex items-center gap-1.5 p-1 rounded-xl hover:bg-black/5 cursor-pointer"
+                className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-slate-100 cursor-pointer transition-colors"
               >
-                <div className="h-9 w-9 rounded-xl border border-slate-300 overflow-hidden bg-slate-50">
+                <div className="h-10 w-10 rounded-xl border-2 border-slate-200 overflow-hidden bg-slate-50">
                   {student?.sprofile_pic ? (
                     <img src={student.sprofile_pic} className="w-full h-full object-cover" alt="Profile" />
                   ) : (
-                    <div className="flex items-center justify-center h-full font-black text-[#093fb4] text-xs">
+                    <div className="flex items-center justify-center h-full font-black text-[#093fb4] text-sm">
                       {student?.sfirst_name?.[0] || 'S'}
                     </div>
                   )}
                 </div>
-                <ChevronDown size={14} className={`transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
+                <ChevronDown size={18} className={`text-slate-800 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
               </button>
 
               {showDropdown && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl py-2 z-50 border border-black/5">
-                  <div className="px-4 py-2 border-b border-slate-100">
-                    <p className="text-[10px] font-black text-slate-900 uppercase truncate">
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl py-2 z-50 border border-slate-200">
+                  <div className="px-4 py-3 border-b border-slate-200">
+                    <p className="text-xs font-black text-slate-900 uppercase truncate">
                       {student?.sfirst_name} {student?.slast_name}
                     </p>
                   </div>
@@ -182,9 +191,9 @@ export default function StudentTopNav() {
                       setShowDropdown(false);
                       navigate('/StudentSettings');
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-slate-700 hover:bg-slate-50 text-[10px] font-black uppercase transition-colors cursor-pointer border-b border-slate-100/60"
+                    className="w-full flex items-center gap-3 px-4 py-3.5 text-slate-800 hover:bg-slate-100 text-xs font-black uppercase transition-colors cursor-pointer border-b border-slate-100"
                   >
-                    <Settings2Icon size={16} className="text-slate-400" /> Settings
+                    <Settings2Icon size={18} className="text-slate-600" /> Settings
                   </button>
 
                   <button
@@ -192,15 +201,16 @@ export default function StudentTopNav() {
                       setShowDropdown(false);
                       setShowLogoutModal(true);
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 text-[10px] font-black uppercase transition-colors cursor-pointer"
+                    className="w-full flex items-center gap-3 px-4 py-3.5 text-[#FF1E1E] hover:bg-red-50 text-xs font-black uppercase transition-colors cursor-pointer"
                   >
-                    <LogOut size={16} /> Sign Out
+                    <LogOut size={18} /> Sign Out
                   </button>
                 </div>
               )}
             </div>
 
           </div>
+
         </div>
       </nav>
 
@@ -213,10 +223,16 @@ export default function StudentTopNav() {
             </div>
             <h3 className="text-xl font-black text-slate-900 mb-2 uppercase tracking-tight">Sign Out?</h3>
             <div className="flex flex-col gap-3 mt-8">
-              <button onClick={handleLogout} className="w-full bg-[#093fb4] text-white font-black py-4 rounded-2xl hover:opacity-95 transition-opacity uppercase text-[10px] tracking-[0.2em] cursor-pointer">
+              <button 
+                onClick={handleLogout} 
+                className="w-full bg-[#093fb4] text-white font-black py-4 rounded-2xl hover:opacity-95 transition-opacity uppercase text-xs tracking-[0.2em] cursor-pointer"
+              >
                 Confirm
               </button>
-              <button onClick={() => setShowLogoutModal(false)} className="w-full bg-slate-100/80 text-slate-700 font-black py-4 rounded-2xl hover:bg-slate-200/60 transition-colors uppercase text-[10px] tracking-[0.2em] cursor-pointer">
+              <button 
+                onClick={() => setShowLogoutModal(false)} 
+                className="w-full bg-slate-100/80 text-slate-700 font-black py-4 rounded-2xl hover:bg-slate-200/60 transition-colors uppercase text-xs tracking-[0.2em] cursor-pointer"
+              >
                 Cancel
               </button>
             </div>
@@ -231,19 +247,19 @@ function NotifCard({ notif }) {
   const title = notif.title?.toLowerCase() || '';
   const config =
     title.includes('approved')
-      ? { icon: <CheckCircle2 size={15} />, bg: 'bg-green-50 text-green-600', border: 'border-green-100' }
+      ? { icon: <CheckCircle2 size={18} />, bg: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-200' }
       : title.includes('rejected') || title.includes('not eligible') || title.includes('taken down')
-      ? { icon: <XCircle size={15} />, bg: 'bg-red-50 text-red-600', border: 'border-red-100' }
-      : { icon: <Info size={15} />, bg: 'bg-blue-50 text-blue-600', border: 'border-blue-100' };
+      ? { icon: <XCircle size={18} />, bg: 'bg-red-50 text-[#FF1E1E]', border: 'border-red-200' }
+      : { icon: <Info size={18} />, bg: 'bg-blue-50 text-[#093fb4]', border: 'border-blue-200' };
 
   return (
-    <div className={`p-3 rounded-xl flex gap-3 border border-transparent transition-all hover:bg-slate-50 ${!notif.is_read ? 'bg-slate-50/60 font-semibold' : ''}`}>
-      <div className={`w-8 h-8 rounded-lg ${config.bg} border ${config.border} flex items-center justify-center shrink-0`}>
+    <div className={`p-3.5 rounded-xl flex gap-3.5 border border-transparent transition-all hover:bg-slate-100/70 ${!notif.is_read ? 'bg-slate-50 font-semibold' : ''}`}>
+      <div className={`w-10 h-10 rounded-xl ${config.bg} border ${config.border} flex items-center justify-center shrink-0`}>
         {config.icon}
       </div>
       <div className="min-w-0 flex-1">
-        <h4 className="text-xs font-black text-slate-900 leading-tight">{notif.title}</h4>
-        <p className="text-[11px] text-slate-600 mt-1 leading-relaxed break-words whitespace-normal">{notif.message}</p>
+        <h4 className="text-sm font-black text-slate-900 leading-tight mb-1">{notif.title}</h4>
+        <p className="text-xs text-slate-700 font-semibold leading-relaxed break-words whitespace-normal">{notif.message}</p>
       </div>
     </div>
   );
