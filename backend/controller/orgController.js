@@ -364,83 +364,25 @@ const monitorApplications = async (req, res) => {
         res.status(500).json({ success: false, message: err.message });
     }
 };
-// ─── PASSWORD CHANGE (Forced on first login after approval) ──────────────────
-
-const changePassword = async (req, res) => {
-    const requesterId = req.user.id; // Could be a main account ID or a co_admin ID
-    const { currentPassword, newPassword } = req.body;
-
-    if (!currentPassword || !newPassword) {
-        return res.status(400).json({ error: "Current and new password are required." });
-    }
-    if (newPassword.length < 8) {
-        return res.status(400).json({ error: "New password must be at least 8 characters." });
-    }
-
-    try {
-        // 1. Fetch the account trying to change the password
-        const accountCheck = await pool.query(
-            'SELECT id, sub_password, account_type, parent_org_id FROM sub_admins WHERE id = $1',
-            [requesterId]
-        );
-        
-        if (accountCheck.rows.length === 0) {
-            return res.status(404).json({ error: "Account not found." });
-        }
-
-        const userAccount = accountCheck.rows[0];
-
-        // 2. Verify the current password against the requester's record
-        const bcrypt = require('bcryptjs');
-        const isMatch = await bcrypt.compare(currentPassword, userAccount.sub_password);
-        if (!isMatch) {
-            return res.status(401).json({ error: "Current password is incorrect." });
-        }
-
-        if (currentPassword === newPassword) {
-            return res.status(400).json({ error: "New password must be different from your current password." });
-        }
-
-        const hashed = await bcrypt.hash(newPassword, 10);
-
-        // 3. DETERMINISTIC ROUTING: Find who actually owns the master record
-        // If a co-admin is updating, we target their parent_org_id. Otherwise, they are the main account.
-        const targetOrgId = userAccount.account_type === 'co_admin' 
-            ? userAccount.parent_org_id 
-            : userAccount.id;
-
-        // 4. Update the main organization password and set its flag
-        await pool.query(
-            `UPDATE sub_admins 
-             SET sub_password = $1, is_password_changed = TRUE 
-             WHERE id = $2`,
-            [hashed, targetOrgId]   
-        );
-
-        // 5. CASCADE EFFECT: Synchronize all associated co-admins to match the new master password
-        // Also update their 'is_password_changed' status so they don't get stuck in modal loops
-        await pool.query(
-            `UPDATE sub_admins 
-             SET sub_password = $1, is_password_changed = TRUE 
-             WHERE parent_org_id = $2 OR id = $2`,
-            [hashed, targetOrgId]
-        );
-
-        res.json({ success: true, message: "Password updated successfully across all organization accounts." });
-    } catch (err) {
-        console.error("Change Password Error:", err.message);
-        res.status(500).json({ error: "Failed to update password." });
-    }
-};
 // ─── CO-ADMIN MANAGEMENT ─────────────────────────────────────────────────────
+// NOTE: Password change now lives solely in userManagementController.js
+// (single source of truth — see /user-management/change-password). It still
+// operates on this same `sub_admins` table and cascades to co-admins.
 
 const addCoAdmin = async (req, res) => {
     const orgId = req.user.id;
-    const { firstName, middleName, lastName, email } = req.body;
+    const { fullName, email } = req.body;
 
-    if (!firstName || !lastName || !email) {
-        return res.status(400).json({ error: "First name, last name and email are required." });
+    if (!fullName || !email) {
+        return res.status(400).json({ error: "Full name and email are required." });
     }
+
+    // Split the single Full Name field into first/last for storage —
+    // no schema change, first token = first_name, remainder = last_name.
+    const nameParts = fullName.trim().split(/\s+/);
+    const firstName = nameParts[0];
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : nameParts[0];
+    const middleName = null;
 
     try {
         // Only main org accounts can add co-admins
@@ -510,6 +452,7 @@ const addCoAdmin = async (req, res) => {
                   You can log in using your email and the organization's current password.
                 </p>
                 <div style="background:#EEF2FF; border:1px solid #c7d2fe; border-radius:16px; padding:20px; margin:24px 0;">
+                
                   <p style="font-size:9px; font-weight:900; text-transform:uppercase; letter-spacing:0.1em; color:#3730a3; margin:0 0 10px 0;">Your Login Details:</p>
                   <p style="margin:0 0 8px 0; font-size:13px; font-weight:600; color:#1e293b;">Email: <strong style="color:#093fb4;">${email}</strong></p>
                   <p style="margin:0; font-size:13px; font-weight:600; color:#1e293b;">Password: <strong style="color:#093fb4;">Same as the organization's current password</strong></p>
@@ -571,6 +514,37 @@ const removeCoAdmin = async (req, res) => {
     }
 };
 
+// Block / unblock a co-admin — reuses the existing is_active column as the
+// block toggle (is_active = FALSE means blocked, cannot log in).
+const blockCoAdmin = async (req, res) => {
+    const orgId = req.user.id;
+    const { coAdminId } = req.params;
+    try {
+        const check = await pool.query(
+            'SELECT id, is_active FROM sub_admins WHERE id = $1 AND parent_org_id = $2 AND account_type = $3',
+            [coAdminId, orgId, 'co_admin']
+        );
+        if (check.rows.length === 0) {
+            return res.status(404).json({ error: "Co-admin not found or does not belong to your organization." });
+        }
+
+        const nextActive = !check.rows[0].is_active;
+        await pool.query(
+            'UPDATE sub_admins SET is_active = $1 WHERE id = $2',
+            [nextActive, coAdminId]
+        );
+
+        res.json({
+            success: true,
+            is_active: nextActive,
+            message: nextActive ? "Co-admin unblocked." : "Co-admin blocked."
+        });
+    } catch (err) {
+        console.error("Block Co-Admin Error:", err.message);
+        res.status(500).json({ error: "Failed to update co-admin status." });
+    }
+};
+
 // Add to exports:
 module.exports = { 
     getDashboardStats,
@@ -583,8 +557,8 @@ module.exports = {
     getOrgPrograms, 
     addProgram,
     monitorApplications,
-    changePassword,
     addCoAdmin,
     getCoAdmins,
-    removeCoAdmin
+    removeCoAdmin,
+    blockCoAdmin
 };

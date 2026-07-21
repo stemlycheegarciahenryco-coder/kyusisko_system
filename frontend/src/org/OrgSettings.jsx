@@ -1,428 +1,368 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
-import { 
-    Shield, Users, Key, Crown, ArrowRightLeft, Lock, 
-    CheckCircle2, AlertTriangle, UserPlus, Trash2, Mail 
-} from 'lucide-react';
+import { Settings, UserPlus, Lock, Users, Trash2, Shield, Eye, EyeOff, AlertCircle, ArrowRightLeft, ShieldOff, ShieldCheck } from 'lucide-react';
 
-const OrgSettings = () => {
-    // Read account_type from localStorage
-    const currentUser = JSON.parse(localStorage.getItem('user')) || { account_type: 'co_admin', id: null };
-    const isMain = currentUser.account_type === 'main';
+export default function OrgSettings() {
+  // Default to security since profile is removed
+  const [activeTab, setActiveTab] = useState('security');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
 
-    // TAB STATE (Tab 1: 'security', Tab 2: 'users')
-    const [activeTab, setActiveTab] = useState('security');
+  // Co-Admin / User Management State
+  const [coAdmins, setCoAdmins] = useState([]);
+  const [addForm, setAddForm] = useState({ fullName: '', email: '' });
+  const [isMainAccount, setIsMainAccount] = useState(true);
 
-    // Password State (Tab 1)
-    const [passwords, setPasswords] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    const [passMsg, setPassMsg] = useState({ type: '', text: '' });
+  // Transfer Ownership confirmation state (per-row action now, not a separate tab)
+  const [transferTargetId, setTransferTargetId] = useState(null);
 
-    // User Management State (Tab 2)
-    const [teamMembers, setTeamMembers] = useState([]);
-    const [coAdminData, setCoAdminData] = useState({ firstName: '', middleName: '', lastName: '', email: '' });
-    const [addMsg, setAddMsg] = useState({ type: '', text: '' });
+  // Password State
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [showPasswords, setShowPasswords] = useState(false);
 
-    // Modals
-    const [transferModal, setTransferModal] = useState({ open: false, targetUser: null });
-    const [removeModal, setRemoveModal] = useState({ open: false, targetUser: null });
+  useEffect(() => {
+    const orgInfo = JSON.parse(localStorage.getItem('orgInfo') || '{}');
+    const isMain = !orgInfo.is_co_admin;
+    setIsMainAccount(isMain);
 
-    useEffect(() => {
-        if (activeTab === 'users' && isMain) {
-            fetchTeamMembers();
-        }
-    }, [activeTab]);
+    if (isMain && activeTab === 'user-management') {
+      fetchCoAdmins();
+    }
+  }, [activeTab]);
 
-    const fetchTeamMembers = async () => {
-        try {
-            const res = await api.get('/user-org/co-admins');
-            setTeamMembers(res.data.data || []);
-        } catch (err) {
-            console.error("Failed to fetch team members:", err);
-        }
-    };
+  const fetchCoAdmins = async () => {
+    try {
+      const res = await api.get('/organizations/co-admins');
+      setCoAdmins(res.data.data || []);
+    } catch (err) {
+      console.error('Failed to fetch co-admins:', err);
+    }
+  };
 
-    // ── TAB 1 ACTION: CHANGE PASSWORD ──
-    const handlePasswordChange = async (e) => {
-        e.preventDefault();
-        setPassMsg({ type: '', text: '' });
+  const handleAddCoAdmin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage({ type: '', text: '' });
+    try {
+      // No password field here — co-admins inherit the org's current
+      // password on the backend (see orgController.addCoAdmin).
+      await api.post('/organizations/co-admins', addForm);
+      setMessage({ type: 'success', text: 'Co-admin added successfully.' });
+      setAddForm({ fullName: '', email: '' });
+      fetchCoAdmins();
+    } catch (err) {
+      setMessage({ type: 'error', text: err.response?.data?.error || 'Failed to add co-admin.' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        if (passwords.newPassword !== passwords.confirmPassword) {
-            setPassMsg({ type: 'error', text: 'New passwords do not match.' });
-            return;
-        }
+  const handleRemoveCoAdmin = async (id) => {
+    if (!window.confirm('Are you sure you want to remove this co-admin? This cannot be undone.')) return;
+    try {
+      await api.delete(`/organizations/co-admins/${id}`);
+      setMessage({ type: 'success', text: 'Co-admin removed.' });
+      fetchCoAdmins();
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Failed to remove co-admin.' });
+    }
+  };
 
-        try {
-            await api.patch('/user-org/change-password', {
-                currentPassword: passwords.currentPassword,
-                newPassword: passwords.newPassword
-            });
-            setPassMsg({ type: 'success', text: 'Password successfully updated!' });
-            setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
-        } catch (err) {
-            setPassMsg({ type: 'error', text: err.response?.data?.error || 'Password update failed.' });
-        }
-    };
+  const handleToggleBlock = async (admin) => {
+    const action = admin.is_active ? 'block' : 'unblock';
+    if (!window.confirm(`${action === 'block' ? 'Block' : 'Unblock'} ${admin.first_name}? ${action === 'block' ? 'They will not be able to log in until unblocked.' : ''}`)) return;
+    try {
+      await api.patch(`/organizations/co-admins/${admin.id}/block`);
+      setMessage({ type: 'success', text: `Co-admin ${action === 'block' ? 'blocked' : 'unblocked'}.` });
+      fetchCoAdmins();
+    } catch (err) {
+      setMessage({ type: 'error', text: `Failed to ${action} co-admin.` });
+    }
+  };
 
-    // ── TAB 2 ACTION: ADD CO-ADMIN EMAIL ──
-    const handleAddCoAdmin = async (e) => {
-        e.preventDefault();
-        setAddMsg({ type: '', text: '' });
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      return setMessage({ type: 'error', text: "New passwords don't match." });
+    }
+    setLoading(true);
+    setMessage({ type: '', text: '' });
+    try {
+      await api.post('/user-org/change-password', {
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword
+      });
+      setMessage({ type: 'success', text: 'Password updated successfully across all organization accounts.' });
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (err) {
+      setMessage({ type: 'error', text: err.response?.data?.error || err.response?.data?.message || 'Failed to update password.' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        try {
-            await api.post('/user-org/co-admins', coAdminData);
-            setAddMsg({ type: 'success', text: 'Member added and invitation sent!' });
-            setCoAdminData({ firstName: '', middleName: '', lastName: '', email: '' });
-            fetchTeamMembers();
-        } catch (err) {
-            setAddMsg({ type: 'error', text: err.response?.data?.error || 'Failed to add member.' });
-        }
-    };
+  const handleTransferOwnership = async (admin) => {
+    if (!window.confirm(`WARNING: Transferring ownership to ${admin.first_name} ${admin.last_name} will demote your account to a co-admin. Continue?`)) return;
 
-    // ── TAB 2 ACTION: REMOVE MEMBER ──
-    const handleConfirmRemove = async () => {
-        if (!removeModal.targetUser) return;
-        try {
-            await api.delete(`/user-org/co-admins/${removeModal.targetUser.id}`);
-            setRemoveModal({ open: false, targetUser: null });
-            fetchTeamMembers();
-        } catch (err) {
-            alert(err.response?.data?.error || 'Failed to remove member.');
-        }
-    };
+    setTransferTargetId(admin.id);
+    setLoading(true);
+    setMessage({ type: '', text: '' });
+    try {
+      await api.post('/user-org/transfer-ownership', {
+        targetUserId: admin.id
+      });
+      setMessage({ type: 'success', text: 'Ownership transferred successfully. You are now a co-admin.' });
 
-    // ── TAB 2 ACTION: TRANSFER OWNERSHIP ──
-    const handleConfirmTransfer = async () => {
-        if (!transferModal.targetUser) return;
-        try {
-            await api.post('/user-org/transfer-ownership', {
-                targetUserId: transferModal.targetUser.id
-            });
-            alert('Ownership transferred successfully! Your account is now a Co-Admin.');
-            window.location.reload();
-        } catch (err) {
-            alert(err.response?.data?.error || 'Transfer failed.');
-        }
-    };
+      const orgInfo = JSON.parse(localStorage.getItem('orgInfo') || '{}');
+      localStorage.setItem('orgInfo', JSON.stringify({ ...orgInfo, is_co_admin: true }));
+      setIsMainAccount(false);
+      setActiveTab('security');
+    } catch (err) {
+      setMessage({ type: 'error', text: err.response?.data?.message || 'Failed to transfer ownership.' });
+    } finally {
+      setLoading(false);
+      setTransferTargetId(null);
+    }
+  };
 
-    return (
-        <div className="max-w-5xl mx-auto p-6 font-['Inter']">
-            {/* PAGE HEADER */}
-            <div className="mb-6">
-                <h1 className="text-xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
-                    <Shield className="text-[#093fb4]" size={22} /> Organization Settings
-                </h1>
-                <p className="text-xs text-slate-500 font-medium mt-1">Manage security credentials and organization admin members.</p>
-            </div>
+  return (
+    <div className="p-8 bg-slate-50 min-h-screen font-['Inter']">
+      <header className="mb-10">
+        <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase flex items-center gap-3">
+          <Settings className="text-[#093fb4]" size={32} /> Organization Settings
+        </h1>
+        <p className="text-slate-500 text-sm font-medium mt-1">
+          Manage your account preferences and access controls.
+        </p>
+      </header>
 
-            {/* TAB NAVIGATION BAR */}
-            <div className="flex border-b border-slate-200 mb-6 gap-2">
-                {/* TAB 1: PASSWORD & SECURITY */}
-                <button
-                    onClick={() => setActiveTab('security')}
-                    className={`px-4 py-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
-                        activeTab === 'security' ? 'border-[#093fb4] text-[#093fb4]' : 'border-transparent text-slate-400 hover:text-slate-600'
-                    }`}
-                >
-                    <Key size={14} /> Password & Security
-                </button>
-
-                {/* TAB 2: USER MANAGEMENT */}
-                <button
-                    onClick={() => setActiveTab('users')}
-                    className={`px-4 py-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
-                        activeTab === 'users' ? 'border-[#093fb4] text-[#093fb4]' : 'border-transparent text-slate-400 hover:text-slate-600'
-                    }`}
-                >
-                    <Users size={14} /> User Management
-                </button>
-            </div>
-
-            {/* ════════════════════════════════════════════════════════════════ */}
-            {/* TAB 1: PASSWORD & SECURITY CONTENT                               */}
-            {/* ════════════════════════════════════════════════════════════════ */}
-            {activeTab === 'security' && (
-                <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs max-w-lg">
-                    <div className="mb-4 pb-3 border-b border-slate-100">
-                        <h2 className="text-xs font-black uppercase tracking-wider text-slate-900">Change Password</h2>
-                        <p className="text-[11px] text-slate-500">
-                            Update account access password for your organization.
-                        </p>
-                    </div>
-
-                    <form onSubmit={handlePasswordChange} className="space-y-4">
-                        {passMsg.text && (
-                            <div className={`p-3 rounded-xl text-xs font-semibold flex items-center gap-2 ${
-                                passMsg.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
-                            }`}>
-                                {passMsg.type === 'success' ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
-                                {passMsg.text}
-                            </div>
-                        )}
-
-                        <div>
-                            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1">Current Password</label>
-                            <input
-                                type="password"
-                                required
-                                value={passwords.currentPassword}
-                                onChange={e => setPasswords({ ...passwords, currentPassword: e.target.value })}
-                                className="w-full text-xs font-semibold border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-[#093fb4]"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1">New Password</label>
-                            <input
-                                type="password"
-                                required
-                                value={passwords.newPassword}
-                                onChange={e => setPasswords({ ...passwords, newPassword: e.target.value })}
-                                className="w-full text-xs font-semibold border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-[#093fb4]"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1">Confirm New Password</label>
-                            <input
-                                type="password"
-                                required
-                                value={passwords.confirmPassword}
-                                onChange={e => setPasswords({ ...passwords, confirmPassword: e.target.value })}
-                                className="w-full text-xs font-semibold border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-[#093fb4]"
-                            />
-                        </div>
-
-                        <button
-                            type="submit"
-                            className="w-full py-2.5 bg-[#093fb4] hover:bg-blue-800 text-white font-black text-xs uppercase tracking-wider rounded-xl transition cursor-pointer shadow-md"
-                        >
-                            Update Password
-                        </button>
-                    </form>
-                </div>
-            )}
-
-            {/* ════════════════════════════════════════════════════════════════ */}
-            {/* TAB 2: USER MANAGEMENT CONTENT                                   */}
-            {/* ════════════════════════════════════════════════════════════════ */}
-            {activeTab === 'users' && (
-                <div className="space-y-6">
-                    {/* RESTRICTION WARNING FOR CO-ADMINS */}
-                    {!isMain && (
-                        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3">
-                            <Lock size={18} className="text-amber-600 shrink-0 mt-0.5" />
-                            <p className="text-xs text-amber-800 font-medium leading-relaxed">
-                                You are currently logged in as a <b>Co-Admin</b>. Inviting new members and transferring main account ownership can only be managed by the <b>Main Account</b> owner.
-                            </p>
-                        </div>
-                    )}
-
-                    {/* SECTION 1: ADD MEMBER FORM (MAIN ONLY) */}
-                    {isMain && (
-                        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs">
-                            <div className="mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
-                                <UserPlus className="text-[#093fb4]" size={18} />
-                                <div>
-                                    <h2 className="text-xs font-black uppercase tracking-wider text-slate-900">Add New Admin Member</h2>
-                                    <p className="text-[11px] text-slate-500">Enter member email and details to assign co-admin permissions.</p>
-                                </div>
-                            </div>
-
-                            {addMsg.text && (
-                                <div className={`p-3 rounded-xl text-xs font-semibold mb-4 flex items-center gap-2 ${
-                                    addMsg.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
-                                }`}>
-                                    {addMsg.type === 'success' ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
-                                    {addMsg.text}
-                                </div>
-                            )}
-
-                            <form onSubmit={handleAddCoAdmin} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-                                <div>
-                                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1">First Name *</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={coAdminData.firstName}
-                                        onChange={e => setCoAdminData({ ...coAdminData, firstName: e.target.value })}
-                                        className="w-full text-xs font-semibold border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-[#093fb4]"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1">Last Name *</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={coAdminData.lastName}
-                                        onChange={e => setCoAdminData({ ...coAdminData, lastName: e.target.value })}
-                                        className="w-full text-xs font-semibold border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-[#093fb4]"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1">Email Address *</label>
-                                    <input
-                                        type="email"
-                                        required
-                                        value={coAdminData.email}
-                                        onChange={e => setCoAdminData({ ...coAdminData, email: e.target.value })}
-                                        className="w-full text-xs font-semibold border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-[#093fb4]"
-                                    />
-                                </div>
-                                <button
-                                    type="submit"
-                                    className="py-2 px-4 bg-[#093fb4] hover:bg-blue-800 text-white font-black text-xs uppercase tracking-wider rounded-xl transition cursor-pointer shadow-xs flex items-center justify-center gap-1.5 h-[38px]"
-                                >
-                                    <Mail size={14} /> Add Member
-                                </button>
-                            </form>
-                        </div>
-                    )}
-
-                    {/* SECTION 2: LIST OF ADMIN MEMBERS */}
-                    {isMain && (
-                        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs">
-                            <div className="mb-4 pb-3 border-b border-slate-100">
-                                <h2 className="text-xs font-black uppercase tracking-wider text-slate-900">Admin Members List</h2>
-                                <p className="text-[11px] text-slate-500">Active accounts with access to your organization dashboard.</p>
-                            </div>
-
-                            <div className="space-y-3">
-                                {/* MAIN ACCOUNT HOLDER BADGE */}
-                                <div className="p-4 border border-amber-200 bg-amber-50/40 rounded-2xl flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-black text-sm">
-                                            <Crown size={18} />
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <p className="text-xs font-bold text-slate-900">You (Main Organization Owner)</p>
-                                                <span className="text-[9px] font-black px-2 py-0.5 rounded uppercase bg-amber-100 text-amber-800">
-                                                    Main Account
-                                                </span>
-                                            </div>
-                                            <p className="text-[11px] text-slate-500 mt-0.5">Full administrative privileges</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* CO-ADMIN MEMBERS */}
-                                {teamMembers.length === 0 ? (
-                                    <div className="text-center py-6 border border-dashed border-slate-200 rounded-2xl text-slate-400 text-xs">
-                                        No co-admin members added yet. Use the form above to add an admin email.
-                                    </div>
-                                ) : (
-                                    teamMembers.map(member => (
-                                        <div key={member.id} className="p-4 border border-slate-200/80 rounded-2xl flex items-center justify-between bg-white hover:border-slate-300 transition">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#093fb4] border border-blue-100 flex items-center justify-center font-black text-sm">
-                                                    {member.first_name ? member.first_name.charAt(0) : 'C'}
-                                                </div>
-                                                <div>
-                                                    <div className="flex items-center gap-2">
-                                                        <p className="text-xs font-bold text-slate-900">
-                                                            {member.first_name} {member.last_name}
-                                                        </p>
-                                                        <span className="text-[9px] font-black px-2 py-0.5 rounded uppercase bg-slate-100 text-slate-600">
-                                                            Co-Admin
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-[11px] text-slate-400 mt-0.5">{member.sub_email}</p>
-                                                </div>
-                                            </div>
-
-                                            {/* ACTION BUTTONS (MAIN ONLY) */}
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() => setTransferModal({ open: true, targetUser: member })}
-                                                    className="px-3 py-1.5 border border-amber-200 bg-amber-50/50 rounded-xl text-[10px] font-black uppercase tracking-wider text-amber-800 hover:bg-amber-100 transition flex items-center gap-1.5 cursor-pointer"
-                                                >
-                                                    <ArrowRightLeft size={12} /> Transfer Ownership
-                                                </button>
-                                                <button
-                                                    onClick={() => setRemoveModal({ open: true, targetUser: member })}
-                                                    className="p-2 border border-red-200 bg-red-50/50 rounded-xl text-red-600 hover:bg-red-100 transition cursor-pointer"
-                                                    title="Remove Member"
-                                                >
-                                                    <Trash2 size={14} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* REMOVE CO-ADMIN CONFIRMATION MODAL */}
-            {removeModal.open && (
-                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl border border-slate-100">
-                        <div className="w-12 h-12 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center text-red-600 mb-4">
-                            <Trash2 size={22} />
-                        </div>
-
-                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">Remove Admin Member</h3>
-                        <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-                            Are you sure you want to remove <b>{removeModal.targetUser?.first_name} {removeModal.targetUser?.last_name}</b>? They will lose access to organization management.
-                        </p>
-
-                        <div className="flex justify-end gap-2 pt-4">
-                            <button
-                                onClick={() => setRemoveModal({ open: false, targetUser: null })}
-                                className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleConfirmRemove}
-                                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase tracking-wider cursor-pointer shadow-md"
-                            >
-                                Remove Account
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* TRANSFER OWNERSHIP CONFIRMATION MODAL */}
-            {transferModal.open && (
-                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl border border-slate-100">
-                        <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 mb-4">
-                            <AlertTriangle size={24} />
-                        </div>
-
-                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">Confirm Ownership Transfer</h3>
-                        <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-                            Are you sure you want to transfer Main Account privileges to <b>{transferModal.targetUser?.first_name} {transferModal.targetUser?.last_name}</b>?
-                        </p>
-
-                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/80 my-4 text-[11px] text-slate-600 space-y-1">
-                            <p>• Your account will become a <b>Co-Admin</b>.</p>
-                            <p>• You will no longer manage member invites or transfer ownership.</p>
-                        </div>
-
-                        <div className="flex justify-end gap-2 pt-2">
-                            <button
-                                onClick={() => setTransferModal({ open: false, targetUser: null })}
-                                className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleConfirmTransfer}
-                                className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black uppercase tracking-wider cursor-pointer shadow-md"
-                            >
-                                Transfer Ownership
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+      {/* Global Message Banner */}
+      {message.text && (
+        <div className={`mb-6 p-4 rounded-xl border flex items-center gap-3 ${
+          message.type === 'error' ? 'bg-red-50 border-red-100 text-red-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'
+        }`}>
+          <AlertCircle size={18} />
+          <p className="text-xs font-bold uppercase tracking-widest">{message.text}</p>
         </div>
-    );
-};
+      )}
 
-export default OrgSettings;
+      <div className="flex flex-col lg:flex-row gap-8">
+
+        {/* Navigation Sidebar */}
+        <aside className="w-full lg:w-64 shrink-0">
+          <nav className="space-y-2">
+            <TabButton
+              active={activeTab === 'security'}
+              onClick={() => setActiveTab('security')}
+              icon={<Lock size={18} />}
+              label="Security & Password"
+            />
+            {isMainAccount && (
+              <TabButton
+                active={activeTab === 'user-management'}
+                onClick={() => setActiveTab('user-management')}
+                icon={<Users size={18} />}
+                label="User Management"
+              />
+            )}
+          </nav>
+        </aside>
+
+        {/* Content Area */}
+        <main className="flex-1 bg-white p-8 rounded-3xl shadow-sm border border-black/5">
+
+          {/* ─── SECURITY TAB ──────────────────────────────────────────────── */}
+          {activeTab === 'security' && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-lg">
+              <div>
+                <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-2">Update Password</h2>
+                <p className="text-xs text-slate-500 font-medium">Ensure your account uses a strong, secure password.</p>
+              </div>
+
+              <form onSubmit={handleChangePassword} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Current Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPasswords ? 'text' : 'password'}
+                      required
+                      value={passwordForm.currentPassword}
+                      onChange={e => setPasswordForm({...passwordForm, currentPassword: e.target.value})}
+                      className="w-full px-4 py-3 pr-11 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-[#093fb4] transition-all"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">New Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPasswords ? 'text' : 'password'}
+                      required
+                      value={passwordForm.newPassword}
+                      onChange={e => setPasswordForm({...passwordForm, newPassword: e.target.value})}
+                      className="w-full px-4 py-3 pr-11 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-[#093fb4] transition-all"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Confirm New Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPasswords ? 'text' : 'password'}
+                      required
+                      value={passwordForm.confirmPassword}
+                      onChange={e => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
+                      className="w-full px-4 py-3 pr-11 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-[#093fb4] transition-all"
+                    />
+                    {/* Single toggle covers all three fields */}
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswords(!showPasswords)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#093fb4]"
+                      title={showPasswords ? 'Hide passwords' : 'Show passwords'}
+                    >
+                      {showPasswords ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-4 mt-4 bg-slate-900 hover:bg-black disabled:opacity-50 text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all"
+                >
+                  {loading ? 'Saving...' : 'Update Password'}
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* ─── USER MANAGEMENT TAB ─────────────────────────────────────────
+              Merges the old "Co-Admin Access" + "Transfer Ownership" tabs.
+              Create form only takes Full Name + Email (co-admins inherit the
+              org's current password on creation). Each row gets Block,
+              Delete, and Transfer Ownership actions. */}
+          {activeTab === 'user-management' && isMainAccount && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div>
+                <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-2">Manage Users</h2>
+                <p className="text-xs text-slate-500 font-medium">Create co-admin accounts and manage their access.</p>
+              </div>
+
+              {/* Add Co-Admin Form */}
+              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                <h3 className="text-[10px] font-black text-[#093fb4] uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <UserPlus size={14} /> Add New Sub-Admin
+                </h3>
+                <form onSubmit={handleAddCoAdmin} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Username</label>
+                    <input
+                      type="text"
+                      required
+                      value={addForm.fullName}
+                      onChange={e => setAddForm({...addForm, fullName: e.target.value})}
+                      className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-[#093fb4] transition-all"
+                      placeholder="e.g. John Doe"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Email Address</label>
+                    <input
+                      type="email"
+                      required
+                      value={addForm.email}
+                      onChange={e => setAddForm({...addForm, email: e.target.value})}
+                      className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-[#093fb4] transition-all"
+                      placeholder="admin@example.com"
+                    />
+                  </div>
+                  <div className="md:col-span-2 flex justify-end mt-2">
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="px-6 py-3 bg-[#093fb4] hover:bg-blue-800 disabled:opacity-50 text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all"
+                    >
+                      {loading ? 'Adding...' : 'Create Co-Admin'}
+                    </button>
+                  </div>
+                </form>
+                <p className="text-[10px] text-slate-400 font-semibold mt-3">
+                  New co-admins log in with the organization's current password. They'll be prompted to change it on first login.
+                </p>
+              </div>
+
+              {/* Co-Admin List */}
+              <div>
+                <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Active Sub-Admins ({coAdmins.length})</h3>
+                <div className="space-y-3">
+                  {coAdmins.length === 0 ? (
+                    <p className="text-xs font-medium text-slate-400 py-4">No co-admins configured for this organization.</p>
+                  ) : (
+                    coAdmins.map(admin => (
+                      <div key={admin.id} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 shadow-sm group hover:border-[#093fb4] transition-colors">
+                        <div className="flex items-center gap-4">
+                          <div className={`p-2.5 rounded-xl shrink-0 ${admin.is_active ? 'bg-blue-50 text-[#093fb4]' : 'bg-slate-100 text-slate-400'}`}>
+                            <Shield size={20} />
+                          </div>
+                          <div>
+                            <h4 className="font-black text-slate-900 text-sm flex items-center gap-2">
+                              {admin.first_name} {admin.middle_name} {admin.last_name}
+                              {!admin.is_active && (
+                                <span className="text-[9px] font-black uppercase tracking-widest text-red-500 bg-red-50 px-2 py-0.5 rounded-full">Blocked</span>
+                              )}
+                            </h4>
+                            <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-tight">{admin.sub_email}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleTransferOwnership(admin)}
+                            disabled={loading && transferTargetId === admin.id}
+                            className="p-2 text-slate-400 hover:text-[#093fb4] hover:bg-blue-50 rounded-xl transition-colors disabled:opacity-50"
+                            title="Transfer Ownership"
+                          >
+                            <ArrowRightLeft size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleToggleBlock(admin)}
+                            className={`p-2 rounded-xl transition-colors ${admin.is_active ? 'text-slate-400 hover:text-amber-600 hover:bg-amber-50' : 'text-amber-600 hover:bg-amber-50'}`}
+                            title={admin.is_active ? 'Block Co-Admin' : 'Unblock Co-Admin'}
+                          >
+                            {admin.is_active ? <ShieldOff size={18} /> : <ShieldCheck size={18} />}
+                          </button>
+                          <button
+                            onClick={() => handleRemoveCoAdmin(admin.id)}
+                            className="p-2 text-slate-400 hover:text-[#FF1E1E] hover:bg-red-50 rounded-xl transition-colors"
+                            title="Remove Co-Admin"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+// Reusable Tab Button Component
+function TabButton({ active, onClick, icon, label }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
+        active
+          ? 'bg-[#093fb4] text-white shadow-md'
+          : 'bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+      }`}
+    >
+      {icon} {label}
+    </button>
+  );
+}

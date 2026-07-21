@@ -22,12 +22,14 @@ router.patch('/programs/:programId/visibility', verifyToken, orgController.toggl
 router.get('/dashboard-stats', verifyToken, orgController.getDashboardStats);
 router.get('/conflicts', verifyToken, orgController.monitorApplications);
 
-// Password change
-router.patch('/change-password', verifyToken, orgController.changePassword);
+// Password change now lives at POST /user-management/change-password
+// (see userOrgRoutes.js) — single source of truth, targets the same
+// sub_admins table with the same cascade-to-co-admins behavior.
 
 // Co-admin management
 router.get('/co-admins', verifyToken, orgController.getCoAdmins);
 router.post('/co-admins', verifyToken, orgController.addCoAdmin);
 router.delete('/co-admins/:coAdminId', verifyToken, orgController.removeCoAdmin);
+router.patch('/co-admins/:coAdminId/block', verifyToken, orgController.blockCoAdmin);
 
 module.exports = router;
