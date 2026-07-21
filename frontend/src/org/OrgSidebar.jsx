@@ -13,6 +13,8 @@ export default function OrgSidebar() {
   const fileInputRef = useRef(null);
   
   const orgId = localStorage.getItem('orgId');
+  const orgInfo = JSON.parse(localStorage.getItem('orgInfo') || '{}');
+  const isCoAdmin = orgInfo.accountType === 'co_admin';
 
   useEffect(() => {
     const fetchOrgProfile = async () => {
@@ -34,11 +36,11 @@ export default function OrgSidebar() {
     { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/OrgDashboard' },
     { name: 'Manage Programs', icon: <LucideScroll size={20} />, path: '/ProgramView' },
     { name: 'Applicants', icon: <Form size={20} />, path: '/OrgApplicantPrograms' }, 
-    { name: 'Settings', icon: <Mails size={20} />, path: '/OrgSettings' },
+    { name: 'Settings', icon: <Mails size={20} />, path: '/OrgSettings', mainOnly: true },
     { name: 'Profile', icon: <User size={20} />, path: '/OrgProfile' }, 
     { name: ' Audit Log', icon: <Archive size={20} />, path: '/OrgLogs' },
 
-  ];
+  ].filter(item => !item.mainOnly || !isCoAdmin);
 
   return ( 
     <div className={`h-screen bg-[#FFFCFB] flex flex-col border-r-2 border-black/10 shadow-2xl relative z-40 transition-all duration-300 ${isExpanded ? 'w-64' : 'w-20'}`}>

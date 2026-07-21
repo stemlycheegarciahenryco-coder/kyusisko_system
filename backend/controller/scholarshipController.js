@@ -1,5 +1,21 @@
 const pool = require('../config/db');
 
+// ─────────────────────────────────────────────────────────────────────────
+// Same fix as orgController.js: co-admin rows have their OWN id, not the
+// org's. Every scholarship operation is scoped by sub_admin_id, so it must
+// resolve through this instead of trusting req.user.id directly — otherwise
+// a co-admin's programs silently end up owned by their own row (never
+// visible under the org), and updates/deletes just match zero rows.
+async function resolveOrgId(requesterId) {
+    const r = await pool.query(
+        'SELECT account_type, parent_org_id FROM sub_admins WHERE id = $1',
+        [requesterId]
+    );
+    if (r.rows.length === 0) return null;
+    const { account_type, parent_org_id } = r.rows[0];
+    return account_type === 'co_admin' ? parent_org_id : requesterId;
+}
+
 // 💡 BULLETPROOF FIX: RegEx String Parser to catch and strip "GMT+0800" strings 
 const formatToLocalDateString = (inputDate) => {
   if (!inputDate) return null;
@@ -40,12 +56,17 @@ const formatToLocalDateString = (inputDate) => {
 // POST /api/scholarships
 const createScholarship = async (req, res) => {
   const { title, description, deadline, slots, gwa, fund_type, requirements, amount_range, criteria } = req.body;
-  const sub_admin_id = req.user.id;
-  
+
   const attachmentPaths = req.files ? req.files.map(f => f.path) : [];
   const client = await pool.connect();
 
   try {
+    const sub_admin_id = await resolveOrgId(req.user.id);
+    if (!sub_admin_id) {
+      client.release();
+      return res.status(404).json({ success: false, message: "Org not found." });
+    }
+
     await client.query('BEGIN');
 
     // 💡 FIX: Intercept deadline field and immunize it before parsing parameters
@@ -95,6 +116,9 @@ const createScholarship = async (req, res) => {
 // GET /api/scholarships
 const getScholarships = async (req, res) => {
   try {
+    const orgId = await resolveOrgId(req.user.id);
+    if (!orgId) return res.status(404).json({ success: false, message: "Org not found." });
+
     const result = await pool.query(
       `SELECT 
         s.*, 
@@ -104,7 +128,7 @@ const getScholarships = async (req, res) => {
        LEFT JOIN sub_admins sa ON s.sub_admin_id = sa.id
        WHERE s.sub_admin_id = $1 
        ORDER BY s.created_at DESC`,
-      [req.user.id]
+      [orgId]
     );
 
     res.status(200).json({ success: true, data: result.rows });
@@ -145,11 +169,16 @@ const getScholarshipById = async (req, res) => {
 const updateScholarship = async (req, res) => {
   const { id } = req.params;
   const { title, description, deadline, slots, gwa, fund_type, amount_range, criteria, requirements } = req.body;
-  const sub_admin_id = req.user.id;
-  
+
   const client = await pool.connect();
 
   try {
+    const sub_admin_id = await resolveOrgId(req.user.id);
+    if (!sub_admin_id) {
+      client.release();
+      return res.status(404).json({ success: false, message: "Org not found." });
+    }
+
     await client.query('BEGIN'); 
 
     const cleanDeadline = formatToLocalDateString(deadline);
@@ -205,12 +234,15 @@ const updateScholarshipStatus = async (req, res) => {
     const { status } = req.body;
     const normalizedStatus = status.toLowerCase();
 
+    const orgId = await resolveOrgId(req.user.id);
+    if (!orgId) return res.status(404).json({ success: false, message: "Org not found." });
+
     const result = await pool.query(
       `UPDATE scholarships 
        SET status = $1, updated_at = NOW() 
        WHERE id = $2 AND sub_admin_id = $3 
        RETURNING *`,
-      [normalizedStatus, req.params.id, req.user.id]
+      [normalizedStatus, req.params.id, orgId]
     );
 
     if (result.rows.length === 0) {
@@ -227,7 +259,10 @@ const updateScholarshipStatus = async (req, res) => {
 // DELETE /api/scholarships/:id
 const deleteScholarship = async (req, res) => {
   try {
-    await pool.query(`DELETE FROM scholarships WHERE id = $1 AND sub_admin_id = $2`, [req.params.id, req.user.id]);
+    const orgId = await resolveOrgId(req.user.id);
+    if (!orgId) return res.status(404).json({ success: false, message: "Org not found." });
+
+    await pool.query(`DELETE FROM scholarships WHERE id = $1 AND sub_admin_id = $2`, [req.params.id, orgId]);
     res.status(200).json({ success: true, message: 'Deleted' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

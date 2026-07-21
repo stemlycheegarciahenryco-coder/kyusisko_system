@@ -1,18 +1,36 @@
 const pool = require('../config/db');
 const {supabaseAdmin} = require('../config/supabaseClient');
 
+// ─────────────────────────────────────────────────────────────────────────
+// Resolves the ACTUAL org id for a requester, regardless of whether they're
+// the main account or a co-admin. Co-admin rows have their own id (not the
+// org's), so every self-service endpoint below must go through this instead
+// of trusting req.user.id directly — and NEVER trust a client-supplied :id
+// param for "which org's data", since that has no ownership check at all.
+async function resolveOrgId(requesterId) {
+    const r = await pool.query(
+        'SELECT account_type, parent_org_id FROM sub_admins WHERE id = $1',
+        [requesterId]
+    );
+    if (r.rows.length === 0) return null;
+    const { account_type, parent_org_id } = r.rows[0];
+    return account_type === 'co_admin' ? parent_org_id : requesterId;
+}
+
 // Org Profile Info top
 const getOrgProfile = async (req, res) => {
-    const { id } = req.params;
     try {
+        const orgId = await resolveOrgId(req.user.id);
+        if (!orgId) return res.status(404).json({ message: "Org not found" });
+
         // Removed 'ability_level' from the query
         const result = await pool.query(
             'SELECT org_name, sub_email, region, city, street_address, provider_type, barangay, created_at,tel_number, contact_number, website, org_pic FROM sub_admins WHERE id = $1',
-            [id]
+            [orgId]
         );
-        
+
         if (result.rows.length === 0) return res.status(404).json({ message: "Org not found" });
-        
+
         res.status(200).json({ success: true, data: result.rows[0] });
     } catch (err) {
         // This will print the actual SQL error in your server console
@@ -23,18 +41,20 @@ const getOrgProfile = async (req, res) => {
 
 // 2.Updated the info of profile
 const updateOrgProfile = async (req, res) => {
-    const { id } = req.params;
     // We destruct to remove keys that don't exist in your DB columns
     const { org_pic, previewUrl, ...textData } = req.body; 
 
     try {
+        const orgId = await resolveOrgId(req.user.id);
+        if (!orgId) return res.status(404).json({ error: "Org not found" });
+
         const fields = Object.keys(textData).map((key, i) => `${key} = $${i + 1}`);
         const values = Object.values(textData);
         
         if (fields.length === 0) return res.status(400).json({ error: "No fields to update" });
 
         const sql = `UPDATE sub_admins SET ${fields.join(', ')} WHERE id = $${values.length + 1} RETURNING *`;
-        const result = await pool.query(sql, [...values, id]);
+        const result = await pool.query(sql, [...values, orgId]);
 
         res.status(200).json({ success: true, data: result.rows[0] });
     } catch (err) {
@@ -44,9 +64,10 @@ const updateOrgProfile = async (req, res) => {
 
 // 3. Update  Profile Picture Only
 const updateProfilePicture = async (req, res) => {
-    const { id } = req.params;
-
     try {
+        const orgId = await resolveOrgId(req.user.id);
+        if (!orgId) return res.status(404).json({ success: false, error: "Organization account not found." });
+
         // 1. Check if a file was uploaded via multer
         if (!req.file) {
             return res.status(400).json({ success: false, error: "No profile image file provided." });
@@ -54,7 +75,7 @@ const updateProfilePicture = async (req, res) => {
 
         // 2. Extract file extension and build a unique file path inside the bucket
         const fileExtension = req.file.originalname.split('.').pop();
-        const filePath = `org_pics/org_${id}_${Date.now()}.${fileExtension}`;
+        const filePath = `org_pics/org_${orgId}_${Date.now()}.${fileExtension}`;
 
         // 3. ☁️ Upload file buffer to the 'profile-images' Supabase Storage Bucket
         const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
@@ -90,7 +111,7 @@ const updateProfilePicture = async (req, res) => {
             WHERE id = $2 
             RETURNING org_pic;
         `;
-        const result = await pool.query(updateQuery, [imageUrl, id]);
+        const result = await pool.query(updateQuery, [imageUrl, orgId]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, error: "Organization account not found." });
@@ -113,7 +134,8 @@ const updateProfilePicture = async (req, res) => {
 //it is connected in Dashboard
 const getOrgApplications = async (req, res) => {
     try {
-        const subAdminId = req.user.id;
+        const subAdminId = await resolveOrgId(req.user.id);
+        if (!subAdminId) return res.status(404).json({ success: false, message: "Org not found." });
 
         const result = await pool.query(
             `SELECT 
@@ -145,7 +167,9 @@ const getOrgApplications = async (req, res) => {
 //this is for org profile programs
 const getOrgProfilePrograms = async (req, res) => {
     try {
-        const { id } = req.params;
+        const orgId = await resolveOrgId(req.user.id);
+        if (!orgId) return res.status(404).json({ success: false, message: "Org not found." });
+
         const result = await pool.query(
             `SELECT 
                 s.id, 
@@ -164,7 +188,7 @@ const getOrgProfilePrograms = async (req, res) => {
                AND s.show_on_profile = true  -- <--- Only fetch programs explicitly set to true
              GROUP BY s.id
              ORDER BY s.created_at DESC`,
-            [id]
+            [orgId]
         );
         res.status(200).json({ success: true, data: result.rows });
     } catch (err) {
@@ -176,10 +200,12 @@ const getOrgProfilePrograms = async (req, res) => {
 
 const toggleProfileProgramVisibility = async (req, res) => {
     const { programId } = req.params;
-    const orgId = req.user.id;
     const { show_on_profile } = req.body; // true or false
 
     try {
+        const orgId = await resolveOrgId(req.user.id);
+        if (!orgId) return res.status(404).json({ success: false, message: "Org not found." });
+
         const result = await pool.query(
             `UPDATE scholarships
              SET show_on_profile = $1
@@ -206,7 +232,9 @@ const toggleProfileProgramVisibility = async (req, res) => {
 //applicants sidebar conencted wirj org applicantsProg and Dashboard
 const getOrgPrograms = async (req, res) => {
     try {
-        const { id } = req.params;
+        const orgId = await resolveOrgId(req.user.id);
+        if (!orgId) return res.status(404).json({ success: false, message: "Org not found." });
+
         const result = await pool.query(
             `SELECT 
                 s.id, 
@@ -234,7 +262,7 @@ const getOrgPrograms = async (req, res) => {
                AND COALESCE(s.taken_down, false) = false
              GROUP BY s.id
              ORDER BY s.created_at DESC`,
-            [id]
+            [orgId]
         );
         res.status(200).json({ success: true, data: result.rows });
     } catch (err) {
@@ -245,14 +273,16 @@ const getOrgPrograms = async (req, res) => {
 
 //addpRogram
 const addProgram = async (req, res) => {
-    const { id } = req.params;
     const { title, description, deadline, slots, status } = req.body;
     try {
+        const orgId = await resolveOrgId(req.user.id);
+        if (!orgId) return res.status(404).json({ success: false, message: "Org not found." });
+
         const result = await pool.query(
             `INSERT INTO scholarships (sub_admin_id, title, description, deadline, slots, status)
              VALUES ($1, $2, $3, $4, $5, $6)
              RETURNING id, title, description, deadline, slots, status`,
-            [id, title, description || '', deadline || null, slots || 0, status || 'Active']
+            [orgId, title, description || '', deadline || null, slots || 0, status || 'Active']
         );
         res.status(201).json({ success: true, data: result.rows[0] });
     } catch (err) {
@@ -266,7 +296,8 @@ const addProgram = async (req, res) => {
 //dashboard stats 
 const getDashboardStats = async (req, res) => {
     try {
-        const subAdminId = req.user.id;
+        const subAdminId = await resolveOrgId(req.user.id);
+        if (!subAdminId) return res.status(404).json({ success: false, message: "Org not found." });
 
         const statsQuery = `
             SELECT 
@@ -316,7 +347,8 @@ const getDashboardStats = async (req, res) => {
 //monitor the applicaiton conflict
 const monitorApplications = async (req, res) => {
     try {
-        const subAdminId = parseInt(req.user.id);
+        const subAdminId = await resolveOrgId(req.user.id);
+        if (!subAdminId) return res.status(404).json({ success: false, message: "Org not found." });
 
         // This revised query surfaces cross-applications regardless of their current status string
         const conflictsQuery = `
