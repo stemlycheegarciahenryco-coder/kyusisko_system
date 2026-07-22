@@ -419,7 +419,7 @@ const addCoAdmin = async (req, res) => {
     try {
         // Only main org accounts can add co-admins
         const orgCheck = await pool.query(
-            'SELECT account_type, org_name, sub_password FROM sub_admins WHERE id = $1',
+            'SELECT account_type, org_name FROM sub_admins WHERE id = $1',
             [orgId]
         );
         if (orgCheck.rows.length === 0) {
@@ -429,7 +429,7 @@ const addCoAdmin = async (req, res) => {
             return res.status(403).json({ error: "Co-admins cannot add other co-admins." });
         }
 
-        const { org_name, sub_password } = orgCheck.rows[0];
+        const { org_name } = orgCheck.rows[0];
 
         // Check email isn't already used anywhere in the system
         const emailCheck = await pool.query(
@@ -445,8 +445,14 @@ const addCoAdmin = async (req, res) => {
             return res.status(400).json({ error: "This email is already registered in the system." });
         }
 
-        // Co-admin inherits the org's current hashed password
-        // (they use the same password the main org is currently using)
+        // Each co-admin gets their OWN independently-generated temporary
+        // password now — no more sharing the org's password. They're forced
+        // to change it on first login (is_password_changed = FALSE below).
+        const bcrypt = require('bcryptjs');
+        const crypto = require('crypto');
+        const tempPassword = crypto.randomBytes(6).toString('hex') + 'A1!'; // e.g. "3f9a2b1c9dE4A1!"
+        const hashedTempPassword = await bcrypt.hash(tempPassword, 10);
+
         await pool.query(
             `INSERT INTO sub_admins (
                 org_name, first_name, middle_name, last_name,
@@ -460,13 +466,13 @@ const addCoAdmin = async (req, res) => {
                 middleName || null,
                 lastName,
                 email,
-                sub_password,       // inherits current hashed password
+                hashedTempPassword,
                 JSON.stringify({}),
                 orgId
             ]
         );
 
-        // Send invite email to the co-admin
+        // Send invite email to the co-admin with their own temporary password
         const transporter = require('../config/mailer_resend');
         const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/rootlogin`;
 
@@ -481,13 +487,13 @@ const addCoAdmin = async (req, res) => {
                 <p style="font-size:14px; font-weight:500; line-height:1.6; color:#64748b;">
                   Hello <strong>${firstName} ${lastName}</strong>,<br/><br/>
                   You have been added as a Co-Admin for <strong>${org_name}</strong> on the KyusISKO Scholarship Portal.
-                  You can log in using your email and the organization's current password.
+                  A temporary password has been generated for your account below — you'll be asked to set your own password the first time you log in.
                 </p>
                 <div style="background:#EEF2FF; border:1px solid #c7d2fe; border-radius:16px; padding:20px; margin:24px 0;">
                 
                   <p style="font-size:9px; font-weight:900; text-transform:uppercase; letter-spacing:0.1em; color:#3730a3; margin:0 0 10px 0;">Your Login Details:</p>
                   <p style="margin:0 0 8px 0; font-size:13px; font-weight:600; color:#1e293b;">Email: <strong style="color:#093fb4;">${email}</strong></p>
-                  <p style="margin:0; font-size:13px; font-weight:600; color:#1e293b;">Password: <strong style="color:#093fb4;">Same as the organization's current password</strong></p>
+                  <p style="margin:0; font-size:13px; font-weight:600; color:#1e293b;">Temporary Password: <strong style="color:#093fb4;">${tempPassword}</strong></p>
                 </div>
                 <div style="text-align:center; margin-bottom:24px;">
                   <a href="${loginUrl}" style="display:inline-block; background:#093fb4; color:#fff; text-decoration:none; padding:14px 32px; border-radius:12px; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:0.15em;">
@@ -512,6 +518,12 @@ const addCoAdmin = async (req, res) => {
 const getCoAdmins = async (req, res) => {
     const orgId = req.user.id;
     try {
+        const accCheck = await pool.query('SELECT account_type FROM sub_admins WHERE id = $1', [orgId]);
+        if (accCheck.rows.length === 0) return res.status(404).json({ error: "Account not found." });
+        if (accCheck.rows[0].account_type !== 'main') {
+            return res.status(403).json({ error: "Co-admins cannot view user management." });
+        }
+
         const result = await pool.query(
             `SELECT id, first_name, middle_name, last_name, sub_email, is_active, created_at
              FROM sub_admins
@@ -530,6 +542,12 @@ const removeCoAdmin = async (req, res) => {
     const orgId = req.user.id;
     const { coAdminId } = req.params;
     try {
+        const accCheck = await pool.query('SELECT account_type FROM sub_admins WHERE id = $1', [orgId]);
+        if (accCheck.rows.length === 0) return res.status(404).json({ error: "Account not found." });
+        if (accCheck.rows[0].account_type !== 'main') {
+            return res.status(403).json({ error: "Co-admins cannot remove other co-admins." });
+        }
+
         // Verify the co-admin actually belongs to this org
         const check = await pool.query(
             'SELECT id FROM sub_admins WHERE id = $1 AND parent_org_id = $2 AND account_type = $3',
@@ -552,6 +570,12 @@ const blockCoAdmin = async (req, res) => {
     const orgId = req.user.id;
     const { coAdminId } = req.params;
     try {
+        const accCheck = await pool.query('SELECT account_type FROM sub_admins WHERE id = $1', [orgId]);
+        if (accCheck.rows.length === 0) return res.status(404).json({ error: "Account not found." });
+        if (accCheck.rows[0].account_type !== 'main') {
+            return res.status(403).json({ error: "Co-admins cannot block other co-admins." });
+        }
+
         const check = await pool.query(
             'SELECT id, is_active FROM sub_admins WHERE id = $1 AND parent_org_id = $2 AND account_type = $3',
             [coAdminId, orgId, 'co_admin']

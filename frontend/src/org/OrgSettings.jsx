@@ -88,7 +88,7 @@ export default function OrgSettings() {
     setLoading(true);
     setMessage({ type: '', text: '' });
     try {
-      await api.post('/user-org/change-password', {
+      await api.post('/user-management/change-password', {
         currentPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword
       });
@@ -108,7 +108,7 @@ export default function OrgSettings() {
     setLoading(true);
     setMessage({ type: '', text: '' });
     try {
-      await api.post('/user-org/transfer-ownership', {
+      await api.post('/user-management/transfer-ownership', {
         targetUserId: admin.id
       });
       setMessage({ type: 'success', text: 'Ownership transferred successfully. You are now a co-admin.' });
@@ -238,9 +238,9 @@ export default function OrgSettings() {
 
           {/* ─── USER MANAGEMENT TAB ─────────────────────────────────────────
               Merges the old "Co-Admin Access" + "Transfer Ownership" tabs.
-              Create form only takes Full Name + Email (co-admins inherit the
-              org's current password on creation). Each row gets Block,
-              Delete, and Transfer Ownership actions. */}
+              Create form only takes Full Name + Email — a unique temporary
+              password is generated server-side and emailed to the co-admin.
+              Each row gets Block, Delete, and Transfer Ownership actions. */}
           {activeTab === 'user-management' && isMainAccount && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div>
@@ -287,7 +287,7 @@ export default function OrgSettings() {
                   </div>
                 </form>
                 <p className="text-[10px] text-slate-400 font-semibold mt-3">
-                  New co-admins log in with the organization's current password. They'll be prompted to change it on first login.
+                  A temporary password is generated and emailed to them. They'll be prompted to set their own password on first login.
                 </p>
               </div>
 

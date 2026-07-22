@@ -1,4 +1,4 @@
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const pool = require('../config/db');
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -136,9 +136,10 @@ const transferOwnership = async (req, res) => {
     }
 };
 
-// 3. Change Password — SINGLE SOURCE OF TRUTH (MAIN account ONLY).
-// Cascades the new password to every co-admin under this org, same as the
-// previous orgController implementation, but fixed to target sub_admins.
+// 3. Change Password — MAIN account ONLY. Only updates the main account's
+// own password now — co-admins each have their own independently-generated
+// password (set at invite time, see orgController.addCoAdmin) and are not
+// affected by the main account changing theirs.
 const changePassword = async (req, res) => {
     try {
         const requesterId = req.user.id;
@@ -160,9 +161,7 @@ const changePassword = async (req, res) => {
         }
         const account = accRes.rows[0];
 
-        if (account.account_type !== 'main') {
-            return res.status(403).json({ success: false, message: "Co-admins are restricted from changing account security credentials." });
-        }
+        
 
         const isMatch = await bcrypt.compare(currentPassword, account.sub_password);
         if (!isMatch) {
@@ -174,19 +173,12 @@ const changePassword = async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-        // Update the main account and mark it as changed
         await pool.query(
             `UPDATE sub_admins SET sub_password = $1, is_password_changed = TRUE WHERE id = $2`,
             [hashedPassword, requesterId]
         );
 
-        // Cascade to all co-admins under this org so everyone shares the current password
-        await pool.query(
-            `UPDATE sub_admins SET sub_password = $1, is_password_changed = TRUE WHERE parent_org_id = $2`,
-            [hashedPassword, requesterId]
-        );
-
-        res.status(200).json({ success: true, message: "Password updated successfully across all organization accounts." });
+        res.status(200).json({ success: true, message: "Password updated successfully." });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
