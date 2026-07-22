@@ -21,14 +21,21 @@ export default function OrgSettings() {
   const [showPasswords, setShowPasswords] = useState(false);
 
   useEffect(() => {
-    const orgInfo = JSON.parse(localStorage.getItem('orgInfo') || '{}');
-    const isMain = !orgInfo.is_co_admin;
-    setIsMainAccount(isMain);
+  const orgInfo = JSON.parse(localStorage.getItem('orgInfo') || '{}');
+  
+  // ✅ FIX: Properly detect if the logged-in user is the main account
+  const isMain = orgInfo.accountType !== 'co_admin' && !orgInfo.is_co_admin;
+  setIsMainAccount(isMain);
 
-    if (isMain && activeTab === 'user-management') {
-      fetchCoAdmins();
-    }
-  }, [activeTab]);
+  // If a co-admin is somehow on 'user-management', kick them back to 'security'
+  if (!isMain && activeTab === 'user-management') {
+    setActiveTab('security');
+  }
+
+  if (isMain && activeTab === 'user-management') {
+    fetchCoAdmins();
+  }
+}, [activeTab]);
 
   const fetchCoAdmins = async () => {
     try {
