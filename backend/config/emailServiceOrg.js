@@ -45,7 +45,7 @@ const sendApprovalEmail = async (email, orgName) => {
 
 // 3. REJECTION WITH COMPLIANCE LINK & STEP-BY-STEP FLOW
 const sendRejectionEmail = async (email, orgName, reason, orgId) => {
-  const complianceLink = `http://localhost:5173/compliance/${orgId}`;
+  const complianceLink = `${CLIENT_URL}/compliance/${orgId}`;
 
   const mailOptions = {
     from: `"KyusISKO Portal" <${process.env.RESEND_FROM_EMAIL}>`,
@@ -95,7 +95,7 @@ const sendRejectionEmail = async (email, orgName, reason, orgId) => {
 };
 // 4. REQUEST SPECIFIC REQUIREMENTS (NEW)
 const sendRequirementsEmail = async (email, orgName, requirementsArray, orgId) => {
-  const complianceLink = `http://localhost:5173/compliance/${orgId}`;
+  const complianceLink = `${CLIENT_URL}/compliance/${orgId}`;
 
   // FIX: Dynamically construct safe HTML list components from string arrays
   const formattedListItems = Array.isArray(requirementsArray)
@@ -153,7 +153,7 @@ const sendRequirementsEmail = async (email, orgName, requirementsArray, orgId) =
 // generated password the org needs to log in. Kept separate from
 // sendApprovalEmail so the original approval notice is untouched.
 const sendApprovalCredentialsEmail = async (email, orgName, providerCode, password) => {
-  const loginLink = `http://localhost:5173/rootlogin`;
+const loginLink = `${CLIENT_URL}/rootlogin`;
 
   const mailOptions = {
     from: `"KyusISKO Portal" <${process.env.RESEND_FROM_EMAIL}>`,

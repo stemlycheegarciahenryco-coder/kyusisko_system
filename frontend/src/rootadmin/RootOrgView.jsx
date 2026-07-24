@@ -184,7 +184,7 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
           <div className="flex items-center gap-4">
             {org.org_pic ? (
               <img
-                src={`http://localhost:5000/${org.org_pic}`}
+                src={org.org_pic}
                 alt={`${org.org_name} logo`}
                 className="w-12 h-12 rounded-2xl object-cover border border-white/20 shrink-0"
               />
