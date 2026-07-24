@@ -1,5 +1,9 @@
 const transporter = require('./mailer_resend'); 
 
+
+
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+
 // 1. OTP VERIFICATION
 const sendOrgOTPEmail = async (email, otp) => {
   const mailOptions = {
@@ -147,6 +151,8 @@ const sendRequirementsEmail = async (email, orgName, requirementsArray, orgId) =
 
   await transporter.sendMail(mailOptions);
 };
+
+
 
 // 5. APPROVAL CREDENTIALS (NEW)
 // Sent automatically right after approval — delivers the Provider ID and

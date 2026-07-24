@@ -10,7 +10,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // and ONLY to the email address you signed up to Resend with — fine for
 // testing, NOT usable for real students. Verify a domain in the Resend
 // dashboard, then change this to something like 'noreply@yourdomain.com'.
-const DEFAULT_FROM = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+const DEFAULT_FROM = process.env.RESEND_FROM_EMAIL;
 
 // Wrapper object that mimics nodemailer's transporter.sendMail() shape, so
 // every existing call site (RegStudentRoutes.js, emailServiceOrg.js, etc.)

@@ -22,6 +22,11 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (status === 403) {
+      console.warn(
+        `[403 Forbidden] Access denied for endpoint: ${requestUrl}. Check if your account role has permission.`
+      );
+    }
     if (error.response && error.response.status === 401) {
       // ✅ FIXED: Checks for 'login' anywhere in the URL string safely (catches portal-login)
       const isLoginRequest = error.config.url.includes('login');
