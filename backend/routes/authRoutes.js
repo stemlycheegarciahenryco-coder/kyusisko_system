@@ -32,7 +32,7 @@ router.post('/auth/logout', authCtrl.logout);
 
 router.put('/students/update-2fa', stdCtrl.update2FA);
 router.get('/students', stdCtrl.getAllStudents);
-
+router.put('/students/change-password', verifyToken, isStudent, stdCtrl.changePassword);
 router.patch('/students/:id/status', stdCtrl.updateStudentStatus);
 
 // Student Profiles and Applications Workspace

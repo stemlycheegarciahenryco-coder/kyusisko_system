@@ -506,3 +506,45 @@ exports.saveOrUpdateParentProfile = async (req, res) => {
         return res.status(500).json({ success: false, error: "Internal server error saving family details." });
     }
 };
+
+
+// Change Password for Student
+exports.changePassword = async (req, res) => {
+    const { studentId, currentPassword, newPassword } = req.body;
+
+    try {
+        // 1. Fetch the student's current password hash from the database
+        const result = await pool.query(
+            'SELECT student_password_hash FROM students WHERE id = $1',
+            [studentId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Student not found." });
+        }
+
+        const student = result.rows[0];
+
+        // 2. Verify the provided current password matches the one in the database
+        const isMatch = await bcrypt.compare(currentPassword, student.student_password_hash);
+        
+        if (!isMatch) {
+            return res.status(400).json({ error: "Incorrect current password." });
+        }
+
+        // 3. Hash the new password
+        // Using a salt round of 10, which matches your resetPassword logic in authController
+        const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+        // 4. Update the password in the database
+        await pool.query(
+            'UPDATE students SET student_password_hash = $1 WHERE id = $2',
+            [hashedNewPassword, studentId]
+        );
+
+        res.json({ success: true, message: "Password updated successfully!" });
+    } catch (err) {
+        console.error("Change Password Error:", err.message);
+        res.status(500).json({ error: "Failed to update password. Please try again later." });
+    }
+};
