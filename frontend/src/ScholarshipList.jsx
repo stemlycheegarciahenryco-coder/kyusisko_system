@@ -45,6 +45,28 @@ export default function ScholarshipList() {
 
   useEffect(() => { fetchScholarships(); }, []);
 
+  // Builds a short, human-readable reason explaining why a scholarship was
+  // recommended — combines the explainable rule-based criteria with a
+  // softer note when semantic similarity contributed meaningfully.
+  const getMatchReason = (s) => {
+    const reasons = [];
+    if (s.matched_criteria?.length > 0) {
+      reasons.push(`matches your ${s.matched_criteria.join(', ').toLowerCase()} profile`);
+    }
+    if (s.ai_matched_criteria?.length > 0 && s.semantic_score >= 55) {
+      reasons.push(`appears to satisfy "${s.ai_matched_criteria[0]}" based on your profile`);
+    }
+    if (s.semantic_score !== null && s.semantic_score !== undefined && s.semantic_score >= 65) {
+      reasons.push(
+        s.matched_criteria?.length > 0
+          ? 'and aligns with your course and interests'
+          : 'aligns closely with your course, bio, and interests'
+      );
+    }
+    if (reasons.length === 0) return null;
+    return `Recommended because it ${reasons.join(' ')}.`;
+  };
+
   const handleSaveToggle = async (id, currentStatus) => {
     try {
       if (currentStatus) {
@@ -146,11 +168,22 @@ export default function ScholarshipList() {
     return (
       <div className="space-y-5">
         {scholarships.map((s) => {
-          const criteriaList = s.criteria
-            ? (typeof s.criteria === 'string'
-                ? s.criteria.split(',').map(c => c.trim())
-                : s.criteria)
+          const rawCriteria = s.criteria
+            ? (typeof s.criteria === 'string' ? JSON.parse(s.criteria || '[]') : s.criteria)
             : [];
+
+          // Normalize every criterion shape into a plain display label so
+          // React never tries to render an object directly, and so the
+          // "matched" check lines up with what the backend returns in
+          // matched_criteria / ai_matched_criteria.
+          const criteriaList = rawCriteria.map(c => {
+            if (typeof c === 'object' && c !== null) {
+              if (c.type === 'custom') return { label: c.label, isAi: true };
+              if (c.type && c.value) return { label: `${c.type}: ${c.value}`, isAi: false };
+              return null;
+            }
+            return { label: c, isAi: false };
+          }).filter(Boolean);
 
           return (
             <div
@@ -212,7 +245,9 @@ export default function ScholarshipList() {
                   {criteriaList.length > 0 && (
                     <div className="flex flex-wrap justify-center gap-1.5">
                       {criteriaList.slice(0, 4).map((tag, idx) => {
-                        const isMatched = s.matched_criteria?.includes(tag);
+                        const isMatched = tag.isAi
+                          ? s.ai_matched_criteria?.includes(tag.label) && s.semantic_score >= 55
+                          : s.matched_criteria?.includes(tag.label);
                         return (
                           <span
                             key={idx}
@@ -222,11 +257,18 @@ export default function ScholarshipList() {
                                 : 'bg-slate-50 border-slate-100 text-slate-400'
                             }`}
                           >
-                            <CheckCircle2 size={14} strokeWidth={3} className="shrink-0" /> {tag}
+                            <CheckCircle2 size={14} strokeWidth={3} className="shrink-0" />
+                            {tag.label}
+                            {tag.isAi && <span className="text-purple-400 normal-case font-semibold ml-0.5">(AI)</span>}
                           </span>
                         );
                       })}
                     </div>
+                  )}
+                  {getMatchReason(s) && (
+                    <p className="text-[13px] text-slate-500 font-semibold text-center max-w-md -mt-1">
+                      {getMatchReason(s)}
+                    </p>
                   )}
                   {/* Match score pill */}
                   {s.match_score !== null && (
@@ -237,7 +279,9 @@ export default function ScholarshipList() {
                         ? 'bg-amber-50 text-amber-600'
                         : 'bg-slate-100 text-slate-500'
                     }`}>
-                      {s.is_open_to_all ? 'Open to All' : `${s.match_score}% Profile Match`}
+                      {s.is_open_to_all && s.match_score < 55
+                        ? 'Open to All'
+                        : `${s.match_score}% Profile Match`}
                     </span>
                   )}
                 </div>

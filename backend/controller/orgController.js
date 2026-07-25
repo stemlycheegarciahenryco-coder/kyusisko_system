@@ -251,7 +251,7 @@ const getOrgPrograms = async (req, res) => {
                             'sfirst_name', COALESCE(st.sfirst_name, ''),
                             'slast_name', COALESCE(st.slast_name, ''),
                             'sprofile_pic', COALESCE(st.sprofile_pic, ''),
-                            'application_status', COALESCE(a.status, '')
+                            'status', COALESCE(a.status, '')
                         )
                     ) FILTER (WHERE st.id IS NOT NULL), '[]'
                 ) AS applicants

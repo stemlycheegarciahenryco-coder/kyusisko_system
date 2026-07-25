@@ -5,7 +5,7 @@ import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 
 import api from '../api';
-import ScholarshipRequirements from './ScholarshipRequirements';
+import ScholarshipRequirements from '../component/ScholarshipRequirements';
 import OrgCriteria from '../org/OrgCriteria';
 
 const CreateScholarship = () => {

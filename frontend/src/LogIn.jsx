@@ -43,7 +43,9 @@ export default function LogIn() {
       });
       
       const { token, role, data } = response.data; 
-
+      if (token) {
+        localStorage.setItem('token', token);
+      }
       if (role === 'root_admin' || role === 'co_admin') {
         localStorage.setItem('systemUid', data.uid);
         localStorage.setItem('adminEmail', data.email);

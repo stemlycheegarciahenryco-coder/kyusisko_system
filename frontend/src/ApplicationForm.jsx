@@ -19,12 +19,12 @@ const getCriteriaIcon = (label = '') => {
 function SectionHeader({ icon: Icon, title, subtitle }) {
   return (
     <div className="flex items-start gap-4 mb-6">
-      <div className="w-11 h-11 rounded-2xl bg-blue-50 text-[#093fb4] flex items-center justify-center shrink-0">
-        <Icon size={20} />
+      <div className="rounded-2xl bg-blue-50 text-[#093fb4] flex items-center justify-center shrink-0" style={{ width: '3.25rem', height: '3.25rem' }}>
+        <Icon size={26} />
       </div>
       <div>
-        <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight">{title}</h2>
-        {subtitle && <p className="text-sm text-slate-500 font-medium mt-0.5">{subtitle}</p>}
+        <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">{title}</h2>
+        {subtitle && <p className="text-[15px] text-slate-600 font-semibold mt-0.5">{subtitle}</p>}
       </div>
     </div>
   );
@@ -147,11 +147,11 @@ export default function ApplicationForm() {
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-500 hover:text-[#093fb4] transition-colors"
+            className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-600 hover:text-[#093fb4] transition-colors"
           >
-            <ArrowLeft size={16} /> Back
+            <ArrowLeft size={18} /> Back
           </button>
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">KyusISKO Application</span>
+          <span className="text-xs font-black uppercase tracking-widest text-slate-600">KyusISKO Application</span>
         </div>
       </nav>
 
@@ -171,15 +171,16 @@ export default function ApplicationForm() {
           )}
 
           <div className="px-10 py-10 flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-8 pr-24">
-            <div className="w-24 h-24 rounded-3xl overflow-hidden bg-white shrink-0 border-2 border-white/40 flex items-center justify-center shadow-2xl p-2">
-              {scholarship?.org_pic ? (
-                <img src={scholarship.org_pic} alt={scholarship.org_name} className="w-full h-full object-contain" />
-              ) : (
-                <span className="text-[#093fb4] font-black text-3xl">
-                  {scholarship?.org_name?.substring(0, 2).toUpperCase() || '??'}
-                </span>
-              )}
-            </div>
+            {/* 🚀 FIXED LOGO CONTAINER */}
+<div className="w-32 h-32 md:w-36 md:h-36 rounded-3xl overflow-hidden bg-white shrink-0 border-2 border-white/40 flex items-center justify-center shadow-2xl">
+  {scholarship?.org_pic ? (
+    <img src={scholarship.org_pic} alt={scholarship.org_name} className="w-full h-full object-cover object-center" />
+  ) : (
+    <span className="text-[#093fb4] font-black text-4xl">
+      {scholarship?.org_name?.substring(0, 2).toUpperCase() || '??'}
+    </span>
+  )}
+</div>
 
             <div className="flex-1 min-w-0">
               <p className="text-white/85 text-[11px] font-black uppercase tracking-[0.2em] mb-2">
@@ -198,7 +199,7 @@ export default function ApplicationForm() {
                   Amount: {scholarship?.amount_range || 'Vary'}
                 </div>
                 <div className="inline-flex items-center gap-2 bg-white/10 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full backdrop-blur-md">
-                  Type: {scholarship?.fund_type || 'General'}
+                  Cover Type: {scholarship?.fund_type || 'General'}
                 </div>
               </div>
             </div>
@@ -248,9 +249,9 @@ export default function ApplicationForm() {
                 {criteria.map((c, i) => {
                   const Icon = getCriteriaIcon(c);
                   return (
-                    <div key={i} className="flex items-center gap-2.5 px-4 py-2.5 bg-blue-50/40 border border-blue-100 rounded-xl">
-                      <Icon size={16} className="text-[#093fb4] shrink-0" />
-                      <span className="text-sm font-bold text-slate-700">{c}</span>
+                    <div key={i} className="flex items-center gap-3 px-4 py-3 bg-blue-50/40 border border-blue-100 rounded-xl">
+                      <Icon size={20} className="text-[#093fb4] shrink-0" />
+                      <span className="text-[15px] font-bold text-slate-800">{c}</span>
                     </div>
                   );
                 })}
@@ -268,7 +269,7 @@ export default function ApplicationForm() {
               />
               <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 flex items-start gap-4">
                 <Quote size={22} className="text-[#093fb4]/30 shrink-0 -scale-x-100 mt-0.5" />
-                <p className="text-sm text-slate-600 leading-[1.8] font-medium italic break-words flex-1">
+                <p className="text-[15px] text-slate-700 leading-[1.8] font-medium italic break-words flex-1">
                   {scholarship.description}
                 </p>
                 <Quote size={22} className="text-[#093fb4]/30 shrink-0 self-end" />
@@ -291,7 +292,7 @@ export default function ApplicationForm() {
                       <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-[#093fb4] shrink-0">
                         <FileText size={20} />
                       </div>
-                      <span className="text-[13px] font-black text-slate-700 truncate max-w-[200px] uppercase">
+                      <span className="text-sm font-black text-slate-800 truncate max-w-[200px] uppercase">
                         {file.split('-').slice(1).join('-')}
                       </span>
                     </div>
@@ -299,17 +300,17 @@ export default function ApplicationForm() {
                       <button
                         type="button"
                         onClick={() => setPreviewFile(`http://localhost:5000/${file}`)}
-                        className="p-2.5 text-slate-400 hover:text-[#093fb4] hover:bg-[#093fb4]/5 rounded-xl transition-all"
+                        className="p-2.5 text-slate-500 hover:text-[#093fb4] hover:bg-[#093fb4]/5 rounded-xl transition-all"
                         title="Preview"
                       >
-                        <Eye size={18} />
+                        <Eye size={20} />
                       </button>
                       <a 
                         href={`http://localhost:5000/${file}`} 
                         download 
-                        className="p-2.5 text-slate-400 hover:text-[#FF1E1E] hover:bg-[#FF1E1E]/5 rounded-xl transition-all"
+                        className="p-2.5 text-slate-500 hover:text-[#FF1E1E] hover:bg-[#FF1E1E]/5 rounded-xl transition-all"
                       >
-                        <Download size={18} />
+                        <Download size={20} />
                       </a>
                     </div>
                   </div>
@@ -332,10 +333,10 @@ export default function ApplicationForm() {
               {fields.map((field, idx) => (
                 <div key={field.id} className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <span className="w-8 h-8 rounded-lg bg-[#093fb4] text-white text-xs font-black flex items-center justify-center shrink-0">
+                    <span className="w-9 h-9 rounded-lg bg-[#093fb4] text-white text-sm font-black flex items-center justify-center shrink-0">
                       {String(idx + 1).padStart(2, '0')}
                     </span>
-                    <label className="text-sm font-black text-slate-900 uppercase tracking-wide">
+                    <label className="text-base font-black text-slate-900 uppercase tracking-wide">
                       {field.field_label}
                       {field.is_required && <span className="text-[#FF1E1E] ml-1">*</span>}
                     </label>
@@ -351,31 +352,33 @@ export default function ApplicationForm() {
                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
                           required={field.is_required}
                         />
-                        <div className={`border-2 border-dashed rounded-2xl py-10 flex flex-col items-center justify-center text-center gap-2 transition-all ${
-                          formData[field.id] ? 'border-[#093fb4] bg-blue-50/50' : 'border-slate-200 bg-slate-50 group-hover:border-[#093fb4]/30'
+                        <div className={`border-2 border-dashed rounded-2xl py-5 px-4 flex flex-row items-center justify-center text-center gap-4 transition-all ${
+                          formData[field.id] ? 'border-[#093fb4] bg-blue-50/50' : 'border-slate-300 bg-slate-50 group-hover:border-[#093fb4]/40'
                         }`}>
-                          <UploadCloud size={32} className={formData[field.id] ? 'text-[#093fb4]' : 'text-slate-400'} />
-                          {formData[field.id] ? (
-                            <span className="text-sm font-black text-[#093fb4] truncate max-w-[80%]">{formData[field.id].name}</span>
-                          ) : (
-                            <>
-                              <span className="text-sm font-black text-slate-900">Drag & drop your file here</span>
-                              <span className="text-xs text-slate-400 font-semibold">or click to browse</span>
-                            </>
-                          )}
-                          <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-tight mt-1">
-                            Accepted formats: PDF, DOCX &nbsp;•&nbsp; Max file size: 10MB
-                          </span>
+                          <UploadCloud size={34} className={formData[field.id] ? 'text-[#093fb4]' : 'text-slate-500'} />
+                          <div className="flex flex-col items-start text-left">
+                            {formData[field.id] ? (
+                              <span className="text-base font-black text-[#093fb4] truncate max-w-[280px]">{formData[field.id].name}</span>
+                            ) : (
+                              <>
+                                <span className="text-base font-black text-slate-900">Drag & drop your file here</span>
+                                <span className="text-sm text-slate-600 font-semibold">or click to browse</span>
+                              </>
+                            )}
+                            <span className="text-xs text-slate-500 font-bold uppercase tracking-tight mt-1">
+                              Accepted formats: PDF, DOCX &nbsp;•&nbsp; Max file size: 10MB
+                            </span>
+                          </div>
                         </div>
                       </div>
                       {errors[field.id] && (
-                        <p className="text-[10px] text-[#FF1E1E] font-bold uppercase flex items-center gap-1">
-                          <AlertCircle size={12} /> {errors[field.id]}
+                        <p className="text-xs text-[#FF1E1E] font-bold uppercase flex items-center gap-1.5">
+                          <AlertCircle size={14} /> {errors[field.id]}
                         </p>
                       )}
-                      <div className="flex items-center gap-2.5 bg-blue-50/60 border border-blue-100 rounded-xl px-4 py-3">
-                        <Info size={16} className="text-[#093fb4] shrink-0" />
-                        <p className="text-xs text-slate-600 font-semibold">
+                      <div className="flex items-center gap-3 bg-blue-50/60 border border-blue-100 rounded-xl px-4 py-3">
+                        <Info size={18} className="text-[#093fb4] shrink-0" />
+                        <p className="text-sm text-slate-700 font-semibold">
                           Please upload a clear and complete copy of your official {field.field_label.toLowerCase()}.
                         </p>
                       </div>
@@ -385,7 +388,7 @@ export default function ApplicationForm() {
                       type="text"
                       onChange={(e) => handleInputChange(field.id, e.target.value, field.field_type)}
                       placeholder={`Enter ${field.field_label.toLowerCase()} details`}
-                      className="w-full bg-slate-50 border-2 border-slate-200/60 rounded-2xl px-5 py-4 text-sm font-bold text-slate-700 placeholder:text-slate-400 outline-none focus:bg-white focus:border-[#093fb4] transition-all shadow-sm"
+                      className="w-full bg-slate-50 border-2 border-slate-300 rounded-2xl px-5 py-4 text-base font-bold text-slate-800 placeholder:text-slate-500 outline-none focus:bg-white focus:border-[#093fb4] transition-all shadow-sm"
                       required={field.is_required}
                     />
                   )}
@@ -397,9 +400,9 @@ export default function ApplicationForm() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-[#093fb4] hover:bg-[#FF1E1E] text-white font-black py-5 rounded-2xl flex items-center justify-center gap-3 uppercase text-[11px] tracking-[0.2em] transition-all active:scale-[0.98] shadow-lg shadow-blue-900/10"
+                className="w-full bg-[#093fb4] hover:bg-[#FF1E1E] text-white font-black py-5 rounded-2xl flex items-center justify-center gap-3 uppercase text-sm tracking-[0.15em] transition-all active:scale-[0.98] shadow-lg shadow-blue-900/10"
               >
-                {submitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                {submitting ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
                 {submitting ? 'Processing Application...' : 'Submit Complete Application'}
               </button>
             </div>
@@ -407,12 +410,12 @@ export default function ApplicationForm() {
 
           {/* 5. Trust / Security Banner */}
           <div className="bg-blue-50/60 border border-blue-100 rounded-3xl px-8 py-6 flex items-center gap-5">
-            <div className="w-14 h-14 rounded-2xl bg-[#093fb4] text-white flex items-center justify-center shrink-0 shadow-lg shadow-blue-900/20">
-              <ShieldCheck size={26} />
+            <div className="w-16 h-16 rounded-2xl bg-[#093fb4] text-white flex items-center justify-center shrink-0 shadow-lg shadow-blue-900/20">
+              <ShieldCheck size={30} />
             </div>
             <div>
-              <h3 className="text-base font-black text-slate-900">Your Information is Safe</h3>
-              <p className="text-sm text-slate-500 font-medium mt-0.5">
+              <h3 className="text-lg font-black text-slate-900">Your Information is Safe</h3>
+              <p className="text-[15px] text-slate-600 font-medium mt-0.5">
                 All documents and information you provide are secure and will only be used for this application.
               </p>
             </div>
@@ -458,7 +461,7 @@ function SuccessModal({ isOpen, onConfirm }) {
           <Send size={32} className="text-white" />
         </div>
         <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter mb-3">Great Success!</h2>
-        <p className="text-[13px] text-slate-500 mb-8 leading-relaxed font-medium">
+        <p className="text-sm text-slate-600 mb-8 leading-relaxed font-medium">
           Your application has been shot through the pipes to the organization.
         </p>
         <button onClick={onConfirm} className="w-full py-5 bg-[#093fb4] hover:bg-[#FF1E1E] text-white rounded-3xl font-black uppercase tracking-[0.2em] text-[11px] transition-all shadow-lg">
@@ -478,7 +481,7 @@ function ErrorModal({ isOpen, onClose, message }) {
           <AlertCircle size={32} className="text-white" />
         </div>
         <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter mb-3">Wait a minute...</h2>
-        <p className="text-[13px] text-slate-500 mb-8 leading-relaxed font-medium">{message}</p>
+        <p className="text-sm text-slate-600 mb-8 leading-relaxed font-medium">{message}</p>
         <button onClick={onClose} className="w-full py-5 bg-slate-900 hover:bg-slate-700 text-white rounded-3xl font-black uppercase tracking-[0.2em] text-[11px] transition-all shadow-lg">
           Try Again
         </button>

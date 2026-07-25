@@ -31,7 +31,7 @@ const applicationWorker = new Worker('applicationSubmissionQueue', async (job) =
 
     // Insert new parent application record cleanly
     const application = await client.query(
-      `INSERT INTO applications (scholarship_id, student_id, application_status) 
+      `INSERT INTO applications (scholarship_id, student_id, status) 
        VALUES ($1, $2, 'pending') RETURNING *`, 
       [id, student_id]
     );
