@@ -5,6 +5,13 @@ const transporter = require ('../config/mailer_resend');
 const bcrypt = require('bcrypt');
 const path = require('path');
 
+
+const { 
+    otpSendLimiter, 
+    otpVerifyLimiter, 
+    registrationLimiter 
+} = require('../middleware/rateLimiter');
+
 // 1. IMPORT YOUR CENTRALIZED MIDDLEWARE
 //const upload = require('../middleware/multerConfig'); 
 
@@ -16,7 +23,7 @@ const path = require('path');
     { name: 'goodMoral', maxCount: 1 }
 ]);*/
 
-router.post('/register', async (req, res) => {
+router.post('/register',registrationLimiter, async (req, res) => {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
@@ -165,7 +172,7 @@ router.post('/verify-doc/:id', async (req, res) => {
 });*/
 
 
-router.post('/send-registration-otp', async (req, res) => {
+router.post('/send-registration-otp',otpSendLimiter, async (req, res) => {
     const { email } = req.body;
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 2 * 60 * 1000); // 10 mins
@@ -230,7 +237,7 @@ router.post('/send-registration-otp', async (req, res) => {
 
 // 2. Verify OTP for NEW registration
 // Change 'code' to 'otp' in the destructuring
-router.post('/verify-registration-otp', async (req, res) => {
+router.post('/verify-registration-otp',otpVerifyLimiter, async (req, res) => {
     const { email, otp } = req.body; 
     
     try {
