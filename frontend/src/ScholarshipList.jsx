@@ -45,27 +45,10 @@ export default function ScholarshipList() {
 
   useEffect(() => { fetchScholarships(); }, []);
 
-  // Builds a short, human-readable reason explaining why a scholarship was
-  // recommended — combines the explainable rule-based criteria with a
-  // softer note when semantic similarity contributed meaningfully.
-  const getMatchReason = (s) => {
-    const reasons = [];
-    if (s.matched_criteria?.length > 0) {
-      reasons.push(`matches your ${s.matched_criteria.join(', ').toLowerCase()} profile`);
-    }
-    if (s.ai_matched_criteria?.length > 0 && s.semantic_score >= 55) {
-      reasons.push(`appears to satisfy "${s.ai_matched_criteria[0]}" based on your profile`);
-    }
-    if (s.semantic_score !== null && s.semantic_score !== undefined && s.semantic_score >= 65) {
-      reasons.push(
-        s.matched_criteria?.length > 0
-          ? 'and aligns with your course and interests'
-          : 'aligns closely with your course, bio, and interests'
-      );
-    }
-    if (reasons.length === 0) return null;
-    return `Recommended because it ${reasons.join(' ')}.`;
-  };
+  // The "why recommended" text now comes directly from the backend's AI
+  // judgment (ai_summary), generated once per student+scholarship pair and
+  // cached — no need to reconstruct a reason client-side anymore.
+  const getMatchReason = (s) => s.ai_summary || null;
 
   const handleSaveToggle = async (id, currentStatus) => {
     try {
@@ -168,22 +151,15 @@ export default function ScholarshipList() {
     return (
       <div className="space-y-5">
         {scholarships.map((s) => {
-          const rawCriteria = s.criteria
-            ? (typeof s.criteria === 'string' ? JSON.parse(s.criteria || '[]') : s.criteria)
-            : [];
-
-          // Normalize every criterion shape into a plain display label so
-          // React never tries to render an object directly, and so the
-          // "matched" check lines up with what the backend returns in
-          // matched_criteria / ai_matched_criteria.
-          const criteriaList = rawCriteria.map(c => {
-            if (typeof c === 'object' && c !== null) {
-              if (c.type === 'custom') return { label: c.label, isAi: true };
-              if (c.type && c.value) return { label: `${c.type}: ${c.value}`, isAi: false };
-              return null;
-            }
-            return { label: c, isAi: false };
-          }).filter(Boolean);
+          // criteria_results comes straight from the AI's judgment —
+          // each entry already has { criterion, matches, reason }, no
+          // need to re-parse the raw criteria array or guess matches
+          // client-side anymore.
+          const criteriaList = (s.criteria_results || []).map(c => ({
+            label: c.criterion,
+            matched: !!c.matches,
+            reason: c.reason,
+          }));
 
           return (
             <div
@@ -244,25 +220,20 @@ export default function ScholarshipList() {
                   </h3>
                   {criteriaList.length > 0 && (
                     <div className="flex flex-wrap justify-center gap-1.5">
-                      {criteriaList.slice(0, 4).map((tag, idx) => {
-                        const isMatched = tag.isAi
-                          ? s.ai_matched_criteria?.includes(tag.label) && s.semantic_score >= 55
-                          : s.matched_criteria?.includes(tag.label);
-                        return (
-                          <span
-                            key={idx}
-                            className={`flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-black uppercase border ${
-                              isMatched
-                                ? 'bg-green-50 border-green-100 text-green-700'
-                                : 'bg-slate-50 border-slate-100 text-slate-400'
-                            }`}
-                          >
-                            <CheckCircle2 size={14} strokeWidth={3} className="shrink-0" />
-                            {tag.label}
-                            {tag.isAi && <span className="text-purple-400 normal-case font-semibold ml-0.5">(AI)</span>}
-                          </span>
-                        );
-                      })}
+                      {criteriaList.slice(0, 4).map((tag, idx) => (
+                        <span
+                          key={idx}
+                          title={tag.reason || undefined}
+                          className={`flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-black uppercase border cursor-help ${
+                            tag.matched
+                              ? 'bg-green-50 border-green-100 text-green-700'
+                              : 'bg-slate-50 border-slate-100 text-slate-400'
+                          }`}
+                        >
+                          <CheckCircle2 size={14} strokeWidth={3} className="shrink-0" />
+                          {tag.label}
+                        </span>
+                      ))}
                     </div>
                   )}
                   {getMatchReason(s) && (

@@ -14,6 +14,9 @@ const CreateScholarship = () => {
   const [criteria, setCriteria] = useState([]);
   const [attachments, setAttachments] = useState([]); 
   
+  // --- NEW: Toggle State for GWA ---
+  const [hasGwa, setHasGwa] = useState(false);
+
   const [validationModal, setValidationModal] = useState({
     open: false,
     title: '',
@@ -46,6 +49,13 @@ const CreateScholarship = () => {
   const labelStyle = "block text-[11px] font-black text-slate-700 uppercase tracking-wider mb-1.5";
 
   const sanitize = (value) => value.replace(/[<>&"']/g, '');
+
+  // Prevent entering negative signs, e/E (scientific notation), and plus signs
+  const preventInvalidNumberKeys = (e) => {
+    if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
+      e.preventDefault();
+    }
+  };
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
@@ -96,7 +106,8 @@ const CreateScholarship = () => {
     data.append('description', formData.description);
     data.append('deadline', formattedDeadline);
     data.append('slots', formData.slots || '');
-    data.append('gwa', formData.gwa || '');
+    // Send GWA only if toggle is turned ON
+    data.append('gwa', hasGwa ? (formData.gwa || '') : '');
     data.append('amount_range', formData.amount_range || '');
     data.append('fund_type', formData.fund_type);
     data.append('requirements', JSON.stringify(finalRequirements));
@@ -199,7 +210,20 @@ const CreateScholarship = () => {
                   <label className={labelStyle}>Slots</label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400"><span className="text-xs font-bold font-sans">#</span></div>
-                    <input type="number" min="0" placeholder="e.g., 50" className={inputStyle} onChange={(e) => setFormData({ ...formData, slots: e.target.value })} />
+                    <input 
+                      type="number" 
+                      min="0" 
+                      placeholder="e.g., 50" 
+                      className={inputStyle} 
+                      value={formData.slots}
+                      onKeyDown={preventInvalidNumberKeys}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '' || Number(val) >= 0) {
+                          setFormData({ ...formData, slots: val });
+                        }
+                      }} 
+                    />
                   </div>
                 </div>
                 <div>
@@ -227,12 +251,56 @@ const CreateScholarship = () => {
                     <input type="text" placeholder="e.g., 5,000 - 10,000" className={inputStyle} value={formData.amount_range} onChange={(e) => setFormData({...formData, amount_range: e.target.value.replace(/[^0-9\s-]/g, '')})} />
                   </div>
                 </div>
+
+                {/* --- TOGGLEABLE GWA SECTION --- */}
                 <div>
-                  <label className={labelStyle}>GWA <span className="text-[10px] font-medium text-slate-400 lowercase">(Optional)</span></label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400"><GraduationCap size={16} /></div>
-                    <input type="number" step="0.01" placeholder="e.g., 2.50 or higher" className={inputStyle} onChange={(e) => setFormData({...formData, gwa: e.target.value})} />
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className={labelStyle}>Set GWA</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextState = !hasGwa;
+                        setHasGwa(nextState);
+                        if (!nextState) {
+                          setFormData(prev => ({ ...prev, gwa: '' }));
+                        }
+                      }}
+                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        hasGwa ? 'bg-[#093fb4]' : 'bg-slate-300'
+                      }`}
+                    >
+                      <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                        hasGwa ? 'translate-x-4' : 'translate-x-0'
+                      }`} />
+                    </button>
                   </div>
+
+                  {hasGwa ? (
+                    <div className="relative animate-in fade-in duration-150">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <GraduationCap size={16} />
+                      </div>
+                      <input 
+                        type="number" 
+                        step="0.01" 
+                        min="0"
+                        placeholder="e.g., 2.50" 
+                        className={inputStyle} 
+                        value={formData.gwa}
+                        onKeyDown={preventInvalidNumberKeys}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || Number(val) >= 0) {
+                            setFormData({ ...formData, gwa: val });
+                          }
+                        }} 
+                      />
+                    </div>
+                  ) : (
+                    <div className="py-3 px-3 bg-slate-50 border border-slate-200 rounded-xl text-center">
+                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Disabled</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
