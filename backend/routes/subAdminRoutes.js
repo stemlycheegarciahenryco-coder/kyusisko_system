@@ -8,7 +8,11 @@ const {createClient} = require('@supabase/supabase-js');
 const { verifyToken } = require('../middleware/auth');
 const {supabaseAdmin} = require('../config/supabaseClient');
 const { sendApprovalEmail, sendRejectionEmail, sendOrgOTPEmail, sendRequirementsEmail, sendApprovalCredentialsEmail } = require('../config/emailServiceOrg');
-
+const { 
+    otpSendLimiter, 
+    otpVerifyLimiter, 
+    registrationLimiter 
+} = require('../middleware/rateLimiter');
 /**
  * GET all organizations
  * Protected: Root Admin uses this to see who needs validation
@@ -34,7 +38,7 @@ router.get('/list', verifyToken, async (req, res) => {
  * POST /register-organization
  * PUBLIC: Self-registration flow
  */
-router.post('/register-organization', async (req, res) => {
+router.post('/register-organization', registrationLimiter, async (req, res) => {
   const { 
     org_name, first_name, middle_name, last_name, 
     sub_email, sub_password, contact_number, tel_number,
@@ -417,8 +421,8 @@ router.post('/comply/:id', upload.any(), async (req, res) => {
 
 
 
-// Request Registration OTP
-router.post('/request-otp', async (req, res) => {
+// Request Registration OTP  PROVIDER SIDE
+router.post('/request-otp',otpSendLimiter, async (req, res) => {
     const { email } = req.body;
     try {
         // FIX: Previously only checked `sub_admins`. Now also checks `students`
@@ -463,8 +467,8 @@ router.post('/request-otp', async (req, res) => {
     }
 });
 
-// Verify Registration OTP
-router.post('/verify-otp', async (req, res) => {
+// Verify Registration OTP  PROVIDER SIDE
+router.post('/verify-otp', otpVerifyLimiter, async (req, res) => {
     const { email, otp } = req.body;
     try {
         const result = await pool.query(
