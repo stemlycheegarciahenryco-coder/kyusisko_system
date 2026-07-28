@@ -12,7 +12,7 @@ redisClient.connect().catch(console.error);
 // ----------------------------------------------------
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, 
-    max: process.env.NODE_ENV === 'development' ? 2000 : 5, 
+    max: process.env.NODE_ENV === 'development' ? 2000 : 500, 
     store: new RedisStore({ sendCommand: (...args) => redisClient.sendCommand(args) }),
     message: { error: "Too many login attempts. Please try again later." },
     standardHeaders: true,
