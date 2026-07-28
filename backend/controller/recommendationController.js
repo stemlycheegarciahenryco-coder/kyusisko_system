@@ -1,43 +1,63 @@
 const pool = require('../config/db');
 const { getAIMatch, buildStudentProfileForAI } = require('../utils/engineMatcher');
 
+// 🔴 ADD THIS: Import your redis client (adjust path as needed for your setup)
+const redisClient = require('../config/queueConnection'); 
+
 const BEST_MATCH_THRESHOLD = 60; // % and above = "Top Match"
 const GOOD_MATCH_THRESHOLD = 30; // % and above = "Good Match"
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CACHE LAYER
-// A match is recomputed only if it's missing, or older than the student's
-// profile OR the scholarship's last update. Otherwise the cached row is
-// used as-is — no AI call, no delay, no quota usage on normal browsing.
+// CACHE LAYER (Upgraded with Redis)
 // ─────────────────────────────────────────────────────────────────────────────
 async function getOrComputeMatch(studentId, scholarship, studentProfileForAI, profileUpdatedAt) {
+  const redisKey = `match:${studentId}:${scholarship.id}`;
+  const scholarshipUpdatedAt = scholarship.updated_at ? new Date(scholarship.updated_at) : new Date(0);
+  const profileUpdated = profileUpdatedAt ? new Date(profileUpdatedAt) : new Date(0);
+
+  // 1. ⚡ FASTEST: Check Redis In-Memory Cache First
+  try {
+    const cachedRedis = await redisClient.get(redisKey);
+    if (cachedRedis) {
+      const parsed = JSON.parse(cachedRedis);
+      const computedAt = new Date(parsed.computed_at);
+      
+      // Ensure Redis cache isn't stale
+      if (computedAt >= scholarshipUpdatedAt && computedAt >= profileUpdated) {
+        return parsed; // Return immediately, zero DB calls!
+      }
+    }
+  } catch (err) {
+    console.error("Redis Cache Error:", err.message);
+  }
+
+  // 2. 🗄️ FALLBACK: Check PostgreSQL if Redis missed or expired
   const cached = await pool.query(
     `SELECT * FROM match_scores WHERE student_id = $1 AND scholarship_id = $2`,
     [studentId, scholarship.id]
   );
-
-  const scholarshipUpdatedAt = scholarship.updated_at ? new Date(scholarship.updated_at) : new Date(0);
-  const profileUpdated = profileUpdatedAt ? new Date(profileUpdatedAt) : new Date(0);
 
   if (cached.rows.length > 0) {
     const row = cached.rows[0];
     const computedAt = new Date(row.computed_at);
     const isFresh = computedAt >= scholarshipUpdatedAt && computedAt >= profileUpdated;
     if (isFresh) {
-      return {
+      const result = {
         match_score: row.match_score,
         criteria_results: row.criteria_results,
         ai_summary: row.ai_summary,
+        computed_at: row.computed_at
       };
+      // Quietly save it back to Redis for next time (expires in 24 hrs)
+      try { await redisClient.setEx(redisKey, 86400, JSON.stringify(result)); } catch (e) {}
+      return result;
     }
   }
 
-  // Missing or stale — call the AI matcher
+  // 3. 🤖 MISSING OR STALE: Call the AI matcher
   const result = await getAIMatch(studentProfileForAI, scholarship);
 
   if (!result) {
-    // AI call failed — fall back to the stale cached value if one exists,
-    // rather than showing nothing at all
     if (cached.rows.length > 0) {
       const row = cached.rows[0];
       return { match_score: row.match_score, criteria_results: row.criteria_results, ai_summary: row.ai_summary };
@@ -45,6 +65,9 @@ async function getOrComputeMatch(studentId, scholarship, studentProfileForAI, pr
     return { match_score: 0, criteria_results: [], ai_summary: null };
   }
 
+  // 4. 💾 SAVE: Store in both PostgreSQL and Redis
+  const computedNow = new Date().toISOString();
+  
   await pool.query(
     `INSERT INTO match_scores (student_id, scholarship_id, match_score, criteria_results, ai_summary, computed_at)
      VALUES ($1, $2, $3, $4, $5, NOW())
@@ -53,7 +76,16 @@ async function getOrComputeMatch(studentId, scholarship, studentProfileForAI, pr
     [studentId, scholarship.id, result.match_score, JSON.stringify(result.criteria_results), result.ai_summary]
   );
 
-  return result;
+  const finalData = {
+    match_score: result.match_score,
+    criteria_results: result.criteria_results,
+    ai_summary: result.ai_summary,
+    computed_at: computedNow
+  };
+
+  try { await redisClient.setEx(redisKey, 86400, JSON.stringify(finalData)); } catch (e) {}
+
+  return finalData;
 }
 
 // Fetches everything needed to build the AI-facing student profile object
@@ -78,31 +110,36 @@ async function getStudentProfileForAI(studentId) {
   return { aiProfile, updatedAt: row.updated_at };
 }
 
-// Scores a list of scholarships against a student, using cache-first AI matching
+// ─────────────────────────────────────────────────────────────────────────────
+// FAST CONCURRENT SCORING (Upgraded with Promise.all)
+// ─────────────────────────────────────────────────────────────────────────────
 async function scoreScholarshipsForStudent(studentId, scholarships) {
   const profileData = await getStudentProfileForAI(studentId);
   if (!profileData) return scholarships.map(s => ({ ...s, match_score: null, criteria_results: [], ai_summary: null, is_best_match: false }));
 
-  const scored = [];
-  for (const scholarship of scholarships) {
-    const { match_score, criteria_results, ai_summary } = await getOrComputeMatch(
-      studentId, scholarship, profileData.aiProfile, profileData.updatedAt
-    );
-    const matched_criteria = (criteria_results || []).filter(c => c.matches).map(c => c.criterion);
-    const unmatched_criteria = (criteria_results || []).filter(c => !c.matches).map(c => c.criterion);
+  // 🚀 Process all scholarships concurrently instead of sequentially
+  const scored = await Promise.all(
+    scholarships.map(async (scholarship) => {
+      const { match_score, criteria_results, ai_summary } = await getOrComputeMatch(
+        studentId, scholarship, profileData.aiProfile, profileData.updatedAt
+      );
+      
+      const matched_criteria = (criteria_results || []).filter(c => c.matches).map(c => c.criterion);
+      const unmatched_criteria = (criteria_results || []).filter(c => !c.matches).map(c => c.criterion);
 
-    scored.push({
-      ...scholarship,
-      match_score,
-      criteria_results,
-      matched_criteria,
-      unmatched_criteria,
-      ai_summary,
-      is_open_to_all: (criteria_results || []).length === 0,
-      is_best_match: match_score >= BEST_MATCH_THRESHOLD,
-      is_good_match: match_score >= GOOD_MATCH_THRESHOLD && match_score < BEST_MATCH_THRESHOLD,
-    });
-  }
+      return {
+        ...scholarship,
+        match_score,
+        criteria_results,
+        matched_criteria,
+        unmatched_criteria,
+        ai_summary,
+        is_open_to_all: (criteria_results || []).length === 0,
+        is_best_match: match_score >= BEST_MATCH_THRESHOLD,
+        is_good_match: match_score >= GOOD_MATCH_THRESHOLD && match_score < BEST_MATCH_THRESHOLD,
+      };
+    })
+  );
 
   scored.sort((a, b) => (b.match_score || 0) - (a.match_score || 0));
   return scored;
@@ -115,6 +152,7 @@ const getRecommendedScholarships = async (req, res) => {
   const { studentId } = req.params;
 
   try {
+    // 🛡️ Added LIMIT 20 to prevent rate-limit crashes on cold cache
     const scholarshipResult = await pool.query(
       `SELECT sch.*, sa.org_name, sa.org_pic AS donor_photo
        FROM scholarships sch
@@ -124,7 +162,8 @@ const getRecommendedScholarships = async (req, res) => {
        AND sch.taken_down = FALSE
        AND NOT EXISTS (
          SELECT 1 FROM applications a WHERE a.scholarship_id = sch.id AND a.student_id = $1
-       )`,
+       )
+       LIMIT 20`,
       [studentId]
     );
 
@@ -146,6 +185,7 @@ const getAllScholarships = async (req, res) => {
     }
     const studentId = req.user.id;
 
+    // 🛡️ Added LIMIT 20 here as well
     const query = `
       SELECT sch.*, sa.org_name, sa.org_pic, sa.contact_number AS org_contact,
              sa.sub_email AS org_email, sa.city AS org_city,
@@ -157,6 +197,7 @@ const getAllScholarships = async (req, res) => {
       AND sch.deadline::date > CURRENT_DATE
       AND sch.taken_down = FALSE
       AND NOT EXISTS (SELECT 1 FROM applications a WHERE a.scholarship_id = sch.id AND a.student_id = $1)
+      LIMIT 20
     `;
     const result = await pool.query(query, [studentId]);
     const scored = await scoreScholarshipsForStudent(studentId, result.rows);
