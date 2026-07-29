@@ -1,6 +1,8 @@
 const pool = require('../config/db');
 // 🔴 ADDED: Queue Manager for background AI matching
 const { addJob } = require('../queues/queueManager');
+const { supabaseAdmin } = require('../config/supabaseClient');
+
 
 async function resolveOrgId(requesterId) {
     const r = await pool.query(
@@ -47,7 +49,7 @@ const formatToLocalDateString = (inputDate) => {
 const createScholarship = async (req, res) => {
   const { title, description, deadline, slots, gwa, fund_type, requirements, amount_range, criteria } = req.body;
 
-  const attachmentPaths = req.files ? req.files.map(f => f.path) : [];
+  const attachmentPaths = [];
   const client = await pool.connect();
 
   try {
@@ -55,6 +57,29 @@ const createScholarship = async (req, res) => {
     if (!sub_admin_id) {
       client.release();
       return res.status(404).json({ success: false, message: "Org not found." });
+    }
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        const cleanFileName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+        const fileName = `${Date.now()}-${cleanFileName}`;
+
+        const { error: uploadError } = await supabaseAdmin.storage
+          .from('provider-reference-download')
+          .upload(fileName, file.buffer, {
+            contentType: file.mimetype,
+            upsert: false
+          });
+
+        if (uploadError) {
+          throw new Error(`Supabase upload failed: ${uploadError.message}`);
+        }
+
+        const { data: publicUrlData } = supabaseAdmin.storage
+          .from('provider-reference-download')
+          .getPublicUrl(fileName);
+
+        attachmentPaths.push(publicUrlData.publicUrl);
+      }
     }
 
     await client.query('BEGIN');

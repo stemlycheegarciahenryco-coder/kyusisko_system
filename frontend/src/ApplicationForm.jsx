@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from './api';
-import { ArrowLeft, Upload, UploadCloud, Send, Loader2, Mail, Globe, MapPin, Phone, CheckCircle2, AlertCircle, FileText, X, Eye, Download, Bookmark, BookOpen, FilePlus2, Quote, Info, ShieldCheck, Accessibility, Flag, GraduationCap, Wallet, Star, Ban } from 'lucide-react';
+import { 
+  ArrowLeft, UploadCloud, Send, Loader2, Mail, Globe, MapPin, 
+  Phone, CheckCircle2, AlertCircle, FileText, X, Eye, Download, 
+  Bookmark, BookOpen, FilePlus2, ShieldCheck, Accessibility, Flag, 
+  GraduationCap, Wallet, Star, Ban 
+} from 'lucide-react';
 
 const getCriteriaIcon = (label = '') => {
   const l = label.toLowerCase();
@@ -30,6 +35,40 @@ function SectionHeader({ icon: Icon, title, subtitle }) {
   );
 }
 
+// 🛠️ NEW HELPER: Safely parses attachments whether they arrive as JSON, Postgres string arrays, or standard arrays.
+const parseAttachments = (rawAttachments) => {
+  if (!rawAttachments) return [];
+
+  let parsed = rawAttachments;
+
+  if (typeof rawAttachments === 'string') {
+    try {
+      parsed = JSON.parse(rawAttachments);
+    } catch (e) {
+      if (rawAttachments.startsWith('{') && rawAttachments.endsWith('}')) {
+        // Handle PostgreSQL native array format: "{file1.pdf,file2.pdf}"
+        parsed = rawAttachments.slice(1, -1).split(',').map(s => s.replace(/"/g, '').trim());
+      } else {
+        // Handle standard comma-separated string
+        parsed = rawAttachments.split(',').map(s => s.trim());
+      }
+    }
+  }
+
+  if (!Array.isArray(parsed)) {
+    parsed = [parsed];
+  }
+
+  return parsed
+    .map(item => {
+      if (!item) return null;
+      if (typeof item === 'string') return item.trim();
+      if (typeof item === 'object') return item.url || item.path || item.name || null;
+      return null;
+    })
+    .filter(Boolean); // removes any null/empty items
+};
+
 export default function ApplicationForm() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -52,13 +91,13 @@ export default function ApplicationForm() {
         if (res.data && res.data.success) {
           setScholarship(res.data.data.scholarship);
           setFields(res.data.data.fields || []);
-          console.log("Fetched Scholarship Data:", res.data.data.scholarship)
         }
       } catch (err) {
         console.error("Error loading application data:", err);
         setErrorMessage("Failed to load scholarship details.");
         setShowError(true);
-      } finally {
+      }
+      finally {
         setLoading(false);
       }
     };
@@ -157,10 +196,8 @@ export default function ApplicationForm() {
 
       <div className="max-w-4xl mx-auto px-6 py-8 space-y-8">
         
-        {/* ── HERO BANNER ── */}
+        {/* HERO BANNER */}
         <div className="bg-[#093fb4] rounded-3xl overflow-hidden shadow-xl shadow-blue-900/10 relative">
-          
-          {/* Dynamic Provider Type Badge (Top Right Corner Circle) */}
           {scholarship?.provider_type && (
             <div 
               className="absolute top-6 right-6 w-14 h-14 rounded-full bg-white text-[#093fb4] text-[10px] font-black uppercase tracking-wider flex items-center justify-center shadow-lg hover:scale-105 transition-transform"
@@ -171,16 +208,15 @@ export default function ApplicationForm() {
           )}
 
           <div className="px-10 py-10 flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-8 pr-24">
-            {/* 🚀 FIXED LOGO CONTAINER */}
-<div className="w-32 h-32 md:w-36 md:h-36 rounded-3xl overflow-hidden bg-white shrink-0 border-2 border-white/40 flex items-center justify-center shadow-2xl">
-  {scholarship?.org_pic ? (
-    <img src={scholarship.org_pic} alt={scholarship.org_name} className="w-full h-full object-cover object-center" />
-  ) : (
-    <span className="text-[#093fb4] font-black text-4xl">
-      {scholarship?.org_name?.substring(0, 2).toUpperCase() || '??'}
-    </span>
-  )}
-</div>
+            <div className="w-32 h-32 md:w-36 md:h-36 rounded-3xl overflow-hidden bg-white shrink-0 border-2 border-white/40 flex items-center justify-center shadow-2xl">
+              {scholarship?.org_pic ? (
+                <img src={scholarship.org_pic} alt={scholarship.org_name} className="w-full h-full object-cover object-center" />
+              ) : (
+                <span className="text-[#093fb4] font-black text-4xl">
+                  {scholarship?.org_name?.substring(0, 2).toUpperCase() || '??'}
+                </span>
+              )}
+            </div>
 
             <div className="flex-1 min-w-0">
               <p className="text-white/85 text-[11px] font-black uppercase tracking-[0.2em] mb-2">
@@ -205,7 +241,6 @@ export default function ApplicationForm() {
             </div>
           </div>
 
-          {/* Contact Details Footer Section */}
           <div className="bg-white/5 border-t border-white/10 px-10 py-6 grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-3">
             {fullAddress && (
               <div className="flex items-center gap-2.5 text-sm font-medium text-white">
@@ -234,10 +269,10 @@ export default function ApplicationForm() {
           </div>
         </div>
 
-        {/* ── UNIFIED APPLICATION INTERFACE ── */}
+        {/* APPLICATION INTERFACE */}
         <div className="space-y-8">
           
-          {/* 1. Criteria Section */}
+          {/* Criteria */}
           {criteria.length > 0 && (
             <section className="bg-white rounded-3xl border border-black/5 p-8 shadow-sm">
               <SectionHeader
@@ -259,7 +294,7 @@ export default function ApplicationForm() {
             </section>
           )}
 
-          {/* 2. Program Overview Section */}
+          {/* Program Overview */}
           {scholarship?.description && (
             <section className="bg-white rounded-3xl border border-black/5 p-8 shadow-sm">
               <SectionHeader
@@ -268,58 +303,74 @@ export default function ApplicationForm() {
                 subtitle="Learn more about this program."
               />
               <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 flex items-start gap-4">
-                <Quote size={22} className="text-[#093fb4]/30 shrink-0 -scale-x-100 mt-0.5" />
                 <p className="text-[15px] text-slate-700 leading-[1.8] font-medium italic break-words flex-1">
                   {scholarship.description}
                 </p>
-                <Quote size={22} className="text-[#093fb4]/30 shrink-0 self-end" />
               </div>
             </section>
           )}
 
-          {/* 3. Reference Downloads Section */}
-          {scholarship?.attachments && scholarship.attachments.length > 0 && (
-            <section className="bg-white rounded-3xl border border-black/5 p-8 shadow-sm">
-              <SectionHeader
-                icon={FileText}
-                title="Reference Documents"
-                subtitle="Download these files for additional program details."
-              />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {scholarship.attachments.map((file, i) => (
-                  <div key={i} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl group transition-all hover:bg-white hover:border-[#093fb4]/20 hover:shadow-md">
-                    <div className="flex items-center gap-4 min-w-0">
-                      <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-[#093fb4] shrink-0">
-                        <FileText size={20} />
+          {/* Reference Downloads (UPDATED WITH PARSER) */}
+          {(() => {
+            const attachmentsList = parseAttachments(scholarship?.attachments);
+            
+            // If the parser finds NO valid files, don't render the section at all.
+            if (attachmentsList.length === 0) return null;
+
+            return (
+              <section className="bg-white rounded-3xl border border-black/5 p-8 shadow-sm">
+                <SectionHeader
+                  icon={FileText}
+                  title="Reference Documents"
+                  subtitle="Download these files for additional program details."
+                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {attachmentsList.map((file, i) => {
+                    const fileName = file.split('/').pop().split('-').slice(1).join('-') || file.split('/').pop() || 'Document';
+                    
+                    // Generate a safe URL by appending API route if the DB only saved the relative path
+                    const fileUrl = file.startsWith('http') 
+                      ? file 
+                      : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${file.startsWith('/') ? '' : '/'}${file}`;
+
+                    return (
+                      <div key={i} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl group transition-all hover:bg-white hover:border-[#093fb4]/20 hover:shadow-md">
+                        <div className="flex items-center gap-4 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-[#093fb4] shrink-0">
+                            <FileText size={20} />
+                          </div>
+                          <span className="text-sm font-black text-slate-800 truncate max-w-[200px] uppercase">
+                            {fileName}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setPreviewFile(fileUrl)}
+                            className="p-2.5 text-slate-500 hover:text-[#093fb4] hover:bg-[#093fb4]/5 rounded-xl transition-all"
+                            title="Preview"
+                          >
+                            <Eye size={20} />
+                          </button>
+                          <a 
+                            href={fileUrl} 
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download 
+                            className="p-2.5 text-slate-500 hover:text-[#FF1E1E] hover:bg-[#FF1E1E]/5 rounded-xl transition-all"
+                          >
+                            <Download size={20} />
+                          </a>
+                        </div>
                       </div>
-                      <span className="text-sm font-black text-slate-800 truncate max-w-[200px] uppercase">
-                        {file.split('-').slice(1).join('-')}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setPreviewFile(`http://localhost:5000/${file}`)}
-                        className="p-2.5 text-slate-500 hover:text-[#093fb4] hover:bg-[#093fb4]/5 rounded-xl transition-all"
-                        title="Preview"
-                      >
-                        <Eye size={20} />
-                      </button>
-                      <a 
-                        href={`http://localhost:5000/${file}`} 
-                        download 
-                        className="p-2.5 text-slate-500 hover:text-[#FF1E1E] hover:bg-[#FF1E1E]/5 rounded-xl transition-all"
-                      >
-                        <Download size={20} />
-                      </a>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })()}
 
-          {/* 4. Complete Questionnaire Section */}
+          {/* Questionnaire */}
           <form onSubmit={handleSubmit} className="bg-white rounded-3xl border border-black/5 p-8 shadow-sm space-y-8">
             <div className="border-b border-slate-100 pb-6">
               <SectionHeader
@@ -376,12 +427,6 @@ export default function ApplicationForm() {
                           <AlertCircle size={14} /> {errors[field.id]}
                         </p>
                       )}
-                      <div className="flex items-center gap-3 bg-blue-50/60 border border-blue-100 rounded-xl px-4 py-3">
-                        <Info size={18} className="text-[#093fb4] shrink-0" />
-                        <p className="text-sm text-slate-700 font-semibold">
-                          Please upload a clear and complete copy of your official {field.field_label.toLowerCase()}.
-                        </p>
-                      </div>
                     </div>
                   ) : (
                     <input
@@ -408,7 +453,7 @@ export default function ApplicationForm() {
             </div>
           </form>
 
-          {/* 5. Trust / Security Banner */}
+          {/* Security Banner */}
           <div className="bg-blue-50/60 border border-blue-100 rounded-3xl px-8 py-6 flex items-center gap-5">
             <div className="w-16 h-16 rounded-2xl bg-[#093fb4] text-white flex items-center justify-center shrink-0 shadow-lg shadow-blue-900/20">
               <ShieldCheck size={30} />
