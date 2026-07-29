@@ -199,6 +199,7 @@ const getScholarshipApplications = async (req, res) => {
           s.scontact_number,
           s.student_email,
           s.sprofile_pic
+          
 
        FROM applications a
        JOIN students s ON s.id = a.student_id
@@ -215,7 +216,7 @@ const getScholarshipApplications = async (req, res) => {
 };
 
 
-// GET /scholarship/:id/applications/:appId — sub_admin views one application in full (Detailed View)
+// GET /scholarship/:id/applications/:appId — sub_admin views one application in full (Detailed View)  file applicationStudentProifile.jsx
 const getApplicationDetail = async (req, res) => {
   try {
     const { id, appId } = req.params;
@@ -232,14 +233,13 @@ const getApplicationDetail = async (req, res) => {
     const application = await pool.query(
       `SELECT 
           a.id, a.status, a.created_at AS submitted_at, a.scholarship_id,
-          s.sfirst_name, s.slast_name, s.student_email, s.sprofile_pic,
-          s.sgender, s.scontact_number, s.portfolio_data, s.bio,
+          s.sfirst_name, s.slast_name, s.student_email, s.sprofile_pic,s.academic_student_id, s.sbirth_date,s.year_level,s.gwa,
+          s.sgender, s.scontact_number, s.portfolio_data, s.bio, CONCAT_WS(', ', s.sdistrict, s.sbarangay, s.szip_code, s.sstreet) AS full_address,
           clg.name AS school,
           crs.name AS course,
           p.father_name, p.father_contact,
           p.mother_name, p.mother_contact,
-          p.guardian_name, p.guardian_contact,
-          p.house_address
+          p.guardian_name, p.guardian_contact
        FROM applications a
        JOIN students s ON s.id = a.student_id
        LEFT JOIN student_parents p ON p.student_id = s.id

@@ -10,7 +10,7 @@ const queues = {
     emails: new Queue('emailQueue', { connection: queueConnection }),
     files: new Queue('fileProcessingQueue', { connection: queueConnection }),
     // 🔴 ADD THIS: Dedicated AI background processing queue
-    aiMatching: new Queue('aiMatchingQueue', { connection: queueConnection })
+    engineMatching: new Queue('engineMatchingQueue', { connection: queueConnection })
 };
 
 const addJob = async (queueName, jobName, data) => {

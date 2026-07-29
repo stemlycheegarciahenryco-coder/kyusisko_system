@@ -49,7 +49,8 @@ exports.getStudentById = async (req, res) => {
         szip_code,
         academic_student_id,
         academic_student_id AS student_id,
-        year_level
+        year_level,
+        gwa
        FROM students 
        WHERE id = $1 LIMIT 1`, 
       [id]
@@ -121,7 +122,8 @@ exports.updatePortfolio = async (req, res) => {
     other_degree_program, 
     sports_interests,
     academic_student_id,
-    year_level
+    year_level,
+    gwa
   } = req.body;
 
   try {
@@ -135,14 +137,15 @@ exports.updatePortfolio = async (req, res) => {
     const finalCourseId = course_id && course_id !== 'Others' && course_id !== '' ? parseInt(course_id) : null;
     const finalOtherSchool = other_school && other_school.trim() !== '' ? other_school.trim() : null;
     const finalOtherDegree = other_degree_program && other_degree_program.trim() !== '' ? other_degree_program.trim() : null;
-
+    const parsedGwa = gwa && gwa.trim() !== '' ? parseFloat(gwa) : null;
     await pool.query(
       `UPDATE students 
        SET bio = COALESCE($1, bio),
            academic_student_id = $2,
-           year_level = $3
-       WHERE id = $4`,
-      [bio || null, academic_student_id || null, year_level || null, student_id]
+           year_level = $3,
+           gwa = $4
+       WHERE id = $5`,
+      [bio || null, academic_student_id || null, year_level || null, parsedGwa, student_id]
     );
 
     await pool.query(
@@ -283,7 +286,7 @@ exports.getFullProfile = async (req, res) => {
         s.portfolio_data, s.bio,
         s.academic_student_id,
         s.academic_student_id AS student_id,
-        s.year_level,
+        s.year_level,s.gwa,
         c.name AS college_name, p.other_school, 
         cr.name AS course_name, p.other_degree_program,
         p.religion, p.other_religion,

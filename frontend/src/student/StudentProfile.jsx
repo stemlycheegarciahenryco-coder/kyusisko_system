@@ -169,6 +169,10 @@ export default function StudentProfile() {
                 <School size={13} className="text-slate-400" />
                 <span>Year Level: <strong className="text-slate-800">{student.year_level || '—'}</strong></span>
               </div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs font-semibold text-slate-600">
+    <Award size={13} className="text-[#093fb4]" />
+    <span>GWA: <strong className="text-[#093fb4]">{student.gwa ? Number(student.gwa).toFixed(2) : '—'}</strong></span>
+  </div>
             </div>
           </div>
 
