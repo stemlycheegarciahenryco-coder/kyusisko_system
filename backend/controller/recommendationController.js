@@ -8,7 +8,9 @@ const BEST_MATCH_THRESHOLD = 60; // % and above = "Top Match"
 const GOOD_MATCH_THRESHOLD = 30; // % and above = "Good Match"
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CACHE LAYER (Upgraded with Redis)
+// CACHE LAYER (Redis + Postgres, both carry is_fallback/tier_used so the
+// caller always knows whether a score came from real AI judgment or the
+// deterministic Tier 3 fallback, even when served from cache)
 // ─────────────────────────────────────────────────────────────────────────────
 async function getOrComputeMatch(studentId, scholarship, studentProfileForAI, profileUpdatedAt) {
   const redisKey = `match:${studentId}:${scholarship.id}`;
@@ -46,6 +48,8 @@ async function getOrComputeMatch(studentId, scholarship, studentProfileForAI, pr
         match_score: row.match_score,
         criteria_results: row.criteria_results,
         ai_summary: row.ai_summary,
+        is_fallback: row.is_fallback,
+        tier_used: row.tier_used,
         computed_at: row.computed_at
       };
       // Quietly save it back to Redis for next time (expires in 24 hrs)
@@ -60,26 +64,34 @@ async function getOrComputeMatch(studentId, scholarship, studentProfileForAI, pr
   if (!result) {
     if (cached.rows.length > 0) {
       const row = cached.rows[0];
-      return { match_score: row.match_score, criteria_results: row.criteria_results, ai_summary: row.ai_summary };
+      return {
+        match_score: row.match_score,
+        criteria_results: row.criteria_results,
+        ai_summary: row.ai_summary,
+        is_fallback: row.is_fallback,
+        tier_used: row.tier_used,
+      };
     }
-    return { match_score: 0, criteria_results: [], ai_summary: null };
+    return { match_score: 0, criteria_results: [], ai_summary: null, is_fallback: true, tier_used: 'none' };
   }
 
   // 4. 💾 SAVE: Store in both PostgreSQL and Redis
   const computedNow = new Date().toISOString();
   
   await pool.query(
-    `INSERT INTO match_scores (student_id, scholarship_id, match_score, criteria_results, ai_summary, computed_at)
-     VALUES ($1, $2, $3, $4, $5, NOW())
+    `INSERT INTO match_scores (student_id, scholarship_id, match_score, criteria_results, ai_summary, is_fallback, tier_used, computed_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
      ON CONFLICT (student_id, scholarship_id)
-     DO UPDATE SET match_score = $3, criteria_results = $4, ai_summary = $5, computed_at = NOW()`,
-    [studentId, scholarship.id, result.match_score, JSON.stringify(result.criteria_results), result.ai_summary]
+     DO UPDATE SET match_score = $3, criteria_results = $4, ai_summary = $5, is_fallback = $6, tier_used = $7, computed_at = NOW()`,
+    [studentId, scholarship.id, result.match_score, JSON.stringify(result.criteria_results), result.ai_summary, !!result.is_fallback, result.tier_used || null]
   );
 
   const finalData = {
     match_score: result.match_score,
     criteria_results: result.criteria_results,
     ai_summary: result.ai_summary,
+    is_fallback: !!result.is_fallback,
+    tier_used: result.tier_used || null,
     computed_at: computedNow
   };
 
@@ -110,36 +122,57 @@ async function getStudentProfileForAI(studentId) {
   return { aiProfile, updatedAt: row.updated_at };
 }
 
+// Runs async tasks with a concurrency cap instead of firing everything at
+// once — a cold cache with many scholarships would otherwise fire N
+// simultaneous Gemini calls, which is exactly what triggers the rate
+// limits this fallback chain exists to survive in the first place.
+async function mapWithConcurrencyLimit(items, limit, fn) {
+  const results = new Array(items.length);
+  let cursor = 0;
+
+  async function worker() {
+    while (cursor < items.length) {
+      const index = cursor++;
+      results[index] = await fn(items[index], index);
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(limit, items.length) }, worker);
+  await Promise.all(workers);
+  return results;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
-// FAST CONCURRENT SCORING (Upgraded with Promise.all)
+// CONCURRENT SCORING (capped, not unbounded)
 // ─────────────────────────────────────────────────────────────────────────────
 async function scoreScholarshipsForStudent(studentId, scholarships) {
   const profileData = await getStudentProfileForAI(studentId);
   if (!profileData) return scholarships.map(s => ({ ...s, match_score: null, criteria_results: [], ai_summary: null, is_best_match: false }));
 
-  // 🚀 Process all scholarships concurrently instead of sequentially
-  const scored = await Promise.all(
-    scholarships.map(async (scholarship) => {
-      const { match_score, criteria_results, ai_summary } = await getOrComputeMatch(
-        studentId, scholarship, profileData.aiProfile, profileData.updatedAt
-      );
-      
-      const matched_criteria = (criteria_results || []).filter(c => c.matches).map(c => c.criterion);
-      const unmatched_criteria = (criteria_results || []).filter(c => !c.matches).map(c => c.criterion);
+  // Max 4 concurrent AI calls at a time — fast enough for a good cold-start
+  // experience, low enough to stay well under typical free-tier RPM limits
+  const scored = await mapWithConcurrencyLimit(scholarships, 4, async (scholarship) => {
+    const { match_score, criteria_results, ai_summary, is_fallback, tier_used } = await getOrComputeMatch(
+      studentId, scholarship, profileData.aiProfile, profileData.updatedAt
+    );
 
-      return {
-        ...scholarship,
-        match_score,
-        criteria_results,
-        matched_criteria,
-        unmatched_criteria,
-        ai_summary,
-        is_open_to_all: (criteria_results || []).length === 0,
-        is_best_match: match_score >= BEST_MATCH_THRESHOLD,
-        is_good_match: match_score >= GOOD_MATCH_THRESHOLD && match_score < BEST_MATCH_THRESHOLD,
-      };
-    })
-  );
+    const matched_criteria = (criteria_results || []).filter(c => c.matches).map(c => c.criterion);
+    const unmatched_criteria = (criteria_results || []).filter(c => !c.matches).map(c => c.criterion);
+
+    return {
+      ...scholarship,
+      match_score,
+      criteria_results,
+      matched_criteria,
+      unmatched_criteria,
+      ai_summary,
+      is_fallback: !!is_fallback, // true only if Tier 3 (rule engine) had to be used
+      tier_used: tier_used || 'cached',
+      is_open_to_all: (criteria_results || []).length === 0,
+      is_best_match: match_score >= BEST_MATCH_THRESHOLD,
+      is_good_match: match_score >= GOOD_MATCH_THRESHOLD && match_score < BEST_MATCH_THRESHOLD,
+    };
+  });
 
   scored.sort((a, b) => (b.match_score || 0) - (a.match_score || 0));
   return scored;

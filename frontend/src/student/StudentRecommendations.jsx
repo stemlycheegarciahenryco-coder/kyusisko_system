@@ -2,24 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
-// Same reasoning logic as ScholarshipList.jsx — kept identical so the
-// explanation a student sees is consistent across both surfaces.
-const getMatchReason = (s) => {
-  const reasons = [];
-  if (s.matched_criteria?.length > 0) {
-    reasons.push(`matches your ${s.matched_criteria.join(', ').toLowerCase()} profile`);
-  }
-  if (s.semantic_score !== null && s.semantic_score !== undefined && s.semantic_score >= 65) {
-    reasons.push(
-      s.matched_criteria?.length > 0
-        ? 'and aligns with your interests'
-        : 'aligns with your course and interests'
-    );
-  }
-  if (reasons.length === 0) return null;
-  return `Because it ${reasons.join(' ')}`;
-};
-
 const StudentRecommendations = () => {
   const [scholarships, setScholarships] = useState([]);
   const [showAll, setShowAll] = useState(false);
@@ -64,13 +46,9 @@ const StudentRecommendations = () => {
   const getInitials = (name) =>
     name?.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || '??';
 
-  const ScholItem = ({ scholarship }) => {
-    const reason = getMatchReason(scholarship);
-
-    return (
+  const ScholItem = ({ scholarship }) => (
     <div
       onClick={() => navigate(`/apply/${scholarship.id}`)}
-      title={reason || undefined}
       className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl cursor-pointer border border-transparent hover:bg-slate-50 hover:border-black/5 transition-all"
     >
       <div className="w-9 h-9 rounded-full bg-slate-100 border border-black/5 shrink-0 overflow-hidden flex items-center justify-center">
@@ -92,17 +70,17 @@ const StudentRecommendations = () => {
           {scholarship.title}
         </p>
         <p className="text-[13px] text-black/50 truncate">
-          {reason || scholarship.org_name}
+          {scholarship.org_name}
         </p>
       </div>
 
       {scholarship.match_score >= 60 ? (
         <span className="shrink-0 text-[12px] font-semibold px-2 py-0.5 rounded-full bg-green-50 text-green-700">
-          {scholarship.match_score}% match
+          Best For You
         </span>
       ) : scholarship.match_score >= 30 ? (
         <span className="shrink-0 text-[12px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">
-          {scholarship.match_score}% match
+          Recommended
         </span>
       ) : (
         <span className="shrink-0 text-[12px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
@@ -110,8 +88,7 @@ const StudentRecommendations = () => {
         </span>
       )}
     </div>
-    );
-  };
+  );
 
   return (
     <div className="bg-white rounded-2xl border border-black/8 shadow-sm p-5 w-full">

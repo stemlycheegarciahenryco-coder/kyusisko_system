@@ -31,20 +31,24 @@ async function getAIMatch(studentProfile, scholarship) {
     const cleanJson = result.response.text().replace(/```json|```/g, '').trim();
     const data = JSON.parse(cleanJson);
     
-    return { ...data, is_fallback: false };
+    return { ...data, is_fallback: false, tier_used: 'primary' };
   } catch (error) {
     console.warn(`⚠️ [Tier 1 Failed - 429/Quota]: ${error.message}`);
     console.warn(`🔄 Escalating to Tier 2 (Secondary Model)...`);
   }
 
   // 2️⃣ TIER 2: Secondary Model (Alternative Quota Pool)
+  // NOTE: gemini-1.5-flash is fully shut down (Google retired all 1.x
+  // models) — requests to it always 404, silently defeating this tier.
+  // gemini-2.5-flash-lite is currently active and sits in a separate
+  // quota pool from Tier 1's gemini-2.5-flash.
   try {
-    const secondaryModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const secondaryModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
     const result = await secondaryModel.generateContent(prompt);
     const cleanJson = result.response.text().replace(/```json|```/g, '').trim();
     const data = JSON.parse(cleanJson);
 
-    return { ...data, is_fallback: false };
+    return { ...data, is_fallback: false, tier_used: 'secondary' };
   } catch (error) {
     console.warn(`⚠️ [Tier 2 Failed - 429/Quota]: ${error.message}`);
     console.warn(`⚙️ Escalating to Tier 3 (Deterministic Local Rule Engine)...`);
@@ -102,7 +106,8 @@ function calculateRuleBasedMatch(studentProfile, scholarship) {
     match_score: finalScore,
     criteria_results: criteriaResults,
     ai_summary: `[Fallback Engine] Computed via standard rule engine (GWA & course requirements evaluated).`,
-    is_fallback: true
+    is_fallback: true,
+    tier_used: 'fallback'
   };
 }
 
