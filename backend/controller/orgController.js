@@ -230,6 +230,7 @@ const toggleProfileProgramVisibility = async (req, res) => {
 
 
 //applicants sidebar conencted wirj org applicantsProg and Dashboard
+// applicants sidebar connected with org applicantsProg and Dashboard
 const getOrgPrograms = async (req, res) => {
     try {
         const orgId = await resolveOrgId(req.user.id);
@@ -244,6 +245,7 @@ const getOrgPrograms = async (req, res) => {
                 s.slots, 
                 s.amount_range, 
                 s.fund_type,
+                COUNT(a.id)::int AS total_applicants,
                 COALESCE(
                     json_agg(
                         json_build_object(
@@ -294,6 +296,7 @@ const addProgram = async (req, res) => {
 
 
 //dashboard stats 
+// dashboard stats 
 const getDashboardStats = async (req, res) => {
     try {
         const subAdminId = await resolveOrgId(req.user.id);
@@ -311,8 +314,9 @@ const getDashboardStats = async (req, res) => {
         
         const programsQuery = `
             SELECT 
-                COUNT(*) FILTER (WHERE status != 'draft') as total,
-                COUNT(*) FILTER (WHERE status = 'draft')  as drafts
+                COUNT(*) FILTER (WHERE LOWER(status) != 'draft') as total,
+                COUNT(*) FILTER (WHERE LOWER(status) = 'draft')  as drafts,
+                COUNT(*) FILTER (WHERE LOWER(status) IN ('active', 'open')) as active_progs
             FROM scholarships 
             WHERE sub_admin_id = $1
         `;
@@ -327,14 +331,16 @@ const getDashboardStats = async (req, res) => {
             return acc;
         }, {});
 
+        const totalApplications = Object.values(statusMap).reduce((sum, val) => sum + val, 0);
+
         res.status(200).json({
             success: true,
             data: {
-                pendingApps:      (statusMap.pending      || 0) + (statusMap.under_review || 0),
-                acceptedStudents: (statusMap.approved     || 0) + (statusMap.active       || 0),
-                rejectedStudents:  statusMap.not_eligible || 0,
-                totalPrograms:    parseInt(programsResult.rows[0].total)  || 0,
-                draftPrograms:    parseInt(programsResult.rows[0].drafts) || 0,
+                pendingApps:        (statusMap.pending || 0) + (statusMap.under_review || 0),
+                acceptedStudents:   (statusMap.approved || 0) + (statusMap.active || 0),
+                totalActiveApps:    totalApplications,
+                activePrograms:     parseInt(programsResult.rows[0].active_progs) || 0,
+                draftPrograms:      parseInt(programsResult.rows[0].drafts) || 0,
             }
         });
     } catch (err) {
