@@ -140,6 +140,7 @@ const getOrgApplications = async (req, res) => {
         const result = await pool.query(
             `SELECT 
                 a.*, 
+                a.created_at AS submitted_at,
                 s.sfirst_name, 
                 s.slast_name,
                 sch.title as scholarship_name,
@@ -240,7 +241,11 @@ const getOrgPrograms = async (req, res) => {
             `SELECT 
                 s.id, 
                 s.title, 
-                s.status, 
+                CASE
+                    WHEN LOWER(s.status) = 'draft' THEN 'draft'
+                    WHEN s.deadline IS NOT NULL AND s.deadline::date < CURRENT_DATE THEN 'deadline_passed'
+                    ELSE LOWER(s.status)
+                END AS status,
                 s.deadline, 
                 s.slots, 
                 s.amount_range, 
@@ -316,7 +321,10 @@ const getDashboardStats = async (req, res) => {
             SELECT 
                 COUNT(*) FILTER (WHERE LOWER(status) != 'draft') as total,
                 COUNT(*) FILTER (WHERE LOWER(status) = 'draft')  as drafts,
-                COUNT(*) FILTER (WHERE LOWER(status) IN ('active', 'open')) as active_progs
+                COUNT(*) FILTER (
+                    WHERE LOWER(status) IN ('active', 'open')
+                      AND (deadline IS NULL OR deadline::date >= CURRENT_DATE)
+                ) as active_progs
             FROM scholarships 
             WHERE sub_admin_id = $1
         `;

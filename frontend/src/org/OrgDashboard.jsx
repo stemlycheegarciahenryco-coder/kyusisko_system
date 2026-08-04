@@ -9,7 +9,8 @@ import {
   Download, 
   MoreVertical,
   Megaphone,
-  ChevronDown
+  ChevronDown,
+  Clock
 } from 'lucide-react';
 import OrgRightBar from '../component/OrgRightBar';
 
@@ -112,22 +113,23 @@ export default function OrgDashboard() {
           setStats(resStats.data.data);
         }
 
-        const userId = localStorage.getItem('userId') || localStorage.getItem('orgId');
-        if (userId) {
-          const resApps = await api.get('/organizations/applications');
-          const mappedApps = (resApps.data?.data || []).slice(0, 5).map(app => ({
-            id: app.id,
-            scholarship_id: app.scholarship_id,
-            name: `${app.sfirst_name} ${app.slast_name}`,
-            program: app.scholarship_name,
-            date: new Date(app.submitted_at).toLocaleDateString(),
-            hasConflict: app.conflicting_org !== null,
-          }));
-          setRecentApplications(mappedApps);
+        const resApps = await api.get('/organizations/applications');
+        const mappedApps = (resApps.data?.data || []).slice(0, 5).map(app => ({
+          id: app.id,
+          scholarship_id: app.scholarship_id,
+          name: `${app.sfirst_name} ${app.slast_name}`,
+          program: app.scholarship_name,
+          date: new Date(app.submitted_at).toLocaleDateString(),
+          hasConflict: app.conflicting_org !== null,
+        }));
+        setRecentApplications(mappedApps);
 
-          const resProgs = await api.get(`/organizations/dashboard-programs/${userId}`);
-          setPrograms(resProgs.data?.data || []);
-        }
+        // NOTE: the backend resolves the org from the auth token (see
+        // resolveOrgId in orgController.js) and ignores this :id param
+        // entirely, so any placeholder value here is fine — it's only
+        // there to satisfy the route shape.
+        const resProgs = await api.get('/organizations/dashboard-programs/me');
+        setPrograms(resProgs.data?.data || []);
       } catch (err) {
         console.error("Dashboard Data Fetch Error:", err);
       } finally {
@@ -155,11 +157,9 @@ export default function OrgDashboard() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-            Organization Dashboard <span className="text-xl">👋</span>
+             Dashboard <span className="text-xl"></span>
           </h1>
-          <p className="text-slate-500 text-xs font-medium mt-0.5">
-            Welcome back! Here's what's happening with your organization today.
-          </p>
+          
         </div>
 
         <button 
@@ -181,7 +181,7 @@ export default function OrgDashboard() {
             <MetricCard 
               icon={<ClipboardCheck size={20} className="text-amber-500" />}
               iconBg="bg-amber-50"
-              label="Pending Review"
+              label=" Application Pending Review"
               value={stats.pendingApps || 1}
               change="-2 from last week"
               changeColor="text-amber-600"
@@ -247,7 +247,7 @@ export default function OrgDashboard() {
                     <ProgramRow 
                       key={prog.id} 
                       title={prog.title} 
-                      status={prog.status?.toUpperCase() || 'ACTIVE'} 
+                      status={(prog.status || 'active').toUpperCase().replace('_', ' ')} 
                       applicants={prog.total_applicants || 0}
                       navigate={navigate}
                     />
@@ -319,12 +319,25 @@ function MetricCard({ icon, iconBg, label, value, change, changeColor }) {
 
 function ProgramRow({ title, status, applicants, navigate }) {
   const isActive = status === 'ACTIVE' || status === 'OPEN';
+  const isExpired = status === 'DEADLINE PASSED';
+
+  const iconStyle = isExpired
+    ? 'bg-amber-50 text-amber-600'
+    : isActive
+      ? 'bg-purple-50 text-purple-600'
+      : 'bg-emerald-50 text-emerald-600';
+
+  const badgeStyle = isExpired
+    ? 'bg-amber-50 text-amber-600 border border-amber-100'
+    : isActive
+      ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+      : 'bg-slate-200/60 text-slate-600';
 
   return (
     <div className="flex items-center justify-between p-3 bg-slate-50/50 hover:bg-slate-50 rounded-xl border border-slate-100/80 transition-all">
       <div className="flex items-center gap-3 min-w-0">
-        <div className={`p-2 rounded-lg shrink-0 ${isActive ? 'bg-purple-50 text-purple-600' : 'bg-emerald-50 text-emerald-600'}`}>
-          {isActive ? <GraduationCap size={16} /> : <FileText size={16} />}
+        <div className={`p-2 rounded-lg shrink-0 ${iconStyle}`}>
+          {isExpired ? <Clock size={16} /> : isActive ? <GraduationCap size={16} /> : <FileText size={16} />}
         </div>
         <div className="min-w-0">
           <p className="text-xs font-bold text-slate-900 truncate">{title}</p>
@@ -332,11 +345,7 @@ function ProgramRow({ title, status, applicants, navigate }) {
       </div>
 
       <div className="flex items-center gap-4 shrink-0">
-        <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider ${
-          isActive 
-            ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
-            : 'bg-slate-200/60 text-slate-600'
-        }`}>
+        <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider ${badgeStyle}`}>
           {status}
         </span>
 
