@@ -25,6 +25,7 @@ export default function ScholarshipManager() {
   const [publishConfirm, setPublishConfirm] = useState({ show: false, id: null });
   const [closeConfirm, setCloseConfirm] = useState({ show: false, id: null });
   const [deleteConfirm, setDeleteConfirm] = useState({ show: false, id: null });
+  const [menuOpenId, setMenuOpenId] = useState(null);
 
   const CARDS_PER_PAGE = 6;
 
@@ -320,9 +321,34 @@ export default function ScholarshipManager() {
                       <span className={`px-2.5 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-wider ${badgeStyles[badgeType] || badgeStyles.draft}`}>
                         {badgeLabels[badgeType]}
                       </span>
-                      <button className="p-1 rounded-lg hover:bg-slate-50 text-slate-400">
-                        <MoreHorizontal size={16} />
-                      </button>
+                      <div className="relative">
+                        <button
+                          onClick={() => setMenuOpenId(menuOpenId === s.id ? null : s.id)}
+                          className="p-1 rounded-lg hover:bg-slate-50 text-slate-400"
+                        >
+                          <MoreHorizontal size={16} />
+                        </button>
+
+                        {menuOpenId === s.id && (
+                          <div className="absolute right-0 top-full mt-1 w-36 bg-white border border-slate-200/80 rounded-xl shadow-2xl shadow-black/10 py-1.5 z-20">
+                            {status === 'draft' ? (
+                              <button
+                                onClick={() => {
+                                  setDeleteConfirm({ show: true, id: s.id });
+                                  setMenuOpenId(null);
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-red-600 hover:bg-red-50 transition-colors"
+                              >
+                                <Trash2 size={13} /> Delete
+                              </button>
+                            ) : (
+                              <p className="px-3 py-2 text-[10px] font-bold text-slate-300 uppercase tracking-wider">
+                                No actions
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Meta header row: Profile avatar image + text titles */}
@@ -485,6 +511,11 @@ export default function ScholarshipManager() {
           </div>
         )}
       </div>
+
+      {/* ── CLICK-OUTSIDE OVERLAY FOR CARD OPTIONS MENU ── */}
+      {menuOpenId && (
+        <div className="fixed inset-0 z-10" onClick={() => setMenuOpenId(null)} />
+      )}
 
       {/* ── EXTERNAL MODAL DRAWERS ── */}
       {viewModal && <ViewProgram scholarship={viewModal} onClose={() => setViewModal(null)} />}
