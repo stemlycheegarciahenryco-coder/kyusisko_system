@@ -17,6 +17,24 @@ async function resolveOrgId(requesterId) {
     return account_type === 'co_admin' ? parent_org_id : requesterId;
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// amount_range is a free-text varchar (e.g. "10,000 - 20,000", "₱15000",
+// or blank). Never trust it as a clean number — pull out every numeric
+// token, and if none exist, return null so callers can show "not
+// specified" instead of silently treating a missing amount as ₱0.
+function parseAmountRange(raw) {
+    if (!raw || typeof raw !== 'string') return null;
+    const matches = raw.match(/\d[\d,]*(\.\d+)?/g);
+    if (!matches || matches.length === 0) return null;
+    const nums = matches
+        .map(m => parseFloat(m.replace(/,/g, '')))
+        .filter(n => !isNaN(n));
+    if (nums.length === 0) return null;
+    const min = Math.min(...nums);
+    const max = Math.max(...nums);
+    return { min, max, midpoint: (min + max) / 2, display: raw.trim() };
+}
+
 // Org Profile Info top
 const getOrgProfile = async (req, res) => {
     try {
@@ -358,6 +376,96 @@ const getDashboardStats = async (req, res) => {
 };
 
 
+// ─────────────────────────────────────────────────────────────────────────
+// Reports & Analytics: real fund allocation per program + real course
+// demographics. No disbursement tracking exists in the schema, so this
+// intentionally does NOT invent a "disbursed" figure — only what the org
+// actually entered (amount_range) and actual approved-applicant counts.
+const getFundReport = async (req, res) => {
+    try {
+        const orgId = await resolveOrgId(req.user.id);
+        if (!orgId) return res.status(404).json({ success: false, message: "Org not found." });
+
+        const programsResult = await pool.query(
+            `SELECT 
+                s.id,
+                s.title,
+                s.amount_range,
+                CASE
+                    WHEN LOWER(s.status) = 'draft' THEN 'draft'
+                    WHEN s.deadline IS NOT NULL AND s.deadline::date < CURRENT_DATE THEN 'deadline_passed'
+                    ELSE LOWER(s.status)
+                END AS status,
+                COUNT(a.id) FILTER (WHERE a.status = 'approved')::int AS beneficiaries
+             FROM scholarships s
+             LEFT JOIN applications a ON a.scholarship_id = s.id
+             WHERE s.sub_admin_id = $1
+               AND COALESCE(s.taken_down, false) = false
+             GROUP BY s.id
+             ORDER BY s.created_at DESC`,
+            [orgId]
+        );
+
+        const courseResult = await pool.query(
+            `SELECT 
+                COALESCE(c.name, 'Unspecified Course') AS course,
+                COUNT(DISTINCT a.student_id)::int AS count
+             FROM applications a
+             JOIN scholarships s ON a.scholarship_id = s.id
+             JOIN students st ON a.student_id = st.id
+             LEFT JOIN student_onboarding_profiles sop ON sop.student_id = st.id
+             LEFT JOIN courses c ON sop.course_id = c.id
+             WHERE s.sub_admin_id = $1
+               AND a.status = 'approved'
+             GROUP BY c.name
+             ORDER BY count DESC`,
+            [orgId]
+        );
+
+        const fundData = programsResult.rows.map(row => {
+            const parsed = parseAmountRange(row.amount_range);
+            return {
+                id: row.id,
+                program: row.title,
+                status: row.status,
+                beneficiaries: row.beneficiaries,
+                amountDisplay: parsed ? parsed.display : null,
+                amountValue: parsed ? parsed.midpoint : null,
+            };
+        });
+
+        const programsWithAmount = fundData.filter(f => f.amountValue !== null);
+        const totalAllocatedFund = programsWithAmount.reduce((sum, f) => sum + f.amountValue, 0);
+        const totalApprovedStudents = fundData.reduce((sum, f) => sum + f.beneficiaries, 0);
+
+        const totalCourseStudents = courseResult.rows.reduce((sum, r) => sum + r.count, 0);
+        const courseDemographics = courseResult.rows.map(r => ({
+            course: r.course,
+            count: r.count,
+            percentage: totalCourseStudents > 0
+                ? parseFloat(((r.count / totalCourseStudents) * 100).toFixed(1))
+                : 0,
+        }));
+
+        res.status(200).json({
+            success: true,
+            data: {
+                fundData,
+                totals: {
+                    totalAllocatedFund,
+                    programsWithAmount: programsWithAmount.length,
+                    programsMissingAmount: fundData.length - programsWithAmount.length,
+                    totalApprovedStudents,
+                },
+                courseDemographics,
+            }
+        });
+    } catch (err) {
+        console.error("Get Fund Report Error:", err.message);
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
 //monitor the applicaiton conflict
 const monitorApplications = async (req, res) => {
     try {
@@ -618,6 +726,7 @@ const blockCoAdmin = async (req, res) => {
 // Add to exports:
 module.exports = { 
     getDashboardStats,
+    getFundReport,
     getOrgProfilePrograms,
     getOrgProfile, 
     toggleProfileProgramVisibility,

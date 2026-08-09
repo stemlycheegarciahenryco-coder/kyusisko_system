@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import api from '../api';
 import { 
   Users, 
   DollarSign, 
@@ -8,43 +9,67 @@ import {
   Search, 
   History, 
   PieChart, 
-  TrendingUp, 
   ShieldCheck, 
   LogOut, 
   LogIn, 
   Clock, 
   Filter,
-  FileSpreadsheet
+  FileSpreadsheet,
+  AlertCircle,
+  Layers
 } from 'lucide-react';
+
+const COURSE_COLORS = [
+  'bg-blue-600', 'bg-purple-600', 'bg-emerald-500', 'bg-amber-500',
+  'bg-rose-500', 'bg-cyan-500', 'bg-indigo-500', 'bg-pink-500'
+];
 
 export default function OrgLogs() {
   const [activeTab, setActiveTab] = useState('reports'); // 'reports' | 'activity'
   const [logFilter, setLogFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // ── Sample Fund Allocation Data ──────────────────────────────────────────
-  const fundData = [
-    { id: 1, program: 'STI College Scholarship Program', totalFund: 500000, disbursed: 350000, beneficiaries: 35, status: 'Active' },
-    { id: 2, program: 'HSLAM Grant', totalFund: 300000, disbursed: 240000, beneficiaries: 24, status: 'Active' },
-    { id: 3, program: 'Muslim Scholarship for Education', totalFund: 250000, disbursed: 180000, beneficiaries: 18, status: 'Active' },
-    { id: 4, program: 'ISAPA Program', totalFund: 200000, disbursed: 150000, beneficiaries: 15, status: 'Active' },
-    { id: 5, program: 'CHED Merit Scholarship', totalFund: 400000, disbursed: 0, beneficiaries: 0, status: 'Draft' },
-  ];
+  const [fundData, setFundData] = useState([]);
+  const [courseDemographics, setCourseDemographics] = useState([]);
+  const [totals, setTotals] = useState({
+    totalAllocatedFund: 0,
+    programsWithAmount: 0,
+    programsMissingAmount: 0,
+    totalApprovedStudents: 0,
+  });
+  const [reportsLoading, setReportsLoading] = useState(true);
+  const [reportsError, setReportsError] = useState(null);
 
-  // Calculated Totals
-  const totalAllocatedFund = fundData.reduce((acc, item) => acc + item.totalFund, 0);
-  const totalDisbursedFund = fundData.reduce((acc, item) => acc + item.disbursed, 0);
-  const totalRemainingFund = totalAllocatedFund - totalDisbursedFund;
-  const totalApprovedStudents = fundData.reduce((acc, item) => acc + item.beneficiaries, 0);
+  useEffect(() => {
+    const fetchFundReport = async () => {
+      try {
+        setReportsLoading(true);
+        setReportsError(null);
+        const res = await api.get('/organizations/fund-report');
+        const data = res.data?.data;
+        if (data) {
+          setFundData(data.fundData || []);
+          setCourseDemographics(data.courseDemographics || []);
+          setTotals(data.totals || {
+            totalAllocatedFund: 0,
+            programsWithAmount: 0,
+            programsMissingAmount: 0,
+            totalApprovedStudents: 0,
+          });
+        }
+      } catch (err) {
+        console.error("Fund Report Fetch Error:", err);
+        setReportsError("Couldn't load reports data. Please try again.");
+      } finally {
+        setReportsLoading(false);
+      }
+    };
 
-  // ── Sample Course Demographics Data ──────────────────────────────────────
-  const courseDemographics = [
-    { course: 'BS Information Technology', count: 38, percentage: 41.3, color: 'bg-blue-600' },
-    { course: 'BS Computer Science', count: 24, percentage: 26.1, color: 'bg-purple-600' },
-    { course: 'BS Business Administration', count: 15, percentage: 16.3, color: 'bg-emerald-500' },
-    { course: 'BS Accountancy', count: 9, percentage: 9.8, color: 'bg-amber-500' },
-    { course: 'BS Civil Engineering', count: 6, percentage: 6.5, color: 'bg-rose-500' },
-  ];
+    fetchFundReport();
+  }, []);
+
+  const totalAllocatedFund = totals.totalAllocatedFund;
+  const totalApprovedStudents = totals.totalApprovedStudents;
 
   // ── Sample Account Activity Logs ─────────────────────────────────────────
   const userLogs = [
@@ -134,7 +159,7 @@ export default function OrgLogs() {
                 <div>
                   <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-tight">Approved Students</p>
                   <p className="text-2xl font-black text-slate-900 leading-tight mt-0.5">{totalApprovedStudents}</p>
-                  <p className="text-[10px] font-bold text-emerald-600 mt-1">+12% from last term</p>
+                  <p className="text-[10px] font-bold text-emerald-600 mt-1">Total across all programs</p>
                 </div>
               </div>
             </div>
@@ -148,40 +173,50 @@ export default function OrgLogs() {
                 <div>
                   <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-tight">Total Allocated Budget</p>
                   <p className="text-2xl font-black text-slate-900 leading-tight mt-0.5">₱{totalAllocatedFund.toLocaleString()}</p>
-                  <p className="text-[10px] font-bold text-blue-600 mt-1">Across {fundData.length} Programs</p>
+                  <p className="text-[10px] font-bold text-blue-600 mt-1">
+                    From {totals.programsWithAmount} of {fundData.length} programs with amount specified
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Total Disbursed Funds */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex items-center justify-between">
-              <div className="flex items-center gap-3.5">
-                <div className="p-3 bg-purple-50 text-purple-600 rounded-xl shrink-0">
-                  <TrendingUp size={22} />
-                </div>
-                <div>
-                  <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-tight">Disbursed Funds</p>
-                  <p className="text-2xl font-black text-slate-900 leading-tight mt-0.5">₱{totalDisbursedFund.toLocaleString()}</p>
-                  <p className="text-[10px] font-bold text-purple-600 mt-1">{((totalDisbursedFund / totalAllocatedFund) * 100).toFixed(1)}% Disbursed</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Remaining Fund Balance */}
+            {/* Programs Missing an Amount */}
             <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex items-center justify-between">
               <div className="flex items-center gap-3.5">
                 <div className="p-3 bg-amber-50 text-amber-600 rounded-xl shrink-0">
-                  <DollarSign size={22} />
+                  <AlertCircle size={22} />
                 </div>
                 <div>
-                  <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-tight">Remaining Balance</p>
-                  <p className="text-2xl font-black text-slate-900 leading-tight mt-0.5">₱{totalRemainingFund.toLocaleString()}</p>
-                  <p className="text-[10px] font-bold text-amber-600 mt-1">Available for allocation</p>
+                  <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-tight">Missing Fund Amount</p>
+                  <p className="text-2xl font-black text-slate-900 leading-tight mt-0.5">{totals.programsMissingAmount}</p>
+                  <p className="text-[10px] font-bold text-amber-600 mt-1">
+                    {totals.programsMissingAmount > 0 ? 'Add an amount range to include in totals' : 'All programs have an amount set'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Course Diversity */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex items-center justify-between">
+              <div className="flex items-center gap-3.5">
+                <div className="p-3 bg-purple-50 text-purple-600 rounded-xl shrink-0">
+                  <Layers size={22} />
+                </div>
+                <div>
+                  <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-tight">Courses Represented</p>
+                  <p className="text-2xl font-black text-slate-900 leading-tight mt-0.5">{courseDemographics.length}</p>
+                  <p className="text-[10px] font-bold text-purple-600 mt-1">Among approved applicants</p>
                 </div>
               </div>
             </div>
 
           </div>
+
+          {reportsError && (
+            <div className="bg-red-50 border border-red-100 text-red-600 text-xs font-bold px-4 py-3 rounded-xl">
+              {reportsError}
+            </div>
+          )}
 
           {/* Grid Layout: Fund Allocation Table & Demographics */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -192,7 +227,7 @@ export default function OrgLogs() {
                 <div className="flex justify-between items-center mb-5">
                   <div>
                     <h2 className="text-sm font-extrabold text-slate-900">Program Fund Allocation Report</h2>
-                    <p className="text-[11px] font-medium text-slate-400 mt-0.5">Detailed breakdown of budget and disbursement per scholarship program</p>
+                    <p className="text-[11px] font-medium text-slate-400 mt-0.5">Amount entered per scholarship program and how many students it's supported</p>
                   </div>
                 </div>
 
@@ -201,30 +236,50 @@ export default function OrgLogs() {
                     <thead>
                       <tr className="border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase">
                         <th className="pb-3 px-2">Program Name</th>
-                        <th className="pb-3 px-2 text-right">Allocated</th>
-                        <th className="pb-3 px-2 text-right">Disbursed</th>
+                        <th className="pb-3 px-2 text-right">Fund Amount</th>
                         <th className="pb-3 px-2 text-center">Approved Students</th>
                         <th className="pb-3 px-2 text-center">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50 text-xs font-semibold">
-                      {fundData.map((item) => (
-                        <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
-                          <td className="py-3 px-2 font-bold text-slate-900">{item.program}</td>
-                          <td className="py-3 px-2 text-right font-extrabold text-slate-900">₱{item.totalFund.toLocaleString()}</td>
-                          <td className="py-3 px-2 text-right text-emerald-600 font-extrabold">₱{item.disbursed.toLocaleString()}</td>
-                          <td className="py-3 px-2 text-center font-black text-slate-800">{item.beneficiaries}</td>
-                          <td className="py-3 px-2 text-center">
-                            <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider ${
-                              item.status === 'Active' 
-                                ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
-                                : 'bg-slate-100 text-slate-500'
-                            }`}>
-                              {item.status}
-                            </span>
+                      {reportsLoading ? (
+                        <tr>
+                          <td colSpan="4" className="text-center py-8 text-slate-400 font-bold">
+                            Loading fund report...
                           </td>
                         </tr>
-                      ))}
+                      ) : fundData.length === 0 ? (
+                        <tr>
+                          <td colSpan="4" className="text-center py-8 text-slate-400 font-bold">
+                            No programs yet.
+                          </td>
+                        </tr>
+                      ) : (
+                        fundData.map((item) => (
+                          <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
+                            <td className="py-3 px-2 font-bold text-slate-900">{item.program}</td>
+                            <td className="py-3 px-2 text-right font-extrabold">
+                              {item.amountDisplay ? (
+                                <span className="text-slate-900">₱{item.amountDisplay}</span>
+                              ) : (
+                                <span className="text-slate-400 italic font-semibold text-[11px]">Not specified</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-2 text-center font-black text-slate-800">{item.beneficiaries}</td>
+                            <td className="py-3 px-2 text-center">
+                              <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                                item.status === 'active' || item.status === 'open'
+                                  ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                  : item.status === 'deadline_passed'
+                                    ? 'bg-amber-50 text-amber-600 border border-amber-100'
+                                    : 'bg-slate-100 text-slate-500'
+                              }`}>
+                                {item.status.replace('_', ' ')}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -235,12 +290,12 @@ export default function OrgLogs() {
                 <span className="text-xs font-extrabold text-slate-700 uppercase tracking-tight">Totality of Funds Summary</span>
                 <div className="flex items-center gap-6 text-xs font-bold">
                   <div>
-                    <span className="text-slate-400 font-medium">Total: </span>
+                    <span className="text-slate-400 font-medium">Total (specified programs): </span>
                     <span className="text-slate-900 font-black">₱{totalAllocatedFund.toLocaleString()}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 font-medium">Disbursed: </span>
-                    <span className="text-emerald-600 font-black">₱{totalDisbursedFund.toLocaleString()}</span>
+                    <span className="text-slate-400 font-medium">Missing amount: </span>
+                    <span className="text-amber-600 font-black">{totals.programsMissingAmount} program{totals.programsMissingAmount === 1 ? '' : 's'}</span>
                   </div>
                 </div>
               </div>
@@ -258,20 +313,26 @@ export default function OrgLogs() {
                 </div>
 
                 <div className="space-y-4 my-2">
-                  {courseDemographics.map((cd, index) => (
-                    <div key={index} className="space-y-1.5">
-                      <div className="flex justify-between items-center text-xs font-bold">
-                        <span className="text-slate-700 truncate max-w-[180px]">{cd.course}</span>
-                        <span className="text-slate-900 font-black">{cd.count} <span className="text-[10px] font-semibold text-slate-400">({cd.percentage}%)</span></span>
+                  {reportsLoading ? (
+                    <p className="text-xs font-bold text-slate-400 text-center py-6">Loading demographics...</p>
+                  ) : courseDemographics.length === 0 ? (
+                    <p className="text-xs font-bold text-slate-400 text-center py-6">No approved students yet.</p>
+                  ) : (
+                    courseDemographics.map((cd, index) => (
+                      <div key={index} className="space-y-1.5">
+                        <div className="flex justify-between items-center text-xs font-bold">
+                          <span className="text-slate-700 truncate max-w-[180px]">{cd.course}</span>
+                          <span className="text-slate-900 font-black">{cd.count} <span className="text-[10px] font-semibold text-slate-400">({cd.percentage}%)</span></span>
+                        </div>
+                        <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full ${COURSE_COLORS[index % COURSE_COLORS.length]} rounded-full transition-all duration-500`} 
+                            style={{ width: `${cd.percentage}%` }}
+                          />
+                        </div>
                       </div>
-                      <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full ${cd.color} rounded-full transition-all duration-500`} 
-                          style={{ width: `${cd.percentage}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
 
