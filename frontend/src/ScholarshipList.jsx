@@ -245,7 +245,7 @@ export default function ScholarshipList() {
                     onClick={() => navigate(`/apply/${s.id}`)}
                     className="flex-1 bg-[#093fb4] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 uppercase text-[12px] tracking-widest hover:bg-[#FF1E1E] transition-all shadow-lg shadow-blue-900/10"
                   >
-                    Apply Scholarship <ArrowRight size={14} />
+                    View and Apply <ArrowRight size={14} />
                   </button>
                 </div>
               </div>

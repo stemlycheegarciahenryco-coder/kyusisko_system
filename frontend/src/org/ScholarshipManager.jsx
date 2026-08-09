@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Plus, Eye, Trash2, Edit3, PowerOff, CheckCircle2, Archive, 
+  Plus, Eye, Trash2, Edit3, PowerOff, CheckCircle2, 
   ChevronLeft, ChevronRight, Calendar, DollarSign, GraduationCap, 
   Search, SlidersHorizontal, MoreHorizontal, Folder, CheckCircle, 
-  FileText, XCircle, AlertTriangle 
+  FileText, XCircle 
 } from 'lucide-react';
 import api from '../api';
 import ViewProgram from '../component/ViewProgram';
@@ -36,21 +36,22 @@ export default function ScholarshipManager() {
   const fetchScholarships = async () => {
     try {
       const res = await api.get('/scholarships/get-all');
-      setScholarships((res.data.data || []).filter(s => s.status !== 'archived'));
+      setScholarships(res.data.data || []);
       setCurrentPage(0);
     } catch (err) {
       console.error('Fetch error', err);
     }
   };
 
-  // Status parser logic
+  // Status parser logic — only 3 real states now: draft, open, closed.
+  // A program past its deadline is treated as closed even if the DB
+  // status still says 'open' (org just hasn't clicked Close yet).
   const getBadgeType = (s) => {
-    const isPast = s.deadline ? new Date() > new Date(s.deadline) : false;
     const st = s.status?.toLowerCase();
-    if (isPast && st !== 'closed') return 'expired';
-    if (st === 'closed') return 'closed';
-    if (st === 'open') return 'open';
-    return 'draft';
+    if (st === 'draft') return 'draft';
+    const isPast = s.deadline ? new Date() > new Date(s.deadline) : false;
+    if (st === 'closed' || isPast) return 'closed';
+    return 'open';
   };
 
   // Dynamic filter pipeline: Tab counters, query match strings, status drop-downs
@@ -90,16 +91,6 @@ export default function ScholarshipManager() {
       setDeleteConfirm({ show: false, id: null });
     } catch (err) {
       console.error('Delete error', err);
-    }
-  };
-
-  const handleArchive = async (id) => {
-    try {
-      await api.patch(`/scholarships/${id}/status`, { status: 'archived' });
-      navigate('/OrgHistory');
-      fetchScholarships();
-    } catch {
-      alert('Failed to archive');
     }
   };
 
@@ -157,7 +148,7 @@ export default function ScholarshipManager() {
         </div>
 
         {/* ── KPI METRIC CARDS ROW ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1: All Programs */}
           <div 
             onClick={() => switchTab('all')}
@@ -218,20 +209,6 @@ export default function ScholarshipManager() {
             </div>
           </div>
 
-          {/* Card 5: Deadline Passed */}
-          <div 
-            onClick={() => switchTab('expired')}
-            className={`bg-white border rounded-2xl p-5 shadow-2xl shadow-black/5 flex items-center gap-4 cursor-pointer transition-all ${activeTab === 'expired' ? 'border-purple-500 ring-2 ring-purple-500/5 bg-purple-50/5' : 'border-slate-200/60 hover:border-slate-300'}`}
-          >
-            <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
-              <AlertTriangle size={20} strokeWidth={2.5} />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Deadline Passed</p>
-              <p className="text-2xl font-black text-slate-900 leading-tight mt-0.5">{getCount('expired')}</p>
-              <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">Expired</p>
-            </div>
-          </div>
         </div>
 
         {/* ── SEARCH FILTERS ROW CONTROL ── */}
@@ -259,7 +236,6 @@ export default function ScholarshipManager() {
                 <option value="open">Open</option>
                 <option value="draft">Draft</option>
                 <option value="closed">Closed</option>
-                <option value="expired">Expired</option>
               </select>
             </div>
 
@@ -290,9 +266,7 @@ export default function ScholarshipManager() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {paginated.map((s) => {
-              const isPastDeadline = s.deadline ? new Date() > new Date(s.deadline) : false;
               const status = s.status?.toLowerCase();
-              const isClosedOrExpired = status === 'closed' || isPastDeadline;
               const badgeType = getBadgeType(s);
 
               // Setup local colors per dynamic tag type
@@ -300,14 +274,15 @@ export default function ScholarshipManager() {
                 open: 'bg-emerald-50 text-emerald-600 border-emerald-100',
                 draft: 'bg-blue-50 text-[#093fb4] border-blue-100',
                 closed: 'bg-red-50 text-red-600 border-red-100',
-                expired: 'bg-purple-50 text-purple-600 border-purple-100',
               };
 
+              // Closed is one unified status now — covers both a program
+              // manually closed by the org AND one whose deadline simply
+              // passed. No separate "Deadline Passed" label anymore.
               const badgeLabels = {
                 open: 'Open',
                 draft: 'Draft',
                 closed: 'Closed',
-                expired: 'Deadline Passed',
               };
 
               return (
@@ -331,7 +306,7 @@ export default function ScholarshipManager() {
 
                         {menuOpenId === s.id && (
                           <div className="absolute right-0 top-full mt-1 w-36 bg-white border border-slate-200/80 rounded-xl shadow-2xl shadow-black/10 py-1.5 z-20">
-                            {status === 'draft' ? (
+                            {(badgeType === 'draft' || badgeType === 'closed') ? (
                               <button
                                 onClick={() => {
                                   setDeleteConfirm({ show: true, id: s.id });
@@ -412,57 +387,54 @@ export default function ScholarshipManager() {
                   </div>
 
                   {/* ── CARD BUTTON ROW ACTION PACK ── */}
-                  <div className="flex items-center gap-2 pt-2 mt-2">
-                    {/* View Action */}
+                  <div className="flex flex-wrap items-center gap-2 pt-2 mt-2">
+                    {/* View Action — always available */}
                     <button 
                       onClick={() => setViewModal(s)}
-                      className="flex-1 border border-slate-200 hover:bg-slate-50 text-slate-600 font-black text-[10px] uppercase tracking-wider py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors"
+                      className="flex-1 min-w-[45%] border border-slate-200 hover:bg-slate-50 text-slate-600 font-black text-[10px] uppercase tracking-wider py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors"
                     >
                       <Eye size={13} /> View
                     </button>
 
-                    {/* Conditional Edit triggers based on draft/open statuses */}
-                    {((status === 'draft' || status === 'open') && !isPastDeadline) && (
-                      <button 
-                        onClick={() => setEditModal(s)}
-                        className="flex-1 border border-slate-200 hover:bg-slate-50 text-slate-600 font-black text-[10px] uppercase tracking-wider py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors"
-                      >
-                        <Edit3 size={13} /> Edit
-                      </button>
+                    {/* DRAFT: Edit, Publish, Delete */}
+                    {badgeType === 'draft' && (
+                      <>
+                        <button 
+                          onClick={() => setEditModal(s)}
+                          className="flex-1 min-w-[45%] border border-slate-200 hover:bg-slate-50 text-slate-600 font-black text-[10px] uppercase tracking-wider py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                          <Edit3 size={13} /> Edit
+                        </button>
+                        <button 
+                          onClick={() => setPublishConfirm({ show: true, id: s.id })}
+                          className="flex-1 min-w-[45%] bg-emerald-50 text-emerald-600 border border-emerald-200/60 hover:bg-emerald-100 font-black text-[10px] uppercase tracking-wider py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                          <CheckCircle2 size={13} /> Publish
+                        </button>
+                        <button 
+                          onClick={() => setDeleteConfirm({ show: true, id: s.id })}
+                          className="flex-1 min-w-[45%] bg-red-50 text-red-600 border border-red-200/60 hover:bg-red-100 font-black text-[10px] uppercase tracking-wider py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                          <Trash2 size={13} /> Delete
+                        </button>
+                      </>
                     )}
 
-                    {/* Primary pipeline controls (Publish, Close, Delete or Archive) */}
-                    {status === 'draft' && !isPastDeadline && (
-                      <button 
-                        onClick={() => setPublishConfirm({ show: true, id: s.id })}
-                        className="flex-1 bg-emerald-50 text-emerald-600 border border-emerald-200/60 hover:bg-emerald-100 font-black text-[10px] uppercase tracking-wider py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors"
-                      >
-                        <CheckCircle2 size={13} /> Publish
-                      </button>
-                    )}
-
-                    {status === 'open' && !isPastDeadline && (
+                    {/* OPEN: Close */}
+                    {badgeType === 'open' && (
                       <button 
                         onClick={() => setCloseConfirm({ show: true, id: s.id })}
-                        className="flex-1 bg-red-50 text-red-600 border border-red-200/60 hover:bg-red-100 font-black text-[10px] uppercase tracking-wider py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors"
+                        className="flex-1 min-w-[45%] bg-red-50 text-red-600 border border-red-200/60 hover:bg-red-100 font-black text-[10px] uppercase tracking-wider py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors"
                       >
                         <PowerOff size={13} /> Close
                       </button>
                     )}
 
-                    {isClosedOrExpired && status !== 'draft' && (
-                      <button 
-                        onClick={() => handleArchive(s.id)}
-                        className="flex-1 bg-red-50 text-red-600 border border-red-200/60 hover:bg-red-100 font-black text-[10px] uppercase tracking-wider py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors"
-                      >
-                        <Archive size={13} /> Archive
-                      </button>
-                    )}
-
-                    {status === 'draft' && isPastDeadline && (
+                    {/* CLOSED (manually closed or deadline passed): Delete */}
+                    {badgeType === 'closed' && (
                       <button 
                         onClick={() => setDeleteConfirm({ show: true, id: s.id })}
-                        className="flex-1 bg-red-50 text-red-600 border border-red-200/60 hover:bg-red-100 font-black text-[10px] uppercase tracking-wider py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors"
+                        className="flex-1 min-w-[45%] bg-red-50 text-red-600 border border-red-200/60 hover:bg-red-100 font-black text-[10px] uppercase tracking-wider py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors"
                       >
                         <Trash2 size={13} /> Delete
                       </button>

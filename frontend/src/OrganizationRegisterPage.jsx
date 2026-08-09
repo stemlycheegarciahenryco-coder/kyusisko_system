@@ -154,7 +154,7 @@ const OrganizationRegisterPage = () => {
         <form onSubmit={handleInitialSubmit} className="space-y-6">
 
           {/* SECTION: Institution Profile Identity */}
-          <SectionLabel label="Institution Identity" />
+          <SectionLabel label="Creation Account" />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Organization / Institution Name" required>
               <div className="relative">
@@ -219,7 +219,7 @@ const OrganizationRegisterPage = () => {
           </div>
 
           {/* SECTION: Address */}
-          <SectionLabel label="Operational Address" />
+          <SectionLabel label="Provider Address" />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Field label="Region" required>
               <select required name="region" value={activeRegionCode} onChange={handleChange} className={inputCls}>
