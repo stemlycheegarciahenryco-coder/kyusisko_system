@@ -20,6 +20,23 @@ const C = {
   surface:     '#f4f6fc',
   danger:      '#7a2d3d',
   dangerLight: '#f4e8eb',
+  // Aligned with ScholarshipManager.jsx's status badge palette
+  activeBg:    '#ecfdf5', // emerald-50
+  activeText:  '#059669', // emerald-600
+  activeBorder:'#d1fae5', // emerald-100
+  closedBg:    '#fef2f2', // red-50
+  closedText:  '#dc2626', // red-600
+  closedBorder:'#fee2e2', // red-100
+};
+
+// Programs on this page are only ever Active or Closed — drafts are
+// hidden entirely, and a past-deadline program counts as Closed, same
+// as ScholarshipManager's unified status logic.
+const getDisplayStatus = (rawStatus) => {
+  const s = rawStatus?.toLowerCase();
+  if (s === 'draft') return 'draft';
+  if (s === 'closed' || s === 'deadline_passed') return 'closed';
+  return 'active';
 };
 
 const CARDS_PER_PAGE = 6;
@@ -35,7 +52,8 @@ export default function OrgApplicantPrograms() {
     const fetchPrograms = async () => {
       try {
         const res = await api.get(`/organizations/dashboard-programs/${orgId}`);
-        setPrograms(res.data.data || res.data);
+        const allPrograms = res.data.data || res.data || [];
+        setPrograms(allPrograms.filter(p => getDisplayStatus(p.status) !== 'draft'));
       } catch (err) {
         console.error("Failed to fetch programs", err);
       } finally {
@@ -112,20 +130,19 @@ export default function OrgApplicantPrograms() {
                 const totalApplicants    = program.applicants?.length || 0;
                 const truncatedApplicants = program.applicants?.slice(0, 4) || [];
                 const extraCount         = totalApplicants - 4;
-                const status             = program.status?.toLowerCase();
+                const displayStatus      = getDisplayStatus(program.status);
 
-                /* status badge style */
-                const badgeStyle = status === 'open' || status === 'active'
-                  ? { background: C.brandLight,  color: C.brand,    border: `1px solid ${C.brandMid}` }
-                  : status === 'closed'
-                  ? { background: C.dangerLight, color: C.danger,   border: `1px solid ${C.danger}40` }
-                  : { background: C.surface,     color: C.textBody, border: `1px solid ${C.border}` };
+                /* status badge style — aligned with ScholarshipManager palette */
+                const badgeStyle = displayStatus === 'active'
+                  ? { background: C.activeBg, color: C.activeText, border: `1px solid ${C.activeBorder}` }
+                  : { background: C.closedBg, color: C.closedText, border: `1px solid ${C.closedBorder}` };
+                const badgeLabel = displayStatus === 'active' ? 'Active' : 'Closed';
 
                 return (
                   <div
                     key={program.id}
                     onClick={() => navigate(`/scholarship-applications/${program.id}/applicants`)}
-                    style={{ background: C.white, border: `1.5px solid ${C.borderLight}`, borderRadius: 20, padding: '20px 18px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 220, cursor: 'pointer', transition: 'border-color .15s, box-shadow .15s' }}
+                    style={{ background: C.white, border: `1.5px solid ${C.borderLight}`, borderRadius: 20, padding: '20px 18px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 236, cursor: 'pointer', transition: 'border-color .15s, box-shadow .15s' }}
                     onMouseEnter={e => { e.currentTarget.style.borderColor = C.brandMid; e.currentTarget.style.boxShadow = `0 4px 20px ${C.brand}14`; }}
                     onMouseLeave={e => { e.currentTarget.style.borderColor = C.borderLight; e.currentTarget.style.boxShadow = 'none'; }}
                   >
@@ -135,23 +152,23 @@ export default function OrgApplicantPrograms() {
                         <div style={{ width: 38, height: 38, borderRadius: 10, background: C.brandLight, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           <Layers size={17} color={C.brand} />
                         </div>
-                        <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: 999, ...badgeStyle }}>
-                          {program.status}
+                        <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '4px 12px', borderRadius: 999, ...badgeStyle }}>
+                          {badgeLabel}
                         </span>
                       </div>
 
                       {/* Title */}
-                      <h2 style={{ fontSize: 13.5, fontWeight: 800, color: C.textStrong, letterSpacing: '-0.01em', lineHeight: 1.35, marginBottom: 12, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                      <h2 style={{ fontSize: 15.5, fontWeight: 800, color: C.textStrong, letterSpacing: '-0.01em', lineHeight: 1.35, marginBottom: 14, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                         {program.title}
                       </h2>
 
                       {/* Applicant avatars */}
                       <div style={{ marginBottom: 4 }}>
-                        <p style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.textBody, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
-                          <Users size={10} /> Applicants ({totalApplicants})
+                        <p style={{ fontSize: 11.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.textBody, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Users size={12} /> Applicants ({totalApplicants})
                         </p>
                         {totalApplicants === 0 ? (
-                          <p style={{ fontSize: 11, fontStyle: 'italic', color: C.textMuted }}>No submissions yet</p>
+                          <p style={{ fontSize: 12.5, fontStyle: 'italic', color: C.textMuted }}>No submissions yet</p>
                         ) : (
                           <div style={{ display: 'flex', alignItems: 'center' }}>
                             {truncatedApplicants.map((applicant, index) => {
@@ -166,21 +183,21 @@ export default function OrgApplicantPrograms() {
                                 <div
                                   key={applicant.id || index}
                                   title={`${firstName} ${lastName}`.trim() || 'Applicant'}
-                                  style={{ width: 28, height: 28, borderRadius: '50%', border: `2px solid ${C.white}`, marginLeft: index === 0 ? 0 : -8, background: C.brandMid, overflow: 'hidden', flexShrink: 0, position: 'relative' }}
+                                  style={{ width: 40, height: 40, borderRadius: '50%', border: `2.5px solid ${C.white}`, marginLeft: index === 0 ? 0 : -12, background: C.brandMid, overflow: 'hidden', flexShrink: 0, position: 'relative', boxShadow: '0 1px 3px rgba(15,31,61,0.12)' }}
                                 >
                                   {hasValidImg && (
                                     <img src={fullImgUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                       onError={e => { e.target.style.display = 'none'; e.target.nextSibling?.removeAttribute('style'); }} />
                                   )}
-                                  <div style={{ width: '100%', height: '100%', background: C.brand, color: C.white, fontSize: 10, fontWeight: 800, display: hasValidImg ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', textTransform: 'uppercase' }}>
+                                  <div style={{ width: '100%', height: '100%', background: C.brand, color: C.white, fontSize: 14, fontWeight: 800, display: hasValidImg ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', textTransform: 'uppercase' }}>
                                     {firstName[0] || '?'}{lastName[0] || ''}
                                   </div>
                                 </div>
                               );
                             })}
                             {extraCount > 0 && (
-                              <div style={{ width: 28, height: 28, borderRadius: '50%', border: `2px solid ${C.white}`, marginLeft: -8, background: C.surface, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                <span style={{ fontSize: 9, fontWeight: 800, color: C.textBody }}>+{extraCount}</span>
+                              <div style={{ width: 40, height: 40, borderRadius: '50%', border: `2.5px solid ${C.white}`, marginLeft: -12, background: C.surface, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <span style={{ fontSize: 12, fontWeight: 800, color: C.textBody }}>+{extraCount}</span>
                               </div>
                             )}
                           </div>
@@ -191,12 +208,12 @@ export default function OrgApplicantPrograms() {
                     {/* Footer */}
                     <div style={{ paddingTop: 12, marginTop: 8, borderTop: `1px solid ${C.borderLight}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       {program.deadline ? (
-                        <span style={{ fontSize: 11, fontWeight: 700, color: C.textBody, display: 'flex', alignItems: 'center', gap: 5 }}>
-                          <Calendar size={11} color={C.textMuted} />
+                        <span style={{ fontSize: 12.5, fontWeight: 700, color: C.textBody, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Calendar size={12.5} color={C.textMuted} />
                           {new Date(program.deadline).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </span>
                       ) : (
-                        <span style={{ fontSize: 10, fontWeight: 600, color: C.textMuted }}>No deadline set</span>
+                        <span style={{ fontSize: 11.5, fontWeight: 600, color: C.textMuted }}>No deadline set</span>
                       )}
                       <div style={{ width: 32, height: 32, borderRadius: 10, background: C.surface, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textMuted, transition: 'background .15s, color .15s' }}
                         onMouseEnter={e => { e.currentTarget.style.background = C.brand; e.currentTarget.style.color = C.white; }}

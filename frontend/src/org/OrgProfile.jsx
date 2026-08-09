@@ -3,7 +3,7 @@ import api from '../api';
 import {
     Camera, MapPin, Globe, Building2, Save, Phone, Smartphone,
     X, Edit2, Award, Plus, EyeOff, ChevronDown, ChevronUp,
-    CheckCircle, Clock, BookOpen, Layers, Calendar, Info, ShieldCheck, Check
+    CheckCircle, Clock, BookOpen, Info, ShieldCheck, Check
 } from 'lucide-react';
 
 /* ─── STATUS METADATA ─── */
@@ -16,7 +16,7 @@ const STATUS_META = {
 /* ─── HELPERS ─── */
 const Field = ({ label, children }) => (
     <div className="mb-4">
-        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5">
+        <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
             {label}
         </label>
         {children}
@@ -24,7 +24,7 @@ const Field = ({ label, children }) => (
 );
 
 const StaticVal = ({ val, placeholder = 'Not specified' }) => (
-    <div className={`text-xs font-semibold border rounded-xl px-3.5 py-2.5 border-slate-200/60 bg-slate-50/50 ${val ? 'text-slate-800' : 'text-slate-400 italic'}`}>
+    <div className={`text-sm font-medium border rounded-lg px-3.5 py-2.5 border-slate-200 bg-slate-50 ${val ? 'text-slate-700' : 'text-slate-400 italic'}`}>
         {val || placeholder}
     </div>
 );
@@ -33,7 +33,7 @@ const SectionHeader = ({ icon: Icon, label, action }) => (
     <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
         <div className="flex items-center gap-2">
             <Icon size={16} className="text-[#093fb4]" />
-            <span className="text-[11px] font-black text-slate-900 uppercase tracking-wider">{label}</span>
+            <span className="text-sm font-semibold text-slate-800">{label}</span>
         </div>
         {action}
     </div>
@@ -224,124 +224,113 @@ const OrgProfile = () => {
     if (loading) return (
         <div className="flex flex-col items-center justify-center min-h-screen gap-3 bg-[#f8fafc]">
             <Building2 size={32} className="text-[#093fb4] animate-pulse" />
-            <p className="text-xs font-black text-slate-400 uppercase tracking-wider">Loading Workspace…</p>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Loading Workspace…</p>
         </div>
     );
 
     return (
-        <div className="min-h-screen bg-[#f8fafc] font-['Inter'] text-slate-800 pb-16">
-            {/* ── HEADER BANNER ── */}
-            <div className="bg-[#093fb4] text-white relative pt-8 pb-6 px-8 shadow-inner overflow-hidden">
-                <div className="absolute right-0 top-0 w-96 h-96 bg-white/5 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
-                
-                <div className="max-w-7xl mx-auto">
-                    <div className="flex justify-between items-start gap-4 mb-6">
-                        <div className="flex flex-col sm:flex-row gap-5 items-start sm:items-center">
+        <div className="min-h-screen bg-slate-50 font-['Inter'] text-slate-800 pb-16">
+            {/* ── PROFILE HEADER ── */}
+            <div className="bg-white border-b border-slate-200">
+                <div className="max-w-6xl mx-auto px-6 py-6">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+
+                        <div className="flex items-start sm:items-center gap-4 min-w-0">
                             <div className="relative shrink-0 group">
-                                <div className="w-24 h-24 rounded-2xl bg-white p-1 shadow-xl overflow-hidden flex items-center justify-center border border-white/20">
+                                <div className="w-16 h-16 rounded-xl bg-slate-100 overflow-hidden flex items-center justify-center border border-slate-200">
                                     {logoSrc ? (
-                                        <img src={logoSrc} alt="Org Logo" className="w-full h-full object-cover rounded-xl" />
+                                        <img src={logoSrc} alt="Org Logo" className="w-full h-full object-cover" />
                                     ) : (
-                                        <div className="w-full h-full bg-blue-50 rounded-xl flex items-center justify-center text-[#093fb4] font-black text-2xl">
+                                        <div className="w-full h-full bg-blue-50 flex items-center justify-center text-[#093fb4] font-bold text-lg">
                                             {profile.org_name ? profile.org_name.charAt(0).toUpperCase() : 'O'}
                                         </div>
                                     )}
                                 </div>
-                                <button 
-                                    onClick={() => fileRef.current.click()} 
-                                    title="Change logo" 
-                                    className="absolute -bottom-1 -right-1 w-7 h-7 rounded-xl bg-[#093fb4] border-2 border-white flex items-center justify-center cursor-pointer shadow-md hover:bg-blue-800 transition"
+                                <button
+                                    onClick={() => fileRef.current.click()}
+                                    title="Change logo"
+                                    className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-lg bg-[#093fb4] border-2 border-white flex items-center justify-center cursor-pointer hover:bg-blue-800 transition"
                                 >
-                                    <Camera size={12} className="text-white" />
+                                    <Camera size={11} className="text-white" />
                                 </button>
                                 <input ref={fileRef} type="file" accept=".png,.jpg,.jpeg,.webp" className="hidden" onChange={handleFileChange} />
                             </div>
 
-                            <div className="space-y-1.5">
+                            <div className="min-w-0">
                                 <div className="flex flex-wrap items-center gap-2">
-                                    <h1 className="text-xl font-black tracking-tight">{profile.org_name || 'Unnamed Organization'}</h1>
-                                    <span className="flex items-center gap-1 text-[9px] font-bold bg-white/20 backdrop-blur-md px-2 py-0.5 rounded-md uppercase tracking-wide">
-                                        <ShieldCheck size={10} className="text-blue-200" /> Verified Organization
+                                    <h1 className="text-lg font-bold text-slate-900 tracking-tight truncate">{profile.org_name || 'Unnamed Organization'}</h1>
+                                    <span className="flex items-center gap-1 text-[11px] font-semibold text-[#093fb4] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md shrink-0">
+                                        <ShieldCheck size={11} /> Verified
                                     </span>
                                 </div>
+                                <p className="text-xs font-medium text-slate-500 mt-0.5 flex items-center gap-1.5">
+                                    <Building2 size={12} className="text-slate-400" /> {profile.provider_type || 'Unspecified Type'}
+                                </p>
 
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-black bg-white/15 text-white px-2.5 py-0.5 rounded-md tracking-wider uppercase flex items-center gap-1">
-                                        <Building2 size={11} /> {profile.provider_type || 'Unspecified Type'}
-                                    </span>
-                                </div>
-
-                                <div className="flex flex-wrap items-center gap-4 text-[11px] text-blue-100/90 pt-1">
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 mt-2">
                                     {profile.website && (
-                                        <a href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:underline">
-                                            <Globe size={12} className="text-blue-200" />
+                                        <a href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 hover:text-[#093fb4] transition-colors">
+                                            <Globe size={12} className="text-slate-400" />
                                             <span>{profile.website}</span>
                                         </a>
                                     )}
                                     {profile.tel_number && (
-                                        <div className="flex items-center gap-1" title="Telephone Number">
-                                            <Phone size={12} className="text-blue-200" />
+                                        <div className="flex items-center gap-1.5" title="Telephone Number">
+                                            <Phone size={12} className="text-slate-400" />
                                             <span>{profile.tel_number}</span>
                                         </div>
                                     )}
                                     {profile.contact_number && (
-                                        <div className="flex items-center gap-1" title="Mobile Contact Number">
-                                            <Smartphone size={12} className="text-blue-200" />
+                                        <div className="flex items-center gap-1.5" title="Mobile Contact Number">
+                                            <Smartphone size={12} className="text-slate-400" />
                                             <span>{profile.contact_number}</span>
                                         </div>
                                     )}
-                                    <div className="flex items-center gap-1">
-                                        <MapPin size={12} className="text-blue-200" />
+                                    <div className="flex items-center gap-1.5">
+                                        <MapPin size={12} className="text-slate-400" />
                                         <span>{[profile.street_address, profile.barangay, profile.city, profile.region, 'Philippines'].filter(Boolean).join(', ') || 'Address not set'}</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="shrink-0">
-                            <button 
-                                onClick={handleOpenEditModal} 
-                                className="px-4 py-2 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-white font-black text-xs flex items-center gap-1.5 transition uppercase tracking-wider shadow-xs cursor-pointer"
-                            >
-                                <Edit2 size={13} /> Edit Profile Details
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="border-t border-white/10 pt-5 mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl">
-                        {[
-                            { label: 'Featured Programs', val: programs.length, icon: Layers },
-                            { label: 'Member Since', val: formattedCreatedAt, icon: Calendar },
-                        ].map(({ label, val, icon: Icon }) => (
-                            <div key={label} className="flex items-center gap-3 bg-white/5 border border-white/5 rounded-2xl p-3 backdrop-blur-xs">
-                                <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-blue-200 shrink-0">
-                                    <Icon size={16} />
+                        <div className="flex items-center gap-5 shrink-0 lg:pl-5">
+                            <div className="flex items-center gap-5 pr-5 border-r border-slate-200">
+                                <div>
+                                    <p className="text-base font-bold text-slate-900 leading-tight">{programs.length}</p>
+                                    <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wide">Programs</p>
                                 </div>
                                 <div>
-                                    <p className="text-[9px] font-bold text-blue-200 uppercase tracking-wider leading-tight">{label}</p>
-                                    <p className="text-base font-black leading-tight mt-0.5">{val}</p>
+                                    <p className="text-sm font-semibold text-slate-900 leading-tight whitespace-nowrap">{formattedCreatedAt}</p>
+                                    <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wide">Member Since</p>
                                 </div>
                             </div>
-                        ))}
+                            <button
+                                onClick={handleOpenEditModal}
+                                className="px-3.5 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs flex items-center gap-1.5 transition cursor-pointer"
+                            >
+                                <Edit2 size={13} /> Edit Profile
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* ── CONTENT GRID ── */}
-            <div className="max-w-7xl mx-auto px-6 mt-6">
+            <div className="max-w-6xl mx-auto px-6 mt-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
 
                     {/* Column 1: Scholarship Programs Showcase */}
-                    <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs">
+                    <div className="bg-white border border-slate-200 rounded-2xl p-5">
                         <SectionHeader
                             icon={Award}
                             label="Scholarship Programs"
                             action={
                                 <button 
                                     onClick={() => setIsAddModalOpen(true)} 
-                                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#093fb4] hover:bg-blue-800 text-white font-black text-[10px] cursor-pointer shadow-md tracking-wider uppercase transition-all"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#093fb4] hover:bg-blue-800 text-white font-semibold text-xs cursor-pointer transition-all"
                                 >
-                                    <Plus size={12} strokeWidth={2.5} /> Add / Feature
+                                    <Plus size={13} strokeWidth={2.5} /> Add / Feature
                                 </button>
                             }
                         />
@@ -366,10 +355,10 @@ const OrgProfile = () => {
                                                 <div className="p-3.5 cursor-pointer select-none" onClick={() => setExpandedProg(expanded ? null : prog.id)}>
                                                     <div className="flex items-start justify-between gap-2">
                                                         <div className="min-w-0">
-                                                            <p className="font-bold text-sm text-slate-900 truncate pr-2">{prog.title || prog.name}</p>
+                                                            <p className="font-semibold text-sm text-slate-900 truncate pr-2">{prog.title || prog.name}</p>
                                                             <div className="flex items-center flex-wrap gap-1.5 mt-1.5">
-                                                                <span className={`text-[9px] font-black px-2 py-0.5 rounded-md flex items-center gap-1 border ${sm.color} uppercase tracking-wider`}>
-                                                                    <Icon size={10} strokeWidth={2.5} /> {prog.status || 'Active'}
+                                                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md flex items-center gap-1 border ${sm.color}`}>
+                                                                    <Icon size={11} strokeWidth={2.5} /> {prog.status || 'Active'}
                                                                 </span>
                                                             </div>
                                                         </div>
@@ -390,16 +379,16 @@ const OrgProfile = () => {
 
                                                     <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-100">
                                                         <div>
-                                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-wider leading-none">Scholars</p>
-                                                            <p className="text-xs font-black text-slate-800 mt-1">{applicantCount}</p>
+                                                            <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wide leading-none">Scholars</p>
+                                                            <p className="text-xs font-semibold text-slate-800 mt-1">{applicantCount}</p>
                                                         </div>
                                                         <div>
-                                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-wider leading-none">Slots</p>
-                                                            <p className="text-xs font-black text-slate-800 mt-1">{prog.slots ?? 0}</p>
+                                                            <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wide leading-none">Slots</p>
+                                                            <p className="text-xs font-semibold text-slate-800 mt-1">{prog.slots ?? 0}</p>
                                                         </div>
                                                         <div>
-                                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-wider leading-none">Deadline</p>
-                                                            <p className="text-[10px] font-bold text-slate-700 mt-1 whitespace-nowrap">{prog.deadline || 'TBD'}</p>
+                                                            <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wide leading-none">Deadline</p>
+                                                            <p className="text-[11px] font-semibold text-slate-700 mt-1 whitespace-nowrap">{prog.deadline || 'TBD'}</p>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -414,23 +403,23 @@ const OrgProfile = () => {
                                 })}
                             </div>
                             {programs.length === 0 && (
-                                <div className="text-center py-10 px-4 text-slate-400 bg-slate-50/50 border border-dashed border-slate-200 rounded-2xl">
+                                <div className="text-center py-10 px-4 text-slate-400 bg-slate-50 border border-dashed border-slate-200 rounded-2xl">
                                     <BookOpen size={28} className="mx-auto text-slate-300 mb-2" />
-                                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">No profile programs displayed</p>
-                                    <p className="text-[10px] text-slate-400 mt-1">Click "Add / Feature" above to select existing programs.</p>
+                                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">No profile programs displayed</p>
+                                    <p className="text-[11px] text-slate-400 mt-1">Click "Add / Feature" above to select existing programs.</p>
                                 </div>
                             )}
                         </div>
                     </div>
 
                     {/* Column 2: About Us */}
-                    <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs">
+                    <div className="bg-white border border-slate-200 rounded-2xl p-5">
                         <SectionHeader icon={Info} label="About Us" />
-                        <p className="text-xs text-slate-600 font-medium leading-relaxed whitespace-pre-line">{profile.about_us || 'No description provided yet.'}</p>
+                        <p className="text-sm text-slate-600 font-normal leading-relaxed whitespace-pre-line">{profile.about_us || 'No description provided yet.'}</p>
                     </div>
 
                     {/* Column 3: Contact & Details */}
-                    <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs">
+                    <div className="bg-white border border-slate-200 rounded-2xl p-5">
                         <SectionHeader icon={Building2} label="Contact & Details" />
                         <div className="space-y-0.5">
                             <Field label="Provider Type">
@@ -438,23 +427,23 @@ const OrgProfile = () => {
                             </Field>
 
                             <Field label="Telephone Number">
-                                <div className="flex items-center gap-2.5 bg-slate-50/60 border border-slate-150 rounded-xl p-2.5">
+                                <div className="flex items-center gap-2.5 bg-slate-50 border border-slate-200 rounded-lg p-2.5">
                                     <Phone size={14} className="text-[#093fb4] shrink-0" />
-                                    <span className="text-xs font-semibold text-slate-800">{profile.tel_number || '—'}</span>
+                                    <span className="text-sm font-medium text-slate-700">{profile.tel_number || '—'}</span>
                                 </div>
                             </Field>
 
                             <Field label="Contact Number (Mobile)">
-                                <div className="flex items-center gap-2.5 bg-slate-50/60 border border-slate-150 rounded-xl p-2.5">
+                                <div className="flex items-center gap-2.5 bg-slate-50 border border-slate-200 rounded-lg p-2.5">
                                     <Smartphone size={14} className="text-[#093fb4] shrink-0" />
-                                    <span className="text-xs font-semibold text-slate-800">{profile.contact_number || '—'}</span>
+                                    <span className="text-sm font-medium text-slate-700">{profile.contact_number || '—'}</span>
                                 </div>
                             </Field>
 
                             <Field label="Website / Social Platform">
-                                <div className="flex items-center gap-2.5 bg-slate-50/60 border border-slate-150 rounded-xl p-2.5">
+                                <div className="flex items-center gap-2.5 bg-slate-50 border border-slate-200 rounded-lg p-2.5">
                                     <Globe size={14} className="text-[#093fb4] shrink-0" />
-                                    <span className="text-xs font-semibold text-slate-800 truncate">{profile.website || '—'}</span>
+                                    <span className="text-sm font-medium text-slate-700 truncate">{profile.website || '—'}</span>
                                 </div>
                             </Field>
 
@@ -481,10 +470,10 @@ const OrgProfile = () => {
             {/* ── CONSOLIDATED EDIT PROFILE MODAL ── */}
             {isEditModalOpen && (
                 <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 overflow-y-auto">
-                    <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl border border-slate-100 overflow-hidden my-8 animate-in zoom-in-95 duration-150">
+                    <div className="bg-white rounded-2xl w-full max-w-2xl shadow-xl border border-slate-200 overflow-hidden my-8 animate-in zoom-in-95 duration-150">
                         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                             <div>
-                                <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">Edit Organization Profile</h2>
+                                <h2 className="text-sm font-semibold text-slate-900">Edit Organization Profile</h2>
                                 <p className="text-[11px] text-slate-500 font-medium">Update contact info, address details, and organization overview.</p>
                             </div>
                             <button onClick={() => setIsEditModalOpen(false)} className="w-8 h-8 rounded-xl border border-slate-200 bg-white cursor-pointer flex items-center justify-center hover:bg-slate-50 transition-all">
@@ -495,7 +484,7 @@ const OrgProfile = () => {
                         <form onSubmit={handleSaveProfileModal} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Organization Name</label>
+                                    <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Organization Name</label>
                                     <input 
                                         type="text"
                                         value={editFormData.org_name || ''} 
@@ -504,7 +493,7 @@ const OrgProfile = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Provider Type</label>
+                                    <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Provider Type</label>
                                     <input 
                                         type="text"
                                         value={editFormData.provider_type || ''} 
@@ -517,7 +506,7 @@ const OrgProfile = () => {
 
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Telephone Number</label>
+                                    <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Telephone Number</label>
                                     <input 
                                         type="text"
                                         value={editFormData.tel_number || ''} 
@@ -527,7 +516,7 @@ const OrgProfile = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Mobile Contact Number</label>
+                                    <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Mobile Contact Number</label>
                                     <input 
                                         type="text"
                                         value={editFormData.contact_number || ''} 
@@ -537,7 +526,7 @@ const OrgProfile = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Website / Social Platform</label>
+                                    <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Website / Social Platform</label>
                                     <input 
                                         type="text"
                                         value={editFormData.website || ''} 
@@ -552,7 +541,7 @@ const OrgProfile = () => {
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Region</label>
+                                    <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Region</label>
                                     <input 
                                         type="text"
                                         value={editFormData.region || ''} 
@@ -562,7 +551,7 @@ const OrgProfile = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">City / Municipality</label>
+                                    <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">City / Municipality</label>
                                     <input 
                                         type="text"
                                         value={editFormData.city || ''} 
@@ -572,7 +561,7 @@ const OrgProfile = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Barangay</label>
+                                    <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Barangay</label>
                                     <input 
                                         type="text"
                                         value={editFormData.barangay || ''} 
@@ -582,7 +571,7 @@ const OrgProfile = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Street Address</label>
+                                    <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Street Address</label>
                                     <input 
                                         type="text"
                                         value={editFormData.street_address || ''} 
@@ -594,7 +583,7 @@ const OrgProfile = () => {
                             </div>
 
                             <div>
-                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">About Us Description</label>
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">About Us Description</label>
                                 <textarea 
                                     value={editFormData.about_us || ''} 
                                     onChange={e => setEditFormData({ ...editFormData, about_us: e.target.value })} 
@@ -607,14 +596,14 @@ const OrgProfile = () => {
                                 <button 
                                     type="button" 
                                     onClick={() => setIsEditModalOpen(false)} 
-                                    className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-500 font-bold text-xs cursor-pointer hover:bg-slate-100 transition-all uppercase tracking-wider"
+                                    className="px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-600 font-semibold text-xs cursor-pointer hover:bg-slate-50 transition-all"
                                 >
                                     Cancel
                                 </button>
                                 <button 
                                     type="submit" 
                                     disabled={saving}
-                                    className="px-5 py-2.5 rounded-xl bg-[#093fb4] hover:bg-blue-800 text-white font-black text-xs cursor-pointer shadow-md transition-all uppercase tracking-wider flex items-center gap-1.5"
+                                    className="px-5 py-2.5 rounded-lg bg-[#093fb4] hover:bg-blue-800 text-white font-semibold text-xs cursor-pointer transition-all flex items-center gap-1.5"
                                 >
                                     <Save size={14} /> {saving ? 'Saving...' : 'Save Changes'}
                                 </button>
@@ -627,10 +616,10 @@ const OrgProfile = () => {
             {/* ── PROGRAM OPTIONS SELECTOR MODAL ── */}
             {isAddModalOpen && (
                 <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-6">
-                    <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-150">
+                    <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-150">
                         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                             <div>
-                                <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Select Programs to Showcase</h2>
+                                <h2 className="text-sm font-semibold text-slate-900">Select Programs to Showcase</h2>
                                 <p className="text-[10px] text-slate-500 font-medium">Select programs to make visible on your organization profile.</p>
                             </div>
                             <button onClick={() => { setIsAddModalOpen(false); setSelectedProgramIds([]); }} className="w-8 h-8 rounded-xl border border-slate-200 bg-white cursor-pointer flex items-center justify-center hover:bg-slate-50 transition-all">
@@ -643,7 +632,7 @@ const OrgProfile = () => {
                             <button 
                                 type="button" 
                                 onClick={handleSelectAll} 
-                                className="text-[#093fb4] hover:underline font-black text-[10px] uppercase tracking-wider cursor-pointer"
+                                className="text-[#093fb4] hover:underline font-semibold text-[11px] cursor-pointer"
                             >
                                 {selectedProgramIds.length > 0 ? 'Deselect All' : 'Select All'}
                             </button>
@@ -692,7 +681,7 @@ const OrgProfile = () => {
                             <button 
                                 type="button" 
                                 onClick={() => { setIsAddModalOpen(false); setSelectedProgramIds([]); }} 
-                                className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-500 font-bold text-xs cursor-pointer hover:bg-slate-100 transition-all uppercase tracking-wider"
+                                className="px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-600 font-semibold text-xs cursor-pointer hover:bg-slate-50 transition-all"
                             >
                                 Cancel
                             </button>
@@ -700,7 +689,7 @@ const OrgProfile = () => {
                                 type="button" 
                                 onClick={handleAddSelectedPrograms} 
                                 disabled={selectedProgramIds.length === 0}
-                                className={`px-5 py-2.5 rounded-xl border-none font-black text-xs cursor-pointer shadow-md transition-all uppercase tracking-wider ${
+                                className={`px-5 py-2.5 rounded-xl border-none font-semibold text-xs cursor-pointer transition-all ${
                                     selectedProgramIds.length > 0 ? 'bg-[#093fb4] text-white hover:bg-blue-800' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
                                 }`}
                             >
