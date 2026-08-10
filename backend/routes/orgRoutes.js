@@ -4,15 +4,16 @@ const uploadOrgPic = require('../config/orgMulter');
 const { verifyToken } = require('../middleware/auth');
 const orgController = require('../controller/orgController');
 
-// Standardized Routes
+// Standardized Routes orgprofile-
 router.get('/profile/:id', verifyToken, orgController.getOrgProfile);
 router.patch('/profile/:id', verifyToken, orgController.updateOrgProfile);
 router.patch('/profile-picture/:id', verifyToken, uploadOrgPic, orgController.updateProfilePicture);
 
 router.get('/applications', verifyToken, orgController.getOrgApplications);
+//orgprofile-
 router.get('/dashboard-programs/:id', verifyToken, orgController.getOrgPrograms);
 
-// Dedicated profile programs endpoint
+// Dedicated profile programs endpoint orgprofile-
 router.get('/profile-programs/:id', verifyToken, orgController.getOrgProfilePrograms);
 
 // ✅ FIX: Changed semicolon to colon

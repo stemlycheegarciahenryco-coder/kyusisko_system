@@ -58,28 +58,56 @@ const getOrgProfile = async (req, res) => {
 };
 
 // 2.Updated the info of profile
+// 2. Updated the info of profile (Whitelisted fields to prevent mass-assignment)
 const updateOrgProfile = async (req, res) => {
-    // We destruct to remove keys that don't exist in your DB columns
-    const { org_pic, previewUrl, ...textData } = req.body; 
-
     try {
         const orgId = await resolveOrgId(req.user.id);
         if (!orgId) return res.status(404).json({ error: "Org not found" });
 
-        const fields = Object.keys(textData).map((key, i) => `${key} = $${i + 1}`);
-        const values = Object.values(textData);
-        
-        if (fields.length === 0) return res.status(400).json({ error: "No fields to update" });
+        // Allowed fields for profile update
+        const allowedFields = [
+            'org_name',
+            'provider_type',
+            'tel_number',
+            'website',
+            'region',
+            'city',
+            'barangay',
+            'street_address',
+            'about_us'
+        ];
 
-        const sql = `UPDATE sub_admins SET ${fields.join(', ')} WHERE id = $${values.length + 1} RETURNING *`;
+        // Filter req.body so only explicit whitelisted keys are accepted
+        const updates = {};
+        for (const field of allowedFields) {
+            if (req.body[field] !== undefined) {
+                updates[field] = req.body[field];
+            }
+        }
+
+        const keys = Object.keys(updates);
+        if (keys.length === 0) {
+            return res.status(400).json({ error: "No valid profile fields provided for update" });
+        }
+
+        const fields = keys.map((key, i) => `${key} = $${i + 1}`);
+        const values = Object.values(updates);
+
+        const sql = `
+            UPDATE sub_admins 
+            SET ${fields.join(', ')} 
+            WHERE id = $${values.length + 1} 
+            RETURNING org_name, sub_email, region, city, street_address, provider_type, barangay, tel_number, contact_number, website, org_pic, about_us;
+        `;
+
         const result = await pool.query(sql, [...values, orgId]);
 
         res.status(200).json({ success: true, data: result.rows[0] });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error("Update Profile Error:", err.message);
+        res.status(500).json({ error: "Failed to update profile." });
     }
 };
-
 // 3. Update  Profile Picture Only
 const updateProfilePicture = async (req, res) => {
     try {

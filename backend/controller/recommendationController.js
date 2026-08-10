@@ -220,8 +220,9 @@ const getAllScholarships = async (req, res) => {
 
     // 🛡️ Added LIMIT 20 here as well
     const query = `
-      SELECT sch.*, sa.org_name, sa.org_pic, sa.contact_number AS org_contact,
-             sa.sub_email AS org_email, sa.city AS org_city,
+      SELECT sch.*, sa.org_name,   sa.org_pic, sa.contact_number AS org_contact,
+             sa.sub_email AS org_email, sa.city AS org_city, sa.provider_type,
+
              EXISTS (SELECT 1 FROM saved_scholarships ss WHERE ss.scholarship_id = sch.id AND ss.student_id = $1) AS is_saved
       FROM scholarships sch
       LEFT JOIN sub_admins sa ON sch.sub_admin_id = sa.id

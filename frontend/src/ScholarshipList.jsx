@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'; 
 import api from './api';
-import { ArrowRight, Bookmark, AlertTriangle, CheckCircle2, Mail, Phone, Calendar, X } from 'lucide-react';
+import { ArrowRight, Bookmark, AlertTriangle, Building2Icon, CheckCircle2, Calendar, X } from 'lucide-react';
 import StudentRecommendations from './student/StudentRecommendations';
 
 // 📋 Pre-defined lists of report reasons
@@ -174,27 +174,26 @@ export default function ScholarshipList() {
 
               <div className={`flex flex-col gap-5 ${s.is_best_match ? 'mt-6' : ''}`}>
                 {/* Org header */}
-                <div className="flex items-start gap-4">
-                  <div className="w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center bg-white border border-slate-100 shadow-sm shrink-0">
+                <div className="flex items-center gap-4">
+                  {/* Increased size to w-20 h-20 and made circular with rounded-full */}
+                  <div className="w-20 h-20 rounded-full overflow-hidden flex items-center justify-center bg-white border border-slate-100 shadow-sm shrink-0">
                     {s.org_pic ? (
                       <img src={s.org_pic} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-lg font-black text-slate-300">
+                      <span className="text-xl font-black text-slate-300">
                         {s.org_name?.substring(0, 2).toUpperCase()}
                       </span>
                     )}
                   </div>
+                  
                   <div className="flex flex-col justify-center">
-                    <h1 className="text-[#093fb4] text-[16px] font-black uppercase tracking-tight leading-tight">
+                    {/* Increased text size for org_name */}
+                    <h1 className="text-[#093fb4] text-xl md:text-2xl font-black uppercase tracking-tight leading-tight">
                       {s.org_name}
                     </h1>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
-                      <div className="flex items-center gap-1.5 text-slate-700 font-bold text-sm">
-                        <Mail size={14} className="text-[#093fb4]" /> {s.org_email || 'N/A'}
-                      </div>
-                      <div className="flex items-center gap-1.5 text-slate-700 font-bold text-sm">
-                        <Phone size={14} className="text-[#093fb4]" /> {s.org_contact || 'N/A'}
-                      </div>
+                    {/* Increased text size for provider_type and removed Mail/Phone */}
+                    <div className="flex items-center gap-1.5 text-slate-700 font-bold text-base md:text-lg mt-1">
+                      <Building2Icon size={18} className="text-[#093fb4]" /> {s.provider_type || 'N/A'}
                     </div>
                   </div>
                 </div>
@@ -206,21 +205,21 @@ export default function ScholarshipList() {
                   </h3>
                 </div>
 
+                {/* Deadline (Moved above description) */}
+                <div className="flex items-center justify-center py-2 border-y border-dashed border-slate-200">
+                  <div className="flex items-center gap-2 text-[#FF1E1E] font-black text-[13px] uppercase tracking-[0.15em]">
+                    <Calendar size={16} />
+                    Deadline: {new Date(s.deadline).toLocaleDateString('en-US', {
+                      month: 'long', day: 'numeric', year: 'numeric'
+                    })}
+                  </div>
+                </div>
+
                 {/* Description */}
                 <div className="p-5 bg-slate-50/50 rounded-2xl border border-slate-100 w-full">
                   <p className="text-sm text-slate-800 leading-relaxed text-justify line-clamp-3 font-medium">
                     {s.description || "No description provided for this scholarship."}
                   </p>
-                </div>
-
-                {/* Deadline */}
-                <div className="flex items-center justify-center py-2 border-y border-dashed border-slate-200">
-                  <div className="flex items-center gap-2 text-[#FF1E1E] font-black text-[12px] uppercase tracking-[0.15em]">
-                    <Calendar size={14} />
-                    Deadline: {new Date(s.deadline).toLocaleDateString('en-US', {
-                      month: 'long', day: 'numeric', year: 'numeric'
-                    })}
-                  </div>
                 </div>
 
                 {/* Actions */}

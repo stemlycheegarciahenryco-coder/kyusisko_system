@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { 
   Users, 
-  DollarSign, 
+  PhilippinePesoIcon, 
   BookOpen, 
   CheckCircle2, 
   Download, 
@@ -196,7 +196,7 @@ export default function OrgLogs() {
             <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex items-center justify-between">
               <div className="flex items-center gap-3.5">
                 <div className="p-3 bg-blue-50 text-blue-600 rounded-xl shrink-0">
-                  <DollarSign size={22} />
+                  <PhilippinePesoIcon size={22} />
                 </div>
                 <div>
                   <p className="text-xs font-extrabold text-slate-400 uppercase tracking-tight">Total Allocated Budget</p>
