@@ -22,6 +22,7 @@ router.patch('/programs/:programId/visibility', verifyToken, orgController.toggl
 
 router.get('/dashboard-stats', verifyToken, orgController.getDashboardStats);
 router.get('/fund-report', verifyToken, orgController.getFundReport);
+router.get('/activity-logs', verifyToken, orgController.getActivityLogs);
 router.get('/conflicts', verifyToken, orgController.monitorApplications);
 
 // Password change now lives at POST /user-management/change-password

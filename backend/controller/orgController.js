@@ -18,6 +18,23 @@ async function resolveOrgId(requesterId) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// Writes one row to provider_audit_trails, isolated per org via
+// sub_admin_id. Never throws into the caller's request flow — a logging
+// failure should never break the actual action that triggered it, so
+// errors are swallowed and just logged server-side.
+async function logActivity({ subAdminId, actorId, actionType, details, studentId = null }) {
+    try {
+        await pool.query(
+            `INSERT INTO provider_audit_trails (sub_admin_id, actor_id, action_type, details, student_id)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [subAdminId, actorId, actionType, details, studentId]
+        );
+    } catch (err) {
+        console.error("Audit Log Write Failed:", err.message);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // amount_range is a free-text varchar (e.g. "10,000 - 20,000", "₱15000",
 // or blank). Never trust it as a clean number — pull out every numeric
 // token, and if none exist, return null so callers can show "not
@@ -102,6 +119,13 @@ const updateOrgProfile = async (req, res) => {
 
         const result = await pool.query(sql, [...values, orgId]);
 
+        await logActivity({
+            subAdminId: orgId,
+            actorId: req.user.id,
+            actionType: 'Profile Updated',
+            details: `Updated organization profile fields: ${keys.join(', ')}.`
+        });
+
         res.status(200).json({ success: true, data: result.rows[0] });
     } catch (err) {
         console.error("Update Profile Error:", err.message);
@@ -162,6 +186,13 @@ const updateProfilePicture = async (req, res) => {
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, error: "Organization account not found." });
         }
+
+        await logActivity({
+            subAdminId: orgId,
+            actorId: req.user.id,
+            actionType: 'Logo Updated',
+            details: `Updated organization profile picture.`
+        });
 
         // 6. Return success response with the new image URL
         return res.status(200).json({
@@ -494,6 +525,53 @@ const getFundReport = async (req, res) => {
     }
 };
 
+// ─────────────────────────────────────────────────────────────────────────
+// Provider-side activity log — isolated per org via sub_admin_id, so one
+// provider can never see another provider's (or the system admin's) rows.
+// Returns the most recent 200 events; search/filter/pagination happen
+// client-side over that set, same pattern as getFundReport.
+const getActivityLogs = async (req, res) => {
+    try {
+        const orgId = await resolveOrgId(req.user.id);
+        if (!orgId) return res.status(404).json({ success: false, message: "Org not found." });
+
+        const result = await pool.query(
+            `SELECT 
+                pat.id,
+                pat.action_type,
+                pat.details,
+                pat.created_at,
+                COALESCE(NULLIF(TRIM(CONCAT(actor.first_name, ' ', actor.last_name)), ''), actor.org_name, 'System') AS actor_name,
+                actor.account_type AS actor_role,
+                st.sfirst_name AS student_first_name,
+                st.slast_name AS student_last_name
+             FROM provider_audit_trails pat
+             LEFT JOIN sub_admins actor ON pat.actor_id = actor.id
+             LEFT JOIN students st ON pat.student_id = st.id
+             WHERE pat.sub_admin_id = $1
+             ORDER BY pat.created_at DESC
+             LIMIT 200`,
+            [orgId]
+        );
+
+        const data = result.rows.map(r => ({
+            id: r.id,
+            user: r.actor_name,
+            role: r.actor_role === 'co_admin' ? 'Co-Admin' : r.actor_role === 'main' ? 'Org Admin' : 'System',
+            type: r.action_type || 'Activity',
+            detail: r.student_first_name
+                ? `${r.details || ''} (Student: ${r.student_first_name} ${r.student_last_name})`.trim()
+                : (r.details || ''),
+            createdAt: r.created_at,
+        }));
+
+        res.status(200).json({ success: true, data });
+    } catch (err) {
+        console.error("Get Activity Logs Error:", err.message);
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
 //monitor the applicaiton conflict
 const monitorApplications = async (req, res) => {
     try {
@@ -658,6 +736,13 @@ const addCoAdmin = async (req, res) => {
             `
         }).catch(err => console.error("Co-admin invite email failed:", err.message));
 
+        await logActivity({
+            subAdminId: orgId,
+            actorId: orgId,
+            actionType: 'Co-Admin Added',
+            details: `Added ${firstName} ${lastName} (${email}) as a co-admin.`
+        });
+
         res.status(201).json({ success: true, message: `Co-admin ${firstName} ${lastName} added and invite sent.` });
     } catch (err) {
         console.error("Add Co-Admin Error:", err.message);
@@ -700,13 +785,20 @@ const removeCoAdmin = async (req, res) => {
 
         // Verify the co-admin actually belongs to this org
         const check = await pool.query(
-            'SELECT id FROM sub_admins WHERE id = $1 AND parent_org_id = $2 AND account_type = $3',
+            'SELECT id, first_name, last_name FROM sub_admins WHERE id = $1 AND parent_org_id = $2 AND account_type = $3',
             [coAdminId, orgId, 'co_admin']
         );
         if (check.rows.length === 0) {
             return res.status(404).json({ error: "Co-admin not found or does not belong to your organization." });
         }
         await pool.query('DELETE FROM sub_admins WHERE id = $1', [coAdminId]);
+
+        await logActivity({
+            subAdminId: orgId,
+            actorId: orgId,
+            actionType: 'Co-Admin Removed',
+            details: `Removed co-admin ${check.rows[0].first_name} ${check.rows[0].last_name}.`
+        });
         res.json({ success: true, message: "Co-admin removed." });
     } catch (err) {
         console.error("Remove Co-Admin Error:", err.message);
@@ -727,7 +819,7 @@ const blockCoAdmin = async (req, res) => {
         }
 
         const check = await pool.query(
-            'SELECT id, is_active FROM sub_admins WHERE id = $1 AND parent_org_id = $2 AND account_type = $3',
+            'SELECT id, is_active, first_name, last_name FROM sub_admins WHERE id = $1 AND parent_org_id = $2 AND account_type = $3',
             [coAdminId, orgId, 'co_admin']
         );
         if (check.rows.length === 0) {
@@ -739,6 +831,13 @@ const blockCoAdmin = async (req, res) => {
             'UPDATE sub_admins SET is_active = $1 WHERE id = $2',
             [nextActive, coAdminId]
         );
+
+        await logActivity({
+            subAdminId: orgId,
+            actorId: orgId,
+            actionType: nextActive ? 'Co-Admin Unblocked' : 'Co-Admin Blocked',
+            details: `${nextActive ? 'Unblocked' : 'Blocked'} co-admin ${check.rows[0].first_name} ${check.rows[0].last_name}.`
+        });
 
         res.json({
             success: true,
@@ -755,6 +854,7 @@ const blockCoAdmin = async (req, res) => {
 module.exports = { 
     getDashboardStats,
     getFundReport,
+    getActivityLogs,
     getOrgProfilePrograms,
     getOrgProfile, 
     toggleProfileProgramVisibility,
