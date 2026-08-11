@@ -7,7 +7,8 @@ const orgController = require('../controller/orgController');
 // Standardized Routes orgprofile-
 router.get('/profile/:id', verifyToken, orgController.getOrgProfile);
 router.patch('/profile/:id', verifyToken, orgController.updateOrgProfile);
-router.patch('/profile-picture/:id', verifyToken, uploadOrgPic, orgController.updateProfilePicture);
+router.patch('/profile-picture/:id', verifyToken, uploadOrgPic.single('org_pic'), orgController.updateProfilePicture);
+router.patch('/cover-picture/:id', verifyToken, uploadOrgPic.single('cover_pic'), orgController.updateCoverPicture);
 
 router.get('/applications', verifyToken, orgController.getOrgApplications);
 //orgprofile-

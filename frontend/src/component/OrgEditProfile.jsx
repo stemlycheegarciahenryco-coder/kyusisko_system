@@ -5,17 +5,27 @@ import api from '../api';
 export default function OrgEditProfile({ isOpen, onClose, initialData, onSaveSuccess }) {
     const [editFormData, setEditFormData] = useState({});
     const [telNumbers, setTelNumbers] = useState(['']); // State for multiple telephone numbers
+    const [websites, setWebsites] = useState(['']);     // State for multiple website/social links
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         if (initialData) {
             setEditFormData({ ...initialData });
-            // If there's an existing comma-separated string, split it into an array
+
+            // Parse comma-separated telephone numbers if present
             if (initialData.tel_number) {
                 const parsedTels = initialData.tel_number.split(',').map(n => n.trim()).filter(Boolean);
                 setTelNumbers(parsedTels.length > 0 ? parsedTels : ['']);
             } else {
                 setTelNumbers(['']);
+            }
+
+            // Parse comma-separated website/social URLs if present
+            if (initialData.website) {
+                const parsedWebsites = initialData.website.split(',').map(w => w.trim()).filter(Boolean);
+                setWebsites(parsedWebsites.length > 0 ? parsedWebsites : ['']);
+            } else {
+                setWebsites(['']);
             }
         }
     }, [initialData, isOpen]);
@@ -35,7 +45,20 @@ export default function OrgEditProfile({ isOpen, onClose, initialData, onSaveSuc
         const newTels = telNumbers.filter((_, i) => i !== index);
         setTelNumbers(newTels.length > 0 ? newTels : ['']);
     };
-    // ----------------------------------
+
+    // --- Dynamic Website / Social Handlers ---
+    const handleWebsiteChange = (index, value) => {
+        const newWebsites = [...websites];
+        newWebsites[index] = value;
+        setWebsites(newWebsites);
+    };
+
+    const addWebsiteField = () => setWebsites([...websites, '']);
+
+    const removeWebsiteField = (index) => {
+        const newWebsites = websites.filter((_, i) => i !== index);
+        setWebsites(newWebsites.length > 0 ? newWebsites : ['']);
+    };
 
     const handleSaveProfileModal = async (e) => {
         e.preventDefault();
@@ -44,11 +67,12 @@ export default function OrgEditProfile({ isOpen, onClose, initialData, onSaveSuc
 
         try {
             if (id) {
-                // Destructure contact_number out so it isn't accidentally overwritten
-                const { org_pic, previewUrl, created_at, contact_number, ...textData } = editFormData;
+                // Omit provider_type, org_pic, previewUrl, created_at, contact_number from payload
+                const { org_pic, previewUrl, created_at, contact_number, provider_type, ...textData } = editFormData;
                 
-                // Join the valid telephone numbers back into a single string for the backend
+                // Join valid entries back into comma-separated strings for backend storage
                 textData.tel_number = telNumbers.filter(n => n.trim() !== '').join(', ');
+                textData.website = websites.filter(w => w.trim() !== '').join(', ');
 
                 const response = await api.patch(`/organizations/profile/${id}`, textData);
                 
@@ -80,29 +104,19 @@ export default function OrgEditProfile({ isOpen, onClose, initialData, onSaveSuc
                 </div>
 
                 <form onSubmit={handleSaveProfileModal} className="p-6 space-y-5 max-h-[75vh] overflow-y-auto scrollbar-thin">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Organization Name</label>
-                            <input 
-                                type="text"
-                                value={editFormData.org_name || ''} 
-                                onChange={e => setEditFormData({ ...editFormData, org_name: e.target.value })} 
-                                className="w-full text-xs font-semibold text-slate-900 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-3 outline-none focus:bg-white focus:border-[#093fb4] transition-colors"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Provider Type</label>
-                            <input 
-                                type="text"
-                                value={editFormData.provider_type || ''} 
-                                onChange={e => setEditFormData({ ...editFormData, provider_type: e.target.value })} 
-                                placeholder="e.g. NGO, Corporate Foundation"
-                                className="w-full text-xs font-semibold text-slate-900 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-3 outline-none focus:bg-white focus:border-[#093fb4] transition-colors"
-                            />
-                        </div>
+                    {/* Organization Name (Full Width) */}
+                    <div>
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Organization Name</label>
+                        <input 
+                            type="text"
+                            value={editFormData.org_name || ''} 
+                            onChange={e => setEditFormData({ ...editFormData, org_name: e.target.value })} 
+                            className="w-full text-xs font-semibold text-slate-900 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-3 outline-none focus:bg-white focus:border-[#093fb4] transition-colors"
+                        />
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Dynamic Contacts Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
                         {/* Dynamic Telephone Fields */}
                         <div>
                             <label className="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
@@ -110,7 +124,7 @@ export default function OrgEditProfile({ isOpen, onClose, initialData, onSaveSuc
                                 <button 
                                     type="button" 
                                     onClick={addTelField}
-                                    className="flex items-center gap-1 bg-blue-50 text-[#093fb4] hover:bg-blue-100 px-2 py-0.5 rounded-md transition-colors"
+                                    className="flex items-center gap-1 bg-blue-50 text-[#093fb4] hover:bg-blue-100 px-2 py-0.5 rounded-md transition-colors text-[10px] font-black"
                                 >
                                     <Plus size={10} strokeWidth={3} /> ADD
                                 </button>
@@ -139,18 +153,44 @@ export default function OrgEditProfile({ isOpen, onClose, initialData, onSaveSuc
                             </div>
                         </div>
 
+                        {/* Dynamic Website / Social Links Fields */}
                         <div>
-                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Website / Social</label>
-                            <input 
-                                type="text"
-                                value={editFormData.website || ''} 
-                                onChange={e => setEditFormData({ ...editFormData, website: e.target.value })} 
-                                placeholder="https://..."
-                                className="w-full text-xs font-semibold text-slate-900 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-3 outline-none focus:bg-white focus:border-[#093fb4] transition-colors"
-                            />
+                            <label className="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                                <span>Website / Social Link(s)</span>
+                                <button 
+                                    type="button" 
+                                    onClick={addWebsiteField}
+                                    className="flex items-center gap-1 bg-blue-50 text-[#093fb4] hover:bg-blue-100 px-2 py-0.5 rounded-md transition-colors text-[10px] font-black"
+                                >
+                                    <Plus size={10} strokeWidth={3} /> ADD
+                                </button>
+                            </label>
+                            <div className="space-y-2">
+                                {websites.map((web, index) => (
+                                    <div key={index} className="flex items-center gap-2">
+                                        <input 
+                                            type="text"
+                                            value={web} 
+                                            onChange={(e) => handleWebsiteChange(index, e.target.value)} 
+                                            placeholder="https://..."
+                                            className="w-full text-xs font-semibold text-slate-900 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:bg-white focus:border-[#093fb4] transition-colors"
+                                        />
+                                        {websites.length > 1 && (
+                                            <button 
+                                                type="button" 
+                                                onClick={() => removeWebsiteField(index)}
+                                                className="shrink-0 w-9 h-9 rounded-xl border border-red-200 bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 transition-colors"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
 
+                    {/* Address Fields */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
                         <div>
                             <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Region</label>
@@ -194,6 +234,7 @@ export default function OrgEditProfile({ isOpen, onClose, initialData, onSaveSuc
                         </div>
                     </div>
 
+                    {/* About Us Field */}
                     <div>
                         <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">About Us Description</label>
                         <textarea 
@@ -204,6 +245,7 @@ export default function OrgEditProfile({ isOpen, onClose, initialData, onSaveSuc
                         />
                     </div>
 
+                    {/* Form Controls */}
                     <div className="pt-4 mt-2 border-t border-slate-100 flex justify-end gap-3">
                         <button 
                             type="button" 

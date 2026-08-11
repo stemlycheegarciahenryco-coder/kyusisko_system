@@ -1,49 +1,29 @@
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-const upload = multer({storage: multer.memoryStorage()}); // Use memory storage for processing before saving to Supabase
-// Specialized folder for Org Profiles to keep them separate from student docs
-const uploadDir = 'uploads/profiles/';
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
 
-const storage = multer.memoryStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    // We use 'org' prefix here so it doesn't conflict with student files
-    const orgId = req.user?.id || 'unknown';
-    const timestamp = Date.now();
-    const ext = path.extname(file.originalname);
-    
-    // Result: org_5_1714123456789.png
-    cb(null, `org_${orgId}_${timestamp}${ext}`);
-  }
-});
+// 1. Use memory storage (holds the file buffer in memory for Supabase)
+const storage = multer.memoryStorage();
 
-// Reuse your existing filter logic for safety
+// 2. Allowed file types filter
 const fileFilter = (req, file, cb) => {
     const allowedTypes = [
         'image/jpeg',
         'image/jpg',
         'image/png',
-        'image/webp' // Added WebP support
+        'image/webp'
     ];
 
     if (allowedTypes.includes(file.mimetype)) {
         cb(null, true);
     } else {
-        // Send a clear error message back
         cb(new Error('Only JPG, JPEG, PNG, and WebP images are allowed'), false);
     }
 };
 
-const uploadOrgPic = multer.memoryStorage({ 
+// 3. Create Multer instance
+const uploadOrgPic = multer({ 
     storage: storage,
     fileFilter: fileFilter,
-    limits: { fileSize: 2 * 1024 * 1024 } // 2MB is plenty for a logo
+    limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
 
-module.exports = upload.single('org_pic');
+module.exports = uploadOrgPic;

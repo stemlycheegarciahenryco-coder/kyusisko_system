@@ -208,6 +208,75 @@ const updateProfilePicture = async (req, res) => {
 };
 
 
+// 4. Update Cover Picture Only
+const updateCoverPicture = async (req, res) => {
+    try {
+        const orgId = await resolveOrgId(req.user.id);
+        if (!orgId) return res.status(404).json({ success: false, error: "Organization account not found." });
+
+        // 1. Check if a file was uploaded via multer
+        if (!req.file) {
+            return res.status(400).json({ success: false, error: "No cover image file provided." });
+        }
+
+        // 2. Extract file extension and build a unique file path inside the bucket
+        const fileExtension = req.file.originalname.split('.').pop();
+        const filePath = `org_covers/org_${orgId}_${Date.now()}.${fileExtension}`;
+
+        // 3. ☁️ Upload file buffer to the 'provider-cover-profile' Supabase Storage Bucket
+        const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+            .from('provider-cover-profile')
+            .upload(filePath, req.file.buffer, {
+                contentType: req.file.mimetype,
+                upsert: true
+            });
+
+        if (uploadError) {
+            console.error("Supabase Storage Upload Error:", uploadError);
+            throw uploadError;
+        }
+
+        // 4. 🌐 Generate the public URL
+        const { data: publicUrlData } = supabaseAdmin.storage
+            .from('provider-cover-profile')
+            .getPublicUrl(filePath);
+
+        const imageUrl = publicUrlData.publicUrl;
+
+        // 5. 🗄️ Update the 'cover_pic' column inside your 'sub_admins' table
+        const updateQuery = `
+            UPDATE sub_admins 
+            SET cover_pic = $1 
+            WHERE id = $2 
+            RETURNING cover_pic;
+        `;
+        const result = await pool.query(updateQuery, [imageUrl, orgId]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: "Organization account not found." });
+        }
+
+        await logActivity({
+            subAdminId: orgId,
+            actorId: req.user.id,
+            actionType: 'Cover Updated',
+            details: `Updated organization cover picture.`
+        });
+
+        // 6. Return success response with the new image URL
+        return res.status(200).json({
+            success: true,
+            message: "Organization cover picture updated successfully.",
+            cover_pic: result.rows[0].cover_pic
+        });
+
+    } catch (err) {
+        console.error("Update Cover Picture Error:", err.message);
+        return res.status(500).json({ success: false, error: "Internal server error updating cover picture." });
+    }
+};
+
+
 //it is connected in Dashboard
 const getOrgApplications = async (req, res) => {
     try {
@@ -860,6 +929,7 @@ module.exports = {
     toggleProfileProgramVisibility,
     updateOrgProfile, 
     updateProfilePicture,
+    updateCoverPicture,
     getOrgApplications,
     getOrgPrograms, 
     addProgram,

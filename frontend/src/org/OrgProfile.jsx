@@ -142,20 +142,25 @@ const OrgProfile = () => {
                 <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden relative">
                     
                     {/* Background Cover Area */}
-                    <div className="h-48 sm:h-56 bg-slate-100 relative group overflow-hidden">
-                        {coverSrc ? (
-                            <img src={coverSrc} alt="Org Cover" className="absolute inset-0 w-full h-full object-cover" />
-                        ) : (
-                            <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-[#093fb4] to-indigo-800 opacity-90" />
-                        )}
-                        <button
-                            onClick={() => coverFileRef.current.click()}
-                            className="absolute top-4 right-4 px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white border border-white/30 rounded-xl text-xs font-bold flex items-center gap-2 transition shadow-sm cursor-pointer"
-                        >
-                            <Camera size={14} /> <span className="hidden sm:inline">Upload Cover</span>
-                        </button>
-                        <input ref={coverFileRef} type="file" accept=".png,.jpg,.jpeg,.webp" className="hidden" onChange={handleCoverChange} />
-                    </div>
+                  {/* Background Cover Area */}
+<div className="h-82 sm:h-94 md:h-98 lg:h-105 bg-slate-100 relative group overflow-hidden">
+    {coverSrc ? (
+        <img 
+            src={coverSrc} 
+            alt="Org Cover" 
+            className="absolute inset-0 w-full h-full object-cover object-center" 
+        />
+    ) : (
+        <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-[#093fb4] to-indigo-800 opacity-90" />
+    )}
+    <button
+        onClick={() => coverFileRef.current.click()}
+        className="absolute top-4 right-4 px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white border border-white/30 rounded-xl text-xs font-bold flex items-center gap-2 transition shadow-sm cursor-pointer z-10"
+    >
+        <Camera size={14} /> <span className="hidden sm:inline">Upload Cover</span>
+    </button>
+    <input ref={coverFileRef} type="file" accept=".png,.jpg,.jpeg,.webp" className="hidden" onChange={handleCoverChange} />
+</div>
 
                     {/* Profile Details & Overview Data (White readable area) */}
                     <div className="px-6 sm:px-10 pb-8 relative z-10 bg-white">
@@ -166,7 +171,7 @@ const OrgProfile = () => {
                             <div className="flex flex-col sm:flex-row items-start sm:items-end gap-5">
                                 {/* Profile Avatar */}
                                 <div className="relative shrink-0 group">
-                                    <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-white shadow-lg overflow-hidden flex items-center justify-center border-4 border-white ring-1 ring-slate-200/60">
+                                    <div className="w-28 h-28 sm:w-42 sm:h-42 rounded-full bg-white shadow-lg overflow-hidden flex items-center justify-center border-4 border-white ring-1 ring-slate-200/60">
                                         {logoSrc ? (
                                             <img src={logoSrc} alt="Org Logo" className="w-full h-full object-cover rounded-full" />
                                         ) : (

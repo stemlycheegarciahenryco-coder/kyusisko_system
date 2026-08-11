@@ -1,21 +1,10 @@
 import React, { useState } from 'react';
 import api from '../api';
-import { 
-    Award, EyeOff, ChevronDown, ChevronUp, CheckCircle, Clock, 
-    X, BookOpen, Check 
-} from 'lucide-react';
-
-const STATUS_META = {
-    Active:   { color: 'text-emerald-700 border-emerald-200 bg-emerald-50', dotColor: 'bg-emerald-500' },
-    Open:     { color: 'text-emerald-700 border-emerald-200 bg-emerald-50', dotColor: 'bg-emerald-500' },
-    Closed:   { color: 'text-rose-700 border-rose-200 bg-rose-50', dotColor: 'bg-rose-500' },
-    Upcoming: { color: 'text-amber-700 border-amber-200 bg-amber-50', dotColor: 'bg-amber-500' },
-};
+import { Award, EyeOff, BookOpen, Check, X, ShieldCheck, Users } from 'lucide-react';
 
 const FeatureProgram = ({ programs, setPrograms, availableOptions, loadWorkspaceData }) => {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [selectedProgramIds, setSelectedProgramIds] = useState([]);
-    const [expandedProg, setExpandedProg] = useState(null);
 
     const toggleProgramSelection = (id) => {
         setSelectedProgramIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
@@ -54,10 +43,11 @@ const FeatureProgram = ({ programs, setPrograms, availableOptions, loadWorkspace
     return (
         <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-6">
             
+            {/* Component Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                 <div className="flex items-center gap-2.5">
                     <Award className="text-[#093fb4]" size={20} />
-                    <h2 className="text-lg font-black text-slate-900 tracking-tight">Your Scholarship Programs</h2>
+                    <h2 className="text-lg font-black text-slate-900 tracking-tight">Featured Scholarship Programs</h2>
                 </div>
                 <button
                     onClick={() => setIsAddModalOpen(true)}
@@ -67,73 +57,63 @@ const FeatureProgram = ({ programs, setPrograms, availableOptions, loadWorkspace
                 </button>
             </div>
 
-            {/* Programs List */}
-            <div className="space-y-4">
-                {programs.map(prog => {
-                    const sm = STATUS_META[prog.status] || STATUS_META.Active;
-                    const expanded = expandedProg === prog.id;
-
-                    return (
-                        <div key={prog.id} className="border border-slate-100 rounded-2xl bg-white hover:border-slate-300 transition-all p-5 shadow-sm">
-                            <div className="flex items-start justify-between gap-3">
-                                <div className="space-y-1.5 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <span className={`w-2.5 h-2.5 rounded-full ${sm.dotColor} shrink-0`} />
-                                        <h3 className="font-black text-slate-900 text-sm tracking-tight truncate">{prog.title || prog.name}</h3>
-                                    </div>
-                                    <div>
-                                        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${sm.color}`}>
-                                            {prog.status || 'OPEN'}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-1 shrink-0">
-                                    <button 
-                                        onClick={() => hideProgramFromProfile(prog.id)} 
-                                        title="Hide from profile display" 
-                                        className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all cursor-pointer"
-                                    >
-                                        <EyeOff size={15} />
-                                    </button>
-                                    <button
-                                        onClick={() => setExpandedProg(expanded ? null : prog.id)}
-                                        className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all cursor-pointer"
-                                    >
-                                        {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                    </button>
-                                </div>
+            {/* Programs Narrow Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {programs.map(prog => (
+                    <div 
+                        key={prog.id} 
+                        className="border border-slate-200/80 rounded-2xl bg-white hover:border-slate-300 transition-all p-4 shadow-sm flex flex-col justify-between space-y-4"
+                    >
+                        {/* Title & Hide Button */}
+                        <div className="space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                                <h3 className="font-black text-slate-900 text-sm tracking-tight line-clamp-1">
+                                    {prog.title || prog.name}
+                                </h3>
+                                <button 
+                                    onClick={() => hideProgramFromProfile(prog.id)} 
+                                    title="Hide from profile display" 
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all cursor-pointer shrink-0"
+                                >
+                                    <EyeOff size={14} />
+                                </button>
                             </div>
 
-                            {/* Program Metrics Row */}
-                            <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-100 text-xs">
-                                <div>
-                                    <p className="text-[10px] font-bold text-slate-400">Active Scholars</p>
-                                    <p className="font-black text-slate-900 mt-0.5">{prog.active_scholars ?? 0}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-bold text-slate-400">Max Slots</p>
-                                    <p className="font-black text-slate-900 mt-0.5">{prog.slots ?? 0}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-bold text-slate-400">Application Deadline</p>
-                                    <p className="font-black text-slate-900 mt-0.5 truncate">{prog.deadline || 'TBD'}</p>
-                                </div>
-                            </div>
-
-                            {expanded && (
-                                <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-600 font-medium leading-relaxed">
-                                    {prog.description || 'No description set for this program.'}
-                                </div>
-                            )}
+                            {/* Program Description */}
+                            <p className="text-xs text-slate-600 font-medium leading-relaxed line-clamp-3">
+                                {prog.description || 'No description provided for this program.'}
+                            </p>
                         </div>
-                    );
-                })}
+
+                        {/* Program Criteria Set & Approved Students Details */}
+                        <div className="pt-3 border-t border-slate-100 space-y-2.5 text-xs">
+                            {/* Criteria Set Section */}
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                                    <ShieldCheck size={12} className="text-[#093fb4]" /> Criteria Set
+                                </p>
+                                <p className="text-xs font-semibold text-slate-700 line-clamp-2">
+                                    {prog.criteria || prog.criteria_set || prog.eligibility || 'Standard organization qualification requirements apply.'}
+                                </p>
+                            </div>
+
+                            {/* Approved Students Counter Badge */}
+                            <div className="flex items-center justify-between pt-1 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                                    <Users size={12} className="text-slate-400" /> Approved Students
+                                </span>
+                                <span className="font-black text-[#093fb4] text-xs">
+                                    {prog.approved_count ?? prog.active_scholars ?? 0}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                ))}
 
                 {programs.length === 0 && (
-                    <div className="text-center py-12 px-6 text-slate-400 bg-slate-50/50 border-2 border-dashed border-slate-200 rounded-3xl">
+                    <div className="col-span-full text-center py-12 px-6 text-slate-400 bg-slate-50/50 border-2 border-dashed border-slate-200 rounded-3xl">
                         <BookOpen size={32} className="mx-auto text-slate-300 mb-3" />
-                        <p className="text-xs font-black uppercase tracking-widest text-slate-500">No profile programs displayed</p>
+                        <p className="text-xs font-black uppercase tracking-widest text-slate-500">No featured programs displayed</p>
                         <p className="text-xs font-medium text-slate-400 mt-1">Click "Feature Programs" above to select existing programs.</p>
                     </div>
                 )}
