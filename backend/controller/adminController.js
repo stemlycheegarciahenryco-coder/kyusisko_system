@@ -74,15 +74,12 @@ exports.updateStatus = async (req, res) => {
             [newStatus, applicationId]
         );
 
-        // 2. Track Event via Logger Helper targeted to Admin's user_id column
+        // 2. Track Event via Logger Helper — system-level action, not tied to any org
         await trackEvent({
             userId: req.user ? req.user.id : null, 
-            subAdminId: null,
-            studentId: null,
-            actionType: `ADMIN_${newStatus.toUpperCase()}`,
+            actionType: `Application ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)} (Admin)`,
             ipAddress: ip,
-            email: req.user ? req.user.email : 'System Admin',
-            message: `Admin modified status of application ID #${applicationId} to status: ${newStatus.toUpperCase()}.`
+            details: `Admin modified status of application ID #${applicationId} to status: ${newStatus}.`
         });
 
         res.json({ message: `Application ${newStatus}` });
@@ -192,15 +189,13 @@ exports.takedownScholarship = async (req, res) => {
       ]
     );
 
-    // 5. Track Enforcement Action targeted to Admin's user_id column
+    // 5. Track Enforcement Action — system-level action targeting a specific org
     await trackEvent({
         userId: req.user ? req.user.id : null,
-        subAdminId: null,
-        studentId: null,
-        actionType: 'SCHOLARSHIP_TAKEDOWN',
+        targetOrgId: sub_admin_id,
+        actionType: 'Scholarship Takedown',
         ipAddress: ip,
-        email: req.user ? req.user.email : 'System Admin',
-        message: `Administrative Takedown forced on scholarship program "${title}" (ID: ${scholarshipId}) managed by "${org_name}". Reason listed: ${reason || 'Unspecified violation'}.`
+        details: `Administrative takedown forced on scholarship program "${title}" (ID: ${scholarshipId}) managed by "${org_name}". Reason: ${reason || 'Unspecified violation'}.`
     });
 
     res.status(200).json({
@@ -233,15 +228,12 @@ exports.dismissReport = async (req, res) => {
     const contextInfo = reportQuery.rows[0];
     const itemTitle = contextInfo ? `filed against "${contextInfo.title}"` : `ID #${reportId}`;
 
-    // Log dismissal targeted to Admin's user_id column
+    // Log dismissal — system-level action
     await trackEvent({
         userId: req.user ? req.user.id : null,
-        subAdminId: null,
-        studentId: null,
-        actionType: 'REPORT_DISMISSED',
+        actionType: 'Report Dismissed',
         ipAddress: ip,
-        email: req.user ? req.user.email : 'System Admin',
-        message: `Report ${itemTitle} was reviewed and dismissed by admin. No structural action taken.`
+        details: `Report ${itemTitle} was reviewed and dismissed by admin. No structural action taken.`
     });
 
     res.json({ success: true });
@@ -252,40 +244,47 @@ exports.dismissReport = async (req, res) => {
 };
 
 /**
- * GET SYSTEM AUDIT LOG FEED WITH LEFT JOINS
- * Relational join resolution across users, sub_admins, and students tables
+ * GET SYSTEM AUDIT LOG FEED
+ * System admin gets full oversight: their own platform-level actions
+ * (system_admin_audit_trails) UNIONed with every provider's activity
+ * (provider_audit_trails). Providers themselves never see this combined
+ * feed — their own org-side endpoint filters strictly by sub_admin_id.
  */
 exports.getAuditLogs = async (req, res) => {
   try {
     const queryText = `
-      SELECT 
-        a.id,
-        a.action_type,
-        a.details,
-        a.created_at,
-        
-        -- Get Actor Name depending on who did the action
-        COALESCE(
-          CONCAT(s.sfirst_name, ' ', s.slast_name), -- Student Name
-          sa.org_name,                              -- Org Name
-          'System Admin'                            -- Root Admin Fallback
-        ) AS actor_name,
+      SELECT * FROM (
+        -- System-level actions (admin takedowns, report dismissals, etc.)
+        SELECT
+          sat.id,
+          sat.action_type,
+          sat.details,
+          sat.created_at,
+          COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), 'System Admin') AS actor_name,
+          u.email AS actor_email,
+          'Admin' AS actor_role,
+          org.org_name AS related_org_name
+        FROM system_admin_audit_trails sat
+        LEFT JOIN users u ON sat.admin_id = u.id
+        LEFT JOIN sub_admins org ON sat.target_org_id = org.id
 
-        -- Get Actor Email
-        COALESCE(s.student_email, sa.sub_email, u.email) AS actor_email,
-        
-        -- Determine Role type for frontend badge styling
-        CASE 
-          WHEN a.student_id IS NOT NULL THEN 'Student'
-          WHEN a.sub_admin_id IS NOT NULL THEN 'Organization'
-          ELSE 'Admin'
-        END AS actor_role
-        
-      FROM audit_trails a
-      LEFT JOIN users u ON a.user_id = u.id
-      LEFT JOIN sub_admins sa ON a.sub_admin_id = sa.id
-      LEFT JOIN students s ON a.student_id = s.id
-      ORDER BY a.created_at DESC 
+        UNION ALL
+
+        -- Provider-level actions, scoped per org
+        SELECT
+          pat.id,
+          pat.action_type,
+          pat.details,
+          pat.created_at,
+          COALESCE(NULLIF(TRIM(CONCAT(actor.first_name, ' ', actor.last_name)), ''), actor.org_name, 'Organization') AS actor_name,
+          actor.sub_email AS actor_email,
+          CASE WHEN actor.account_type = 'co_admin' THEN 'Co-Admin' ELSE 'Organization' END AS actor_role,
+          org.org_name AS related_org_name
+        FROM provider_audit_trails pat
+        LEFT JOIN sub_admins actor ON pat.actor_id = actor.id
+        LEFT JOIN sub_admins org ON pat.sub_admin_id = org.id
+      ) combined
+      ORDER BY created_at DESC
       LIMIT 250
     `;
 

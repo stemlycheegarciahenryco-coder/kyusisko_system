@@ -60,7 +60,7 @@ const getOrgProfile = async (req, res) => {
 
         // Removed 'ability_level' from the query
         const result = await pool.query(
-            'SELECT org_name, sub_email, region, city, street_address, provider_type, barangay, created_at,tel_number, contact_number, website, org_pic FROM sub_admins WHERE id = $1',
+            'SELECT org_name, sub_email, region, city, street_address, provider_type, barangay, created_at,tel_number, contact_number, website, org_pic, cover_pic, about_us FROM sub_admins WHERE id = $1',
             [orgId]
         );
 

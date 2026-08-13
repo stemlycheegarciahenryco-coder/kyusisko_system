@@ -1,6 +1,23 @@
 const pool = require('../config/db');
 const {supabaseAdmin} = require('../config/supabaseClient');
 const {applicationQueue} = require ('../queues/applicationQueue');
+const { trackEvent } = require('../utils/logger');
+
+// ─────────────────────────────────────────────────────────────────────────
+// Resolves the ACTUAL org id for a requester, regardless of whether they're
+// the main account or a co-admin. Co-admin rows have their own id (not the
+// org's), so every ownership check below must go through this instead of
+// trusting req.user.id directly — otherwise a co-admin's id never matches
+// scholarships.sub_admin_id and every action here silently 403s for them.
+async function resolveOrgId(requesterId) {
+    const r = await pool.query(
+        'SELECT account_type, parent_org_id FROM sub_admins WHERE id = $1',
+        [requesterId]
+    );
+    if (r.rows.length === 0) return null;
+    const { account_type, parent_org_id } = r.rows[0];
+    return account_type === 'co_admin' ? parent_org_id : requesterId;
+}
 
 // POST /scholarship/:id/apply
 // student submits an application with responses to all fields
@@ -180,7 +197,8 @@ const getScholarshipDetails = async (req, res) => {
 const getScholarshipApplications = async (req, res) => {
   try {
     const { id } = req.params;
-    const sub_admin_id = parseInt(req.user.id);
+    const sub_admin_id = await resolveOrgId(req.user.id);
+    if (!sub_admin_id) return res.status(404).json({ success: false, message: 'Org not found.' });
 
     const owned = await pool.query(
       `SELECT id FROM scholarships WHERE id = $1 AND sub_admin_id = $2`,
@@ -220,7 +238,8 @@ const getScholarshipApplications = async (req, res) => {
 const getApplicationDetail = async (req, res) => {
   try {
     const { id, appId } = req.params;
-    const sub_admin_id = req.user.id;
+    const sub_admin_id = await resolveOrgId(req.user.id);
+    if (!sub_admin_id) return res.status(404).json({ success: false, message: 'Org not found.' });
 
     const owned = await pool.query(
       `SELECT id FROM scholarships WHERE id = $1 AND sub_admin_id = $2`,
@@ -311,7 +330,8 @@ const getApplicationDetail = async (req, res) => {
 const updateApplicationStatus = async (req, res) => {
   try {
     const { id, appId } = req.params;
-    const sub_admin_id = req.user.id;
+    const sub_admin_id = await resolveOrgId(req.user.id);
+    if (!sub_admin_id) return res.status(404).json({ success: false, message: 'Org not found.' });
     const { status } = req.body;
 
     const allowed = ['pending', 'under_review', 'approved', 'not_eligible'];
@@ -375,11 +395,13 @@ const updateApplicationStatus = async (req, res) => {
       [applicationData.student_id, notif.title, notif.message, appId, sub_admin_id]
     );
 
-    await pool.query(
-      //!audit
-      `INSERT INTO audit_trails (user_id, action_type, details) VALUES ($1, $2, $3)`,
-      [sub_admin_id, `APP_${status.toUpperCase()}`, `Org (ID: ${sub_admin_id}) set application #${appId} for "${scholarshipName}" to ${status}`]
-    );
+    await trackEvent({
+      subAdminId: sub_admin_id,
+      userId: req.user.id,
+      studentId: applicationData.student_id,
+      actionType: `Application ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+      details: `Set application #${appId} for "${scholarshipName}" to ${status}.`
+    });
 
     res.status(200).json({ success: true, data: applicationData });
   } catch (err) {
@@ -391,7 +413,8 @@ const updateApplicationStatus = async (req, res) => {
 const sendComplianceRequest = async (req, res) => {
   try {
     const { id, appId } = req.params;
-    const sub_admin_id = req.user.id;
+    const sub_admin_id = await resolveOrgId(req.user.id);
+    if (!sub_admin_id) return res.status(404).json({ success: false, message: 'Org not found.' });
     const { reason, required_docs } = req.body;
 
     if (!reason || !required_docs) {
@@ -442,12 +465,13 @@ const sendComplianceRequest = async (req, res) => {
       ]
     );
 
-    await pool.query(
-
-                  //!audit
-      `INSERT INTO audit_trails (user_id, action_type, details) VALUES ($1, $2, $3)`,
-      [sub_admin_id, 'APP_COMPLY', `Org sent compliance request for application #${appId}`]
-    );
+    await trackEvent({
+      subAdminId: sub_admin_id,
+      userId: req.user.id,
+      studentId: student_id,
+      actionType: 'Compliance Request Sent',
+      details: `Sent compliance request for application #${appId} on "${scholarshipName}".`
+    });
 
     res.status(200).json({ success: true, message: 'Compliance request sent.' });
   } catch (err) {
