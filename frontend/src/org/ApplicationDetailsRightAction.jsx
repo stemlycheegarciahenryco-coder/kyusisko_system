@@ -1,5 +1,5 @@
-import React from 'react';
-import { CheckCircle2, AlertCircle, Clock, XCircle, Calendar, ShieldCheck, RefreshCw } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { CheckCircle2, AlertCircle, Clock, XCircle, Calendar, RefreshCw } from 'lucide-react';
 
 export default function ApplicationDetailsRightAction({ 
   detail, 
@@ -11,68 +11,110 @@ export default function ApplicationDetailsRightAction({
   handleAction 
 }) {
   
-  const status = detail.status || 'pending';
+  const status = detail?.status || 'pending';
 
-  // State Banner Stylings handling standard and renewal flows
+  // Helper to format timestamps dynamically
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'Date unavailable';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return 'Date unavailable';
+
+    const formattedDate = date.toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+    });
+    const formattedTime = date.toLocaleTimeString('en-US', {
+      hour: '2-digit', minute: '2-digit', hour12: true,
+    });
+
+    return `${formattedDate} — ${formattedTime}`;
+  };
+
+  // State Banner Stylings
   const getStatusBanner = () => {
     switch(status) {
       case 'approved':
       case 'active':
-        return {
-          bg: 'bg-emerald-50/60 border border-emerald-100',
-          icon: <CheckCircle2 size={22} className="text-emerald-600 shrink-0" />,
-          title: 'APPROVED / ACTIVE',
-          sub: 'Student is eligible for the scholarship.'
-        };
+        return { bg: 'bg-emerald-50/60 border border-emerald-100', icon: <CheckCircle2 size={22} className="text-emerald-600 shrink-0" />, title: 'APPROVED / ACTIVE', sub: 'Student is eligible for the scholarship.' };
       case 'submitted':
-        return {
-          bg: 'bg-blue-50/60 border border-blue-100',
-          icon: <RefreshCw size={22} className="text-blue-600 shrink-0 animate-pulse" />,
-          title: 'RENEWAL SUBMITTED',
-          sub: 'Student has submitted documents for renewal review.'
-        };
+        return { bg: 'bg-blue-50/60 border border-blue-100', icon: <RefreshCw size={22} className="text-blue-600 shrink-0 animate-pulse" />, title: 'RENEWAL SUBMITTED', sub: 'Student has submitted documents for renewal review.' };
       case 'renewing':
-        return {
-          bg: 'bg-purple-50/60 border border-purple-100',
-          icon: <Clock size={22} className="text-purple-600 shrink-0" />,
-          title: 'UNDER RENEWAL REVIEW',
-          sub: 'Renewal requirements are currently being evaluated.'
-        };
+        return { bg: 'bg-purple-50/60 border border-purple-100', icon: <Clock size={22} className="text-purple-600 shrink-0" />, title: 'UNDER RENEWAL REVIEW', sub: 'Renewal requirements are currently being evaluated.' };
       case 'under_review':
       case 'compliance':
       case 'need_changes':
-        return {
-          bg: 'bg-amber-50/60 border border-amber-100',
-          icon: <Clock size={22} className="text-amber-600 shrink-0" />,
-          title: 'UNDER COMPLIANCE',
-          sub: 'Awaiting requested student uploads.'
-        };
+        return { bg: 'bg-amber-50/60 border border-amber-100', icon: <Clock size={22} className="text-amber-600 shrink-0" />, title: 'UNDER COMPLIANCE', sub: 'Awaiting requested student uploads.' };
       case 'not_eligible':
       case 'terminated':
       case 'rejected':
-        return {
-          bg: 'bg-red-50/60 border border-red-100',
-          icon: <XCircle size={22} className="text-red-600 shrink-0" />,
-          title: 'NOT ELIGIBLE / TERMINATED',
-          sub: 'Application has been turned down or scholar terminated.'
-        };
+        return { bg: 'bg-red-50/60 border border-red-100', icon: <XCircle size={22} className="text-red-600 shrink-0" />, title: 'NOT ELIGIBLE / TERMINATED', sub: 'Application has been turned down or scholar terminated.' };
       default:
-        return {
-          bg: 'bg-slate-50 border border-slate-200',
-          icon: <AlertCircle size={22} className="text-slate-500 shrink-0" />,
-          title: 'PENDING EVALUATION',
-          sub: 'Awaiting primary compliance review.'
-        };
+        return { bg: 'bg-slate-50 border border-slate-200', icon: <AlertCircle size={22} className="text-slate-500 shrink-0" />, title: 'PENDING EVALUATION', sub: 'Awaiting primary compliance review.' };
     }
   };
 
   const banner = getStatusBanner();
-
-  // Determine if this applicant is under a renewal cycle
   const isRenewalFlow = ['submitted', 'renewing'].includes(status);
-
-  // Check if current state allows manager pipeline evaluations
   const isActionable = ['pending', 'under_review', 'compliance', 'need_changes', 'submitted', 'renewing'].includes(status);
+
+  // ==========================================
+  // BUILD DYNAMIC TIMELINE EVENTS
+  // ==========================================
+  const timelineEvents = useMemo(() => {
+    if (!detail) return [];
+    const events = [];
+
+    // 1. Initial Submission
+    if (detail.submitted_at) {
+      events.push({
+        id: 'submitted',
+        title: isRenewalFlow ? 'Renewal Requested' : 'Application Submitted',
+        date: detail.submitted_at,
+        color: 'bg-slate-400 ring-white'
+      });
+    }
+
+    // 2. Compliance History (Loops through all compliance requests)
+    if (detail.compliance_history && detail.compliance_history.length > 0) {
+      detail.compliance_history.forEach((req, idx) => {
+        // Add the request event
+        events.push({
+          id: `compliance-req-${req.id || idx}`,
+          title: 'Compliance Requested',
+          date: req.created_at,
+          color: 'bg-amber-400 ring-white'
+        });
+
+        // If compliance was submitted back by the student
+        if (req.status === 'submitted' && req.updated_at) {
+          events.push({
+            id: `compliance-sub-${req.id || idx}`,
+            title: 'Compliance Uploaded',
+            date: req.updated_at,
+            color: 'bg-blue-400 ring-white'
+          });
+        }
+      });
+    }
+
+    // 3. Final/Current Status (Only add if it's a concluding status like approved/rejected)
+    const finalStatuses = ['approved', 'active', 'not_eligible', 'terminated', 'rejected'];
+    if (finalStatuses.includes(status)) {
+      events.push({
+        id: 'final-status',
+        title: status.replace('_', ' '),
+        date: detail.updated_at || new Date().toISOString(), // Fallback to current time if updated_at is missing
+        color: ['approved', 'active'].includes(status) ? 'bg-emerald-500 ring-emerald-100' : 'bg-red-500 ring-red-100'
+      });
+    }
+
+    // Sort chronologically (oldest to newest)
+    return events.sort((a, b) => new Date(a.date) - new Date(b.date));
+  }, [detail, status, isRenewalFlow]);
+
+
+  const lastActivityDate = formatDate(
+    timelineEvents.length > 0 ? timelineEvents[timelineEvents.length - 1].date : detail?.submitted_at
+  );
 
   return (
     <div className="space-y-4 lg:sticky lg:top-6 w-full">
@@ -95,31 +137,23 @@ export default function ApplicationDetailsRightAction({
           </div>
         </div>
 
-        {/* VERTICAL TIMELINE STACK TRACK */}
+        {/* DYNAMIC VERTICAL TIMELINE STACK TRACK */}
         <div className="relative pl-6 space-y-4 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-200">
           
-          {/* Node 1: Submitted */}
-          <div className="relative text-xs">
-            <div className="absolute -left-[20px] top-1 w-2.5 h-2.5 rounded-full bg-slate-400 ring-4 ring-white" />
-            <p className="font-bold text-slate-700">{isRenewalFlow ? 'Renewal Requested' : 'Submitted'}</p>
-            <p className="text-slate-400 font-medium mt-0.5">July 5, 2026 — 05:12 AM</p>
-          </div>
+          {timelineEvents.map((event, index) => (
+            <div key={event.id} className="relative text-xs">
+              <div className={`absolute -left-[20px] top-1 w-2.5 h-2.5 rounded-full ring-4 ${event.color}`} />
+              <p className="font-bold text-slate-700 capitalize">{event.title}</p>
+              <p className="text-slate-400 font-medium mt-0.5">
+                {formatDate(event.date)}
+              </p>
+            </div>
+          ))}
 
-          {/* Node 2: Under Review */}
-          <div className="relative text-xs">
-            <div className={`absolute -left-[20px] top-1 w-2.5 h-2.5 rounded-full ring-4 ring-white ${status !== 'pending' && status !== 'submitted' ? 'bg-slate-400' : 'bg-slate-300'}`} />
-            <p className="font-bold text-slate-700">Under Review</p>
-            <p className="text-slate-400 font-medium mt-0.5">July 7, 2026 — 10:45 AM</p>
-          </div>
-
-          {/* Node 3: Current State */}
-          <div className="relative text-xs">
-            <div className={`absolute -left-[20px] top-1 w-2.5 h-2.5 rounded-full ring-4 ring-white ${
-              ['approved', 'active'].includes(status) ? 'bg-emerald-500 ring-emerald-100' : ['not_eligible', 'terminated', 'rejected'].includes(status) ? 'bg-red-500 ring-red-100' : 'bg-slate-300'
-            }`} />
-            <p className="font-bold text-slate-700 capitalize">{status.replace('_', ' ')}</p>
-            <p className="text-slate-400 font-medium mt-0.5">July 9, 2026 — 02:19 PM</p>
-          </div>
+          {/* Fallback if somehow there are no events */}
+          {timelineEvents.length === 0 && (
+             <p className="text-xs text-slate-400 italic">No timeline history available.</p>
+          )}
 
         </div>
 
@@ -129,24 +163,15 @@ export default function ApplicationDetailsRightAction({
           
           {isActionable ? (
             <>
-              <button
-                onClick={() => setConfirmModal({ open: true, status: 'approved' })}
-                className="w-full bg-[#093fb4] hover:bg-[#093fb4]/90 text-white font-bold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 text-xs transition-colors shadow-sm"
-              >
+              <button onClick={() => setConfirmModal({ open: true, status: 'approved' })} className="w-full bg-[#093fb4] hover:bg-[#093fb4]/90 text-white font-bold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 text-xs transition-colors shadow-sm cursor-pointer">
                 ✓ {isRenewalFlow ? 'Approve Renewal' : 'Approve Application'}
               </button>
               
-              <button
-                onClick={() => setComplianceModal(true)}
-                className="w-full bg-white text-amber-600 hover:bg-amber-50 border border-amber-200 font-bold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 text-xs transition-colors"
-              >
+              <button onClick={() => setComplianceModal(true)} className="w-full bg-white text-amber-600 hover:bg-amber-50 border border-amber-200 font-bold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 text-xs transition-colors cursor-pointer">
                 ⟳ Send for Compliance
               </button>
 
-              <button
-                onClick={() => setConfirmModal({ open: true, status: isRenewalFlow ? 'terminated' : 'not_eligible' })}
-                className="w-full bg-white text-red-500 hover:bg-red-50 border border-red-200 font-bold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 text-xs transition-colors"
-              >
+              <button onClick={() => setConfirmModal({ open: true, status: isRenewalFlow ? 'terminated' : 'not_eligible' })} className="w-full bg-white text-red-500 hover:bg-red-50 border border-red-200 font-bold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 text-xs transition-colors cursor-pointer">
                 ✕ {isRenewalFlow ? 'Terminate Scholar' : 'Mark Not Eligible'}
               </button>
             </>
@@ -163,8 +188,8 @@ export default function ApplicationDetailsRightAction({
             <Calendar size={12} />
             <span>Last Activity</span>
           </div>
-          <p className="font-semibold text-slate-700">July 9, 2026 — 02:20 PM</p>
-          <p className="text-slate-500 font-medium">Application state verified internally by <span className="text-[#093fb4] font-semibold">Admin User</span></p>
+          <p className="font-semibold text-slate-700">{lastActivityDate}</p>
+          <p className="text-slate-500 font-medium">Application state verified internally</p>
         </div>
 
       </div>
