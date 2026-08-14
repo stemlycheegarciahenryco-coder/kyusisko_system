@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, GraduationCap, Building2, X, DollarSign, Award, Mail, Phone } from 'lucide-react';
+import { Search, GraduationCap, Building2, X, DollarSign, Award, Phone, ShieldCheck, BookOpen } from 'lucide-react';
 import api from '../api';
 
 export default function SearchBar() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchFilter, setSearchFilter] = useState('all'); // 'all' | 'scholarships' | 'organizations'
+  const [searchFilter, setSearchFilter] = useState('all');
   const [searchResults, setSearchResults] = useState({ scholarships: [], organizations: [] });
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -12,6 +12,8 @@ export default function SearchBar() {
   // Modal Details States
   const [selectedItem, setSelectedItem] = useState(null);
   const [modalType, setModalType] = useState(null); // 'scholarship' or 'organization'
+  const [orgPrograms, setOrgPrograms] = useState([]);
+  const [isLoadingPrograms, setIsLoadingPrograms] = useState(false);
 
   const searchRef = useRef(null);
   const BASE_URL = 'http://localhost:5000';
@@ -37,6 +39,19 @@ export default function SearchBar() {
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery, searchFilter]);
+
+  // Fetch Programs when an Organization is selected
+  useEffect(() => {
+    if (modalType === 'organization' && selectedItem?.id) {
+        setIsLoadingPrograms(true);
+        api.get(`/organizations/profile-programs/${selectedItem.id}`)
+            .then(res => setOrgPrograms(res.data?.data || []))
+            .catch(err => console.error("Error fetching programs:", err))
+            .finally(() => setIsLoadingPrograms(false));
+    } else {
+        setOrgPrograms([]);
+    }
+  }, [modalType, selectedItem]);
 
   // Click Outside hooks
   useEffect(() => {
@@ -157,7 +172,7 @@ export default function SearchBar() {
                             </div>
                             <div className="min-w-0">
                               <p className="text-sm font-black text-slate-900 truncate">{org.org_name}</p>
-                              <p className="text-xs text-slate-600 font-semibold truncate">{org.sub_email}</p>
+                              <p className="text-xs text-slate-600 font-semibold truncate">Provider Platform</p>
                             </div>
                           </div>
                           <span className="text-xs font-black uppercase text-blue-700 bg-blue-100 px-2 py-0.5 rounded-md shrink-0">Partner</span>
@@ -174,7 +189,7 @@ export default function SearchBar() {
         )}
       </div>
 
-      {/* 👤/🎓 SEARCH RESULT PROFILE INFORMATION MODAL */}
+      {/* SEARCH RESULT PROFILE INFORMATION MODAL */}
       {selectedItem && modalType && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-[#FFFCFB] rounded-[2.5rem] max-w-lg w-full p-8 shadow-2xl border-4 border-white relative animate-in fade-in zoom-in-95 duration-200">
@@ -182,9 +197,9 @@ export default function SearchBar() {
             {/* Close Button */}
             <button 
               onClick={() => { setSelectedItem(null); setModalType(null); }}
-              className="absolute top-6 right-6 p-2 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-700 transition-colors cursor-pointer"
+              className="absolute top-6 right-6 z-50 p-2 bg-white/20 hover:bg-white/40 backdrop-blur-md rounded-full text-white transition-colors cursor-pointer"
             >
-              <X size={20} />
+              <X size={20} className={modalType === 'scholarship' ? 'text-slate-700' : 'text-white'} />
             </button>
 
             {modalType === 'scholarship' ? (
@@ -221,48 +236,85 @@ export default function SearchBar() {
               </>
             ) : (
               <>
-                <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-5 border border-emerald-100 overflow-hidden">
-                  {selectedItem.org_pic ? (
-                    <img 
-                      src={`${BASE_URL}/${selectedItem.org_pic}`} 
-                      className="w-full h-full object-cover" 
-                      alt="Org Logo" 
-                    />
-                  ) : (
-                    <Building2 size={32} />
-                  )}
-                </div>
-                <h3 className="text-2xl font-black text-slate-950 uppercase tracking-tight leading-tight mb-2">
-                  {selectedItem.org_name}
-                </h3>
-                <span className="text-xs font-black tracking-widest uppercase bg-emerald-600 text-white px-2.5 py-1 rounded-md inline-block">Verified Organization</span>
-
-                <div className="mt-6 space-y-4 text-left">
-                  <div>
-                    <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider">About Provider</h4>
-                    <p className="text-sm text-slate-800 font-semibold mt-1 leading-relaxed bg-slate-100/70 border border-slate-200 p-3.5 rounded-xl">
-                      This organization is a registered scholarship funding partner platform administrator.
-                    </p>
-                  </div>
-
-                  <div className="space-y-2.5">
-                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                      <Mail size={16} className="text-[#093fb4]" />
-                      <div>
-                        <h5 className="text-xs font-black text-slate-700 uppercase leading-none">Email Address</h5>
-                        <p className="text-sm font-bold text-slate-900 mt-1">{selectedItem.sub_email}</p>
+                {/* ── ORGANIZATION PROFILE BANNER ── */}
+                <div className="bg-[#093fb4] text-white relative pt-8 pb-6 px-8 rounded-t-[2.1rem] -mt-8 -mx-8 shadow-inner overflow-hidden mb-6">
+                   <div className="absolute right-0 top-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
+                   
+                   <div className="relative z-10 flex items-center gap-4">
+                      <div className="w-16 h-16 bg-white rounded-2xl border border-white/20 flex items-center justify-center overflow-hidden shrink-0 shadow-lg">
+                        {selectedItem.org_pic ? (
+                          <img 
+                            src={`${BASE_URL}/${selectedItem.org_pic}`} 
+                            className="w-full h-full object-cover" 
+                            alt="Org Logo" 
+                          />
+                        ) : (
+                          <Building2 size={32} className="text-[#093fb4]" />
+                        )}
                       </div>
-                    </div>
-                    {selectedItem.contact_number && (
+                      <div>
+                         <h3 className="text-xl font-black uppercase tracking-tight leading-tight line-clamp-2">
+                           {selectedItem.org_name}
+                         </h3>
+                         <span className="mt-1 text-[10px] font-black tracking-widest uppercase bg-white/20 px-2 py-0.5 rounded-md inline-flex items-center gap-1 backdrop-blur-sm">
+                           <ShieldCheck size={12} className="text-blue-200" /> Verified Partner
+                         </span>
+                      </div>
+                   </div>
+                </div>
+
+                <div className="space-y-5 text-left px-1">
+                  
+                  {/* Telephone / Contact Number Only */}
+                  {selectedItem.contact_number && (
+                    <div>
+                      <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-2">Contact</h4>
                       <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
                         <Phone size={16} className="text-[#093fb4]" />
                         <div>
-                          <h5 className="text-xs font-black text-slate-700 uppercase leading-none">Contact Number</h5>
+                          <h5 className="text-[10px] font-black text-slate-500 uppercase leading-none">Telephone Number</h5>
                           <p className="text-sm font-bold text-slate-900 mt-1">{selectedItem.contact_number}</p>
                         </div>
                       </div>
-                    )}
+                    </div>
+                  )}
+
+                  {/* Fetched Scholarship Programs Showcase */}
+                  <div>
+                    <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                       <Award size={14} className="text-[#093fb4]"/> Offered Programs
+                    </h4>
+                    
+                    <div className="space-y-2.5 max-h-48 overflow-y-auto scrollbar-thin pr-1">
+                       {isLoadingPrograms ? (
+                           <div className="text-center py-6 bg-slate-50 border border-slate-200 rounded-xl animate-pulse">
+                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Loading programs...</p>
+                           </div>
+                       ) : orgPrograms.length > 0 ? (
+                           orgPrograms.map(prog => (
+                               <div key={prog.id} className="border border-slate-200/80 rounded-xl bg-white p-3 hover:border-[#093fb4]/50 transition-all cursor-default">
+                                   <p className="font-bold text-sm text-slate-900 truncate">{prog.title || prog.name}</p>
+                                   <div className="flex justify-between items-center mt-2.5 pt-2.5 border-t border-slate-100">
+                                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-md border uppercase tracking-wider ${
+                                          prog.status === 'Active' ? 'border-green-200 bg-green-50 text-green-600' : 'border-amber-200 bg-amber-50 text-amber-600'
+                                      }`}>
+                                         {prog.status || 'Active'}
+                                      </span>
+                                      <span className="text-[10px] font-bold text-slate-500">
+                                         Slots: {prog.slots ?? 0}
+                                      </span>
+                                   </div>
+                               </div>
+                           ))
+                       ) : (
+                           <div className="text-center py-8 bg-slate-50 border border-dashed border-slate-200 rounded-xl flex flex-col items-center gap-2">
+                               <BookOpen size={20} className="text-slate-300" />
+                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">No profile programs displayed</p>
+                           </div>
+                       )}
+                    </div>
                   </div>
+
                 </div>
               </>
             )}
@@ -270,7 +322,7 @@ export default function SearchBar() {
             <div className="mt-8">
               <button
                 onClick={() => { setSelectedItem(null); setModalType(null); }}
-                className="w-full bg-slate-900 text-white font-black py-4 rounded-xl hover:bg-slate-800 transition-colors uppercase text-xs tracking-widest cursor-pointer"
+                className="w-full bg-slate-900 text-white font-black py-4 rounded-xl hover:bg-slate-800 transition-colors uppercase text-xs tracking-widest cursor-pointer shadow-lg"
               >
                 Close View
               </button>

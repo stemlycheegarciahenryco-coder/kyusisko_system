@@ -1,13 +1,14 @@
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
-const { authLimiter, generalLimiter } = require('./middleware/rateLimiter');
+
 const path = require('path');
 require('dotenv').config();
 
 // 🚀 1. BOOT UP THE BULLMQ BACKGROUND WORKER PROCESS
 // This wakes up your worker file so it listens to Redis queue jobs cleanly in the background
 require('./queues/applicationQueue');
+require('./workers/engineMatchingWorker'); // <-- Dedicated AI background processing queue
 
 // Route Imports
 const subAdminRoutes = require('./routes/subAdminRoutes');
@@ -66,7 +67,7 @@ app.use('/api/organizations', orgRoutes);
 app.use('/api/recommendations',  recommendationRoutes);
 app.use('/api/security', securityRoutes);
 app.use('/api/notif',  notifRoutes);
-app.use('/api', authLimiter, authRoutes);
+app.use('/api',  authRoutes);
 app.use('/api/scholarships', scholarshipRoutes);
 app.use('/api/user-org', userOrgRoutes);
 app.use('/api/applications', applicationRoutes);

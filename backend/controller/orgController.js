@@ -17,6 +17,41 @@ async function resolveOrgId(requesterId) {
     return account_type === 'co_admin' ? parent_org_id : requesterId;
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Writes one row to provider_audit_trails, isolated per org via
+// sub_admin_id. Never throws into the caller's request flow — a logging
+// failure should never break the actual action that triggered it, so
+// errors are swallowed and just logged server-side.
+async function logActivity({ subAdminId, actorId, actionType, details, studentId = null }) {
+    try {
+        await pool.query(
+            `INSERT INTO provider_audit_trails (sub_admin_id, actor_id, action_type, details, student_id)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [subAdminId, actorId, actionType, details, studentId]
+        );
+    } catch (err) {
+        console.error("Audit Log Write Failed:", err.message);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// amount_range is a free-text varchar (e.g. "10,000 - 20,000", "₱15000",
+// or blank). Never trust it as a clean number — pull out every numeric
+// token, and if none exist, return null so callers can show "not
+// specified" instead of silently treating a missing amount as ₱0.
+function parseAmountRange(raw) {
+    if (!raw || typeof raw !== 'string') return null;
+    const matches = raw.match(/\d[\d,]*(\.\d+)?/g);
+    if (!matches || matches.length === 0) return null;
+    const nums = matches
+        .map(m => parseFloat(m.replace(/,/g, '')))
+        .filter(n => !isNaN(n));
+    if (nums.length === 0) return null;
+    const min = Math.min(...nums);
+    const max = Math.max(...nums);
+    return { min, max, midpoint: (min + max) / 2, display: raw.trim() };
+}
+
 // Org Profile Info top
 const getOrgProfile = async (req, res) => {
     try {
@@ -25,7 +60,7 @@ const getOrgProfile = async (req, res) => {
 
         // Removed 'ability_level' from the query
         const result = await pool.query(
-            'SELECT org_name, sub_email, region, city, street_address, provider_type, barangay, created_at,tel_number, contact_number, website, org_pic FROM sub_admins WHERE id = $1',
+            'SELECT org_name, sub_email, region, city, street_address, provider_type, barangay, created_at,tel_number, contact_number, website, org_pic, cover_pic, about_us FROM sub_admins WHERE id = $1',
             [orgId]
         );
 
@@ -40,28 +75,63 @@ const getOrgProfile = async (req, res) => {
 };
 
 // 2.Updated the info of profile
+// 2. Updated the info of profile (Whitelisted fields to prevent mass-assignment)
 const updateOrgProfile = async (req, res) => {
-    // We destruct to remove keys that don't exist in your DB columns
-    const { org_pic, previewUrl, ...textData } = req.body; 
-
     try {
         const orgId = await resolveOrgId(req.user.id);
         if (!orgId) return res.status(404).json({ error: "Org not found" });
 
-        const fields = Object.keys(textData).map((key, i) => `${key} = $${i + 1}`);
-        const values = Object.values(textData);
-        
-        if (fields.length === 0) return res.status(400).json({ error: "No fields to update" });
+        // Allowed fields for profile update
+        const allowedFields = [
+            'org_name',
+            'provider_type',
+            'tel_number',
+            'website',
+            'region',
+            'city',
+            'barangay',
+            'street_address',
+            'about_us'
+        ];
 
-        const sql = `UPDATE sub_admins SET ${fields.join(', ')} WHERE id = $${values.length + 1} RETURNING *`;
+        // Filter req.body so only explicit whitelisted keys are accepted
+        const updates = {};
+        for (const field of allowedFields) {
+            if (req.body[field] !== undefined) {
+                updates[field] = req.body[field];
+            }
+        }
+
+        const keys = Object.keys(updates);
+        if (keys.length === 0) {
+            return res.status(400).json({ error: "No valid profile fields provided for update" });
+        }
+
+        const fields = keys.map((key, i) => `${key} = $${i + 1}`);
+        const values = Object.values(updates);
+
+        const sql = `
+            UPDATE sub_admins 
+            SET ${fields.join(', ')} 
+            WHERE id = $${values.length + 1} 
+            RETURNING org_name, sub_email, region, city, street_address, provider_type, barangay, tel_number, contact_number, website, org_pic, about_us;
+        `;
+
         const result = await pool.query(sql, [...values, orgId]);
+
+        await logActivity({
+            subAdminId: orgId,
+            actorId: req.user.id,
+            actionType: 'Profile Updated',
+            details: `Updated organization profile fields: ${keys.join(', ')}.`
+        });
 
         res.status(200).json({ success: true, data: result.rows[0] });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error("Update Profile Error:", err.message);
+        res.status(500).json({ error: "Failed to update profile." });
     }
 };
-
 // 3. Update  Profile Picture Only
 const updateProfilePicture = async (req, res) => {
     try {
@@ -117,6 +187,13 @@ const updateProfilePicture = async (req, res) => {
             return res.status(404).json({ success: false, error: "Organization account not found." });
         }
 
+        await logActivity({
+            subAdminId: orgId,
+            actorId: req.user.id,
+            actionType: 'Logo Updated',
+            details: `Updated organization profile picture.`
+        });
+
         // 6. Return success response with the new image URL
         return res.status(200).json({
             success: true,
@@ -131,6 +208,75 @@ const updateProfilePicture = async (req, res) => {
 };
 
 
+// 4. Update Cover Picture Only
+const updateCoverPicture = async (req, res) => {
+    try {
+        const orgId = await resolveOrgId(req.user.id);
+        if (!orgId) return res.status(404).json({ success: false, error: "Organization account not found." });
+
+        // 1. Check if a file was uploaded via multer
+        if (!req.file) {
+            return res.status(400).json({ success: false, error: "No cover image file provided." });
+        }
+
+        // 2. Extract file extension and build a unique file path inside the bucket
+        const fileExtension = req.file.originalname.split('.').pop();
+        const filePath = `org_covers/org_${orgId}_${Date.now()}.${fileExtension}`;
+
+        // 3. ☁️ Upload file buffer to the 'provider-cover-profile' Supabase Storage Bucket
+        const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+            .from('provider-cover-profile')
+            .upload(filePath, req.file.buffer, {
+                contentType: req.file.mimetype,
+                upsert: true
+            });
+
+        if (uploadError) {
+            console.error("Supabase Storage Upload Error:", uploadError);
+            throw uploadError;
+        }
+
+        // 4. 🌐 Generate the public URL
+        const { data: publicUrlData } = supabaseAdmin.storage
+            .from('provider-cover-profile')
+            .getPublicUrl(filePath);
+
+        const imageUrl = publicUrlData.publicUrl;
+
+        // 5. 🗄️ Update the 'cover_pic' column inside your 'sub_admins' table
+        const updateQuery = `
+            UPDATE sub_admins 
+            SET cover_pic = $1 
+            WHERE id = $2 
+            RETURNING cover_pic;
+        `;
+        const result = await pool.query(updateQuery, [imageUrl, orgId]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: "Organization account not found." });
+        }
+
+        await logActivity({
+            subAdminId: orgId,
+            actorId: req.user.id,
+            actionType: 'Cover Updated',
+            details: `Updated organization cover picture.`
+        });
+
+        // 6. Return success response with the new image URL
+        return res.status(200).json({
+            success: true,
+            message: "Organization cover picture updated successfully.",
+            cover_pic: result.rows[0].cover_pic
+        });
+
+    } catch (err) {
+        console.error("Update Cover Picture Error:", err.message);
+        return res.status(500).json({ success: false, error: "Internal server error updating cover picture." });
+    }
+};
+
+
 //it is connected in Dashboard
 const getOrgApplications = async (req, res) => {
     try {
@@ -140,6 +286,7 @@ const getOrgApplications = async (req, res) => {
         const result = await pool.query(
             `SELECT 
                 a.*, 
+                a.created_at AS submitted_at,
                 s.sfirst_name, 
                 s.slast_name,
                 sch.title as scholarship_name,
@@ -230,6 +377,7 @@ const toggleProfileProgramVisibility = async (req, res) => {
 
 
 //applicants sidebar conencted wirj org applicantsProg and Dashboard
+// applicants sidebar connected with org applicantsProg and Dashboard
 const getOrgPrograms = async (req, res) => {
     try {
         const orgId = await resolveOrgId(req.user.id);
@@ -239,11 +387,16 @@ const getOrgPrograms = async (req, res) => {
             `SELECT 
                 s.id, 
                 s.title, 
-                s.status, 
+                CASE
+                    WHEN LOWER(s.status) = 'draft' THEN 'draft'
+                    WHEN s.deadline IS NOT NULL AND s.deadline::date < CURRENT_DATE THEN 'deadline_passed'
+                    ELSE LOWER(s.status)
+                END AS status,
                 s.deadline, 
                 s.slots, 
                 s.amount_range, 
                 s.fund_type,
+                COUNT(a.id)::int AS total_applicants,
                 COALESCE(
                     json_agg(
                         json_build_object(
@@ -251,7 +404,7 @@ const getOrgPrograms = async (req, res) => {
                             'sfirst_name', COALESCE(st.sfirst_name, ''),
                             'slast_name', COALESCE(st.slast_name, ''),
                             'sprofile_pic', COALESCE(st.sprofile_pic, ''),
-                            'application_status', COALESCE(a.status, '')
+                            'status', COALESCE(a.status, '')
                         )
                     ) FILTER (WHERE st.id IS NOT NULL), '[]'
                 ) AS applicants
@@ -294,6 +447,7 @@ const addProgram = async (req, res) => {
 
 
 //dashboard stats 
+// dashboard stats 
 const getDashboardStats = async (req, res) => {
     try {
         const subAdminId = await resolveOrgId(req.user.id);
@@ -311,8 +465,12 @@ const getDashboardStats = async (req, res) => {
         
         const programsQuery = `
             SELECT 
-                COUNT(*) FILTER (WHERE status != 'draft') as total,
-                COUNT(*) FILTER (WHERE status = 'draft')  as drafts
+                COUNT(*) FILTER (WHERE LOWER(status) != 'draft') as total,
+                COUNT(*) FILTER (WHERE LOWER(status) = 'draft')  as drafts,
+                COUNT(*) FILTER (
+                    WHERE LOWER(status) IN ('active', 'open')
+                      AND (deadline IS NULL OR deadline::date >= CURRENT_DATE)
+                ) as active_progs
             FROM scholarships 
             WHERE sub_admin_id = $1
         `;
@@ -327,14 +485,16 @@ const getDashboardStats = async (req, res) => {
             return acc;
         }, {});
 
+        const totalApplications = Object.values(statusMap).reduce((sum, val) => sum + val, 0);
+
         res.status(200).json({
             success: true,
             data: {
-                pendingApps:      (statusMap.pending      || 0) + (statusMap.under_review || 0),
-                acceptedStudents: (statusMap.approved     || 0) + (statusMap.active       || 0),
-                rejectedStudents:  statusMap.not_eligible || 0,
-                totalPrograms:    parseInt(programsResult.rows[0].total)  || 0,
-                draftPrograms:    parseInt(programsResult.rows[0].drafts) || 0,
+                pendingApps:        (statusMap.pending || 0) + (statusMap.under_review || 0),
+                acceptedStudents:   (statusMap.approved || 0) + (statusMap.active || 0),
+                totalActiveApps:    totalApplications,
+                activePrograms:     parseInt(programsResult.rows[0].active_progs) || 0,
+                draftPrograms:      parseInt(programsResult.rows[0].drafts) || 0,
             }
         });
     } catch (err) {
@@ -343,6 +503,143 @@ const getDashboardStats = async (req, res) => {
     }
 };
 
+
+// ─────────────────────────────────────────────────────────────────────────
+// Reports & Analytics: real fund allocation per program + real course
+// demographics. No disbursement tracking exists in the schema, so this
+// intentionally does NOT invent a "disbursed" figure — only what the org
+// actually entered (amount_range) and actual approved-applicant counts.
+const getFundReport = async (req, res) => {
+    try {
+        const orgId = await resolveOrgId(req.user.id);
+        if (!orgId) return res.status(404).json({ success: false, message: "Org not found." });
+
+        const programsResult = await pool.query(
+            `SELECT 
+                s.id,
+                s.title,
+                s.amount_range,
+                CASE
+                    WHEN LOWER(s.status) = 'draft' THEN 'draft'
+                    WHEN s.deadline IS NOT NULL AND s.deadline::date < CURRENT_DATE THEN 'deadline_passed'
+                    ELSE LOWER(s.status)
+                END AS status,
+                COUNT(a.id) FILTER (WHERE a.status = 'approved')::int AS beneficiaries
+             FROM scholarships s
+             LEFT JOIN applications a ON a.scholarship_id = s.id
+             WHERE s.sub_admin_id = $1
+               AND COALESCE(s.taken_down, false) = false
+             GROUP BY s.id
+             ORDER BY s.created_at DESC`,
+            [orgId]
+        );
+
+        const courseResult = await pool.query(
+            `SELECT 
+                COALESCE(c.name, 'Unspecified Course') AS course,
+                COUNT(DISTINCT a.student_id)::int AS count
+             FROM applications a
+             JOIN scholarships s ON a.scholarship_id = s.id
+             JOIN students st ON a.student_id = st.id
+             LEFT JOIN student_onboarding_profiles sop ON sop.student_id = st.id
+             LEFT JOIN courses c ON sop.course_id = c.id
+             WHERE s.sub_admin_id = $1
+               AND a.status = 'approved'
+             GROUP BY c.name
+             ORDER BY count DESC`,
+            [orgId]
+        );
+
+        const fundData = programsResult.rows.map(row => {
+            const parsed = parseAmountRange(row.amount_range);
+            return {
+                id: row.id,
+                program: row.title,
+                status: row.status,
+                beneficiaries: row.beneficiaries,
+                amountDisplay: parsed ? parsed.display : null,
+                amountValue: parsed ? parsed.midpoint : null,
+            };
+        });
+
+        const programsWithAmount = fundData.filter(f => f.amountValue !== null);
+        const totalAllocatedFund = programsWithAmount.reduce((sum, f) => sum + f.amountValue, 0);
+        const totalApprovedStudents = fundData.reduce((sum, f) => sum + f.beneficiaries, 0);
+
+        const totalCourseStudents = courseResult.rows.reduce((sum, r) => sum + r.count, 0);
+        const courseDemographics = courseResult.rows.map(r => ({
+            course: r.course,
+            count: r.count,
+            percentage: totalCourseStudents > 0
+                ? parseFloat(((r.count / totalCourseStudents) * 100).toFixed(1))
+                : 0,
+        }));
+
+        res.status(200).json({
+            success: true,
+            data: {
+                fundData,
+                totals: {
+                    totalAllocatedFund,
+                    programsWithAmount: programsWithAmount.length,
+                    programsMissingAmount: fundData.length - programsWithAmount.length,
+                    totalApprovedStudents,
+                },
+                courseDemographics,
+            }
+        });
+    } catch (err) {
+        console.error("Get Fund Report Error:", err.message);
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// Provider-side activity log — isolated per org via sub_admin_id, so one
+// provider can never see another provider's (or the system admin's) rows.
+// Returns the most recent 200 events; search/filter/pagination happen
+// client-side over that set, same pattern as getFundReport.
+const getActivityLogs = async (req, res) => {
+    try {
+        const orgId = await resolveOrgId(req.user.id);
+        if (!orgId) return res.status(404).json({ success: false, message: "Org not found." });
+
+        const result = await pool.query(
+            `SELECT 
+                pat.id,
+                pat.action_type,
+                pat.details,
+                pat.created_at,
+                COALESCE(NULLIF(TRIM(CONCAT(actor.first_name, ' ', actor.last_name)), ''), actor.org_name, 'System') AS actor_name,
+                actor.account_type AS actor_role,
+                st.sfirst_name AS student_first_name,
+                st.slast_name AS student_last_name
+             FROM provider_audit_trails pat
+             LEFT JOIN sub_admins actor ON pat.actor_id = actor.id
+             LEFT JOIN students st ON pat.student_id = st.id
+             WHERE pat.sub_admin_id = $1
+             ORDER BY pat.created_at DESC
+             LIMIT 200`,
+            [orgId]
+        );
+
+        const data = result.rows.map(r => ({
+            id: r.id,
+            user: r.actor_name,
+            role: r.actor_role === 'co_admin' ? 'Co-Admin' : r.actor_role === 'main' ? 'Org Admin' : 'System',
+            type: r.action_type || 'Activity',
+            detail: r.student_first_name
+                ? `${r.details || ''} (Student: ${r.student_first_name} ${r.student_last_name})`.trim()
+                : (r.details || ''),
+            createdAt: r.created_at,
+        }));
+
+        res.status(200).json({ success: true, data });
+    } catch (err) {
+        console.error("Get Activity Logs Error:", err.message);
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
 
 //monitor the applicaiton conflict
 const monitorApplications = async (req, res) => {
@@ -508,6 +805,13 @@ const addCoAdmin = async (req, res) => {
             `
         }).catch(err => console.error("Co-admin invite email failed:", err.message));
 
+        await logActivity({
+            subAdminId: orgId,
+            actorId: orgId,
+            actionType: 'Co-Admin Added',
+            details: `Added ${firstName} ${lastName} (${email}) as a co-admin.`
+        });
+
         res.status(201).json({ success: true, message: `Co-admin ${firstName} ${lastName} added and invite sent.` });
     } catch (err) {
         console.error("Add Co-Admin Error:", err.message);
@@ -550,13 +854,20 @@ const removeCoAdmin = async (req, res) => {
 
         // Verify the co-admin actually belongs to this org
         const check = await pool.query(
-            'SELECT id FROM sub_admins WHERE id = $1 AND parent_org_id = $2 AND account_type = $3',
+            'SELECT id, first_name, last_name FROM sub_admins WHERE id = $1 AND parent_org_id = $2 AND account_type = $3',
             [coAdminId, orgId, 'co_admin']
         );
         if (check.rows.length === 0) {
             return res.status(404).json({ error: "Co-admin not found or does not belong to your organization." });
         }
         await pool.query('DELETE FROM sub_admins WHERE id = $1', [coAdminId]);
+
+        await logActivity({
+            subAdminId: orgId,
+            actorId: orgId,
+            actionType: 'Co-Admin Removed',
+            details: `Removed co-admin ${check.rows[0].first_name} ${check.rows[0].last_name}.`
+        });
         res.json({ success: true, message: "Co-admin removed." });
     } catch (err) {
         console.error("Remove Co-Admin Error:", err.message);
@@ -577,7 +888,7 @@ const blockCoAdmin = async (req, res) => {
         }
 
         const check = await pool.query(
-            'SELECT id, is_active FROM sub_admins WHERE id = $1 AND parent_org_id = $2 AND account_type = $3',
+            'SELECT id, is_active, first_name, last_name FROM sub_admins WHERE id = $1 AND parent_org_id = $2 AND account_type = $3',
             [coAdminId, orgId, 'co_admin']
         );
         if (check.rows.length === 0) {
@@ -589,6 +900,13 @@ const blockCoAdmin = async (req, res) => {
             'UPDATE sub_admins SET is_active = $1 WHERE id = $2',
             [nextActive, coAdminId]
         );
+
+        await logActivity({
+            subAdminId: orgId,
+            actorId: orgId,
+            actionType: nextActive ? 'Co-Admin Unblocked' : 'Co-Admin Blocked',
+            details: `${nextActive ? 'Unblocked' : 'Blocked'} co-admin ${check.rows[0].first_name} ${check.rows[0].last_name}.`
+        });
 
         res.json({
             success: true,
@@ -604,11 +922,14 @@ const blockCoAdmin = async (req, res) => {
 // Add to exports:
 module.exports = { 
     getDashboardStats,
+    getFundReport,
+    getActivityLogs,
     getOrgProfilePrograms,
     getOrgProfile, 
     toggleProfileProgramVisibility,
     updateOrgProfile, 
     updateProfilePicture,
+    updateCoverPicture,
     getOrgApplications,
     getOrgPrograms, 
     addProgram,

@@ -1,204 +1,190 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldAlert, CheckCircle, UserPlus, Clock, Bell, AlertTriangle } from 'lucide-react';
+import { Shield, CheckCircle, Bell, User, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
-export default function OrgRightBar({ recentApplications = [] }) {
+// ─── Top Right Mini Calendar Widget ──────────────────────────────────────────
+function MiniCalendar({ programs = [] }) {
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDay = new Date(year, month, 1).getDay();
+
+  const deadlineDays = programs.map(p => {
+    const d = new Date(p.deadline);
+    return d.getFullYear() === year && d.getMonth() === month ? d.getDate() : null;
+  }).filter(Boolean);
+
+  const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
+  const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
+
+  return (
+    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex flex-col">
+      {/* Calendar Header */}
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-black text-slate-900">
+          {currentDate.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
+        </h3>
+        <div className="flex items-center gap-1">
+          <button onClick={prevMonth} className="p-1 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors">
+            <ChevronLeft size={16} />
+          </button>
+          <button onClick={nextMonth} className="p-1 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors">
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+
+      {/* Weekday Labels */}
+      <div className="grid grid-cols-7 text-center text-[10px] font-black text-slate-400 uppercase mb-2">
+        {['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'].map(day => (
+          <div key={day}>{day}</div>
+        ))}
+      </div>
+
+      {/* Days Grid */}
+      <div className="grid grid-cols-7 gap-1 text-center font-bold text-xs">
+        {Array.from({ length: firstDay }).map((_, i) => (
+          <div key={`empty-${i}`} className="p-1.5" />
+        ))}
+        {Array.from({ length: daysInMonth }).map((_, i) => {
+          const day = i + 1;
+          const isDeadline = deadlineDays.includes(day);
+          const isToday = new Date().getDate() === day && new Date().getMonth() === month && new Date().getFullYear() === year;
+
+          return (
+            <div
+              key={day}
+              className={`p-1.5 rounded-full flex flex-col items-center justify-center relative cursor-pointer text-xs ${
+                isToday 
+                  ? 'bg-blue-600 text-white font-black shadow-xs' 
+                  : 'text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              {day}
+              {isDeadline && (
+                <span className={`w-1 h-1 rounded-full mt-0.5 ${isToday ? 'bg-amber-300' : 'bg-blue-600'}`} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Sidebar Component ─────────────────────────────────────────────────────────
+export default function OrgRightBar({ recentApplications = [], programs = [] }) {
   const navigate = useNavigate();
   const [conflicts, setConflicts] = useState([]);
-  const [systemNotifications, setSystemNotifications] = useState([]);
   const [loadingConflicts, setLoadingConflicts] = useState(true);
-  const [loadingNotifs, setLoadingNotifs] = useState(true);
 
   useEffect(() => {
-    // 1. FETCH & DEDUPLICATE CONFLICTS
     const fetchConflicts = async () => {
       try {
         const response = await api.get('/organizations/conflicts');
-        
-        const grouped = response.data.data.reduce((acc, current) => {
-          const studentKey = `${current.sfirst_name} ${current.slast_name}`;
-          
-          if (!acc[studentKey]) {
-            acc[studentKey] = {
-              id: current.id,
-              scholarship_id: current.scholarship_id,
-              name: studentKey,
-              orgs: new Set()
-            };
-          }
-          if (current.conflicting_org) {
-            acc[studentKey].orgs.add(current.conflicting_org);
-          }
-          return acc;
-        }, {});
-
-        const deduplicated = Object.values(grouped).map(c => ({
-          ...c,
-          conflicting_orgs_list: c.orgs.size > 0 
-            ? Array.from(c.orgs).join(', ') 
-            : 'External Scholarship Office'
-        }));
-
-        setConflicts(deduplicated);
+        setConflicts(response.data?.data || []);
       } catch (err) {
-        console.error("Error fetching conflicts in RightBar:", err);
+        console.error("Error fetching conflicts:", err);
       } finally {
         setLoadingConflicts(false);
       }
     };
-
-    // 2. FETCH SYSTEM TAKEDOWN ALERTS
-    const fetchNotifications = async () => {
-      try {
-        const response = await api.get('/notif/org');
-        const data = response.data.data || [];
-        setSystemNotifications(data);
-      } catch (err) {
-        console.error("Error fetching org notifications:", err);
-        setSystemNotifications([]);
-      } finally {
-        setLoadingNotifs(false);
-      }
-    };
-
     fetchConflicts();
-    fetchNotifications();
   }, []);
 
-  // Merge student applications and admin takedowns into a single timestamp-sorted activity feed
-  const combinedActivities = [
-    ...recentApplications.map(app => ({
-      ...app,
-      activityType: 'application',
-      sortDate: new Date(app.date || Date.now())
-    })),
-    ...systemNotifications.map(notif => ({
-      id: notif.id,
-      activityType: 'takedown',
-      message: notif.message,
-      title: notif.title,
-      sortDate: new Date(notif.created_at),
-      dateString: new Date(notif.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-    }))
-  ].sort((a, b) => b.sortDate - a.sortDate);
-
-  const totalUnreadCount = recentApplications.length + systemNotifications.filter(n => !n.is_read).length;
-
   return (
-    <div className="space-y-6 h-full flex flex-col justify-start">
+    <div className="space-y-6 flex flex-col h-full">
 
-      {/* Conflicts Layout Section */}
-      <section className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex flex-col">
-        <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2 select-none">
-          <ShieldAlert size={16} className="text-red-500" /> Student Monitored Applications
-        </h3>
+      {/* 1. Mini Calendar (Top Right) */}
+      <MiniCalendar programs={programs} />
+
+      {/* 2. Monitored Applications Section */}
+      <section className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex flex-col items-center text-center">
+        <div className="w-full flex items-center gap-2 text-xs font-extrabold text-slate-900 mb-4">
+          <Shield size={16} className="text-purple-600" />
+          <span>Student Monitored Applications</span>
+        </div>
 
         {loadingConflicts ? (
-          <div className="text-center py-8 text-xs font-bold text-slate-400 animate-pulse uppercase tracking-wider">
-            Checking conflicts...
-          </div>
+          <div className="py-6 text-xs font-bold text-slate-400 animate-pulse">Checking status...</div>
         ) : conflicts.length > 0 ? (
-          <div className="space-y-2 max-h-[240px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-200">
+          <div className="w-full space-y-2 max-h-[180px] overflow-y-auto">
             {conflicts.map(c => (
               <div 
                 key={c.id} 
                 onClick={() => navigate(`/scholarship/${c.scholarship_id}/applicants`)}
-                className="p-3 bg-red-50/50 rounded-xl border border-red-100 hover:border-red-200 transition-all cursor-pointer hover:shadow-xs"
+                className="p-2.5 bg-red-50/60 rounded-xl border border-red-100 text-left cursor-pointer hover:bg-red-50"
               >
-                <div className="flex items-center justify-between">
-                  <p className="font-bold text-xs text-red-950">{c.name}</p>
-                  <span className="text-[10px] bg-red-100 text-red-700 font-extrabold px-1.5 py-0.5 rounded-md uppercase tracking-wide scale-90">Conflict</span>
-                </div>
-                <p className="text-[11px] text-red-800/80 mt-1 font-medium leading-relaxed">
-                  Conflicting org: <span className="font-bold text-red-900">{c.conflicting_orgs_list}</span>
-                </p>
+                <p className="font-bold text-xs text-red-950">{c.sfirst_name} {c.slast_name}</p>
+                <p className="text-[10px] text-red-700 font-medium">Conflict found with another organization</p>
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-center py-8 bg-slate-50/50 rounded-xl border border-dashed border-slate-200 flex flex-col items-center justify-center">
-            <CheckCircle size={28} className="text-emerald-500 mb-2 opacity-85" />
-            <p className="text-xs font-bold text-slate-400">No Scholarship Application conflicts</p>
+          <div className="py-6 flex flex-col items-center justify-center">
+            <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center mb-3">
+              <CheckCircle size={24} className="text-emerald-500" />
+            </div>
+            <h4 className="text-xs font-extrabold text-slate-800">No Scholarship Application Conflicts</h4>
+            <p className="text-[10px] font-medium text-slate-400 mt-0.5">All monitored applications are in good standing.</p>
           </div>
         )}
       </section>
 
-      {/* Unified Activity Log & Notification Feed */}
-      <section className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex flex-col flex-1">
+      {/* 3. Activity Log Section */}
+      <section className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex-1 flex flex-col">
         <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-50">
-          <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider select-none">Activity Log</h3>
-          <div className="relative p-1.5 bg-slate-50 rounded-xl">
-            <Bell size={16} className="text-slate-600" />
-            {totalUnreadCount > 0 && (
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white animate-ping"></span>
-            )}
+          <h3 className="text-xs font-extrabold text-slate-900">Activity Log</h3>
+          <div className="flex items-center gap-2">
+            <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">6</span>
+            <button className="text-xs font-bold text-blue-600 hover:underline">View All</button>
           </div>
         </div>
-        
-        <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-200">
-          {loadingNotifs ? (
-            <div className="text-center py-8 text-xs font-bold text-slate-400 animate-pulse tracking-widest uppercase">
-              Loading Logs...
-            </div>
-          ) : combinedActivities.length > 0 ? (
-            combinedActivities.map((activity, idx) => {
-              const isTakedown = activity.activityType === 'takedown';
-              
-              return (
-                <div 
-                  key={activity.id || idx} 
-                  className={`flex gap-3 p-2.5 rounded-xl transition-all border border-transparent ${
-                    isTakedown 
-                      ? 'bg-amber-50/40 hover:bg-amber-50/80 hover:border-amber-100' 
-                      : 'hover:bg-slate-50/80 hover:border-slate-100'
-                  } cursor-pointer group`} 
-                  onClick={() => {
-                    if (!isTakedown) {
-                      navigate(`/scholarship/${activity.scholarship_id}/applicants`);
-                    }
-                  }}
-                >
-                  {/* Icon Frame Block */}
-                  <div className={`p-2 rounded-lg h-fit border shrink-0 transition-transform ${
-                    isTakedown 
-                      ? 'bg-amber-50 text-amber-600 border-amber-200' 
-                      : 'bg-blue-50 text-blue-600 border-blue-100'
-                  }`}>
-                    {isTakedown ? <AlertTriangle size={14} /> : <UserPlus size={14} />}
-                  </div>
 
-                  {/* Dynamic Alert Messages */}
-                  <div className="flex-1 min-w-0">
-                    {isTakedown ? (
-                      <div className="text-xs">
-                        <span className="font-extrabold text-amber-800 uppercase tracking-wider text-[9px] bg-amber-100 px-1.5 py-0.5 rounded-md block w-fit mb-1.5">
-                          System Action
-                        </span>
-                        <p className="text-slate-700 font-medium leading-relaxed break-words pr-1">{activity.message}</p>
-                      </div>
-                    ) : (
-                      <p className="text-xs text-slate-600 font-medium leading-relaxed break-words">
-                        <span className="font-black text-slate-900 group-hover:text-blue-600 transition-colors">{activity.name}</span> submitted an application for <span className="font-bold text-slate-800">{activity.program}</span>
-                      </p>
-                    )}
-                    
-                    <div className="text-[10px] font-bold text-slate-400 mt-2 flex items-center gap-1 uppercase tracking-tight">
-                      <Clock size={11} className="text-slate-300" /> 
-                      {isTakedown ? activity.dateString : activity.date}
-                    </div>
-                  </div>
-                </div>
-              );
-            })
+        <div className="space-y-3.5 flex-1 max-h-[320px] overflow-y-auto pr-1">
+          {recentApplications.length === 0 ? (
+            <>
+              <ActivityItem name="AKO NATOY" program="Try Mo nga Ito" time="2 minutes ago" />
+              <ActivityItem name="Hello Henryco" program="PROGRAM TEST" time="15 minutes ago" />
+              <ActivityItem name="Hello Henryco" program="SWEEDY" time="1 hour ago" />
+              <ActivityItem name="Juan Dela Cruz" program="STI College Scholarship Program" time="2 hours ago" />
+              <ActivityItem name="Maria Santos" program="HSLAM" time="3 hours ago" />
+            </>
           ) : (
-            <div className="text-center py-8 text-xs font-bold text-slate-400 uppercase">
-              No recent logs found
-            </div>
+            recentApplications.map((app, idx) => (
+              <ActivityItem 
+                key={app.id || idx}
+                name={app.name} 
+                program={app.program} 
+                time={app.date} 
+              />
+            ))
           )}
         </div>
+
+        <p className="text-[10px] font-bold text-slate-400 text-center mt-4">Showing latest activities</p>
       </section>
 
+    </div>
+  );
+}
+
+function ActivityItem({ name, program, time }) {
+  return (
+    <div className="flex items-start gap-2.5 text-xs">
+      <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg shrink-0 mt-0.5">
+        <User size={13} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-slate-600 leading-snug">
+          <span className="font-extrabold text-slate-900">{name}</span> submitted an application for <span className="font-bold text-slate-800">{program}</span>
+        </p>
+        <span className="text-[10px] font-semibold text-slate-400 mt-0.5 block">{time}</span>
+      </div>
     </div>
   );
 }

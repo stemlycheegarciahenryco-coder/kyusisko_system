@@ -4,15 +4,17 @@ const uploadOrgPic = require('../config/orgMulter');
 const { verifyToken } = require('../middleware/auth');
 const orgController = require('../controller/orgController');
 
-// Standardized Routes
+// Standardized Routes orgprofile-
 router.get('/profile/:id', verifyToken, orgController.getOrgProfile);
 router.patch('/profile/:id', verifyToken, orgController.updateOrgProfile);
-router.patch('/profile-picture/:id', verifyToken, uploadOrgPic, orgController.updateProfilePicture);
+router.patch('/profile-picture/:id', verifyToken, uploadOrgPic.single('org_pic'), orgController.updateProfilePicture);
+router.patch('/cover-picture/:id', verifyToken, uploadOrgPic.single('cover_pic'), orgController.updateCoverPicture);
 
 router.get('/applications', verifyToken, orgController.getOrgApplications);
+//orgprofile-
 router.get('/dashboard-programs/:id', verifyToken, orgController.getOrgPrograms);
 
-// Dedicated profile programs endpoint
+// Dedicated profile programs endpoint orgprofile-
 router.get('/profile-programs/:id', verifyToken, orgController.getOrgProfilePrograms);
 
 // ✅ FIX: Changed semicolon to colon
@@ -20,6 +22,8 @@ router.post('/programs/:id', verifyToken, orgController.addProgram);
 router.patch('/programs/:programId/visibility', verifyToken, orgController.toggleProfileProgramVisibility);
 
 router.get('/dashboard-stats', verifyToken, orgController.getDashboardStats);
+router.get('/fund-report', verifyToken, orgController.getFundReport);
+router.get('/activity-logs', verifyToken, orgController.getActivityLogs);
 router.get('/conflicts', verifyToken, orgController.monitorApplications);
 
 // Password change now lives at POST /user-management/change-password

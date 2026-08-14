@@ -1,9 +1,29 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const pool = require('../config/db');
-//const security = require('./securityController'); // Import your new security logic
-const transporter = require('../config/mailer_resend'); // For sending emails
-const { supabaseAdmin } = require('../config/supabaseClient'); // ✅ Fixed and completed initialization
+const transporter = require('../config/mailer_resend');
+const { supabaseAdmin } = require('../config/supabaseClient');
+// 🔴 ADDED: Queue Manager for background AI matching
+const { addJob } = require('../queues/queueManager');
+
+// Helper to re-match a student against all open scholarships when their profile updates
+async function triggerStudentReMatch(studentId) {
+  try {
+    const openScholarships = await pool.query(
+      `SELECT id FROM scholarships WHERE status IN ('open', 'published') AND deadline::date > CURRENT_DATE AND taken_down = FALSE`
+    );
+    await Promise.all(
+      openScholarships.rows.map(scholarship =>
+        addJob('engineMatching', 'computeMatch', {
+          studentId: studentId,
+          scholarshipId: scholarship.id
+        })
+      )
+    );
+  } catch (err) {
+    console.error("Failed to queue student re-match jobs:", err.message);
+  }
+}
 
 // Get specific student profile by ID
 // GET /api/students/:id
@@ -23,15 +43,14 @@ exports.getStudentById = async (req, res) => {
         sis_active,
         sbirth_date,
         sprofile_pic,
-        -- Pulling individual address fields from your ERD
         sstreet, 
         sbarangay, 
         sdistrict, 
         szip_code,
-        -- Added for new profile parameters
         academic_student_id,
-        academic_student_id AS student_id, -- Aliased for seamless frontend parsing
-        year_level
+        academic_student_id AS student_id,
+        year_level,
+        gwa
        FROM students 
        WHERE id = $1 LIMIT 1`, 
       [id]
@@ -48,8 +67,7 @@ exports.getStudentById = async (req, res) => {
   }
 };
 
-
-// get registration status to root
+// Get registration status
 exports.getAllStudents = async (req, res) => {
     try {
         const query = `
@@ -60,7 +78,6 @@ exports.getAllStudents = async (req, res) => {
                 slast_name,
                 scontact_number,
                 sis_active,
-                -- Derive status: If profile is complete, they are Registered
                 CASE 
                     WHEN is_profile_complete = true THEN 'Registered' 
                     ELSE 'Pending' 
@@ -77,10 +94,9 @@ exports.getAllStudents = async (req, res) => {
     }
 };
 
-
 exports.updateStudentStatus = async (req, res) => {
     const { id } = req.params;
-    const { activeStatus } = req.body; // Expecting true or false
+    const { activeStatus } = req.body;
 
     try {
         await pool.query(
@@ -92,7 +108,6 @@ exports.updateStudentStatus = async (req, res) => {
         res.status(500).json({ error: "Failed to update security status" });
     }
 };
-
 
 // Profile student achievements & academic updates
 exports.updatePortfolio = async (req, res) => {
@@ -106,35 +121,33 @@ exports.updatePortfolio = async (req, res) => {
     other_school, 
     other_degree_program, 
     sports_interests,
-    academic_student_id, // ✅ Added incoming identifier field from FormData
-    year_level           // ✅ Added incoming choice field from FormData
+    academic_student_id,
+    year_level,
+    gwa
   } = req.body;
 
   try {
-    // 1. Process sports interests array safely
     let processedSports = null;
     if (sports_interests !== undefined && sports_interests !== '') {
       const sportsArray = sports_interests.split(',').map(s => s.trim()).filter(Boolean);
       processedSports = JSON.stringify(sportsArray); 
     }
 
-    // 2. Format integers safely.
     const finalCollegeId = college_id && college_id !== 'Others' && college_id !== '' ? parseInt(college_id) : null;
     const finalCourseId = course_id && course_id !== 'Others' && course_id !== '' ? parseInt(course_id) : null;
     const finalOtherSchool = other_school && other_school.trim() !== '' ? other_school.trim() : null;
     const finalOtherDegree = other_degree_program && other_degree_program.trim() !== '' ? other_degree_program.trim() : null;
-
-    // 3. Update the 'students' table cleanly with the new fields included
+    const parsedGwa = gwa && gwa.trim() !== '' ? parseFloat(gwa) : null;
     await pool.query(
       `UPDATE students 
        SET bio = COALESCE($1, bio),
            academic_student_id = $2,
-           year_level = $3
-       WHERE id = $4`,
-      [bio || null, academic_student_id || null, year_level || null, student_id]
+           year_level = $3,
+           gwa = $4
+       WHERE id = $5`,
+      [bio || null, academic_student_id || null, year_level || null, parsedGwa, student_id]
     );
 
-    // 4. Smart cross-clearing CASE WHEN logic to handle toggling between formal IDs and custom text statuses
     await pool.query(
       `UPDATE student_onboarding_profiles 
        SET college_id = CASE 
@@ -170,7 +183,6 @@ exports.updatePortfolio = async (req, res) => {
       ]
     );
 
-    // 5. ✅ FIXED: Asynchronously upload portfolio files to Supabase Storage Bucket
     if (req.files && req.files.length > 0) {
       const studentQuery = await pool.query('SELECT portfolio_data FROM students WHERE id = $1', [student_id]);
       const currentPortfolio = studentQuery.rows[0]?.portfolio_data || [];
@@ -178,13 +190,11 @@ exports.updatePortfolio = async (req, res) => {
       const titlesArray = Array.isArray(req.body.titles) ? req.body.titles : [req.body.titles];
       const typesArray = Array.isArray(req.body.types) ? req.body.types : [req.body.types];
 
-      // Using for...of loop to handle asynchronous await functions properly
       for (let index = 0; index < req.files.length; index++) {
         const file = req.files[index];
         const fileExtension = file.originalname.split('.').pop();
         const filePath = `portfolio/student_${student_id}/${Date.now()}_${index}.${fileExtension}`;
 
-        // 5a. Upload document stream buffer to your private 'student-portfolio' bucket
         const { data, error: uploadError } = await supabaseAdmin.storage
           .from('student-portfolio')
           .upload(filePath, file.buffer, {
@@ -194,17 +204,16 @@ exports.updatePortfolio = async (req, res) => {
 
         if (uploadError) throw uploadError;
 
-        // 5b. Generate long-lived (1 year) secure signed URL for private access
         const { data: signedUrlData, error: urlError } = await supabaseAdmin.storage
           .from('student-portfolio')
-          .createSignedUrl(filePath, 31536000); // 31536000 seconds = 1 year
+          .createSignedUrl(filePath, 31536000);
 
         if (urlError) throw urlError;
 
         const newEntry = {
           type: typesArray[index] || 'Certificate',
           title: titlesArray[index] || 'Untitled Document',
-          file_path: filePath, // Storing path mapping helps if you need to delete it later
+          file_path: filePath,
           url: signedUrlData.signedUrl 
         };
         currentPortfolio.push(newEntry);
@@ -216,6 +225,11 @@ exports.updatePortfolio = async (req, res) => {
       );
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // 🚀 SCENARIO B: Trigger AI Background Re-Matching for this Student
+    // ─────────────────────────────────────────────────────────────────────────
+    await triggerStudentReMatch(student_id);
+
     res.json({ message: "Profile updated successfully!" });
   } catch (err) {
     console.error("Error updating profile fields:", err.message);
@@ -223,16 +237,12 @@ exports.updatePortfolio = async (req, res) => {
   }
 };
 
-
-
-
-//PERSONAL EDIT INFO UPDATE
+// PERSONAL EDIT INFO UPDATE
 exports.updatePersonalInfo = async (req, res) => {
   const { id } = req.params;
   const { scontact_number, sstreet, sbarangay, sgender, religion, other_religion } = req.body;
 
   try {
-    // 1. Update core demographic fields in the students table
     await pool.query(
       `UPDATE students 
        SET scontact_number = COALESCE($1, scontact_number),
@@ -243,14 +253,19 @@ exports.updatePersonalInfo = async (req, res) => {
       [scontact_number, sstreet, sbarangay, sgender, id]
     );
 
-    // 2. Update extended onboarding fields (Religion)
     await pool.query(
       `UPDATE student_onboarding_profiles 
        SET religion = COALESCE($1, religion),
-           other_religion = $2
+           other_religion = $2,
+           updated_at = NOW()
        WHERE student_id = $3`,
       [religion, religion === 'Others' ? other_religion : null, id]
     );
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 🚀 SCENARIO B: Trigger AI Background Re-Matching
+    // ─────────────────────────────────────────────────────────────────────────
+    await triggerStudentReMatch(id);
 
     res.json({ success: true, message: "Personal information updated successfully!" });
   } catch (err) {
@@ -259,8 +274,7 @@ exports.updatePersonalInfo = async (req, res) => {
   }
 };
 
-
-//getting the full profile information
+// Fetching full profile info (Read-only GET function)
 exports.getFullProfile = async (req, res) => {
   const { id } = req.params;
   try {
@@ -270,16 +284,14 @@ exports.getFullProfile = async (req, res) => {
         s.scontact_number, s.sbirth_date, s.sprofile_pic,
         s.sstreet, s.sbarangay, s.sdistrict, s.szip_code,
         s.portfolio_data, s.bio,
-        -- Added new fields for layout consumption
         s.academic_student_id,
-        s.academic_student_id AS student_id, -- Aliased matching state components
-        s.year_level,
+        s.academic_student_id AS student_id,
+        s.year_level,s.gwa,
         c.name AS college_name, p.other_school, 
         cr.name AS course_name, p.other_degree_program,
         p.religion, p.other_religion,
         p.sports_interests, p.other_sport,
         
-        /* ── ADDED PARENT FIELDS HERE ── */
         sp.mother_name, sp.mother_contact, sp.mother_occupation,
         sp.father_name, sp.father_contact, sp.father_occupation,
         sp.guardian_name, sp.guardian_contact, sp.guardian_occupation,
@@ -288,10 +300,7 @@ exports.getFullProfile = async (req, res) => {
        LEFT JOIN student_onboarding_profiles p ON s.id = p.student_id
        LEFT JOIN colleges c ON p.college_id = c.id
        LEFT JOIN courses cr ON p.course_id = cr.id
-       
-       /* ── JOIN THE PARENTS TABLE ── */
        LEFT JOIN student_parents sp ON s.id = sp.student_id
-       
        WHERE s.id = $1`,
       [id]
     );
@@ -306,12 +315,9 @@ exports.getFullProfile = async (req, res) => {
   }
 };
 
-
-// ✅ FIXED: Updated to upload directly to Supabase Public 'profile-images' bucket
 exports.updateProfilePic = async (req, res) => {
   const { id } = req.params;
   
-  // Check if a file was actually uploaded via multer
   if (!req.file) {
     return res.status(400).json({ error: "No image provided" });
   }
@@ -320,7 +326,6 @@ exports.updateProfilePic = async (req, res) => {
     const fileExtension = req.file.originalname.split('.').pop();
     const filePath = `profiles/student_${id}_${Date.now()}.${fileExtension}`;
 
-    // 1. Upload the raw image buffer to your public bucket
     const { data, error: uploadError } = await supabaseAdmin.storage
       .from('profile-images')
       .upload(filePath, req.file.buffer, {
@@ -333,14 +338,12 @@ exports.updateProfilePic = async (req, res) => {
       return res.status(500).json({ error: "Failed to upload image to storage" });
     }
 
-    // 2. Fetch the permanent public url structure
     const { data: urlData } = supabaseAdmin.storage
       .from('profile-images')
       .getPublicUrl(filePath);
 
     const publicUrl = urlData.publicUrl;
 
-    // 3. Save full URL back to 'sprofile_pic' database column
     const result = await pool.query(
       `UPDATE students 
        SET sprofile_pic = $1 
@@ -363,7 +366,6 @@ exports.updateProfilePic = async (req, res) => {
   }
 };
 
-//update two factor authentication settings for student
 exports.update2FA = async (req, res) => {
     const { studentId, two_factor_enabled, preferred_2fa_method } = req.body;
 
@@ -381,7 +383,6 @@ exports.update2FA = async (req, res) => {
         res.status(500).json({ error: "Failed to update security settings" });
     }
 };
-
 
 exports.getMyScholarships = async (req, res) => {
   try {
@@ -432,7 +433,6 @@ exports.getMyScholarships = async (req, res) => {
   }
 };
 
-// Parents Profile
 exports.saveOrUpdateParentProfile = async (req, res) => {
     const { studentId } = req.params;
     const {
@@ -504,5 +504,40 @@ exports.saveOrUpdateParentProfile = async (req, res) => {
         }
 
         return res.status(500).json({ success: false, error: "Internal server error saving family details." });
+    }
+};
+
+exports.changePassword = async (req, res) => {
+    const { studentId, currentPassword, newPassword } = req.body;
+
+    try {
+        const result = await pool.query(
+            'SELECT student_password_hash FROM students WHERE id = $1',
+            [studentId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Student not found." });
+        }
+
+        const student = result.rows[0];
+
+        const isMatch = await bcrypt.compare(currentPassword, student.student_password_hash);
+        
+        if (!isMatch) {
+            return res.status(400).json({ error: "Incorrect current password." });
+        }
+
+        const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+        await pool.query(
+            'UPDATE students SET student_password_hash = $1 WHERE id = $2',
+            [hashedNewPassword, studentId]
+        );
+
+        res.json({ success: true, message: "Password updated successfully!" });
+    } catch (err) {
+        console.error("Change Password Error:", err.message);
+        res.status(500).json({ error: "Failed to update password. Please try again later." });
     }
 };

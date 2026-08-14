@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
-import { CheckCircle2, AlertCircle, Clock, Upload } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Clock, Upload, FileText } from 'lucide-react';
 
 const MAX_FILE_SIZE_MB = 5;
 
@@ -95,9 +95,32 @@ export default function RenewCompliance({ applicationId, onSuccess }) {
 
   if (submitted || compliance?.status === 'submitted' || compliance?.status === 'renewal_pending') {
     return (
-      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 text-center">
-        <CheckCircle2 size={20} className="text-emerald-500 mx-auto mb-2" />
-        <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Renewal Submitted</p>
+      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-3">
+        <div className="text-center">
+          <CheckCircle2 size={20} className="text-emerald-500 mx-auto mb-1.5" />
+          <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Renewal Submitted</p>
+        </div>
+
+        {/* Submitted documents checklist — shows each required item as verified,
+            with the uploaded filename when it's known for this session. */}
+        {docList.length > 0 && (
+          <div className="bg-white rounded-lg border border-emerald-100 divide-y divide-emerald-50 overflow-hidden">
+            {docList.map((doc, i) => (
+              <div key={i} className="flex items-center gap-2.5 px-3 py-2">
+                <div className="w-6 h-6 rounded-md bg-emerald-100 flex items-center justify-center shrink-0">
+                  <FileText size={12} className="text-emerald-600" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-black text-slate-600 truncate">{doc}</p>
+                  <p className="text-[9px] text-slate-400 font-medium truncate">
+                    {fileMap[doc]?.name || 'Submitted'}
+                  </p>
+                </div>
+                <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }

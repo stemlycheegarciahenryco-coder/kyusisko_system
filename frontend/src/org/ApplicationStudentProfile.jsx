@@ -58,7 +58,7 @@ export default function ApplicationStudentProfile({ detail }) {
           <div className="flex flex-wrap gap-2 pt-1.5">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs text-slate-500 font-medium">
               <User size={12} className="text-slate-400" />
-              <span>Student ID: <strong className="text-slate-700">{detail.student_id || '2023-45678'}</strong></span>
+              <span>Student ID: <strong className="text-slate-700">{detail.academic_student_id || '2023-45678'}</strong></span>
             </div>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs text-slate-500 font-medium">
               <Award size={12} className="text-slate-400" />
@@ -95,7 +95,7 @@ export default function ApplicationStudentProfile({ detail }) {
             <InfoRow label="Email" value={detail.student_email} />
             <InfoRow label="Contact Number" value={detail.scontact_number} />
             <InfoRow label="Gender" value={detail.sgender} />
-            <InfoRow label="Date of Birth" value={detail.dob ? new Date(detail.dob).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'January 12, 2003'} />
+            <InfoRow label="Date of Birth" value={detail.sbirth_date ? new Date(detail.sbirth_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'January 12, 2003'} />
           </div>
         </div>
 
@@ -108,7 +108,7 @@ export default function ApplicationStudentProfile({ detail }) {
           <span>Home Address</span>
         </div>
         <p className="text-sm font-medium text-slate-700 leading-relaxed">
-          {detail.house_address || 'No complete address recorded.'}
+          {detail.full_address || 'No complete address recorded.'}
         </p>
       </div>
 

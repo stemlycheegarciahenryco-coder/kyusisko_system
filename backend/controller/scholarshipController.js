@@ -1,11 +1,9 @@
 const pool = require('../config/db');
+// 🔴 ADDED: Queue Manager for background AI matching
+const { addJob } = require('../queues/queueManager');
+const { supabaseAdmin } = require('../config/supabaseClient');
 
-// ─────────────────────────────────────────────────────────────────────────
-// Same fix as orgController.js: co-admin rows have their OWN id, not the
-// org's. Every scholarship operation is scoped by sub_admin_id, so it must
-// resolve through this instead of trusting req.user.id directly — otherwise
-// a co-admin's programs silently end up owned by their own row (never
-// visible under the org), and updates/deletes just match zero rows.
+
 async function resolveOrgId(requesterId) {
     const r = await pool.query(
         'SELECT account_type, parent_org_id FROM sub_admins WHERE id = $1',
@@ -16,13 +14,10 @@ async function resolveOrgId(requesterId) {
     return account_type === 'co_admin' ? parent_org_id : requesterId;
 }
 
-// 💡 BULLETPROOF FIX: RegEx String Parser to catch and strip "GMT+0800" strings 
 const formatToLocalDateString = (inputDate) => {
   if (!inputDate) return null;
-  
   const dateStr = String(inputDate).trim();
 
-  // If it contains 'GMT', extract standard components manually
   if (dateStr.includes('GMT')) {
     try {
       const d = new Date(dateStr);
@@ -35,11 +30,8 @@ const formatToLocalDateString = (inputDate) => {
     }
   }
 
-  // Check if it's already a clean YYYY-MM-DD string
   const cleanMatch = dateStr.match(/^(\d{4}-\d{2}-\d{2})/);
-  if (cleanMatch) {
-    return cleanMatch[1];
-  }
+  if (cleanMatch) return cleanMatch[1];
 
   try {
     const d = new Date(dateStr);
@@ -57,7 +49,7 @@ const formatToLocalDateString = (inputDate) => {
 const createScholarship = async (req, res) => {
   const { title, description, deadline, slots, gwa, fund_type, requirements, amount_range, criteria } = req.body;
 
-  const attachmentPaths = req.files ? req.files.map(f => f.path) : [];
+  const attachmentPaths = [];
   const client = await pool.connect();
 
   try {
@@ -66,12 +58,33 @@ const createScholarship = async (req, res) => {
       client.release();
       return res.status(404).json({ success: false, message: "Org not found." });
     }
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        const cleanFileName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+        const fileName = `${Date.now()}-${cleanFileName}`;
+
+        const { error: uploadError } = await supabaseAdmin.storage
+          .from('provider-reference-download')
+          .upload(fileName, file.buffer, {
+            contentType: file.mimetype,
+            upsert: false
+          });
+
+        if (uploadError) {
+          throw new Error(`Supabase upload failed: ${uploadError.message}`);
+        }
+
+        const { data: publicUrlData } = supabaseAdmin.storage
+          .from('provider-reference-download')
+          .getPublicUrl(fileName);
+
+        attachmentPaths.push(publicUrlData.publicUrl);
+      }
+    }
 
     await client.query('BEGIN');
 
-    // 💡 FIX: Intercept deadline field and immunize it before parsing parameters
     const cleanDeadline = formatToLocalDateString(deadline);
-
     const parsedRequirements = typeof requirements === 'string' ? JSON.parse(requirements) : (requirements || []);
     const parsedCriteria = typeof criteria === 'string' ? JSON.parse(criteria) : (criteria || []);
 
@@ -103,6 +116,24 @@ const createScholarship = async (req, res) => {
     }
 
     await client.query('COMMIT');
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 🚀 SCENARIO A: Dispatch Background AI Matching Jobs for All Active Students
+    // ─────────────────────────────────────────────────────────────────────────
+    try {
+      const activeStudents = await pool.query(`SELECT id FROM students WHERE sis_active = true`);
+      await Promise.all(
+        activeStudents.rows.map(student =>
+          addJob('engineMatching', 'computeMatch', {
+            studentId: student.id,
+            scholarshipId: scholarshipId
+          })
+        )
+      );
+    } catch (queueErr) {
+      console.error("Failed to queue AI matching jobs on creation:", queueErr.message);
+    }
+
     res.status(201).json({ success: true, scholarshipId });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -133,7 +164,7 @@ const getScholarships = async (req, res) => {
 
     res.status(200).json({ success: true, data: result.rows });
   } catch (err) {
-    console.error("Database Error:", err.message); // This will print the exact issue to your server console logs!
+    console.error("Database Error:", err.message);
     res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -165,7 +196,7 @@ const getScholarshipById = async (req, res) => {
   }
 };
 
-// edit scholarship
+// Edit scholarship
 const updateScholarship = async (req, res) => {
   const { id } = req.params;
   const { title, description, deadline, slots, gwa, fund_type, amount_range, criteria, requirements } = req.body;
@@ -186,7 +217,6 @@ const updateScholarship = async (req, res) => {
     const finalGwa = (gwa === "" || gwa == null || isNaN(parsedGwa)) ? null : parsedGwa;
     const finalSlots = (slots === "" || slots == null || slots === undefined) ? null : parseInt(slots, 10);
 
-    // Update the main scholarship record
     await client.query(
       `UPDATE scholarships 
        SET title = $1, description = $2, deadline = $3, slots = $4, 
@@ -196,7 +226,6 @@ const updateScholarship = async (req, res) => {
       [title, description, cleanDeadline, finalSlots, finalGwa, fund_type, amount_range, criteria || [], id, sub_admin_id]
     );
 
-    // 💡 FIX: Wipe out old items first to clear out stale parameters
     await client.query(
       `DELETE FROM scholarship_requirements WHERE scholarship_id = $1`,
       [id]

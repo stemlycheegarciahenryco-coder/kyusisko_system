@@ -95,6 +95,7 @@ function AcademicSection({ studentData, onRefresh }) {
       : studentData?.sports_interests || '',
     student_id: studentData?.student_id || '', 
     year_level: studentData?.year_level || '', 
+    gwa: studentData?.gwa || '',
   });
 
   const [colleges, setColleges] = useState([]);
@@ -135,7 +136,8 @@ function AcademicSection({ studentData, onRefresh }) {
     
     // Pass the new columns to backend
     formData.append('academic_student_id', form.student_id); 
-    formData.append('year_level', form.year_level); 
+    formData.append('year_level', form.year_level);
+    formData.append('gwa', form.gwa);
 
     try {
       await api.patch('/students/update-portfolio', formData, {
@@ -197,6 +199,20 @@ function AcademicSection({ studentData, onRefresh }) {
           </select>
         </div>
       </div>
+      {/* 👈 3. NEW GWA INPUT FIELD */}
+  <div>
+    <label className="block text-xs font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">GWA</label>
+    <input
+      type="number"
+      step="0.01"
+      min="1.00"
+      max="5.00"
+      placeholder="e.g. 1.50"
+      className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:border-[#093fb4] outline-none text-sm font-medium text-black transition-all"
+      value={form.gwa}
+      onChange={e => setForm({ ...form, gwa: e.target.value })}
+    />
+  </div>
 
       <div>
         <label className="block text-xs font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">About Yourself (Bio)</label>

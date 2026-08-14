@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'; 
 import api from './api';
-import { ArrowRight, Bookmark, AlertTriangle, CheckCircle2, Mail, Phone, Calendar, X } from 'lucide-react';
+import { ArrowRight, Bookmark, AlertTriangle, Building2Icon, CheckCircle2, Calendar, X } from 'lucide-react';
 import StudentRecommendations from './student/StudentRecommendations';
 
 // 📋 Pre-defined lists of report reasons
@@ -110,7 +110,7 @@ export default function ScholarshipList() {
     if (loading) {
       return (
         <div className="text-center font-black text-slate-400 animate-pulse py-20 uppercase tracking-widest text-xs">
-          Scanning Programs...
+          Scholarship Programs for you...
         </div>
       );
     }
@@ -146,11 +146,6 @@ export default function ScholarshipList() {
     return (
       <div className="space-y-5">
         {scholarships.map((s) => {
-          const criteriaList = s.criteria
-            ? (typeof s.criteria === 'string'
-                ? s.criteria.split(',').map(c => c.trim())
-                : s.criteria)
-            : [];
 
           return (
             <div
@@ -163,7 +158,7 @@ export default function ScholarshipList() {
               {s.is_best_match && (
                 <div className="absolute top-0 left-0 right-0 bg-[#093fb4] px-5 py-1.5 flex items-center gap-2">
                   <span className="text-[11px] font-black text-white uppercase tracking-[0.2em]">
-                    ✦ Best Match — {s.match_score}% Profile Match
+                    ✦ Best Scholarship For You
                   </span>
                 </div>
               )}
@@ -179,67 +174,45 @@ export default function ScholarshipList() {
 
               <div className={`flex flex-col gap-5 ${s.is_best_match ? 'mt-6' : ''}`}>
                 {/* Org header */}
-                <div className="flex items-start gap-4">
-                  <div className="w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center bg-white border border-slate-100 shadow-sm shrink-0">
+                <div className="flex items-center gap-4">
+                  {/* Increased size to w-20 h-20 and made circular with rounded-full */}
+                  <div className="w-20 h-20 rounded-full overflow-hidden flex items-center justify-center bg-white border border-slate-100 shadow-sm shrink-0">
                     {s.org_pic ? (
                       <img src={s.org_pic} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-lg font-black text-slate-300">
+                      <span className="text-xl font-black text-slate-300">
                         {s.org_name?.substring(0, 2).toUpperCase()}
                       </span>
                     )}
                   </div>
+                  
                   <div className="flex flex-col justify-center">
-                    <h1 className="text-[#093fb4] text-[16px] font-black uppercase tracking-tight leading-tight">
+                    {/* Increased text size for org_name */}
+                    <h1 className="text-[#093fb4] text-xl md:text-2xl font-black uppercase tracking-tight leading-tight">
                       {s.org_name}
                     </h1>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
-                      <div className="flex items-center gap-1.5 text-slate-700 font-bold text-sm">
-                        <Mail size={14} className="text-[#093fb4]" /> {s.org_email || 'N/A'}
-                      </div>
-                      <div className="flex items-center gap-1.5 text-slate-700 font-bold text-sm">
-                        <Phone size={14} className="text-[#093fb4]" /> {s.org_contact || 'N/A'}
-                      </div>
+                    {/* Increased text size for provider_type and removed Mail/Phone */}
+                    <div className="flex items-center gap-1.5 text-slate-700 font-bold text-base md:text-lg mt-1">
+                      <Building2Icon size={18} className="text-[#093fb4]" /> {s.provider_type || 'N/A'}
                     </div>
                   </div>
                 </div>
 
-                {/* Title + criteria tags */}
+                {/* Title */}
                 <div className="flex flex-col items-center justify-center gap-4 py-2">
                   <h3 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight tracking-tight text-center max-w-2xl">
                     {s.title}
                   </h3>
-                  {criteriaList.length > 0 && (
-                    <div className="flex flex-wrap justify-center gap-1.5">
-                      {criteriaList.slice(0, 4).map((tag, idx) => {
-                        const isMatched = s.matched_criteria?.includes(tag);
-                        return (
-                          <span
-                            key={idx}
-                            className={`flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-black uppercase border ${
-                              isMatched
-                                ? 'bg-green-50 border-green-100 text-green-700'
-                                : 'bg-slate-50 border-slate-100 text-slate-400'
-                            }`}
-                          >
-                            <CheckCircle2 size={14} strokeWidth={3} className="shrink-0" /> {tag}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
-                  {/* Match score pill */}
-                  {s.match_score !== null && (
-                    <span className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${
-                      s.match_score >= 60
-                        ? 'bg-[#093fb4]/10 text-[#093fb4]'
-                        : s.match_score >= 30
-                        ? 'bg-amber-50 text-amber-600'
-                        : 'bg-slate-100 text-slate-500'
-                    }`}>
-                      {s.is_open_to_all ? 'Open to All' : `${s.match_score}% Profile Match`}
-                    </span>
-                  )}
+                </div>
+
+                {/* Deadline (Moved above description) */}
+                <div className="flex items-center justify-center py-2 border-y border-dashed border-slate-200">
+                  <div className="flex items-center gap-2 text-[#FF1E1E] font-black text-[13px] uppercase tracking-[0.15em]">
+                    <Calendar size={16} />
+                    Deadline: {new Date(s.deadline).toLocaleDateString('en-US', {
+                      month: 'long', day: 'numeric', year: 'numeric'
+                    })}
+                  </div>
                 </div>
 
                 {/* Description */}
@@ -247,16 +220,6 @@ export default function ScholarshipList() {
                   <p className="text-sm text-slate-800 leading-relaxed text-justify line-clamp-3 font-medium">
                     {s.description || "No description provided for this scholarship."}
                   </p>
-                </div>
-
-                {/* Deadline */}
-                <div className="flex items-center justify-center py-2 border-y border-dashed border-slate-200">
-                  <div className="flex items-center gap-2 text-[#FF1E1E] font-black text-[12px] uppercase tracking-[0.15em]">
-                    <Calendar size={14} />
-                    Deadline: {new Date(s.deadline).toLocaleDateString('en-US', {
-                      month: 'long', day: 'numeric', year: 'numeric'
-                    })}
-                  </div>
                 </div>
 
                 {/* Actions */}
@@ -281,7 +244,7 @@ export default function ScholarshipList() {
                     onClick={() => navigate(`/apply/${s.id}`)}
                     className="flex-1 bg-[#093fb4] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 uppercase text-[12px] tracking-widest hover:bg-[#FF1E1E] transition-all shadow-lg shadow-blue-900/10"
                   >
-                    Apply Now <ArrowRight size={14} />
+                    View and Apply <ArrowRight size={14} />
                   </button>
                 </div>
               </div>

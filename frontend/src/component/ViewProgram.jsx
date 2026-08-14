@@ -127,6 +127,10 @@ const ViewProgram = ({ scholarship, onClose }) => {
               <h4 className="font-black text-slate-400 uppercase text-[9px] tracking-widest mb-1">Grant Range</h4>
               <p className="font-black text-slate-900 text-xs">{fullData.amount_range || 'TBD'}</p>
             </div>
+            <div className="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm">
+              <h4 className="font-black text-slate-400 uppercase text-[9px] tracking-widest mb-1">Grant Range</h4>
+              <p className="font-black text-slate-900 text-xs">{fullData.fund_type || 'TBD'}</p>
+            </div>
           </section>
 
           {/* Criteria Chips */}

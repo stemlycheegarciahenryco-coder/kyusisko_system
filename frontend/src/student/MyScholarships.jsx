@@ -276,6 +276,7 @@ function ScholarshipCard({ s, isExpanded, onToggle, onStatusUpdate }) {
             <div className="bg-[#093fb4]/5 border border-[#093fb4]/10 rounded-xl px-4 py-4">
               <p className="text-[11px] font-black uppercase tracking-widest text-[#093fb4] mb-3">Contact Organization</p>
               <div className="space-y-2">
+                {/* This section is contact information */}
                 {s.sub_email && (
                   <a href={`mailto:${s.sub_email}`} className="flex items-center gap-2.5 text-[13px] font-bold text-slate-600 hover:text-[#093fb4]">
                     <Mail size={14} className="text-[#093fb4]" /> {s.sub_email}

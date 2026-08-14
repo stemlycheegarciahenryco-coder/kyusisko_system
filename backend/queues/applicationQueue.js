@@ -1,6 +1,7 @@
 const { Queue, Worker } = require('bullmq');
 const IORedis = require('ioredis'); // Make sure you have installed ioredis via npm!
 const pool = require('../config/db');
+const { trackEvent } = require('../utils/logger');
 
 // 1. Establish the Core Redis Connection
 const redisConnection = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
@@ -31,7 +32,7 @@ const applicationWorker = new Worker('applicationSubmissionQueue', async (job) =
 
     // Insert new parent application record cleanly
     const application = await client.query(
-      `INSERT INTO applications (scholarship_id, student_id, application_status) 
+      `INSERT INTO applications (scholarship_id, student_id, status) 
        VALUES ($1, $2, 'pending') RETURNING *`, 
       [id, student_id]
     );
@@ -47,11 +48,15 @@ const applicationWorker = new Worker('applicationSubmissionQueue', async (job) =
 
     await client.query('COMMIT');
 
-    // Log the event to your Audit Trail
-    await pool.query(
-      'INSERT INTO audit_trails (user_id, action_type, details) VALUES ($1, $2, $3)',
-      [student_id, 'STUDENT_APPLY', `Student applied for Scholarship (ID: ${id})`]
-    );
+    // Log the event to the org's isolated audit trail. No actorId — this
+    // was a self-service student action, not something an org staff
+    // member did, but it's still relevant to that org's activity feed.
+    await trackEvent({
+      subAdminId: sub_admin_id,
+      studentId: student_id,
+      actionType: 'Student Application Submitted',
+      details: `${studentName} applied for "${scholarshipTitle}" (Scholarship ID: ${id}).`
+    });
 
   } catch (error) {
     await client.query('ROLLBACK');

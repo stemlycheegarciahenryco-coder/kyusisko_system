@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, Form, LucideScroll, Pencil, 
-  LogOut, User, AlertTriangle, ChevronRight, Menu,Archive, Mails 
+  LogOut, User, AlertTriangle, ChevronRight, Menu,Archive, Mails,Settings 
 } from 'lucide-react';
 import api from '../api';
 
@@ -35,10 +35,10 @@ export default function OrgSidebar() {
   const menuItems = [
     { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/OrgDashboard' },
     { name: 'Manage Programs', icon: <LucideScroll size={20} />, path: '/ProgramView' },
-    { name: 'Applicants', icon: <Form size={20} />, path: '/OrgApplicantPrograms' }, 
-    { name: 'Settings', icon: <Mails size={20} />, path: '/OrgSettings' },
+    { name: 'Manage Students', icon: <Form size={20} />, path: '/OrgApplicantPrograms' }, 
     { name: 'Profile', icon: <User size={20} />, path: '/OrgProfile' }, 
-    { name: ' Audit Log', icon: <Archive size={20} />, path: '/OrgLogs' },
+    { name: 'Reports & Logs', icon: <Archive size={20} />, path: '/OrgLogs' },
+    { name: 'Settings', icon: <Settings size={20} />, path: '/OrgSettings' },
 
   ].filter(item => !item.mainOnly || !isCoAdmin);
 

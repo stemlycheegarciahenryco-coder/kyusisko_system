@@ -76,11 +76,11 @@ const StudentRecommendations = () => {
 
       {scholarship.match_score >= 60 ? (
         <span className="shrink-0 text-[12px] font-semibold px-2 py-0.5 rounded-full bg-green-50 text-green-700">
-          {scholarship.match_score}% match
+          Best For You
         </span>
       ) : scholarship.match_score >= 30 ? (
         <span className="shrink-0 text-[12px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">
-          {scholarship.match_score}% match
+          Recommended
         </span>
       ) : (
         <span className="shrink-0 text-[12px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">

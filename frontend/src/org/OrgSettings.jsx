@@ -95,7 +95,7 @@ export default function OrgSettings() {
     setLoading(true);
     setMessage({ type: '', text: '' });
     try {
-      await api.post('/user-management/change-password', {
+      await api.post('/user-org/change-password', {
         currentPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword
       });
