@@ -75,7 +75,7 @@ export default function VerifyReset() {
         newPassword 
       });
       
-      navigate('/student-login');
+      navigate('/login');
     } catch (err) {
       setError(err.response?.data?.error || "Error updating password.");
     } finally {
@@ -95,7 +95,7 @@ export default function VerifyReset() {
       <div className="bg-white/90 backdrop-blur-xl w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden border border-white/60 relative z-10 animate-in fade-in zoom-in duration-300">
         
         <button 
-          onClick={() => navigate('/student-login')} 
+          onClick={() => navigate('/login')} 
           className="absolute top-5 right-5 text-slate-400 hover:text-[#FF1E1E] transition-colors p-2 z-20"
         >
           <IconX size={24} />
@@ -109,11 +109,11 @@ export default function VerifyReset() {
               Final Step
             </p>
             <h2 className="text-2xl md:text-3xl font-black text-slate-800 uppercase tracking-tight italic">
-              Verify <span className="text-[#093fb4]">& Reset</span>
+              Password Reset
             </h2>
             <p className="text-slate-600 text-xs md:text-sm font-semibold leading-normal mt-2 px-2">
-              Enter the 6-digit code sent to <br />
-              <span className="text-[#093fb4] font-black underline">{email}</span>
+              Enter the 6-digit code that sent  <br />
+              
             </p>
           </div>
 

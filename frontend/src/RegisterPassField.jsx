@@ -1,16 +1,38 @@
 import React, { useState, useEffect } from "react";
 import { Eye, EyeOff, ShieldCheck, ShieldAlert, Check, X } from "lucide-react";
+import PasswordValidator from "password-validator";
+
+// Single source of truth for the password policy. Keep this in sync with
+// whatever schema is used server-side (see passwordSchema.js on the backend)
+// so front-end and back-end never disagree about what counts as "valid".
+const passwordSchema = new PasswordValidator();
+passwordSchema
+    .is().min(8)                 // Minimum length 8
+    .has().uppercase()           // Must have uppercase letters
+    .has().lowercase()           // Must have lowercase letters
+    .has().digits(1)             // Must have at least 1 digit
+    .has().symbols(1)            // Must have at least 1 symbol
+    .has().not().spaces();       // Should not have spaces
+
+// Maps password-validator's failed-rule names to the labels shown in the UI.
+const REQUIREMENT_DEFS = [
+    { rule: "min", label: "8+ Characters" },
+    { rule: "uppercase", label: "One Uppercase" },
+    { rule: "digits", label: "One Number" },
+    { rule: "symbols", label: "One Special Char" },
+];
 
 export default function RegisterPassField({ name, value = "", onChange, placeholder, error, showStrength = false }) {
   const [showPassword, setShowPassword] = useState(false);
   const [strength, setStrength] = useState({ score: 0, label: "Empty", color: "bg-slate-200" });
 
-  const requirements = [
-    { label: "8+ Characters", met: value.length >= 8 },
-    { label: "One Uppercase", met: /[A-Z]/.test(value) },
-    { label: "One Number", met: /[0-9]/.test(value) },
-    { label: "One Special Char", met: /[@$!%*?&]/.test(value) },
-  ];
+  // Ask password-validator which rules currently fail, then flip that into
+  // "met" flags for the checklist below.
+  const failedRules = value ? passwordSchema.validate(value, { list: true }) : REQUIREMENT_DEFS.map(r => r.rule);
+  const requirements = REQUIREMENT_DEFS.map(({ rule, label }) => ({
+      label,
+      met: !failedRules.includes(rule),
+  }));
 
   useEffect(() => {
     if (!showStrength) return;

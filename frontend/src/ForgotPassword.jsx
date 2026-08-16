@@ -13,7 +13,7 @@ function NotRegisteredModal({ isOpen, email, onClose, onTryAgain }) {
         </div>
         <h2 className="text-xl font-black text-slate-900 mb-2 uppercase tracking-tight">Email Not Found</h2>
         <p className="text-slate-600 text-sm font-semibold leading-relaxed mb-6">
-          We couldn't find an account registered with <span className="text-slate-900 font-bold">{email}</span>. Please check the email address and try again.
+          Please check the email address and try again.
         </p>
         <div className="flex gap-3">
           <button
@@ -82,7 +82,7 @@ export default function ForgotPassword() {
         <div className="p-8 md:p-10 space-y-6">
           <div className="text-center">
             <h2 className="text-2xl md:text-3xl font-black text-slate-800 uppercase tracking-tight italic">
-              Reset <span className="text-[#093fb4]">Password</span>
+              Reset Password
             </h2>
             <p className="text-slate-600 text-sm font-bold leading-normal mt-3 px-2">
               Enter your email address to receive a 6-digit recovery code.
@@ -126,18 +126,12 @@ export default function ForgotPassword() {
           <div className="pt-5 border-t border-slate-100 flex flex-col gap-2">
             <div className="flex items-center justify-center gap-4">
               <button 
-                onClick={() => navigate('/student-login')} 
+                onClick={() => navigate('/login')} 
                 className="text-xs font-black text-slate-600 hover:text-[#093FB4] transition-colors uppercase tracking-wider"
               >
-                Student Sign In
+                 Sign In
               </button>
-              <span className="text-slate-300">|</span>
-              <button 
-                onClick={() => navigate('/rootlogin')} 
-                className="text-xs font-black text-[#FF1E1E] hover:text-red-700 transition-colors uppercase tracking-wider"
-              >
-                Admin Sign In
-              </button>
+             
             </div>
           </div>
         </div>

@@ -7,6 +7,18 @@ import TermsModal from "../TermsModal";
 import { SuccessModal, ErrorModal, OtpModal } from "../component/RegisterModals";
 import RegisterActions from "../component/RegisterActions";
 import StudentAddress from "../student/StudentAddress";
+import PasswordValidator from "password-validator";
+
+// Same policy as RegisterPassField.jsx / the backend schema — 8+ chars,
+// upper, lower, digit, symbol, no spaces.
+const passwordSchema = new PasswordValidator();
+passwordSchema
+    .is().min(8)
+    .has().uppercase()
+    .has().lowercase()
+    .has().digits(1)
+    .has().symbols(1)
+    .has().not().spaces();
 
 export default function StudentRegister() {
     const navigate = useNavigate();
@@ -19,6 +31,17 @@ export default function StudentRegister() {
     const [showError, setShowError] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
 
+    //BIRTHDATE CLAMPS
+    // Calculate min and max dates for the birthdate clamp
+    const today = new Date();
+    const minYear = today.getFullYear() - 60; // Max age 60
+    const maxYear = today.getFullYear() - 15; // Min age 15
+    // Format to YYYY-MM-DD
+    const minDate = `${minYear}-01-01`;
+    const maxDate = `${maxYear}-12-31`;
+
+
+
     // Verification States
     const [showOtpModal, setShowOtpModal] = useState(false);
     const [verifying, setVerifying] = useState(false);
@@ -29,13 +52,26 @@ export default function StudentRegister() {
         district: '', barangay: '', street: '', zipCode: '', 
         email: '', password: '', confirmPassword: ''
     });
+
     
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    const isPasswordValid = passwordRegex.test(regform.password || "");
+
+    //PASSWORD VALIDATION (via password-validator)
+    const isPasswordValid = passwordSchema.validate(regform.password || "");
     const passwordsMatch = regform.password !== "" && regform.password === regform.confirmPassword;
 
 
     const showMismatch = regform.confirmPassword.length > 0 && !passwordsMatch;
+
+    // BIRTHDATE CLAMP CHECK
+    // The <input type="date" min/max> attributes stop most users, but they
+    // don't stop someone pasting a value in or editing devtools, so we
+    // re-check the actual age here too.
+    const isBirthDateValid = (() => {
+        if (!regform.birthDate) return false;
+        const entered = new Date(regform.birthDate);
+        if (Number.isNaN(entered.getTime())) return false;
+        return entered >= new Date(minDate) && entered <= new Date(maxDate);
+    })();
 
   const isFormInvalid = (() => {
     const optionalFields = ["middleName", "suffix"];
@@ -43,7 +79,7 @@ export default function StudentRegister() {
         optionalFields.includes(key) ? true : value.trim() !== ""
     );
     
-    return !requiredFilled || !isPasswordValid || !passwordsMatch;
+    return !requiredFilled || !isPasswordValid || !passwordsMatch || !isBirthDateValid;
 })();
 
     const handleChange = (e) => {
@@ -70,6 +106,11 @@ export default function StudentRegister() {
         e.preventDefault();
         
         // Front-end validations
+        if (!isBirthDateValid) {
+            setErrorMessage("Birth date must reflect an age between 15 and 60 years old.");
+            setShowError(true);
+            return;
+        }
         if (!isPasswordValid) {
             setErrorMessage("Password must be at least 8 characters with uppercase, lowercase, number, and symbol.");
             setShowError(true);
@@ -174,10 +215,20 @@ export default function StudentRegister() {
                             <Label text="Suffix" />
                             <input type="text" name="suffix" value={regform.suffix} onChange={handleChange} placeholder="Jr" className={`${inputClass} uppercase`} />
                         </div>
+                        {/*birthdate */}
                         <div className="space-y-1">
-                            <Label text="Birth Date" required />
-                            <input type="date" name="birthDate" value={regform.birthDate} onChange={handleChange} required className={inputClass} />
-                        </div>
+    <Label text="Birth Date" required />
+    <input 
+        type="date" 
+        name="birthDate" 
+        value={regform.birthDate} 
+        onChange={handleChange} 
+        required
+        min={minDate} // Clamps the earliest possible date
+        max={maxDate} // Clamps the latest possible date
+        className={inputClass} 
+    />
+</div>
                         <div className="space-y-1">
                             <Label text="Gender" />
                             <select name="gender" value={regform.gender} onChange={handleChange} className={inputClass}>
