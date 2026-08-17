@@ -83,7 +83,7 @@ export default function StudentProfile() {
   const parentContact = student.guardian_contact || student.father_contact || student.mother_contact || '—';
   const schoolName = student?.other_school ? student.other_school : (student?.college_name || "School not set");
   const degreeName = student?.other_degree_program ? student.other_degree_program : (student?.course_name || "Course not set");
-  const fullAddress = [student?.sstreet, student?.sbarangay, student?.szip_code].filter(Boolean).join(', ') || "Not provided";
+  const fullAddress = [student?.sbarangay, student?.sdistrict, student?.sstreet,  student?.szip_code].filter(Boolean).join(', ') || "Not provided";
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6 text-slate-800 antialiased relative">

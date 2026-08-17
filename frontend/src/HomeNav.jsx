@@ -76,12 +76,20 @@ const HomeNav = () => {
             </button>
 
             {showPartnerMenu && (
-              <div className="absolute top-full left-0 mt-3 w-64 bg-white border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.12)] rounded-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="p-1.5 flex flex-col gap-0.5">
-                  <button onClick={() => { navigate('/organization-register'); setShowPartnerMenu(false); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 rounded-lg text-slate-900"><UserPlus size={18} /> Create Provider Account</button>
-                  {/* UPDATED: Points to unified login */}
-                  <button onClick={() => { navigate('/login'); setShowPartnerMenu(false); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 rounded-lg text-slate-900"><LogIn size={18} /> Provider Login</button>
-                  <button onClick={() => { navigate('/provider-guidelines'); setShowPartnerMenu(false); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 rounded-lg border-t border-slate-50 text-slate-900"><FileText size={18} /> Provider Guidelines</button>
+              <div className="absolute top-full left-0 mt-3 w-72 bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="p-2 flex flex-col gap-1">
+                  <button 
+                    onClick={() => { navigate('/organization-register'); setShowPartnerMenu(false); }} 
+                    className="flex items-center gap-3 px-3.5 py-3 text-white text-[13px] font-black tracking-[0.12em] uppercase hover:bg-white/10 hover:text-blue-400 rounded-xl transition-all text-left"
+                  >
+                    <UserPlus size={18} strokeWidth={2.5} /> Create Provider Account
+                  </button>
+                  <button 
+                    onClick={() => { navigate('/provider-guidelines'); setShowPartnerMenu(false); }} 
+                    className="flex items-center gap-3 px-3.5 py-3 text-white text-[13px] font-black tracking-[0.12em] uppercase hover:bg-white/10 hover:text-blue-400 rounded-xl transition-all text-left"
+                  >
+                    <FileText size={18} strokeWidth={2.5} /> Provider Guidelines
+                  </button>
                 </div>
               </div>
             )}
@@ -95,11 +103,20 @@ const HomeNav = () => {
             </button>
 
             {showStudentMenu && (
-              <div className="absolute top-full left-0 mt-3 w-64 bg-white border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.12)] rounded-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="p-1.5 flex flex-col gap-0.5">
-                  <button onClick={() => { navigate('/student-register'); setShowStudentMenu(false); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 rounded-lg text-slate-900"><UserPlus size={18} /> Student Sign Up</button>
-                  {/* UPDATED: Points to unified login */}
-                  <button onClick={() => { navigate('/login'); setShowStudentMenu(false); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 rounded-lg text-slate-900"><UserCircle size={18} /> Student Portal Login</button>
+              <div className="absolute top-full left-0 mt-3 w-72 bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="p-2 flex flex-col gap-1">
+                  <button 
+                    onClick={() => { navigate('/student-register'); setShowStudentMenu(false); }} 
+                    className="flex items-center gap-3 px-3.5 py-3 text-white text-[13px] font-black tracking-[0.12em] uppercase hover:bg-white/10 hover:text-blue-400 rounded-xl transition-all text-left"
+                  >
+                    <UserPlus size={18} strokeWidth={2.5} /> Student Sign Up
+                  </button>
+                  <button 
+                    onClick={() => { navigate('/login'); setShowStudentMenu(false); }} 
+                    className="flex items-center gap-3 px-3.5 py-3 text-white text-[13px] font-black tracking-[0.12em] uppercase hover:bg-white/10 hover:text-blue-400 rounded-xl transition-all text-left"
+                  >
+                    <UserCircle size={18} strokeWidth={2.5} /> Student Scholarship
+                  </button>
                 </div>
               </div>
             )}
@@ -110,10 +127,10 @@ const HomeNav = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/login')} 
-            className="px-6 py-3 bg-[#093fb4] text-[#FFFCFB] text-[13px] font-black uppercase tracking-[0.12em] rounded-xl hover:bg-[#073496] transition-all shadow-md shadow-[#093fb4]/10 flex items-center gap-1.5 group"
+            className="px-6 py-3 bg-[#093fb4] text-[#FFFCFB] text-[13px] font-black uppercase tracking-[0.12em] rounded-xl hover:bg-[#073496] transition-all shadow-md shadow-[#093fb4]/10 flex items-center gap-1.5 group cursor-pointer"
           >
             <LogIn size={16} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform" />
-            Log In
+            Sign In
           </button>
         </div>
       </div>

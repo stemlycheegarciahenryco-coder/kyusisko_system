@@ -7,7 +7,8 @@ import PasswordValidator from "password-validator";
 // so front-end and back-end never disagree about what counts as "valid".
 const passwordSchema = new PasswordValidator();
 passwordSchema
-    .is().min(8)                 // Minimum length 8
+    .is().min(12)                // Minimum length 12
+    .is().max(18)                // Maximum length 18
     .has().uppercase()           // Must have uppercase letters
     .has().lowercase()           // Must have lowercase letters
     .has().digits(1)             // Must have at least 1 digit
@@ -15,11 +16,12 @@ passwordSchema
     .has().not().spaces();       // Should not have spaces
 
 // Maps password-validator's failed-rule names to the labels shown in the UI.
+// "min"/"max" both roll up into a single "12-18 Characters" requirement.
 const REQUIREMENT_DEFS = [
-    { rule: "min", label: "8+ Characters" },
-    { rule: "uppercase", label: "One Uppercase" },
-    { rule: "digits", label: "One Number" },
-    { rule: "symbols", label: "One Special Char" },
+    { rules: ["min", "max"], label: "12-18 Characters" },
+    { rules: ["uppercase"], label: "One Uppercase" },
+    { rules: ["digits"], label: "One Number" },
+    { rules: ["symbols"], label: "One Special Char" },
 ];
 
 export default function RegisterPassField({ name, value = "", onChange, placeholder, error, showStrength = false }) {
@@ -28,10 +30,10 @@ export default function RegisterPassField({ name, value = "", onChange, placehol
 
   // Ask password-validator which rules currently fail, then flip that into
   // "met" flags for the checklist below.
-  const failedRules = value ? passwordSchema.validate(value, { list: true }) : REQUIREMENT_DEFS.map(r => r.rule);
-  const requirements = REQUIREMENT_DEFS.map(({ rule, label }) => ({
+  const failedRules = value ? passwordSchema.validate(value, { list: true }) : ["min", "max", "uppercase", "lowercase", "digits", "symbols"];
+  const requirements = REQUIREMENT_DEFS.map(({ rules, label }) => ({
       label,
-      met: !failedRules.includes(rule),
+      met: rules.every(rule => !failedRules.includes(rule)),
   }));
 
   useEffect(() => {
@@ -62,6 +64,7 @@ export default function RegisterPassField({ name, value = "", onChange, placehol
           name={name}
           value={value}
           onChange={onChange}
+          maxLength={18}
           placeholder={placeholder || "••••••••"}
           className={`w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-black outline-none focus:border-[#093FB4] focus:bg-white transition-all text-sm pr-12 ${error ? "border-red-500 bg-red-50" : ""}`}
         />

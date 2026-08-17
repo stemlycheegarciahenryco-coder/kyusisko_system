@@ -9,11 +9,12 @@ import RegisterActions from "../component/RegisterActions";
 import StudentAddress from "../student/StudentAddress";
 import PasswordValidator from "password-validator";
 
-// Same policy as RegisterPassField.jsx / the backend schema — 8+ chars,
+// Same policy as RegisterPassField.jsx / the backend schema — 12-18 chars,
 // upper, lower, digit, symbol, no spaces.
 const passwordSchema = new PasswordValidator();
 passwordSchema
-    .is().min(8)
+    .is().min(12)
+    .is().max(18)
     .has().uppercase()
     .has().lowercase()
     .has().digits(1)
@@ -40,8 +41,6 @@ export default function StudentRegister() {
     const minDate = `${minYear}-01-01`;
     const maxDate = `${maxYear}-12-31`;
 
-
-
     // Verification States
     const [showOtpModal, setShowOtpModal] = useState(false);
     const [verifying, setVerifying] = useState(false);
@@ -53,7 +52,45 @@ export default function StudentRegister() {
         email: '', password: '', confirmPassword: ''
     });
 
-    
+    // BIRTHDATE — custom Month/Day/Year selects instead of the native
+    // <input type="date">. Native date pickers are inconsistent about which
+    // month they open on when the field is empty (some browsers default to
+    // ~1970 instead of the current year), which meant users had to scroll
+    // back decades by hand. Selects give predictable, instant access to any
+    // year in range, and the year list is sorted newest-first (closest to
+    // today) since most registrants are near the young end of the 15-60
+    // range.
+    const [birthMonth, setBirthMonth] = useState("");
+    const [birthDay, setBirthDay] = useState("");
+    const [birthYear, setBirthYear] = useState("");
+
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const yearOptions = Array.from({ length: maxYear - minYear + 1 }, (_, i) => maxYear - i); // newest first
+
+    const daysInMonth = (month, year) => {
+        if (!month || !year) return 31;
+        return new Date(Number(year), Number(month), 0).getDate();
+    };
+
+    // Keep the selected day valid if the month/year changes to one with fewer days (e.g. Feb 30 -> Feb).
+    useEffect(() => {
+        if (birthDay && Number(birthDay) > daysInMonth(birthMonth, birthYear)) {
+            setBirthDay("");
+        }
+    }, [birthMonth, birthYear]);
+
+    // Combine the three selects into the regform.birthDate string the rest of the form expects.
+    useEffect(() => {
+        if (birthMonth && birthDay && birthYear) {
+            const mm = String(birthMonth).padStart(2, "0");
+            const dd = String(birthDay).padStart(2, "0");
+            setRegForm(prev => ({ ...prev, birthDate: `${birthYear}-${mm}-${dd}` }));
+        } else {
+            setRegForm(prev => ({ ...prev, birthDate: "" }));
+        }
+    }, [birthMonth, birthDay, birthYear]);
+
+
 
     //PASSWORD VALIDATION (via password-validator)
     const isPasswordValid = passwordSchema.validate(regform.password || "");
@@ -112,7 +149,7 @@ export default function StudentRegister() {
             return;
         }
         if (!isPasswordValid) {
-            setErrorMessage("Password must be at least 8 characters with uppercase, lowercase, number, and symbol.");
+            setErrorMessage("Password must be 12-18 characters with uppercase, lowercase, number, and symbol.");
             setShowError(true);
             return;
         }
@@ -218,16 +255,44 @@ export default function StudentRegister() {
                         {/*birthdate */}
                         <div className="space-y-1">
     <Label text="Birth Date" required />
-    <input 
-        type="date" 
-        name="birthDate" 
-        value={regform.birthDate} 
-        onChange={handleChange} 
-        required
-        min={minDate} // Clamps the earliest possible date
-        max={maxDate} // Clamps the latest possible date
-        className={inputClass} 
-    />
+    <div className="grid grid-cols-3 gap-2">
+        <select
+            name="birthMonth"
+            value={birthMonth}
+            onChange={(e) => setBirthMonth(e.target.value)}
+            required
+            className={inputClass}
+        >
+            <option value="" disabled>Month</option>
+            {monthNames.map((m, i) => (
+                <option key={m} value={i + 1}>{m}</option>
+            ))}
+        </select>
+        <select
+            name="birthDay"
+            value={birthDay}
+            onChange={(e) => setBirthDay(e.target.value)}
+            required
+            className={inputClass}
+        >
+            <option value="" disabled>Day</option>
+            {Array.from({ length: daysInMonth(birthMonth, birthYear) }, (_, i) => i + 1).map(d => (
+                <option key={d} value={d}>{d}</option>
+            ))}
+        </select>
+        <select
+            name="birthYear"
+            value={birthYear}
+            onChange={(e) => setBirthYear(e.target.value)}
+            required
+            className={inputClass}
+        >
+            <option value="" disabled>Year</option>
+            {yearOptions.map(y => (
+                <option key={y} value={y}>{y}</option>
+            ))}
+        </select>
+    </div>
 </div>
                         <div className="space-y-1">
                             <Label text="Gender" />
@@ -329,12 +394,12 @@ export default function StudentRegister() {
             <TermsModal 
                 isOpen={showTerms} 
                 onClose={() => setShowTerms(false)} 
-                onAccept={() => {setAcceptedTerms(true); setShowTerms(false);}} 
+                onAccept={() => {setAcceptedTerms(true); setShowTerms(false) ;}} 
             />
 
             <SuccessModal 
                 isOpen={showSuccess} 
-                onConfirm={() => {setShowSuccess(false); navigate("/student-login");}} 
+                onConfirm={() => {setShowSuccess(false); navigate("/login");}} 
  
             />
 
