@@ -44,8 +44,8 @@ export default function StudentProfile() {
     formData.append('profile_image', file);
 
     try {
-      const id = localStorage.getItem('studentId');
-      await api.put(`/upload-profile/${id}`, formData);
+      
+      await api.put(`/upload-profile/me`, formData);
       refreshProfile(); 
       window.dispatchEvent(new Event('profilePicUpdated'));
     } catch (err) {

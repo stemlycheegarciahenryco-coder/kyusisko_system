@@ -126,7 +126,7 @@ function AcademicSection({ studentData, onRefresh }) {
     setErrorMsg('');
 
     const formData = new FormData();
-    formData.append('student_id', localStorage.getItem('studentId')); // Lookup reference key
+    
     formData.append('bio', form.bio);
     formData.append('college_id', form.college_id);
     formData.append('course_id', form.course_id);
@@ -323,8 +323,8 @@ function PersonalSection({ studentData, onRefresh }) {
     }
 
     try {
-      const studentId = localStorage.getItem('studentId');
-      await api.put(`/students/personal-info/${studentId}`, form);
+     
+      await api.put(`/students/personal-info/me`, form);
       if (onRefresh) onRefresh();
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
@@ -476,8 +476,8 @@ function FamilySection({ studentData, onRefresh }) {
     }
 
     try {
-      const studentId = localStorage.getItem('studentId');
-      await api.put(`/students/parent-profile/${studentId}`, form);
+      
+      await api.put(`/students/parent-profile/me`, form);
       if (onRefresh) onRefresh();
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);

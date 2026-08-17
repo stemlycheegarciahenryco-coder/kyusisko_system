@@ -35,7 +35,7 @@ export default function LogIn() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setErrorMessage(''); // Clear previous errors on submit
+    setErrorMessage('');
 
     try {
       const response = await api.post('/auth/portal-login', { 
@@ -43,19 +43,14 @@ export default function LogIn() {
         password 
       });
       
-      const { token, role, data } = response.data; 
-      if (token) {
-        localStorage.setItem('token', token);
-      }
+      // We no longer extract or save 'token' here!
+      const { role, data } = response.data; 
+
       if (role === 'root_admin' || role === 'co_admin') {
-        localStorage.setItem('systemUid', data.uid);
-        localStorage.setItem('adminEmail', data.email);
         localStorage.setItem('userRole', role);
-    
         navigate('/RootDashboard');
+
       } else if (role === 'sub_admin') {
-        localStorage.setItem('orgId', data.id); 
-        localStorage.setItem('adminEmail', data.email);
         localStorage.setItem('userRole', role);
         localStorage.setItem('orgInfo', JSON.stringify({
           isPasswordChanged: data.isPasswordChanged,
@@ -64,10 +59,9 @@ export default function LogIn() {
         }));
         
         navigate('/OrgDashboard');
+
       } else if (role === 'student') {
-        localStorage.setItem('studentId', data.id);
         localStorage.setItem('userRole', role);
-        localStorage.setItem('studentInfo', JSON.stringify(data));
        
         if (!data.isProfileComplete) {
           navigate('/student-onboard');
@@ -77,8 +71,6 @@ export default function LogIn() {
       }
     } catch (err) {
       const errorData = err.response?.data;
-      
-      // Override default backend 'Invalid Credentials' with custom banner messaging
       if (errorData?.error === "Invalid Credentials") {
         setErrorMessage("Invalid or Unknown Credentials");
       } else {

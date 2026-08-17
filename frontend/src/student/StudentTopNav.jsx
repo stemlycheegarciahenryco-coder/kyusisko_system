@@ -30,7 +30,7 @@ export default function StudentTopNav() {
 
   const dropdownRef = useRef(null);
   const notifRef = useRef(null);
-  const studentId = localStorage.getItem('studentId');
+  ;
 
   const handleToggleNotif = async () => {
     const willOpen = !showNotif;
@@ -49,7 +49,7 @@ export default function StudentTopNav() {
     }
   };
 
-  // Fetch unread notifications count on mount
+  // ✅ FIXED: Fetch unread count immediately on mount using cookie auth
   useEffect(() => {
     const fetchUnread = async () => {
       try {
@@ -59,10 +59,8 @@ export default function StudentTopNav() {
         console.error("Error fetching unread count:", err);
       }
     };
-    if (studentId) {
-      fetchUnread();
-    }
-  }, [studentId]);
+    fetchUnread();
+  }, []);
 
   // Listen for profile picture updates
   useEffect(() => {

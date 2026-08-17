@@ -32,7 +32,7 @@ export default function StudentSettings() {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const sID = localStorage.getItem('studentId'); 
+       
         const res = await api.get(`/students/${sID}`); 
         
         setIs2FAEnabled(res.data.two_factor_enabled);
@@ -49,7 +49,7 @@ export default function StudentSettings() {
   // 2. Save MFA changes to the DB
   const saveSecuritySettings = async (enabled, selectedMethod) => {
     try {
-      const sID = localStorage.getItem('studentId'); 
+      
       
       await api.put('/students/update-2fa', { 
         studentId: sID, 
@@ -92,7 +92,7 @@ export default function StudentSettings() {
 
     setIsChangingPassword(true);
     try {
-      const sID = localStorage.getItem('studentId');
+     
       
       await api.put(`/students/change-password`, {
         studentId: sID,

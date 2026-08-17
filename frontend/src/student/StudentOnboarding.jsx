@@ -127,7 +127,7 @@ const StudentOnboarding = () => {
 
   const handleSubmit = async () => {
     try {
-      const sID = localStorage.getItem('studentId');
+      
       if (!sID) {
         alert("Session expired. Please log in again.");
         return;

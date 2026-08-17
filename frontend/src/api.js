@@ -9,7 +9,7 @@ const api = axios.create({
   withCredentials: true
 });
 
-// Attach token from localStorage to every request
+{/* Attach token from localStorage to every request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
 
@@ -17,7 +17,7 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
-});
+});*/}
 
 api.interceptors.response.use(
   (response) => response,
@@ -27,7 +27,7 @@ api.interceptors.response.use(
       const isLoginRequest = error.config.url.includes('login');
       
       // ✅ FIXED: Include your public pages
-      const isPublicPage = ['/', '/studentlogin', '/rootlogin', '/Home', '/login'].includes(window.location.pathname);
+      const isPublicPage = ['/', '/Home', '/login'].includes(window.location.pathname);
       
       if (!isLoginRequest && !isPublicPage) {
         console.log("Wiping storage because 401 hit on non-public page:", window.location.pathname);

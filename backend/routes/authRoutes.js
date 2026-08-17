@@ -38,13 +38,13 @@ router.put('/students/change-password', verifyToken, isStudent, stdCtrl.changePa
 router.patch('/students/:id/status', stdCtrl.updateStudentStatus);
 
 // Student Profiles and Applications Workspace
-router.get('/students/profile-full/:id', stdCtrl.getFullProfile);
+router.get('/students/profile-full/me', verifyToken, isStudent, stdCtrl.getFullProfile);
 router.get('/students/my-scholarships', verifyToken, isStudent, stdCtrl.getMyScholarships);
 router.get('/students/:id', stdCtrl.getStudentById);
 router.patch('/students/update-portfolio', verifyToken, isStudent, upload.array('files', 10), stdCtrl.updatePortfolio);
-router.put('/upload-profile/:id', upload.single('profile_image'), stdCtrl.updateProfilePic);
-router.put('/students/parent-profile/:studentId', stdCtrl.saveOrUpdateParentProfile);
-router.put('/students/personal-info/:studentId', verifyToken, isStudent, stdCtrl.updatePersonalInfo);
+router.put('/upload-profile/me', upload.single('profile_image'), stdCtrl.updateProfilePic);
+router.put('/students/parent-profile/me', verifyToken, isStudent, stdCtrl.saveOrUpdateParentProfile);
+router.put('/students/personal-info/me', verifyToken, isStudent, stdCtrl.updatePersonalInfo);
 
 // ==========================================
 // 3. SYSTEM ADMINISTRATION CORE OPERATIONS

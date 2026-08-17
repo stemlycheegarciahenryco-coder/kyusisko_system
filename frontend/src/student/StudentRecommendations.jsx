@@ -11,8 +11,8 @@ const StudentRecommendations = () => {
   const fetchRecommendations = async () => {
     try {
       // 1. Grab the flat key directly from Local Storage
-      const studentId = localStorage.getItem('studentId');
-      console.log('studentId directly from localStorage:', studentId);
+      
+      
 
       // 2. Safeguard checks if it's missing
       if (!studentId) {

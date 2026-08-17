@@ -9,9 +9,8 @@ export function StudentProvider({ children }) {
 
   const fetchProfile = async () => {
     try {
-      const studentId = localStorage.getItem('studentId');
-      if (!studentId) return;
-      const res = await api.get(`/students/profile-full/${studentId}`);
+      
+      const res = await api.get(`/students/profile-full/me`);
       setStudent(res.data);
     } catch (err) {
       console.error("Context Profile Fetch Error:", err);
