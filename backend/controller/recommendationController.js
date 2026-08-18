@@ -182,7 +182,7 @@ async function scoreScholarshipsForStudent(studentId, scholarships) {
 // GET /recommendations/:studentId
 // ─────────────────────────────────────────────────────────────────────────────
 const getRecommendedScholarships = async (req, res) => {
-  const { studentId } = req.params;
+  const studentId  = req.user.id;
 
   try {
     // 🛡️ Added LIMIT 20 to prevent rate-limit crashes on cold cache

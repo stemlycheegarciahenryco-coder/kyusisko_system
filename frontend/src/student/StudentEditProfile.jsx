@@ -170,11 +170,12 @@ function AcademicSection({ studentData, onRefresh }) {
           <input
             type="text"
             placeholder="e.g. 2026-00123-MN-0"
+            maxLength={20}
             className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:border-[#093fb4] outline-none text-sm font-medium text-black transition-all"
             value={form.student_id}
             onChange={e => {
-              // Allows only letters, numbers, and hyphens (-)
-              const sanitized = e.target.value.replace(/[^a-zA-Z0-9-]/g, '');
+              // Allows only letters, numbers, and hyphens (-), capped at 20 chars
+              const sanitized = e.target.value.replace(/[^a-zA-Z0-9-]/g, '').slice(0, 20);
               setForm({ ...form, student_id: sanitized });
             }}
           />

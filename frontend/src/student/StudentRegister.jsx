@@ -65,11 +65,23 @@ export default function StudentRegister() {
     const [birthYear, setBirthYear] = useState("");
 
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    const yearOptions = Array.from({ length: maxYear - minYear + 1 }, (_, i) => maxYear - i); // newest first
+    // Full, ungated year list: current year down to 1975. The 15-60 age
+    // eligibility check still runs on submit (isBirthDateValid below) — this
+    // dropdown just shouldn't silently hide years to enforce that itself.
+    const currentYear = today.getFullYear();
+    const oldestBirthYear = 1975;
+    const yearOptions = Array.from({ length: currentYear - oldestBirthYear + 1 }, (_, i) => currentYear - i); // newest first
 
     const daysInMonth = (month, year) => {
-        if (!month || !year) return 31;
-        return new Date(Number(year), Number(month), 0).getDate();
+        if (!month) return 31;
+        const m = Number(month);
+        if (m === 2) {
+            // Default to a leap year (29 days) until an actual year is chosen,
+            // so Feb 29 is selectable up front instead of being hidden.
+            const y = year ? Number(year) : 2000;
+            return new Date(y, 2, 0).getDate();
+        }
+        return new Date(2000, m, 0).getDate(); // day count for non-Feb months doesn't depend on year
     };
 
     // Keep the selected day valid if the month/year changes to one with fewer days (e.g. Feb 30 -> Feb).
@@ -394,12 +406,12 @@ export default function StudentRegister() {
             <TermsModal 
                 isOpen={showTerms} 
                 onClose={() => setShowTerms(false)} 
-                onAccept={() => {setAcceptedTerms(true); setShowTerms(false) ;}} 
+                onAccept={() => {setAcceptedTerms(true); setShowTerms(false);}} 
             />
 
             <SuccessModal 
                 isOpen={showSuccess} 
-                onConfirm={() => {setShowSuccess(false); navigate("/login");}} 
+                onConfirm={() => {setShowSuccess(false); navigate("/student-login");}} 
  
             />
 

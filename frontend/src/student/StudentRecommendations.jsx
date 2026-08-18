@@ -10,18 +10,9 @@ const StudentRecommendations = () => {
   useEffect(() => {
   const fetchRecommendations = async () => {
     try {
-      // 1. Grab the flat key directly from Local Storage
-      
-      
-
-      // 2. Safeguard checks if it's missing
-      if (!studentId) {
-        console.warn('No studentId found — widget will be hidden');
-        return;
-      }
 
       // 3. Make your API request with the correct ID
-      const res = await api.get(`/recommendations/${studentId}`);
+      const res = await api.get(`/recommendations/program`);
       console.log('API response:', res.data);               
       
       const data = res.data.recommendations || [];

@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { Users, Phone, ShieldAlert, Briefcase, MapPin, Edit2 } from 'lucide-react';
-import EditFamilyModal from './EditFamilyModal'; // We will build this in Step 2
+import StudentEditProfile from './StudentEditProfile';
+
 
 export default function StudentParent({ student, onRefresh }) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const hasParents = student?.mother_name || student?.father_name;
+  const hasMother = !!student?.mother_name;
+  const hasFather = !!student?.father_name;
+  const hasGuardian = !!student?.guardian_name;
+  const hasAnyFamily = hasMother || hasFather || hasGuardian;
 
   return (
     <div className="bg-white border border-[#093fb4]/10 rounded-2xl p-6 mb-5 shadow-sm relative overflow-hidden">
@@ -27,10 +31,10 @@ export default function StudentParent({ student, onRefresh }) {
         </button>
       </div>
 
-      {hasParents ? (
+      {hasAnyFamily ? (
         <div className="space-y-6">
           {/* Mother's Line Block */}
-          {student.mother_name && (
+          {hasMother && (
             <div>
               <p className="text-[10px] font-black text-[#093fb4] uppercase tracking-wider mb-2">Mother's Details</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -42,8 +46,8 @@ export default function StudentParent({ student, onRefresh }) {
           )}
 
           {/* Father's Line Block */}
-          {student.father_name && (
-            <div className={student.mother_name ? "pt-4 border-t border-slate-100" : ""}>
+          {hasFather && (
+            <div className={hasMother ? "pt-4 border-t border-slate-100" : ""}>
               <p className="text-[10px] font-black text-[#093fb4] uppercase tracking-wider mb-2">Father's Details</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <ParentInfoItem icon={<Users />} label="Full Name" value={student.father_name} />
@@ -52,18 +56,21 @@ export default function StudentParent({ student, onRefresh }) {
               </div>
             </div>
           )}
-        </div>
-      ) : student?.guardian_name ? (
-        /* Fallback Legal Guardian Profile View */
-        <div>
-          <p className="text-[10px] font-black text-amber-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-            <ShieldAlert size={12} /> Guardian Details (Fallback)
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <ParentInfoItem icon={<Users />} label="Guardian Name" value={student.guardian_name} />
-            <ParentInfoItem icon={<Phone />} label="Contact Number" value={student.guardian_contact} />
-            <ParentInfoItem icon={<Briefcase />} label="Occupation" value={student.guardian_occupation} />
-          </div>
+
+          {/* Guardian Line Block — shown whenever a guardian is on file, */}
+          {/* even alongside mother/father, not just as a no-parents fallback. */}
+          {hasGuardian && (
+            <div className={(hasMother || hasFather) ? "pt-4 border-t border-slate-100" : ""}>
+              <p className="text-[10px] font-black text-amber-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <ShieldAlert size={12} /> Guardian Details
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <ParentInfoItem icon={<Users />} label="Guardian Name" value={student.guardian_name} />
+                <ParentInfoItem icon={<Phone />} label="Contact Number" value={student.guardian_contact} />
+                <ParentInfoItem icon={<Briefcase />} label="Occupation" value={student.guardian_occupation} />
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <p className="text-center text-slate-400 text-xs py-4 italic font-medium">
@@ -84,11 +91,11 @@ export default function StudentParent({ student, onRefresh }) {
         </div>
       )}
 
-      {/* Render the Edit Form Modal */}
       {isEditModalOpen && (
-        <EditFamilyModal 
-          onClose={() => setIsEditModalOpen(false)} 
+        <StudentEditProfile
+          initialTab="family"
           studentData={student}
+          onClose={() => setIsEditModalOpen(false)}
           onRefresh={onRefresh}
         />
       )}
