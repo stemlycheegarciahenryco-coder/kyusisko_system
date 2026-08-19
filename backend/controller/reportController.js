@@ -1,6 +1,6 @@
 const pool = require('../config/db');
 
-// Financial & Fund Allocation Report with Dynamic Interpretation
+// Financial & Fund Allocation Report
 exports.getFinancialReport = async (req, res) => {
   try {
     const query = `
@@ -9,8 +9,8 @@ exports.getFinancialReport = async (req, res) => {
         title, 
         amount_range, 
         slots, 
-        (SELECT COUNT(*) FROM student_onboarding_profiles WHERE status = 'approved') AS approved_scholars
-      FROM scholarship_programs;
+        (SELECT COUNT(*) FROM applications WHERE LOWER(status) = 'approved') AS approved_scholars
+      FROM scholarships;
     `;
     const { rows } = await pool.query(query);
 
@@ -39,13 +39,10 @@ exports.getFinancialReport = async (req, res) => {
       };
     });
 
-    // Algorithmic Interpretation string generated for OrgLogs display
     let interpretation = `Total estimated allocated budget across active programs is ₱${totalAllocatedMidpoint.toLocaleString()}. `;
-    if (missingAmountCount > 0) {
-      interpretation += `Attention: ${missingAmountCount} program(s) contain missing or unparsed fund ranges requiring administrative review.`;
-    } else {
-      interpretation += `All program fund allocations are fully verified and parsed.`;
-    }
+    interpretation += missingAmountCount > 0 
+      ? `Attention: ${missingAmountCount} program(s) contain missing or unparsed fund ranges requiring administrative review.`
+      : `All program fund allocations are fully verified and parsed.`;
 
     res.status(200).json({
       success: true,
@@ -57,49 +54,80 @@ exports.getFinancialReport = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error("Financial Report Error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// Demographic Distribution Report with DSS Rule Interpretation
+// Demographic & Gender Distribution Report
+// Demographic & Gender Distribution Report (Safe Version)
 exports.getDemographicReport = async (req, res) => {
   try {
-    const query = `
+    // 1. Fetch Course Distribution
+    const courseQuery = `
       SELECT 
-        c.course_name, 
-        COUNT(s.id) AS scholar_count
-      FROM student_onboarding_profiles s
-      LEFT JOIN courses c ON s.course_id = c.id
-      WHERE s.status = 'approved'
-      GROUP BY c.course_name
+        COALESCE(c.name, sop.other_degree_program, 'Unspecified') AS course_name, 
+        COUNT(DISTINCT a.student_id) AS scholar_count
+      FROM applications a
+      JOIN student_onboarding_profiles sop ON a.student_id = sop.student_id
+      LEFT JOIN courses c ON sop.course_id = c.id
+      WHERE LOWER(a.status) = 'approved'
+      GROUP BY COALESCE(c.name, sop.other_degree_program, 'Unspecified')
       ORDER BY scholar_count DESC;
     `;
-    const { rows } = await pool.query(query);
 
-    const totalScholars = rows.reduce((sum, r) => sum + parseInt(r.scholar_count, 10), 0);
+    // 2. Fetch Cleaned Gender Distribution
+    const genderQuery = `
+      SELECT 
+        COALESCE(INITCAP(TRIM(s.sgender)), 'Unspecified') AS gender, 
+        COUNT(DISTINCT a.student_id) AS count
+      FROM applications a
+      JOIN students s ON a.student_id = s.id
+      WHERE LOWER(a.status) = 'approved'
+      GROUP BY COALESCE(INITCAP(TRIM(s.sgender)), 'Unspecified');
+    `;
 
-    const demographics = rows.map((r) => {
+    const [courseRes, genderRes] = await Promise.all([
+      pool.query(courseQuery),
+      pool.query(genderQuery)
+    ]);
+
+    const totalScholars = genderRes.rows.reduce((sum, r) => sum + parseInt(r.count, 10), 0);
+
+    // Format Course Data
+    const demographics = courseRes.rows.map((r) => {
       const count = parseInt(r.scholar_count, 10);
       const percentage = totalScholars > 0 ? ((count / totalScholars) * 100).toFixed(2) : 0;
       return {
-        course_name: r.course_name || 'Unspecified',
+        course_name: r.course_name,
         count,
         percentage: parseFloat(percentage)
       };
     });
 
-    // DSS Narrative Generator
+    // Format Gender Data
+    const genderBreakdown = genderRes.rows.map((r) => {
+      const count = parseInt(r.count, 10);
+      const percentage = totalScholars > 0 ? ((count / totalScholars) * 100).toFixed(2) : 0;
+      return {
+        gender: r.gender,
+        count,
+        percentage: parseFloat(percentage)
+      };
+    });
+
+    // Dynamic Interpretation
     let interpretation = '';
     if (demographics.length > 0) {
       const topCourse = demographics[0];
-      interpretation = `Course demographic is currently concentrated in ${topCourse.course_name} (${topCourse.percentage}% of total approved scholars). `;
+      interpretation = `Highest concentration of approved scholars is in ${topCourse.course_name} (${topCourse.percentage}% of total). `;
       if (topCourse.percentage > 40) {
-        interpretation += `DSS Recommendation: Rebalance review priorities toward applicants in minor degree programs to ensure equal distribution.`;
+        interpretation += `DSS Recommendation: Consider prioritizing applicants from under-represented degree programs.`;
       } else {
-        interpretation += `Scholar distribution across academic programs remains balanced.`;
+        interpretation += `Academic program distribution remains balanced across applicants.`;
       }
     } else {
-      interpretation = 'No scholar records found to build demographic interpretation.';
+      interpretation = 'No approved scholar records found for demographic analysis.';
     }
 
     res.status(200).json({
@@ -107,25 +135,27 @@ exports.getDemographicReport = async (req, res) => {
       data: {
         totalScholars,
         demographics,
+        genderBreakdown,
         interpretation
       }
     });
   } catch (error) {
+    console.error("Demographic Report Error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // District Allocation DSS Decision Engine
-// District Allocation DSS Decision Engine
 exports.getDistrictDSSReport = async (req, res) => {
   try {
     const query = `
       SELECT 
-        COALESCE(sdistrict, 'Unassigned') AS district, 
-        COUNT(id) AS current_scholars
-      FROM student_onboarding_profiles
-      WHERE LOWER(status) = 'approved'
-      GROUP BY COALESCE(sdistrict, 'Unassigned');
+        COALESCE(s.sdistrict, 'Unassigned') AS district, 
+        COUNT(DISTINCT a.student_id) AS current_scholars
+      FROM applications a
+      JOIN students s ON a.student_id = s.id
+      WHERE LOWER(a.status) = 'approved'
+      GROUP BY s.sdistrict;
     `;
     const { rows } = await pool.query(query);
 
@@ -160,7 +190,7 @@ exports.getDistrictDSSReport = async (req, res) => {
       };
     });
 
-    const interpretation = `DSS decision rule model calculated variances across ${dssAnalysis.length} district group(s) to direct organization funding decisions.`;
+    const interpretation = `DSS decision rule model calculated variances across ${dssAnalysis.length} district group(s) to direct funding decisions.`;
 
     res.status(200).json({
       success: true,
