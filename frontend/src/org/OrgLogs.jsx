@@ -16,7 +16,11 @@ import {
   Filter,
   FileSpreadsheet,
   AlertCircle,
-  Layers
+  Layers,
+  Brain,
+  Target,
+  Sparkles,
+  AlertTriangle
 } from 'lucide-react';
 
 const COURSE_COLORS = [
@@ -24,9 +28,6 @@ const COURSE_COLORS = [
   'bg-rose-500', 'bg-cyan-500', 'bg-indigo-500', 'bg-pink-500'
 ];
 
-// Same unified status model used across the app now: draft / active / closed.
-// "deadline_passed" (still returned by the backend as a distinct value)
-// folds into "closed" here too — there's no separate label for it anymore.
 const getDisplayStatus = (rawStatus) => {
   const s = rawStatus?.toLowerCase();
   if (s === 'draft') return 'draft';
@@ -46,8 +47,12 @@ const STATUS_LABELS = {
   draft:  'Draft',
 };
 
-// action_type is free-form text now (not fixed codes), so badge color is
-// inferred from keywords rather than an exact match against a known list.
+const DSS_TAG_STYLES = {
+  HIGH_PRIORITY: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+  NEUTRAL: 'bg-slate-100 text-slate-700 border border-slate-200',
+  WARNING: 'bg-amber-50 text-amber-700 border border-amber-200',
+};
+
 const getActionBadgeStyle = (type) => {
   const t = (type || '').toLowerCase();
   if (t.includes('remov') || t.includes('block') || t.includes('delet')) return 'bg-red-50 text-red-600 border border-red-100';
@@ -88,7 +93,14 @@ export default function OrgLogs() {
   const [fundData, setFundData] = useState([]);
   const [fundPage, setFundPage] = useState(0);
   const FUND_ROWS_PER_PAGE = 6;
+  
   const [courseDemographics, setCourseDemographics] = useState([]);
+  const [districtDSS, setDistrictDSS] = useState([]);
+  
+  const [financialInterpretation, setFinancialInterpretation] = useState('');
+  const [demographicInterpretation, setDemographicInterpretation] = useState('');
+  const [dssInterpretation, setDssInterpretation] = useState('');
+
   const [totals, setTotals] = useState({
     totalAllocatedFund: 0,
     programsWithAmount: 0,
@@ -99,32 +111,61 @@ export default function OrgLogs() {
   const [reportsError, setReportsError] = useState(null);
 
   useEffect(() => {
-    const fetchFundReport = async () => {
+    const fetchAnalyticsReports = async () => {
       try {
         setReportsLoading(true);
         setReportsError(null);
-        const res = await api.get('/organizations/fund-report');
-        const data = res.data?.data;
-        if (data) {
-          setFundData(data.fundData || []);
-          setFundPage(0);
-          setCourseDemographics(data.courseDemographics || []);
-          setTotals(data.totals || {
-            totalAllocatedFund: 0,
-            programsWithAmount: 0,
-            programsMissingAmount: 0,
-            totalApprovedStudents: 0,
-          });
+
+        const [finRes, demoRes, dssRes] = await Promise.allSettled([
+          api.get('/reports/financial'),
+          api.get('/reports/demographics'),
+          api.get('/reports/dss-interpretation')
+        ]);
+
+        // Financial Data & Interpretation
+        if (finRes.status === 'fulfilled' && finRes.value.data?.success) {
+          const finData = finRes.value.data.data;
+          setFundData(finData.programs || []);
+          setFinancialInterpretation(finData.interpretation || '');
+          setTotals(prev => ({
+            ...prev,
+            totalAllocatedFund: finData.totalAllocatedMidpoint || 0,
+            programsMissingAmount: finData.missingAmountCount || 0,
+            programsWithAmount: (finData.programs || []).length - (finData.missingAmountCount || 0)
+          }));
         }
+
+        // Demographics Data & Interpretation
+        if (demoRes.status === 'fulfilled' && demoRes.value.data?.success) {
+          const demoData = demoRes.value.data.data;
+          setCourseDemographics(demoData.demographics?.map(d => ({
+            course: d.course_name,
+            count: d.count,
+            percentage: d.percentage
+          })) || []);
+          setDemographicInterpretation(demoData.interpretation || '');
+          setTotals(prev => ({
+            ...prev,
+            totalApprovedStudents: demoData.totalScholars || 0
+          }));
+        }
+
+        // District Decision Support System Data
+        if (dssRes.status === 'fulfilled' && dssRes.value.data?.success) {
+          const dss = dssRes.value.data.data;
+          setDistrictDSS(dss.analysis || []);
+          setDssInterpretation(dss.interpretation || '');
+        }
+
       } catch (err) {
-        console.error("Fund Report Fetch Error:", err);
-        setReportsError("Couldn't load reports data. Please try again.");
+        console.error("Reports Fetch Error:", err);
+        setReportsError("Couldn't load report analytics. Please verify report API routes.");
       } finally {
         setReportsLoading(false);
       }
     };
 
-    fetchFundReport();
+    fetchAnalyticsReports();
   }, []);
 
   useEffect(() => {
@@ -174,10 +215,10 @@ export default function OrgLogs() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-            Reports & Activity Logs <History className="text-blue-600" size={22} />
+            Reports & Decision Intelligence <History className="text-blue-600" size={22} />
           </h1>
           <p className="text-slate-500 text-sm font-medium mt-0.5">
-            Audit organization finances, applicant demographics, and user account actions.
+            Audit finances, evaluate applicant demographics, and execute DSS allocation models.
           </p>
         </div>
 
@@ -206,7 +247,7 @@ export default function OrgLogs() {
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          <PieChart size={16} /> Reports & Analytics
+          <PieChart size={16} /> Reports & DSS Analytics
         </button>
         <button
           onClick={() => setActiveTab('activity')}
@@ -216,12 +257,12 @@ export default function OrgLogs() {
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          <ShieldCheck size={16} /> User Activity & System Logs
+          <ShieldCheck size={16} /> Audit Trail & System Logs
         </button>
       </div>
 
       {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* TAB 1: REPORTS & ANALYTICS                                          */}
+      {/* TAB 1: REPORTS & DECISION SUPPORT ANALYTICS                       */}
       {/* ─────────────────────────────────────────────────────────────────── */}
       {activeTab === 'reports' && (
         <div className="space-y-6">
@@ -229,7 +270,6 @@ export default function OrgLogs() {
           {/* Key Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             
-            {/* Total Students Approved */}
             <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex items-center justify-between">
               <div className="flex items-center gap-3.5">
                 <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl shrink-0">
@@ -238,53 +278,50 @@ export default function OrgLogs() {
                 <div>
                   <p className="text-xs font-extrabold text-slate-400 uppercase tracking-tight">Approved Students</p>
                   <p className="text-3xl font-black text-slate-900 leading-tight mt-1">{totalApprovedStudents}</p>
-                  <p className="text-xs font-bold text-emerald-600 mt-1.5">Total across all programs</p>
+                  <p className="text-xs font-bold text-emerald-600 mt-1.5">Total active scholars</p>
                 </div>
               </div>
             </div>
 
-            {/* Totality of Allocated Funds */}
             <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex items-center justify-between">
               <div className="flex items-center gap-3.5">
                 <div className="p-3 bg-blue-50 text-blue-600 rounded-xl shrink-0">
                   <DollarSign size={22} />
                 </div>
                 <div>
-                  <p className="text-xs font-extrabold text-slate-400 uppercase tracking-tight">Total Allocated Budget</p>
+                  <p className="text-xs font-extrabold text-slate-400 uppercase tracking-tight">Estimated Allocation</p>
                   <p className="text-3xl font-black text-slate-900 leading-tight mt-1">₱{totalAllocatedFund.toLocaleString()}</p>
                   <p className="text-xs font-bold text-blue-600 mt-1.5">
-                    From {totals.programsWithAmount} of {fundData.length} programs with amount specified
+                    Parsed across {totals.programsWithAmount} active program(s)
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Programs Missing an Amount */}
             <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex items-center justify-between">
               <div className="flex items-center gap-3.5">
                 <div className="p-3 bg-amber-50 text-amber-600 rounded-xl shrink-0">
                   <AlertCircle size={22} />
                 </div>
                 <div>
-                  <p className="text-xs font-extrabold text-slate-400 uppercase tracking-tight">Missing Fund Amount</p>
+                  <p className="text-xs font-extrabold text-slate-400 uppercase tracking-tight">Unparsed Amounts</p>
                   <p className="text-3xl font-black text-slate-900 leading-tight mt-1">{totals.programsMissingAmount}</p>
                   <p className="text-xs font-bold text-amber-600 mt-1.5">
-                    {totals.programsMissingAmount > 0 ? 'Add an amount range to include in totals' : 'All programs have an amount set'}
+                    {totals.programsMissingAmount > 0 ? 'Requires numeric format check' : 'All program amounts verified'}
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Course Diversity */}
             <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex items-center justify-between">
               <div className="flex items-center gap-3.5">
                 <div className="p-3 bg-purple-50 text-purple-600 rounded-xl shrink-0">
                   <Layers size={22} />
                 </div>
                 <div>
-                  <p className="text-xs font-extrabold text-slate-400 uppercase tracking-tight">Courses Represented</p>
+                  <p className="text-xs font-extrabold text-slate-400 uppercase tracking-tight">Course Reach</p>
                   <p className="text-3xl font-black text-slate-900 leading-tight mt-1">{courseDemographics.length}</p>
-                  <p className="text-xs font-bold text-purple-600 mt-1.5">Among approved applicants</p>
+                  <p className="text-xs font-bold text-purple-600 mt-1.5">Academic degree fields</p>
                 </div>
               </div>
             </div>
@@ -297,16 +334,45 @@ export default function OrgLogs() {
             </div>
           )}
 
+          {/* Master DSS Executive Interpretation Panel */}
+          {(financialInterpretation || demographicInterpretation || dssInterpretation) && (
+            <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-6 rounded-2xl shadow-md border border-indigo-800 space-y-3">
+              <div className="flex items-center gap-2 text-blue-300 font-extrabold text-xs uppercase tracking-wider">
+                <Sparkles size={16} className="text-blue-400" /> Executive DSS Interpretation Summary
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+                {financialInterpretation && (
+                  <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-xl border border-white/10 text-xs">
+                    <span className="font-bold text-blue-200 block mb-1">Financial Analysis:</span>
+                    <p className="text-slate-200 leading-relaxed">{financialInterpretation}</p>
+                  </div>
+                )}
+                {demographicInterpretation && (
+                  <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-xl border border-white/10 text-xs">
+                    <span className="font-bold text-blue-200 block mb-1">Demographic Analysis:</span>
+                    <p className="text-slate-200 leading-relaxed">{demographicInterpretation}</p>
+                  </div>
+                )}
+                {dssInterpretation && (
+                  <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-xl border border-white/10 text-xs">
+                    <span className="font-bold text-blue-200 block mb-1">District Rules Engine:</span>
+                    <p className="text-slate-200 leading-relaxed">{dssInterpretation}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Grid Layout: Fund Allocation Table & Demographics */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             
-            {/* Fund Allocation Per Program Report (2 Columns Wide) */}
+            {/* Fund Allocation Per Program Report */}
             <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs flex flex-col justify-between">
               <div>
                 <div className="flex justify-between items-center mb-5">
                   <div>
                     <h2 className="text-base font-extrabold text-slate-900">Program Fund Allocation Report</h2>
-                    <p className="text-sm font-medium text-slate-400 mt-0.5">Amount entered per scholarship program and how many students it's supported</p>
+                    <p className="text-sm font-medium text-slate-400 mt-0.5">Budget boundaries and beneficiary tracking per program</p>
                   </div>
                   {fundData.length > FUND_ROWS_PER_PAGE && (
                     <span className="text-xs font-bold text-slate-400 shrink-0 ml-4">
@@ -319,9 +385,9 @@ export default function OrgLogs() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-slate-100 text-xs font-black text-slate-400 uppercase">
-                        <th className="pb-3 px-2">Program Name</th>
-                        <th className="pb-3 px-2 text-right">Fund Amount</th>
-                        <th className="pb-3 px-2 text-center">Approved Students</th>
+                        <th className="pb-3 px-2">Program Title</th>
+                        <th className="pb-3 px-2 text-right">Raw Amount Range</th>
+                        <th className="pb-3 px-2 text-right">Midpoint Estimate</th>
                         <th className="pb-3 px-2 text-center">Status</th>
                       </tr>
                     </thead>
@@ -329,13 +395,13 @@ export default function OrgLogs() {
                       {reportsLoading ? (
                         <tr>
                           <td colSpan="4" className="text-center py-8 text-slate-400 font-bold">
-                            Loading fund report...
+                            Loading algorithm data...
                           </td>
                         </tr>
                       ) : fundData.length === 0 ? (
                         <tr>
                           <td colSpan="4" className="text-center py-8 text-slate-400 font-bold">
-                            No programs yet.
+                            No program record entries found.
                           </td>
                         </tr>
                       ) : (
@@ -343,15 +409,13 @@ export default function OrgLogs() {
                           const displayStatus = getDisplayStatus(item.status);
                           return (
                             <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
-                              <td className="py-3.5 px-2 font-bold text-slate-900">{item.program}</td>
-                              <td className="py-3.5 px-2 text-right font-extrabold">
-                                {item.amountDisplay ? (
-                                  <span className="text-slate-900">₱{item.amountDisplay}</span>
-                                ) : (
-                                  <span className="text-slate-400 italic font-semibold text-sm">Not specified</span>
-                                )}
+                              <td className="py-3.5 px-2 font-bold text-slate-900">{item.title || item.program}</td>
+                              <td className="py-3.5 px-2 text-right font-extrabold text-slate-700">
+                                {item.amount_range || item.amountDisplay || 'Not specified'}
                               </td>
-                              <td className="py-3.5 px-2 text-center font-black text-slate-800">{item.beneficiaries}</td>
+                              <td className="py-3.5 px-2 text-right font-black text-blue-700">
+                                ₱{(item.estimated_midpoint || 0).toLocaleString()}
+                              </td>
                               <td className="py-3.5 px-2 text-center">
                                 <span className={`text-xs font-extrabold px-2.5 py-1 rounded-md ${STATUS_BADGE_STYLES[displayStatus]}`}>
                                   {STATUS_LABELS[displayStatus]}
@@ -388,23 +452,15 @@ export default function OrgLogs() {
                 )}
               </div>
 
-              {/* Totality Summary Bar */}
-              <div className="mt-6 pt-4 border-t border-slate-100 bg-slate-50/50 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-center gap-2">
-                <span className="text-sm font-extrabold text-slate-700 uppercase tracking-tight">Totality of Funds Summary</span>
-                <div className="flex items-center gap-6 text-sm font-bold">
-                  <div>
-                    <span className="text-slate-400 font-medium">Total (specified programs): </span>
-                    <span className="text-slate-900 font-black">₱{totalAllocatedFund.toLocaleString()}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 font-medium">Missing amount: </span>
-                    <span className="text-amber-600 font-black">{totals.programsMissingAmount} program{totals.programsMissingAmount === 1 ? '' : 's'}</span>
-                  </div>
+              {financialInterpretation && (
+                <div className="mt-4 p-3 bg-blue-50/70 border border-blue-100 rounded-xl text-xs text-blue-900 font-medium">
+                  <span className="font-extrabold text-blue-900">Interpretation: </span>
+                  {financialInterpretation}
                 </div>
-              </div>
+              )}
             </div>
 
-            {/* Course Demographics Card (1 Column Wide) */}
+            {/* Course Demographics Card */}
             <div className="lg:col-span-1 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-4">
@@ -439,25 +495,91 @@ export default function OrgLogs() {
                 </div>
               </div>
 
-              <div className="mt-6 pt-3 border-t border-slate-50 text-center">
-                <span className="text-xs font-extrabold text-slate-400 uppercase tracking-widest">
-                  Total Enrolled Demographics: {totalApprovedStudents} Students
-                </span>
-              </div>
+              {demographicInterpretation && (
+                <div className="mt-4 p-3 bg-purple-50/70 border border-purple-100 rounded-xl text-xs text-purple-900 font-medium">
+                  <span className="font-extrabold text-purple-900">DSS Insight: </span>
+                  {demographicInterpretation}
+                </div>
+              )}
             </div>
 
+          </div>
+
+          {/* District Allocation Decision Support Matrix */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                  <Brain size={18} className="text-indigo-600" /> District Decision Support Engine
+                </h2>
+                <p className="text-sm font-medium text-slate-400 mt-0.5">
+                  Automated quota variance checks & geographical rebalancing decision rules
+                </p>
+              </div>
+              <span className="text-xs font-extrabold px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100">
+                Active DSS Rules Engine
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-100 text-xs font-black text-slate-400 uppercase">
+                    <th className="pb-3 px-3">District</th>
+                    <th className="pb-3 px-3 text-center">Approved Scholars</th>
+                    <th className="pb-3 px-3 text-center">Target Quota</th>
+                    <th className="pb-3 px-3 text-center">Slot Variance</th>
+                    <th className="pb-3 px-3 text-center">Action Level</th>
+                    <th className="pb-3 px-3">DSS Recommendation Rule</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 text-sm font-semibold">
+                  {reportsLoading ? (
+                    <tr>
+                      <td colSpan="6" className="text-center py-8 text-slate-400 font-bold">
+                        Executing decision models...
+                      </td>
+                    </tr>
+                  ) : districtDSS.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="text-center py-8 text-slate-400 font-bold">
+                        No district decision matrix available.
+                      </td>
+                    </tr>
+                  ) : (
+                    districtDSS.map((item, index) => (
+                      <tr key={index} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="py-3.5 px-3 font-bold text-slate-900">{item.district}</td>
+                        <td className="py-3.5 px-3 text-center font-extrabold text-slate-800">{item.current}</td>
+                        <td className="py-3.5 px-3 text-center font-bold text-slate-500">{item.quota}</td>
+                        <td className="py-3.5 px-3 text-center font-black">
+                          <span className={item.variance > 0 ? 'text-emerald-600' : item.variance < 0 ? 'text-amber-600' : 'text-slate-600'}>
+                            {item.variance > 0 ? `+${item.variance}` : item.variance}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-3 text-center">
+                          <span className={`text-xs font-extrabold px-2.5 py-1 rounded-md ${DSS_TAG_STYLES[item.actionTag] || DSS_TAG_STYLES.NEUTRAL}`}>
+                            {item.actionTag}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-3 font-medium text-slate-700 text-xs">{item.decisionRule}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
         </div>
       )}
 
       {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* TAB 2: USER ACTIVITY & LOGIN LOGS                                   */}
+      {/* TAB 2: AUDIT TRAIL & SYSTEM LOGS                                    */}
       {/* ─────────────────────────────────────────────────────────────────── */}
       {activeTab === 'activity' && (
         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-5">
           
-          {/* Controls Header */}
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className="relative w-full sm:w-72">
               <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
@@ -491,7 +613,6 @@ export default function OrgLogs() {
             </div>
           )}
 
-          {/* Activity Logs Table */}
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>

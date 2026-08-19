@@ -46,12 +46,12 @@ export default function OrgApplicantPrograms() {
   const [programs, setPrograms] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
-  const orgId = localStorage.getItem('orgId');
 
   useEffect(() => {
     const fetchPrograms = async () => {
       try {
-        const res = await api.get(`/organizations/dashboard-programs/${orgId}`);
+        // ✅ Updated to secure /me endpoint
+        const res = await api.get('/organizations/dashboard-programs/me');
         const allPrograms = res.data.data || res.data || [];
         setPrograms(allPrograms.filter(p => getDisplayStatus(p.status) !== 'draft'));
       } catch (err) {
@@ -61,7 +61,7 @@ export default function OrgApplicantPrograms() {
       }
     };
     fetchPrograms();
-  }, [orgId]);
+  }, []);
 
   const totalPages     = Math.ceil(programs.length / CARDS_PER_PAGE);
   const paginatedProgs = programs.slice(currentPage * CARDS_PER_PAGE, (currentPage + 1) * CARDS_PER_PAGE);

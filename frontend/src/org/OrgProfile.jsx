@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../api';
 import OrgEditProfile from '../component/OrgEditProfile';
-import FeatureProgram from '../component/FeatureProgram'; // Adjust path if needed
+import FeatureProgram from '../component/FeatureProgram';
 import {
     Camera, MapPin, Globe, Building2, Phone, Mail,
     Edit2, Award, CheckCircle, ShieldCheck, User, Sparkles, Clock
@@ -30,17 +30,12 @@ const OrgProfile = () => {
     }, []);
 
     const loadWorkspaceData = async () => {
-        const orgId = localStorage.getItem('orgId');
-        if (!orgId) {
-            setLoading(false);
-            return;
-        }
-
         try {
+            // ✅ Updated all endpoints to /me
             const [profileRes, dashboardProgsRes, profileProgsRes] = await Promise.all([
-                api.get(`/organizations/profile/${orgId}`),
-                api.get(`/organizations/dashboard-programs/${orgId}`).catch(() => null),
-                api.get(`/organizations/profile-programs/${orgId}`).catch(() => null)
+                api.get('/organizations/profile/me'),
+                api.get('/organizations/dashboard-programs/me').catch(() => null),
+                api.get('/organizations/profile-programs/me').catch(() => null)
             ]);
 
             if (profileRes.data?.data) setProfile(profileRes.data.data);
@@ -61,13 +56,11 @@ const OrgProfile = () => {
             return;
         }
 
-        const id = localStorage.getItem('orgId');
-        if (!id) return;
-
         try {
             const imgData = new FormData();
             imgData.append('org_pic', file);
-            const picRes = await api.patch(`/organizations/profile-picture/${id}`, imgData);
+            // ✅ Updated to secure /me endpoint
+            const picRes = await api.patch('/organizations/profile-picture/me', imgData);
             if (picRes.data?.org_pic) {
                 setProfile(prev => ({ ...prev, org_pic: picRes.data.org_pic }));
             }
@@ -85,14 +78,11 @@ const OrgProfile = () => {
             return;
         }
 
-        const id = localStorage.getItem('orgId');
-        if (!id) return;
-
         try {
             const imgData = new FormData();
             imgData.append('cover_pic', file);
-            // Assuming your backend API for cover upload matches this structure
-            const picRes = await api.patch(`/organizations/cover-picture/${id}`, imgData);
+            // ✅ Updated to secure /me endpoint
+            const picRes = await api.patch('/organizations/cover-picture/me', imgData);
             if (picRes.data?.cover_pic) {
                 setProfile(prev => ({ ...prev, cover_pic: picRes.data.cover_pic }));
             }
@@ -124,7 +114,7 @@ const OrgProfile = () => {
     const openProgramsCount = programs.filter(p => (p.status || '').toLowerCase() === 'active' || (p.status || '').toLowerCase() === 'open').length;
     const totalScholarsCount = programs.reduce((sum, p) => sum + (parseInt(p.active_scholars) || 0), 0);
 
-    const orgIdDisplay = localStorage.getItem('orgId') ? `ORG-${String(localStorage.getItem('orgId')).padStart(4, '0')}` : 'ORG-0001';
+    const orgIdDisplay = profile.id ? `ORG-${String(profile.id).padStart(4, '0')}` : 'ORG-MEMBER';
     const fullAddress = [profile.street_address, profile.barangay, profile.city, profile.region].filter(Boolean).join(', ') || 'Location not set';
 
     if (loading) return (
@@ -142,25 +132,24 @@ const OrgProfile = () => {
                 <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden relative">
                     
                     {/* Background Cover Area */}
-                  {/* Background Cover Area */}
-<div className="h-82 sm:h-94 md:h-98 lg:h-105 bg-slate-100 relative group overflow-hidden">
-    {coverSrc ? (
-        <img 
-            src={coverSrc} 
-            alt="Org Cover" 
-            className="absolute inset-0 w-full h-full object-cover object-center" 
-        />
-    ) : (
-        <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-[#093fb4] to-indigo-800 opacity-90" />
-    )}
-    <button
-        onClick={() => coverFileRef.current.click()}
-        className="absolute top-4 right-4 px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white border border-white/30 rounded-xl text-xs font-bold flex items-center gap-2 transition shadow-sm cursor-pointer z-10"
-    >
-        <Camera size={14} /> <span className="hidden sm:inline">Upload Cover</span>
-    </button>
-    <input ref={coverFileRef} type="file" accept=".png,.jpg,.jpeg,.webp" className="hidden" onChange={handleCoverChange} />
-</div>
+                    <div className="h-82 sm:h-94 md:h-98 lg:h-105 bg-slate-100 relative group overflow-hidden">
+                        {coverSrc ? (
+                            <img 
+                                src={coverSrc} 
+                                alt="Org Cover" 
+                                className="absolute inset-0 w-full h-full object-cover object-center" 
+                            />
+                        ) : (
+                            <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-[#093fb4] to-indigo-800 opacity-90" />
+                        )}
+                        <button
+                            onClick={() => coverFileRef.current.click()}
+                            className="absolute top-4 right-4 px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white border border-white/30 rounded-xl text-xs font-bold flex items-center gap-2 transition shadow-sm cursor-pointer z-10"
+                        >
+                            <Camera size={14} /> <span className="hidden sm:inline">Upload Cover</span>
+                        </button>
+                        <input ref={coverFileRef} type="file" accept=".png,.jpg,.jpeg,.webp" className="hidden" onChange={handleCoverChange} />
+                    </div>
 
                     {/* Profile Details & Overview Data (White readable area) */}
                     <div className="px-6 sm:px-10 pb-8 relative z-10 bg-white">
@@ -314,7 +303,7 @@ const OrgProfile = () => {
 
                 </div>
 
-                {/* ── 3. FEATURED PROGRAMS (Replaces the Right Column) ── */}
+                {/* ── 3. FEATURED PROGRAMS ── */}
                 <FeatureProgram 
                     programs={programs} 
                     setPrograms={setPrograms} 
