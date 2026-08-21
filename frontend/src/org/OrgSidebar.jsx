@@ -37,7 +37,8 @@ export default function OrgSidebar() {
     { name: 'Manage Programs', icon: <LucideScroll size={20} />, path: '/ProgramView' },
     { name: 'Manage Students', icon: <Form size={20} />, path: '/OrgApplicantPrograms' }, 
     { name: 'Profile', icon: <User size={20} />, path: '/OrgProfile' }, 
-    { name: 'Reports & Logs', icon: <Archive size={20} />, path: '/OrgLogs' },
+    { name: 'Reports', icon: <Archive size={20} />, path: '/OrgReports' },
+    { name: ' Logs', icon: <Archive size={20} />, path: '/OrgLogs' },
     { name: 'Settings', icon: <Settings size={20} />, path: '/OrgSettings' },
   ];
 

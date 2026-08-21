@@ -7,13 +7,21 @@ const { createClient } = require('redis');
 const redisClient = createClient({ url: process.env.REDIS_URL });
 redisClient.connect().catch(console.error);
 
+// Helper to clean up the store creation and enforce unique prefixes
+const createRedisStore = (prefixName) => {
+    return new RedisStore({
+        sendCommand: (...args) => redisClient.sendCommand(args),
+        prefix: `rl:${prefixName}:` // <-- This completely isolates each limiter in Redis
+    });
+};
+
 // ----------------------------------------------------
 // 1. LOGIN LIMITER
 // ----------------------------------------------------
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, 
     max: process.env.NODE_ENV === 'development' ? 2000 : 500, 
-    store: new RedisStore({ sendCommand: (...args) => redisClient.sendCommand(args) }),
+    store: createRedisStore('auth'), 
     message: { error: "Too many login attempts. Please try again later." },
     standardHeaders: true,
     legacyHeaders: false,
@@ -25,7 +33,7 @@ const authLimiter = rateLimit({
 const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, 
     max: process.env.NODE_ENV === 'development' ? 2000 : 100,
-    store: new RedisStore({ sendCommand: (...args) => redisClient.sendCommand(args) }),
+    store: createRedisStore('general'),
     message: { error: "High traffic detected. Please slow down." },
     standardHeaders: true,
     legacyHeaders: false,
@@ -37,14 +45,13 @@ const generalLimiter = rateLimit({
 const otpSendLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, 
     max: process.env.NODE_ENV === 'development' ? 1000 : 3, 
-    // THE FIX IS HERE:
     keyGenerator: (req, res) => {
         if (req.body && req.body.email) {
             return req.body.email.toLowerCase(); // Rate limit by email first
         }
         return ipKeyGenerator(req, res); // Fallback to safely formatted IP
     },
-    store: new RedisStore({ sendCommand: (...args) => redisClient.sendCommand(args) }),
+    store: createRedisStore('otp_send'),
     message: { error: "Too many OTP requests. Please wait 15 minutes before requesting another code." },
     standardHeaders: true,
     legacyHeaders: false,
@@ -56,7 +63,7 @@ const otpSendLimiter = rateLimit({
 const otpVerifyLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, 
     max: process.env.NODE_ENV === 'development' ? 1000 : 5, 
-    store: new RedisStore({ sendCommand: (...args) => redisClient.sendCommand(args) }),
+    store: createRedisStore('otp_verify'),
     message: { error: "Too many verification attempts. Please wait 15 minutes or request a new code." },
     standardHeaders: true,
     legacyHeaders: false,
@@ -68,7 +75,7 @@ const otpVerifyLimiter = rateLimit({
 const registrationLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, 
     max: process.env.NODE_ENV === 'development' ? 1000 : 5, 
-    store: new RedisStore({ sendCommand: (...args) => redisClient.sendCommand(args) }),
+    store: createRedisStore('registration'),
     message: { error: "Too many registration attempts from this network. Please try again in an hour." },
     standardHeaders: true,
     legacyHeaders: false,

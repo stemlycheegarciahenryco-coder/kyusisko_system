@@ -1,4 +1,10 @@
 const pool = require('../config/db');
+const {
+  buildCriteriaReport,
+  pivotGenderBreakdown,
+  analyzeDemographicConcentration,
+  analyzeFinancialSpread
+} = require('../utils/dssEngine');
 
 // Financial & Fund Allocation Report
 exports.getFinancialReport = async (req, res) => {
@@ -16,6 +22,7 @@ exports.getFinancialReport = async (req, res) => {
 
     let totalAllocatedMidpoint = 0;
     let missingAmountCount = 0;
+    const midpoints = [];
 
     const parsedPrograms = rows.map((program) => {
       const matches = program.amount_range ? program.amount_range.match(/\d+/g) : null;
@@ -32,6 +39,7 @@ exports.getFinancialReport = async (req, res) => {
       }
 
       totalAllocatedMidpoint += calculatedMidpoint;
+      midpoints.push(calculatedMidpoint);
 
       return {
         ...program,
@@ -39,16 +47,26 @@ exports.getFinancialReport = async (req, res) => {
       };
     });
 
+    // Coefficient-of-variation check (mathjs) — flags when fund sizes are
+    // wildly inconsistent across programs, which a flat total/missing-count
+    // summary would never surface.
+    const { coefficientOfVariation, highVarianceFlag } = analyzeFinancialSpread(midpoints);
+
     let interpretation = `Total estimated allocated budget across active programs is ₱${totalAllocatedMidpoint.toLocaleString()}. `;
-    interpretation += missingAmountCount > 0 
-      ? `Attention: ${missingAmountCount} program(s) contain missing or unparsed fund ranges requiring administrative review.`
-      : `All program fund allocations are fully verified and parsed.`;
+    interpretation += missingAmountCount > 0
+      ? `${missingAmountCount} program(s) contain missing or unparsed fund ranges requiring administrative review. `
+      : `All program fund allocations are fully verified and parsed. `;
+    interpretation += highVarianceFlag
+      ? `Grant sizes vary sharply across programs (coefficient of variation ${coefficientOfVariation}) — consider reviewing for funding equity.`
+      : `Grant sizes are reasonably consistent across programs (coefficient of variation ${coefficientOfVariation}).`;
 
     res.status(200).json({
       success: true,
       data: {
         totalAllocatedMidpoint,
         missingAmountCount,
+        coefficientOfVariation,
+        highVarianceFlag,
         programs: parsedPrograms,
         interpretation
       }
@@ -59,83 +77,96 @@ exports.getFinancialReport = async (req, res) => {
   }
 };
 
-// Demographic & Gender Distribution Report
-// Demographic & Gender Distribution Report (Safe Version)
+// Demographic Report — Male/Female breakdown per program, course, district,
+// and barangay. Every dimension is queried as flat {name, gender, count}
+// rows, then pivoted into {name, male, female, unspecified, total} via
+// pivotGenderBreakdown() so the shape is identical across all four.
+//
+// NOTE: assumes a `sbarangay` column on `students`, mirroring the existing
+// `sdistrict` / `sgender` naming convention. Rename the column reference
+// below if your actual schema differs.
 exports.getDemographicReport = async (req, res) => {
   try {
-    // 1. Fetch Course Distribution
-    const courseQuery = `
-      SELECT 
-        COALESCE(c.name, sop.other_degree_program, 'Unspecified') AS course_name, 
-        COUNT(DISTINCT a.student_id) AS scholar_count
+    const genderExpr = `COALESCE(INITCAP(TRIM(s.sgender)), 'Unspecified')`;
+
+    const byProgramQuery = `
+      SELECT prog.title AS name, ${genderExpr} AS gender, COUNT(DISTINCT a.student_id) AS count
+      FROM applications a
+      JOIN scholarships prog ON a.scholarship_id = prog.id
+      JOIN students s ON a.student_id = s.id
+      WHERE LOWER(a.status) = 'approved'
+      GROUP BY prog.title, ${genderExpr};
+    `;
+
+    const byCourseQuery = `
+      SELECT COALESCE(c.name, sop.other_degree_program, 'Unspecified') AS name, ${genderExpr} AS gender, COUNT(DISTINCT a.student_id) AS count
       FROM applications a
       JOIN student_onboarding_profiles sop ON a.student_id = sop.student_id
       LEFT JOIN courses c ON sop.course_id = c.id
+      JOIN students s ON a.student_id = s.id
       WHERE LOWER(a.status) = 'approved'
-      GROUP BY COALESCE(c.name, sop.other_degree_program, 'Unspecified')
-      ORDER BY scholar_count DESC;
+      GROUP BY COALESCE(c.name, sop.other_degree_program, 'Unspecified'), ${genderExpr};
     `;
 
-    // 2. Fetch Cleaned Gender Distribution
-    const genderQuery = `
-      SELECT 
-        COALESCE(INITCAP(TRIM(s.sgender)), 'Unspecified') AS gender, 
-        COUNT(DISTINCT a.student_id) AS count
+    const byDistrictQuery = `
+      SELECT COALESCE(s.sdistrict, 'Unassigned') AS name, ${genderExpr} AS gender, COUNT(DISTINCT a.student_id) AS count
       FROM applications a
       JOIN students s ON a.student_id = s.id
       WHERE LOWER(a.status) = 'approved'
-      GROUP BY COALESCE(INITCAP(TRIM(s.sgender)), 'Unspecified');
+      GROUP BY COALESCE(s.sdistrict, 'Unassigned'), ${genderExpr};
     `;
 
-    const [courseRes, genderRes] = await Promise.all([
-      pool.query(courseQuery),
-      pool.query(genderQuery)
+    const byBarangayQuery = `
+      SELECT COALESCE(s.sbarangay, 'Unassigned') AS name, ${genderExpr} AS gender, COUNT(DISTINCT a.student_id) AS count
+      FROM applications a
+      JOIN students s ON a.student_id = s.id
+      WHERE LOWER(a.status) = 'approved'
+      GROUP BY COALESCE(s.sbarangay, 'Unassigned'), ${genderExpr};
+    `;
+
+    const [programRes, courseRes, districtRes, barangayRes] = await Promise.all([
+      pool.query(byProgramQuery),
+      pool.query(byCourseQuery),
+      pool.query(byDistrictQuery),
+      pool.query(byBarangayQuery)
     ]);
 
-    const totalScholars = genderRes.rows.reduce((sum, r) => sum + parseInt(r.count, 10), 0);
+    const byProgram = pivotGenderBreakdown(programRes.rows);
+    const byCourse = pivotGenderBreakdown(courseRes.rows);
+    const byDistrict = pivotGenderBreakdown(districtRes.rows);
+    const byBarangay = pivotGenderBreakdown(barangayRes.rows);
 
-    // Format Course Data
-    const demographics = courseRes.rows.map((r) => {
-      const count = parseInt(r.scholar_count, 10);
-      const percentage = totalScholars > 0 ? ((count / totalScholars) * 100).toFixed(2) : 0;
-      return {
-        course_name: r.course_name,
-        count,
-        percentage: parseFloat(percentage)
-      };
-    });
+    const totalMale = byProgram.reduce((sum, r) => sum + r.male, 0);
+    const totalFemale = byProgram.reduce((sum, r) => sum + r.female, 0);
+    const totalUnspecified = byProgram.reduce((sum, r) => sum + r.unspecified, 0);
+    const totalScholars = totalMale + totalFemale + totalUnspecified;
 
-    // Format Gender Data
-    const genderBreakdown = genderRes.rows.map((r) => {
-      const count = parseInt(r.count, 10);
-      const percentage = totalScholars > 0 ? ((count / totalScholars) * 100).toFixed(2) : 0;
-      return {
-        gender: r.gender,
-        count,
-        percentage: parseFloat(percentage)
-      };
-    });
+    // Statistical concentration check on the course dimension (mathjs
+    // mean/std/z-score) — flags a course as over-represented rather than
+    // relying on a fixed percentage cutoff.
+    const courseShares = byCourse.map((c) => ({
+      course_name: c.name,
+      percentage: totalScholars > 0 ? parseFloat(((c.total / totalScholars) * 100).toFixed(2)) : 0
+    })).sort((a, b) => b.percentage - a.percentage);
+    const { interpretation: concentrationNote, zScoreFlag } = analyzeDemographicConcentration(courseShares);
 
-    // Dynamic Interpretation
-    let interpretation = '';
-    if (demographics.length > 0) {
-      const topCourse = demographics[0];
-      interpretation = `Highest concentration of approved scholars is in ${topCourse.course_name} (${topCourse.percentage}% of total). `;
-      if (topCourse.percentage > 40) {
-        interpretation += `DSS Recommendation: Consider prioritizing applicants from under-represented degree programs.`;
-      } else {
-        interpretation += `Academic program distribution remains balanced across applicants.`;
-      }
-    } else {
-      interpretation = 'No approved scholar records found for demographic analysis.';
-    }
+    let interpretation = totalScholars > 0
+      ? `${totalMale} male and ${totalFemale} female approved scholars recorded (${totalUnspecified > 0 ? `${totalUnspecified} unspecified. ` : ''}${totalScholars} total). `
+      : 'No approved scholar records found for demographic analysis. ';
+    interpretation += concentrationNote;
 
     res.status(200).json({
       success: true,
       data: {
         totalScholars,
-        demographics,
-        genderBreakdown,
+        totalMale,
+        totalFemale,
+        totalUnspecified,
+        byProgram,
+        byCourse,
+        byDistrict,
+        byBarangay,
+        concentrationStats: { zScoreFlag },
         interpretation
       }
     });
@@ -145,62 +176,29 @@ exports.getDemographicReport = async (req, res) => {
   }
 };
 
-// District Allocation DSS Decision Engine
-exports.getDistrictDSSReport = async (req, res) => {
+// Program Criteria / Funding Purpose Report
+// Classifies each scholarship's title + description against a funding-
+// purpose taxonomy (Poverty Reduction, Academic Merit, PWD Support, STEM,
+// etc.) using a json-rules-engine keyword ruleset, then aggregates with
+// lodash/mathjs to surface the most commonly entered program criteria.
+exports.getCriteriaReport = async (req, res) => {
   try {
-    const query = `
-      SELECT 
-        COALESCE(s.sdistrict, 'Unassigned') AS district, 
-        COUNT(DISTINCT a.student_id) AS current_scholars
-      FROM applications a
-      JOIN students s ON a.student_id = s.id
-      WHERE LOWER(a.status) = 'approved'
-      GROUP BY s.sdistrict;
-    `;
+    const query = `SELECT id, title, description FROM scholarships;`;
     const { rows } = await pool.query(query);
 
-    const DEFAULT_QUOTA = 50;
-
-    const dssAnalysis = rows.map((row) => {
-      const current = parseInt(row.current_scholars, 10);
-      const quota = DEFAULT_QUOTA;
-      const variance = quota - current;
-
-      let decisionRule = '';
-      let actionTag = '';
-
-      if (variance > 0) {
-        decisionRule = `Under-allocated area. Prioritize pending applications from ${row.district} (${variance} slots remaining).`;
-        actionTag = 'HIGH_PRIORITY';
-      } else if (variance === 0) {
-        decisionRule = `Target quota reached for ${row.district}. Maintain standard review process.`;
-        actionTag = 'NEUTRAL';
-      } else {
-        decisionRule = `Quota exceeded in ${row.district} by ${Math.abs(variance)} slots. Reallocate funds to under-represented districts.`;
-        actionTag = 'WARNING';
-      }
-
-      return {
-        district: row.district,
-        current,
-        quota,
-        variance,
-        decisionRule,
-        actionTag
-      };
-    });
-
-    const interpretation = `DSS decision rule model calculated variances across ${dssAnalysis.length} district group(s) to direct funding decisions.`;
+    const { distribution, programBreakdown, interpretation } = await buildCriteriaReport(rows);
 
     res.status(200).json({
       success: true,
       data: {
-        analysis: dssAnalysis,
+        totalPrograms: rows.length,
+        distribution,
+        programBreakdown,
         interpretation
       }
     });
   } catch (error) {
-    console.error("District DSS Report Error:", error);
+    console.error("Criteria Report Error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
