@@ -1,17 +1,16 @@
 const rateLimit = require('express-rate-limit');
-const { ipKeyGenerator } = require('express-rate-limit'); // <-- Added this helper
+const { ipKeyGenerator } = require('express-rate-limit');
 const RedisStore = require('rate-limit-redis').default;
-const { createClient } = require('redis');
 
-// Initialize Redis client
-const redisClient = createClient({ url: process.env.REDIS_URL });
-redisClient.connect().catch(console.error);
+// Import your existing ioredis client
+const redisClient = require('../config/queueConnection');
 
 // Helper to clean up the store creation and enforce unique prefixes
 const createRedisStore = (prefixName) => {
     return new RedisStore({
-        sendCommand: (...args) => redisClient.sendCommand(args),
-        prefix: `rl:${prefixName}:` // <-- This completely isolates each limiter in Redis
+        // ioredis uses .call(...args) instead of .sendCommand(args)
+        sendCommand: (...args) => redisClient.call(...args),
+        prefix: `rl:${prefixName}:`
     });
 };
 

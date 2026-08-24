@@ -6,7 +6,7 @@ import { Plus, Trash2, Shield, GripVertical, Check, Sparkles } from 'lucide-reac
 // criterion the same way, whether it came from this checklist or was
 // typed freeform below.
 const defaultOptions = [
-  "4PS", "PWD", "Freshmen", "Student Athlete/Arts",
+  "4PS", "PWD", "Freshman", "Student Athlete/Arts",
   "Working Student", "Indigenous", "OFW", "No Failing Grades"
 ];
 

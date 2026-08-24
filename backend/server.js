@@ -8,7 +8,7 @@ require('dotenv').config();
 // 🚀 1. BOOT UP THE BULLMQ BACKGROUND WORKER PROCESS
 // This wakes up your worker file so it listens to Redis queue jobs cleanly in the background
 require('./queues/applicationQueue');
-require('./workers/engineMatchingWorker'); // <-- Dedicated AI background processing queue
+require('./workers/matchingWorker'); // <-- Dedicated AI background processing queue
 
 // Route Imports
 const subAdminRoutes = require('./routes/subAdminRoutes');

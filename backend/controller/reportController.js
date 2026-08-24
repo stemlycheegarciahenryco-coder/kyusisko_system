@@ -6,19 +6,35 @@ const {
   analyzeFinancialSpread
 } = require('../utils/dssEngine');
 
-// Financial & Fund Allocation Report
+// Import helper to resolve main org vs co-admin ID
+async function resolveOrgId(requesterId) {
+    const r = await pool.query(
+        'SELECT account_type, parent_org_id FROM sub_admins WHERE id = $1',
+        [requesterId]
+    );
+    if (r.rows.length === 0) return null;
+    const { account_type, parent_org_id } = r.rows[0];
+    return account_type === 'co_admin' ? parent_org_id : requesterId;
+}
+
+// 1. Financial & Fund Allocation Report (ISOLATED)
 exports.getFinancialReport = async (req, res) => {
   try {
+    const orgId = await resolveOrgId(req.user.id);
+    if (!orgId) return res.status(404).json({ success: false, message: "Org not found." });
+
     const query = `
       SELECT 
-        id, 
-        title, 
-        amount_range, 
-        slots, 
-        (SELECT COUNT(*) FROM applications WHERE LOWER(status) = 'approved') AS approved_scholars
-      FROM scholarships;
+        s.id, 
+        s.title, 
+        s.amount_range, 
+        s.slots, 
+        s.status,
+        (SELECT COUNT(*) FROM applications a WHERE a.scholarship_id = s.id AND LOWER(a.status) = 'approved') AS approved_scholars
+      FROM scholarships s
+      WHERE s.sub_admin_id = $1;
     `;
-    const { rows } = await pool.query(query);
+    const { rows } = await pool.query(query, [orgId]);
 
     let totalAllocatedMidpoint = 0;
     let missingAmountCount = 0;
@@ -47,9 +63,6 @@ exports.getFinancialReport = async (req, res) => {
       };
     });
 
-    // Coefficient-of-variation check (mathjs) — flags when fund sizes are
-    // wildly inconsistent across programs, which a flat total/missing-count
-    // summary would never surface.
     const { coefficientOfVariation, highVarianceFlag } = analyzeFinancialSpread(midpoints);
 
     let interpretation = `Total estimated allocated budget across active programs is ₱${totalAllocatedMidpoint.toLocaleString()}. `;
@@ -77,16 +90,12 @@ exports.getFinancialReport = async (req, res) => {
   }
 };
 
-// Demographic Report — Male/Female breakdown per program, course, district,
-// and barangay. Every dimension is queried as flat {name, gender, count}
-// rows, then pivoted into {name, male, female, unspecified, total} via
-// pivotGenderBreakdown() so the shape is identical across all four.
-//
-// NOTE: assumes a `sbarangay` column on `students`, mirroring the existing
-// `sdistrict` / `sgender` naming convention. Rename the column reference
-// below if your actual schema differs.
+// 2. Demographic Report (ISOLATED)
 exports.getDemographicReport = async (req, res) => {
   try {
+    const orgId = await resolveOrgId(req.user.id);
+    if (!orgId) return res.status(404).json({ success: false, message: "Org not found." });
+
     const genderExpr = `COALESCE(INITCAP(TRIM(s.sgender)), 'Unspecified')`;
 
     const byProgramQuery = `
@@ -94,41 +103,44 @@ exports.getDemographicReport = async (req, res) => {
       FROM applications a
       JOIN scholarships prog ON a.scholarship_id = prog.id
       JOIN students s ON a.student_id = s.id
-      WHERE LOWER(a.status) = 'approved'
+      WHERE LOWER(a.status) = 'approved' AND prog.sub_admin_id = $1
       GROUP BY prog.title, ${genderExpr};
     `;
 
     const byCourseQuery = `
       SELECT COALESCE(c.name, sop.other_degree_program, 'Unspecified') AS name, ${genderExpr} AS gender, COUNT(DISTINCT a.student_id) AS count
       FROM applications a
+      JOIN scholarships prog ON a.scholarship_id = prog.id
       JOIN student_onboarding_profiles sop ON a.student_id = sop.student_id
       LEFT JOIN courses c ON sop.course_id = c.id
       JOIN students s ON a.student_id = s.id
-      WHERE LOWER(a.status) = 'approved'
+      WHERE LOWER(a.status) = 'approved' AND prog.sub_admin_id = $1
       GROUP BY COALESCE(c.name, sop.other_degree_program, 'Unspecified'), ${genderExpr};
     `;
 
     const byDistrictQuery = `
       SELECT COALESCE(s.sdistrict, 'Unassigned') AS name, ${genderExpr} AS gender, COUNT(DISTINCT a.student_id) AS count
       FROM applications a
+      JOIN scholarships prog ON a.scholarship_id = prog.id
       JOIN students s ON a.student_id = s.id
-      WHERE LOWER(a.status) = 'approved'
+      WHERE LOWER(a.status) = 'approved' AND prog.sub_admin_id = $1
       GROUP BY COALESCE(s.sdistrict, 'Unassigned'), ${genderExpr};
     `;
 
     const byBarangayQuery = `
       SELECT COALESCE(s.sbarangay, 'Unassigned') AS name, ${genderExpr} AS gender, COUNT(DISTINCT a.student_id) AS count
       FROM applications a
+      JOIN scholarships prog ON a.scholarship_id = prog.id
       JOIN students s ON a.student_id = s.id
-      WHERE LOWER(a.status) = 'approved'
+      WHERE LOWER(a.status) = 'approved' AND prog.sub_admin_id = $1
       GROUP BY COALESCE(s.sbarangay, 'Unassigned'), ${genderExpr};
     `;
 
     const [programRes, courseRes, districtRes, barangayRes] = await Promise.all([
-      pool.query(byProgramQuery),
-      pool.query(byCourseQuery),
-      pool.query(byDistrictQuery),
-      pool.query(byBarangayQuery)
+      pool.query(byProgramQuery, [orgId]),
+      pool.query(byCourseQuery, [orgId]),
+      pool.query(byDistrictQuery, [orgId]),
+      pool.query(byBarangayQuery, [orgId])
     ]);
 
     const byProgram = pivotGenderBreakdown(programRes.rows);
@@ -141,9 +153,6 @@ exports.getDemographicReport = async (req, res) => {
     const totalUnspecified = byProgram.reduce((sum, r) => sum + r.unspecified, 0);
     const totalScholars = totalMale + totalFemale + totalUnspecified;
 
-    // Statistical concentration check on the course dimension (mathjs
-    // mean/std/z-score) — flags a course as over-represented rather than
-    // relying on a fixed percentage cutoff.
     const courseShares = byCourse.map((c) => ({
       course_name: c.name,
       percentage: totalScholars > 0 ? parseFloat(((c.total / totalScholars) * 100).toFixed(2)) : 0
@@ -176,15 +185,14 @@ exports.getDemographicReport = async (req, res) => {
   }
 };
 
-// Program Criteria / Funding Purpose Report
-// Classifies each scholarship's title + description against a funding-
-// purpose taxonomy (Poverty Reduction, Academic Merit, PWD Support, STEM,
-// etc.) using a json-rules-engine keyword ruleset, then aggregates with
-// lodash/mathjs to surface the most commonly entered program criteria.
+// 3. Program Criteria / Funding Purpose Report (ISOLATED)
 exports.getCriteriaReport = async (req, res) => {
   try {
-    const query = `SELECT id, title, description FROM scholarships;`;
-    const { rows } = await pool.query(query);
+    const orgId = await resolveOrgId(req.user.id);
+    if (!orgId) return res.status(404).json({ success: false, message: "Org not found." });
+
+    const query = `SELECT id, title, description FROM scholarships WHERE sub_admin_id = $1;`;
+    const { rows } = await pool.query(query, [orgId]);
 
     const { distribution, programBreakdown, interpretation } = await buildCriteriaReport(rows);
 

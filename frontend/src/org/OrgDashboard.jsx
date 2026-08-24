@@ -15,8 +15,8 @@ import {
 import OrgRightBar from '../component/OrgRightBar';
 
 // ─── SVG Donut Chart Component ───────────────────────────────────────────────
-function ProgramOverviewChart({ active = 13, apps = 4, drafts = 1, pending = 1 }) {
-  const total = active + apps + drafts + pending || 1;
+function ProgramOverviewChart({ active = 0, apps = 0, drafts = 0, pending = 0 }) {
+  const total = active + apps + drafts + pending;
 
   const data = [
     { label: 'Active Programs', count: active, color: '#A855F7' },   // Purple
@@ -40,28 +40,39 @@ function ProgramOverviewChart({ active = 13, apps = 4, drafts = 1, pending = 1 }
         {/* Donut Graphic */}
         <div className="relative w-44 h-44 shrink-0 flex items-center justify-center">
           <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-            {data.map((item, index) => {
-              const percent = (item.count / total) * 100;
-              const strokeDasharray = `${percent} ${100 - percent}`;
-              const strokeDashoffset = 100 - cumulativePercent;
-              cumulativePercent += percent;
+            {total > 0 ? (
+              data.map((item, index) => {
+                const percent = (item.count / total) * 100;
+                const strokeDasharray = `${percent} ${100 - percent}`;
+                const strokeDashoffset = 100 - cumulativePercent;
+                cumulativePercent += percent;
 
-              return (
-                <circle
-                  key={index}
-                  cx="18"
-                  cy="18"
-                  r="14"
-                  fill="transparent"
-                  stroke={item.color}
-                  strokeWidth="5"
-                  strokeDasharray={strokeDasharray}
-                  strokeDashoffset={strokeDashoffset}
-                  pathLength="100"
-                  className="transition-all duration-500 ease-out"
-                />
-              );
-            })}
+                return (
+                  <circle
+                    key={index}
+                    cx="18"
+                    cy="18"
+                    r="14"
+                    fill="transparent"
+                    stroke={item.color}
+                    strokeWidth="5"
+                    strokeDasharray={strokeDasharray}
+                    strokeDashoffset={strokeDashoffset}
+                    pathLength="100"
+                    className="transition-all duration-500 ease-out"
+                  />
+                );
+              })
+            ) : (
+              <circle
+                cx="18"
+                cy="18"
+                r="14"
+                fill="transparent"
+                stroke="#e2e8f0"
+                strokeWidth="5"
+              />
+            )}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
             <span className="text-2xl font-black text-slate-900 leading-none">{total}</span>
@@ -72,7 +83,7 @@ function ProgramOverviewChart({ active = 13, apps = 4, drafts = 1, pending = 1 }
         {/* Dynamic Legend */}
         <div className="flex-1 space-y-3 w-full">
           {data.map((item, idx) => {
-            const percentage = ((item.count / total) * 100).toFixed(1);
+            const percentage = total > 0 ? ((item.count / total) * 100).toFixed(1) : "0.0";
             return (
               <div key={idx} className="flex items-center justify-between text-xs font-medium">
                 <div className="flex items-center gap-2">
@@ -95,10 +106,10 @@ function ProgramOverviewChart({ active = 13, apps = 4, drafts = 1, pending = 1 }
 // ─── Main Org Dashboard Page ──────────────────────────────────────────────────
 export default function OrgDashboard() {
   const [stats, setStats] = useState({ 
-    pendingApps: 1, 
-    draftPrograms: 1, 
-    activePrograms: 13, 
-    totalActiveApps: 4 
+    pendingApps: 0, 
+    draftPrograms: 0, 
+    activePrograms: 0, 
+    totalActiveApps: 0 
   });
   const [recentApplications, setRecentApplications] = useState([]);
   const [programs, setPrograms] = useState([]);
@@ -124,10 +135,6 @@ export default function OrgDashboard() {
         }));
         setRecentApplications(mappedApps);
 
-        // NOTE: the backend resolves the org from the auth token (see
-        // resolveOrgId in orgController.js) and ignores this :id param
-        // entirely, so any placeholder value here is fine — it's only
-        // there to satisfy the route shape.
         const resProgs = await api.get('/organizations/dashboard-programs/me');
         setPrograms(resProgs.data?.data || []);
       } catch (err) {
@@ -157,9 +164,8 @@ export default function OrgDashboard() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-             Dashboard <span className="text-xl"></span>
+             Dashboard
           </h1>
-          
         </div>
 
         <button 
@@ -182,42 +188,42 @@ export default function OrgDashboard() {
               icon={<ClipboardCheck size={20} className="text-amber-500" />}
               iconBg="bg-amber-50"
               label=" Application Pending Review"
-              value={stats.pendingApps || 1}
-              change="-2 from last week"
+              value={stats.pendingApps ?? 0}
+              change="Active applications"
               changeColor="text-amber-600"
             />
             <MetricCard 
               icon={<FileText size={20} className="text-emerald-500" />}
               iconBg="bg-emerald-50"
               label="Draft Programs"
-              value={stats.draftPrograms || 1}
-              change="No change"
+              value={stats.draftPrograms ?? 0}
+              change="Saved drafts"
               changeColor="text-emerald-600"
             />
             <MetricCard 
               icon={<GraduationCap size={20} className="text-purple-500" />}
               iconBg="bg-purple-50"
               label="Active Programs"
-              value={stats.activePrograms || 13}
-              change="+2 from last week"
-              changeColor="text-emerald-600"
+              value={stats.activePrograms ?? 0}
+              change="Published programs"
+              changeColor="text-purple-600"
             />
             <MetricCard 
               icon={<Users size={20} className="text-blue-500" />}
               iconBg="bg-blue-50"
               label="Total Applications"
-              value={stats.totalActiveApps || 4}
-              change="+1 from last week"
-              changeColor="text-emerald-600"
+              value={stats.totalActiveApps ?? 0}
+              change="All time received"
+              changeColor="text-blue-600"
             />
           </div>
 
           {/* Program Overview Donut Chart */}
           <ProgramOverviewChart 
-            active={stats.activePrograms || 13} 
-            apps={stats.totalActiveApps || 4} 
-            drafts={stats.draftPrograms || 1} 
-            pending={stats.pendingApps || 1} 
+            active={stats.activePrograms ?? 0} 
+            apps={stats.totalActiveApps ?? 0} 
+            drafts={stats.draftPrograms ?? 0} 
+            pending={stats.pendingApps ?? 0} 
           />
 
           {/* Program Status & Applicants Table */}
@@ -235,13 +241,9 @@ export default function OrgDashboard() {
 
               <div className="space-y-3">
                 {programs.length === 0 ? (
-                  <>
-                    <ProgramRow title="STI College Scholarship Program" status="ACTIVE" applicants={0} navigate={navigate} />
-                    <ProgramRow title="HSLAM" status="ACTIVE" applicants={0} navigate={navigate} />
-                    <ProgramRow title="Muslim Scholarship for Education" status="ACTIVE" applicants={0} navigate={navigate} />
-                    <ProgramRow title="ISAPA Program" status="ACTIVE" applicants={0} navigate={navigate} />
-                    <ProgramRow title="CHED Merit Scholarship" status="DRAFT" applicants={0} navigate={navigate} />
-                  </>
+                  <div className="text-center py-8 text-slate-400 font-bold text-xs">
+                    No programs created yet. Click "Create New Program" below to add one.
+                  </div>
                 ) : (
                   programs.slice(0, 5).map(prog => (
                     <ProgramRow 
@@ -268,7 +270,7 @@ export default function OrgDashboard() {
 
         </div>
 
-        {/* Right Column: Sidebar (Calendar + Conflicts + Activity Log) */}
+        {/* Right Column: Sidebar */}
         <div className="lg:col-span-1">
           <OrgRightBar recentApplications={recentApplications} programs={programs} />
         </div>

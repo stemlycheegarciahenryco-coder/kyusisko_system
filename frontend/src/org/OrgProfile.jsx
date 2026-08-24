@@ -242,12 +242,7 @@ const OrgProfile = () => {
                                     <MapPin size={14} className="text-[#093fb4] shrink-0" /> {fullAddress}
                                 </p>
                             </div>
-                            <div className="md:col-span-2">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Member ID</p>
-                                <p className="font-semibold text-slate-800 mt-1 flex items-center gap-2 text-sm">
-                                    <Building2 size={14} className="text-[#093fb4]" /> {orgIdDisplay}
-                                </p>
-                            </div>
+                            
                         </div>
 
                     </div>
