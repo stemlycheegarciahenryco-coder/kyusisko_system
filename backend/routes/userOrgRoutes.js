@@ -20,6 +20,6 @@ router.get('/team', verifyToken, getOrgUsers);
 router.post('/transfer-ownership', verifyToken, transferOwnership);
 
 // 3. Update main account password (Protected inside controller for account_type === 'main')
-router.post('/change-password', verifyToken, changePassword);
+router.put('/change-password', verifyToken, changePassword);
 
 module.exports = router;

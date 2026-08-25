@@ -1,21 +1,29 @@
 import React, { useState } from 'react';
-import api from './api'; // Your axios instance
-import RegisterPassField from './RegisterPassField'; // Your custom password field
+import api from '../api'; // Your axios instance
+import RegisterPassField from '../RegisterPassField'; // Your custom password field
 
 export default function ForcePasswordChange({ onComplete }) {
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+
+        // Validate that the new password and confirmation match
+        if (newPassword !== confirmPassword) {
+            setError("New passwords do not match.");
+            return;
+        }
+
         setLoading(true);
 
         try {
             // Calls your userManagementController.js changePassword endpoint
-            await api.put('/user-management/change-password', {
+            await api.put('/user-org/change-password', {
                 currentPassword,
                 newPassword
             });
@@ -35,8 +43,8 @@ export default function ForcePasswordChange({ onComplete }) {
     };
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center p-6 bg-[#FFFCFB]">
-            <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-slate-200">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+            <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 border border-slate-200 relative max-h-[90vh] overflow-y-auto">
                 <h2 className="text-2xl font-black text-slate-800 uppercase text-center mb-2">
                     Action Required
                 </h2>
@@ -50,7 +58,7 @@ export default function ForcePasswordChange({ onComplete }) {
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-slate-700 uppercase">Current / Temp Password</label>
                         <input
@@ -65,7 +73,6 @@ export default function ForcePasswordChange({ onComplete }) {
 
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-slate-700 uppercase">New Password</label>
-                        {/* Using your provided RegisterPassField file */}
                         <RegisterPassField
                             name="newPassword"
                             value={newPassword}
@@ -74,10 +81,22 @@ export default function ForcePasswordChange({ onComplete }) {
                         />
                     </div>
 
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700 uppercase">Confirm New Password</label>
+                        <input
+                            type="password"
+                            required
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-black outline-none focus:border-[#093FB4] focus:bg-white transition-all text-sm"
+                            placeholder="Re-enter new password"
+                        />
+                    </div>
+
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-[#093fb4] hover:bg-[#073496] text-white font-black py-4 rounded-2xl transition-all uppercase tracking-wider text-sm mt-4 disabled:opacity-50"
+                        className="w-full bg-[#093fb4] hover:bg-[#073496] text-white font-black py-4 rounded-2xl transition-all uppercase tracking-wider text-sm mt-2 disabled:opacity-50 shadow-lg shadow-[#093fb4]/30"
                     >
                         {loading ? 'Updating...' : 'Update Password'}
                     </button>

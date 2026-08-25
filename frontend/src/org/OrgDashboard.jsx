@@ -13,6 +13,8 @@ import {
   Clock
 } from 'lucide-react';
 import OrgRightBar from '../component/OrgRightBar';
+// ADDED: Import the modal component (check this path is correct for your setup!)
+import ForcePasswordChange from '../component/ForcePasswordChange'; 
 
 // ─── SVG Donut Chart Component ───────────────────────────────────────────────
 function ProgramOverviewChart({ active = 0, apps = 0, drafts = 0, pending = 0 }) {
@@ -105,6 +107,12 @@ function ProgramOverviewChart({ active = 0, apps = 0, drafts = 0, pending = 0 })
 
 // ─── Main Org Dashboard Page ──────────────────────────────────────────────────
 export default function OrgDashboard() {
+  // ADDED: Synchronous state check. It fires immediately before rendering.
+  const [needsPasswordChange, setNeedsPasswordChange] = useState(() => {
+    const orgInfo = JSON.parse(localStorage.getItem('orgInfo') || '{}');
+    return orgInfo.isPasswordChanged === false;
+  });
+
   const [stats, setStats] = useState({ 
     pendingApps: 0, 
     draftPrograms: 0, 
@@ -158,145 +166,154 @@ export default function OrgDashboard() {
   }
 
   return (
-    <div className="p-8 bg-slate-50/50 min-h-screen font-sans space-y-6">
+    <div className="relative bg-slate-50/50 min-h-screen font-sans">
       
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-             Dashboard
-          </h1>
-        </div>
+      {/* ADDED: The Modal conditionally renders here */}
+      {needsPasswordChange && (
+        <ForcePasswordChange onComplete={() => setNeedsPasswordChange(false)} />
+      )}
 
-        <button 
-          onClick={() => window.print()}
-          className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-extrabold px-4 py-2.5 rounded-xl border border-slate-200 shadow-xs transition-all w-fit"
-        >
-          <Download size={15} /> Export Report
-        </button>
-      </div>
-
-      {/* Main Grid: Left Dashboard Area & Right Sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      {/* ADDED: Wrapped dashboard content in a div that blurs if needsPasswordChange is true */}
+      <div className={`p-8 space-y-6 transition-all duration-300 ${needsPasswordChange ? 'blur-sm pointer-events-none select-none' : ''}`}>
         
-        {/* Left Column (2 Cols Wide) */}
-        <div className="lg:col-span-2 space-y-6">
-          
-          {/* Top Metric Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <MetricCard 
-              icon={<ClipboardCheck size={20} className="text-amber-500" />}
-              iconBg="bg-amber-50"
-              label=" Application Pending Review"
-              value={stats.pendingApps ?? 0}
-              change="Active applications"
-              changeColor="text-amber-600"
-            />
-            <MetricCard 
-              icon={<FileText size={20} className="text-emerald-500" />}
-              iconBg="bg-emerald-50"
-              label="Draft Programs"
-              value={stats.draftPrograms ?? 0}
-              change="Saved drafts"
-              changeColor="text-emerald-600"
-            />
-            <MetricCard 
-              icon={<GraduationCap size={20} className="text-purple-500" />}
-              iconBg="bg-purple-50"
-              label="Active Programs"
-              value={stats.activePrograms ?? 0}
-              change="Published programs"
-              changeColor="text-purple-600"
-            />
-            <MetricCard 
-              icon={<Users size={20} className="text-blue-500" />}
-              iconBg="bg-blue-50"
-              label="Total Applications"
-              value={stats.totalActiveApps ?? 0}
-              change="All time received"
-              changeColor="text-blue-600"
-            />
+        {/* Page Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+               Dashboard
+            </h1>
           </div>
 
-          {/* Program Overview Donut Chart */}
-          <ProgramOverviewChart 
-            active={stats.activePrograms ?? 0} 
-            apps={stats.totalActiveApps ?? 0} 
-            drafts={stats.draftPrograms ?? 0} 
-            pending={stats.pendingApps ?? 0} 
-          />
+          <button 
+            onClick={() => window.print()}
+            className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-extrabold px-4 py-2.5 rounded-xl border border-slate-200 shadow-xs transition-all w-fit"
+          >
+            <Download size={15} /> Export Report
+          </button>
+        </div>
 
-          {/* Program Status & Applicants Table */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs flex flex-col justify-between">
-            <div>
-              <div className="flex justify-between items-center mb-5">
-                <h2 className="text-sm font-extrabold text-slate-900">Program Status & Applicants</h2>
+        {/* Main Grid: Left Dashboard Area & Right Sidebar */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          
+          {/* Left Column (2 Cols Wide) */}
+          <div className="lg:col-span-2 space-y-6">
+            
+            {/* Top Metric Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <MetricCard 
+                icon={<ClipboardCheck size={20} className="text-amber-500" />}
+                iconBg="bg-amber-50"
+                label=" Application Pending Review"
+                value={stats.pendingApps ?? 0}
+                change="Active applications"
+                changeColor="text-amber-600"
+              />
+              <MetricCard 
+                icon={<FileText size={20} className="text-emerald-500" />}
+                iconBg="bg-emerald-50"
+                label="Draft Programs"
+                value={stats.draftPrograms ?? 0}
+                change="Saved drafts"
+                changeColor="text-emerald-600"
+              />
+              <MetricCard 
+                icon={<GraduationCap size={20} className="text-purple-500" />}
+                iconBg="bg-purple-50"
+                label="Active Programs"
+                value={stats.activePrograms ?? 0}
+                change="Published programs"
+                changeColor="text-purple-600"
+              />
+              <MetricCard 
+                icon={<Users size={20} className="text-blue-500" />}
+                iconBg="bg-blue-50"
+                label="Total Applications"
+                value={stats.totalActiveApps ?? 0}
+                change="All time received"
+                changeColor="text-blue-600"
+              />
+            </div>
+
+            {/* Program Overview Donut Chart */}
+            <ProgramOverviewChart 
+              active={stats.activePrograms ?? 0} 
+              apps={stats.totalActiveApps ?? 0} 
+              drafts={stats.draftPrograms ?? 0} 
+              pending={stats.pendingApps ?? 0} 
+            />
+
+            {/* Program Status & Applicants Table */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex justify-between items-center mb-5">
+                  <h2 className="text-sm font-extrabold text-slate-900">Program Status & Applicants</h2>
+                  <button 
+                    onClick={() => navigate('/ProgramView')}
+                    className="text-xs font-bold text-blue-600 hover:underline"
+                  >
+                    View All Programs
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {programs.length === 0 ? (
+                    <div className="text-center py-8 text-slate-400 font-bold text-xs">
+                      No programs created yet. Click "Create New Program" below to add one.
+                    </div>
+                  ) : (
+                    programs.slice(0, 5).map(prog => (
+                      <ProgramRow 
+                        key={prog.id} 
+                        title={prog.title} 
+                        status={(prog.status || 'active').toUpperCase().replace('_', ' ')} 
+                        applicants={prog.total_applicants || 0}
+                        navigate={navigate}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-6 text-center pt-2">
                 <button 
                   onClick={() => navigate('/ProgramView')}
-                  className="text-xs font-bold text-blue-600 hover:underline"
+                  className="text-xs font-bold text-blue-600 bg-blue-50/60 hover:bg-blue-100/60 px-5 py-2 rounded-xl transition-all"
                 >
                   View All Programs
                 </button>
               </div>
-
-              <div className="space-y-3">
-                {programs.length === 0 ? (
-                  <div className="text-center py-8 text-slate-400 font-bold text-xs">
-                    No programs created yet. Click "Create New Program" below to add one.
-                  </div>
-                ) : (
-                  programs.slice(0, 5).map(prog => (
-                    <ProgramRow 
-                      key={prog.id} 
-                      title={prog.title} 
-                      status={(prog.status || 'active').toUpperCase().replace('_', ' ')} 
-                      applicants={prog.total_applicants || 0}
-                      navigate={navigate}
-                    />
-                  ))
-                )}
-              </div>
             </div>
 
-            <div className="mt-6 text-center pt-2">
-              <button 
-                onClick={() => navigate('/ProgramView')}
-                className="text-xs font-bold text-blue-600 bg-blue-50/60 hover:bg-blue-100/60 px-5 py-2 rounded-xl transition-all"
-              >
-                View All Programs
-              </button>
+          </div>
+
+          {/* Right Column: Sidebar */}
+          <div className="lg:col-span-1">
+            <OrgRightBar recentApplications={recentApplications} programs={programs} />
+          </div>
+
+        </div>
+
+        {/* Bottom Stay Updated Banner */}
+        <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-blue-600 text-white rounded-xl shrink-0">
+              <Megaphone size={18} />
+            </div>
+            <div>
+              <h4 className="text-xs font-extrabold text-slate-900">Stay Updated!</h4>
+              <p className="text-[11px] font-medium text-slate-500">Keep track of your programs and applicant activities.</p>
             </div>
           </div>
 
-        </div>
-
-        {/* Right Column: Sidebar */}
-        <div className="lg:col-span-1">
-          <OrgRightBar recentApplications={recentApplications} programs={programs} />
+          <button 
+            onClick={() => navigate('/create-scholarship')}
+            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold px-5 py-2.5 rounded-xl shadow-xs transition-all shrink-0"
+          >
+            Create New Program
+          </button>
         </div>
 
       </div>
-
-      {/* Bottom Stay Updated Banner */}
-      <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-blue-600 text-white rounded-xl shrink-0">
-            <Megaphone size={18} />
-          </div>
-          <div>
-            <h4 className="text-xs font-extrabold text-slate-900">Stay Updated!</h4>
-            <p className="text-[11px] font-medium text-slate-500">Keep track of your programs and applicant activities.</p>
-          </div>
-        </div>
-
-        <button 
-          onClick={() => navigate('/create-scholarship')}
-          className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold px-5 py-2.5 rounded-xl shadow-xs transition-all shrink-0"
-        >
-          Create New Program
-        </button>
-      </div>
-
     </div>
   );
 }
