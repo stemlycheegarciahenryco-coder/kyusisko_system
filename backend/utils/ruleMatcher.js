@@ -28,6 +28,12 @@ const YEAR_LEVEL_MAP = {
   'sophomore': ['2', 'sophomore', 'second year'],
   'junior': ['3', 'junior', 'third year'],
   'senior': ['4', 'senior', 'fourth year'],
+  'graduate': ['graduate'],
+  'postgraduate': ['postgraduate'],
+  'masters': ['masters'],
+  "master's": ['masters'],
+  'doctorate': ['doctorate'],
+  'phd': ['doctorate'],
 };
 
 /**
@@ -52,6 +58,10 @@ function buildStudentProfile(student, row, meta) {
     courseName: meta.courseName || '',
     collegeName: meta.collegeName || '',
     yearLevel: student.year_level,
+    // Free text, carried through only for the optional interest-ranking
+    // signal (computeInterestScore) — never used in eligibility rules.
+    bio: student.bio || '',
+    profileSummary: row.profile_summary || '',
     gender: student.gender,
     is_working_student: !!row.is_working_student,
     is_pwd: !!row.is_pwd,
@@ -162,7 +172,33 @@ async function calculateRuleMatch(studentProfile, scholarship) {
   };
 }
 
+/**
+ * OPTIONAL SOFT SIGNAL — not eligibility.
+ * Fuzzy-scores how well a scholarship's free-text description relates to a
+ * student's own free-text (bio / profile_summary). Used only to order
+ * already-eligible scholarships, never to include/exclude one. Not cached
+ * in match_scores — that table is for deterministic eligibility facts only.
+ * Returns a 0–1 relevance score (higher = more relevant), or null if either
+ * side has no text to compare.
+ */
+function computeInterestScore(studentText, description) {
+  if (!description || !studentText) return null;
+
+  const fuse = new Fuse([{ text: description }], {
+    keys: ['text'],
+    includeScore: true,
+    threshold: 0.6 // looser than eligibility matching — this is just ranking
+  });
+
+  const result = fuse.search(studentText);
+  if (result.length === 0) return 0;
+
+  // Fuse score: 0 = perfect match, 1 = no match. Invert so higher = better.
+  return 1 - result[0].score;
+}
+
 module.exports = {
   calculateRuleMatch,
-  buildStudentProfile
+  buildStudentProfile,
+  computeInterestScore
 };

@@ -14,14 +14,22 @@ const CreateScholarship = () => {
   const [criteria, setCriteria] = useState([]);
   const [attachments, setAttachments] = useState([]); 
   
-  // --- NEW: Toggle State for GWA ---
+  // Toggles for optional fields
   const [hasGwa, setHasGwa] = useState(false);
+  const [hasAmount, setHasAmount] = useState(false); 
 
   const [validationModal, setValidationModal] = useState({
     open: false,
     title: '',
     message: ''
   });
+
+
+  const getTomorrow = () => {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return tomorrow;
+};
 
   const [reqs, setReqs] = useState([
     { label: 'Curriculum Vitae', type: 'file' },
@@ -45,12 +53,12 @@ const CreateScholarship = () => {
     fund_type: '' 
   });
 
-  const inputStyle = "w-full pl-10 pr-3 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-[#093fb4] focus:ring-2 focus:ring-[#093fb4]/10 outline-none text-sm transition-all font-medium text-slate-800";
-  const labelStyle = "block text-[11px] font-black text-slate-700 uppercase tracking-wider mb-1.5";
+  // Updated styles for better readability (larger fonts, darker text)
+  const inputStyle = "w-full pl-10 pr-4 py-3.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-[#093fb4] focus:ring-4 focus:ring-[#093fb4]/10 outline-none text-sm md:text-base transition-all font-medium text-slate-900 placeholder:text-slate-400";
+  const labelStyle = "block text-xs md:text-sm font-bold text-slate-800 uppercase tracking-wide mb-2";
 
   const sanitize = (value) => value.replace(/[<>&"']/g, '');
 
-  // Prevent entering negative signs, e/E (scientific notation), and plus signs
   const preventInvalidNumberKeys = (e) => {
     if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
       e.preventDefault();
@@ -106,9 +114,8 @@ const CreateScholarship = () => {
     data.append('description', formData.description);
     data.append('deadline', formattedDeadline);
     data.append('slots', formData.slots || '');
-    // Send GWA only if toggle is turned ON
     data.append('gwa', hasGwa ? (formData.gwa || '') : '');
-    data.append('amount_range', formData.amount_range || '');
+    data.append('amount_range', hasAmount ? (formData.amount_range || '') : '');
     data.append('fund_type', formData.fund_type);
     data.append('requirements', JSON.stringify(finalRequirements));
     data.append('criteria', JSON.stringify(criteria));
@@ -131,85 +138,95 @@ const CreateScholarship = () => {
   };
 
   return (
-    <div className="p-8 bg-[#f8fafc] min-h-screen font-['Inter'] relative text-slate-800">
+    <div className="p-4 md:p-8 bg-[#f8fafc] min-h-screen font-['Inter'] relative text-slate-900">
+      
       {/* Warning Modal */}
       {validationModal.open && (
         <div 
-          className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4"
+          className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4"
           onClick={() => setValidationModal({ open: false, title: '', message: '' })}
         >
-          <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-slate-100 flex flex-col items-center text-center animate-in zoom-in-95 duration-150" onClick={(e) => e.stopPropagation()}>
-            <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-500 mb-4 border border-amber-100">
-              <AlertTriangle size={22} strokeWidth={2.5} />
+          <div className="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl border border-slate-200 flex flex-col items-center text-center animate-in zoom-in-95 duration-150" onClick={(e) => e.stopPropagation()}>
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-500 mb-5 border border-amber-100">
+              <AlertTriangle size={28} strokeWidth={2.5} />
             </div>
-            <h3 className="text-sm font-black text-slate-950 uppercase tracking-wide mb-1.5">{validationModal.title}</h3>
-            <p className="text-slate-500 text-xs font-medium leading-relaxed mb-6 px-2">{validationModal.message}</p>
-            <button onClick={() => setValidationModal({ open: false, title: '', message: '' })} className="w-full py-3.5 bg-[#093fb4] text-white font-bold rounded-xl uppercase text-[10px] tracking-wider hover:bg-[#07369a] transition-all">
+            <h3 className="text-base md:text-lg font-black text-slate-900 uppercase tracking-wide mb-2">{validationModal.title}</h3>
+            <p className="text-slate-600 text-sm md:text-base font-medium leading-relaxed mb-8 px-2">{validationModal.message}</p>
+            <button onClick={() => setValidationModal({ open: false, title: '', message: '' })} className="w-full py-4 bg-[#093fb4] text-white font-bold rounded-xl uppercase text-xs md:text-sm tracking-wider hover:bg-[#07369a] transition-all shadow-md">
               Understand
             </button>
           </div>
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header and Tips Panel Grid */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
+      <div className="max-w-7xl mx-auto space-y-8">
+        
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-4">
           <div>
-            <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 mb-3 font-bold text-xs text-slate-500 uppercase tracking-wider hover:text-[#093fb4] transition-colors">
-              <ArrowLeft size={14} strokeWidth={2.5} /> Back
+            <button onClick={() => navigate(-1)} className="flex items-center gap-2 mb-4 font-bold text-sm text-slate-500 uppercase tracking-wider hover:text-[#093fb4] transition-colors">
+              <ArrowLeft size={16} strokeWidth={2.5} /> Back
             </button>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-[#093fb4] text-white rounded-2xl flex items-center justify-center shadow-lg shadow-[#093fb4]/20">
-                <GraduationCap size={24} />
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-[#093fb4] text-white rounded-2xl flex items-center justify-center shadow-lg shadow-[#093fb4]/20 shrink-0">
+                <GraduationCap size={28} />
               </div>
               <div>
-                <h1 className="text-xl font-black tracking-tight text-slate-900">Create Scholarship Program</h1>
-                <p className="text-xs text-slate-400 font-medium mt-0.5">Fill in the program details, requirements and criteria to publish your scholarship.</p>
+                <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">Create Scholarship Program</h1>
+                <p className="text-sm text-slate-500 font-medium mt-1">Fill in the program details, requirements, and criteria to publish your scholarship.</p>
               </div>
             </div>
           </div>
           
-          <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-4 max-w-sm flex items-start gap-3">
-            <div className="p-1.5 bg-blue-100/60 rounded-xl text-[#093fb4] shrink-0">
-              <Info size={16} />
+          <div className="bg-blue-50/80 border border-blue-200 rounded-2xl p-5 max-w-sm flex items-start gap-4">
+            <div className="p-2 bg-blue-100 rounded-xl text-[#093fb4] shrink-0">
+              <Info size={20} />
             </div>
             <div>
-              <h4 className="text-xs font-bold text-slate-800">Note:</h4>
-              <p className="text-[14px] text-slate-900 font-medium leading-normal mt-0.5">Provide accurate and complete scholarship program information .</p>
+              <h4 className="text-sm font-bold text-slate-900 mb-1">Important Note:</h4>
+              <p className="text-sm text-slate-700 font-medium leading-relaxed">Provide accurate and complete information to help students determine their eligibility.</p>
             </div>
           </div>
         </div>
 
-        {/* 3 Column Form Workspace Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        {/* Main 3 Column Layout */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
           
-          {/* Column 1: Program Information */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col h-full">
-            <div className="flex items-center gap-2.5 pb-4 mb-5 border-b border-slate-100">
-              <div className="p-2 bg-blue-50 rounded-xl text-[#093fb4]"><ClipboardList size={18} /></div>
+          {/* Column 1: Core Details */}
+          <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm flex flex-col h-full">
+            <div className="flex items-center gap-3 pb-5 mb-6 border-b border-slate-100">
+              <div className="p-2.5 bg-blue-50 rounded-xl text-[#093fb4]"><ClipboardList size={20} /></div>
               <div>
-                <h2 className="text-sm font-black text-slate-900 uppercase tracking-wide">Program Information</h2>
-                <p className="text-[11px] text-slate-400 font-medium">Basic details about your scholarship program</p>
+                <h2 className="text-base font-black text-slate-900 uppercase tracking-wide">Program Information</h2>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">Basic details about your scholarship</p>
               </div>
             </div>
             
-            <div className="space-y-4 flex-grow">
+            <div className="space-y-6 flex-grow">
+              {/* Title Field */}
               <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className="text-[11px] font-black text-slate-700 uppercase tracking-wider">Program Title <span className="text-red-500">*</span></label>
-                  <span className="text-[10px] font-bold text-slate-400">{formData.title.length}/100</span>
+                <div className="flex justify-between items-center mb-2">
+                  <label className={labelStyle}>Program Title <span className="text-red-500">*</span></label>
+                  <span className="text-xs font-bold text-slate-400">{formData.title.length}/100</span>
                 </div>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400"><ClipboardList size={16} /></div>
-                  <input type="text" maxLength={100} placeholder="Enter program title" className={inputStyle} onChange={(e) => setFormData({...formData, title: sanitize(e.target.value)})} />
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400"><ClipboardList size={18} /></div>
+                  <input 
+                    type="text" 
+                    maxLength={100} 
+                    placeholder="Enter official program title" 
+                    className={inputStyle} 
+                    onChange={(e) => setFormData({...formData, title: sanitize(e.target.value)})} 
+                  />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* Slots & Deadline */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-4">
                 <div>
-                  <label className={labelStyle}>Slots</label>
+                  <label className={labelStyle}>Available Slots</label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400"><span className="text-xs font-bold font-sans">#</span></div>
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400"><span className="text-sm font-bold font-sans">#</span></div>
                     <input 
                       type="number" 
                       min="0" 
@@ -227,15 +244,16 @@ const CreateScholarship = () => {
                   </div>
                 </div>
                 <div>
-                  <label className={labelStyle}>Deadline <span className="text-red-500">*</span></label>
+                  <label className={labelStyle}>Application Deadline <span className="text-red-500">*</span></label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 z-10"><Calendar size={15} /></div>
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 z-10"><Calendar size={18} /></div>
                     <DatePicker
                       selected={formData.deadline ? new Date(formData.deadline) : null}
                       onChange={(date) => setFormData({...formData, deadline: date})}
                       dateFormat="yyyy-MM-dd"
-                      placeholderText="Select deadline"
-                      minDate={new Date()}
+                      placeholderText="Select closing date"
+                      minDate={getTomorrow()}
+                      shouldCloseOnSelect={true}
                       className={inputStyle}
                       wrapperClassName="w-full"
                     />
@@ -243,42 +261,67 @@ const CreateScholarship = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* Toggles: Amount & GWA */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-4">
+                
+                {/* Amount Toggle Component */}
                 <div>
-                  <label className={labelStyle}>Amount Range</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400"><DollarSign size={15} /></div>
-                    <input type="text" placeholder="e.g., 5,000 - 10,000" className={inputStyle} value={formData.amount_range} onChange={(e) => setFormData({...formData, amount_range: e.target.value.replace(/[^0-9\s-]/g, '')})} />
+                  <div className="flex items-center justify-between mb-2">
+                    <label className={labelStyle}>Amount Range</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextState = !hasAmount;
+                        setHasAmount(nextState);
+                        if (!nextState) setFormData(prev => ({ ...prev, amount_range: '' }));
+                      }}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#093fb4] focus:ring-offset-1 ${hasAmount ? 'bg-[#093fb4]' : 'bg-slate-300'}`}
+                    >
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${hasAmount ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
                   </div>
+
+                  {hasAmount ? (
+                    <div className="relative animate-in fade-in duration-200">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                        <DollarSign size={18} />
+                      </div>
+                      <input 
+                        type="text" 
+                        placeholder="e.g., 5,000 - 10,000" 
+                        className={inputStyle} 
+                        value={formData.amount_range} 
+                        onChange={(e) => setFormData({...formData, amount_range: e.target.value.replace(/[^0-9\s-]/g, '')})} 
+                      />
+                    </div>
+                  ) : (
+                    <div className="py-3.5 px-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center">
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Undisclosed</span>
+                    </div>
+                  )}
                 </div>
 
-                {/* --- TOGGLEABLE GWA SECTION --- */}
+                {/* GWA Toggle Component */}
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className={labelStyle}>Set GWA</label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className={labelStyle}>GWA Requirement</label>
                     <button
                       type="button"
                       onClick={() => {
                         const nextState = !hasGwa;
                         setHasGwa(nextState);
-                        if (!nextState) {
-                          setFormData(prev => ({ ...prev, gwa: '' }));
-                        }
+                        if (!nextState) setFormData(prev => ({ ...prev, gwa: '' }));
                       }}
-                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                        hasGwa ? 'bg-[#093fb4]' : 'bg-slate-300'
-                      }`}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#093fb4] focus:ring-offset-1 ${hasGwa ? 'bg-[#093fb4]' : 'bg-slate-300'}`}
                     >
-                      <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                        hasGwa ? 'translate-x-4' : 'translate-x-0'
-                      }`} />
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${hasGwa ? 'translate-x-5' : 'translate-x-0'}`} />
                     </button>
                   </div>
 
                   {hasGwa ? (
-                    <div className="relative animate-in fade-in duration-150">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                        <GraduationCap size={16} />
+                    <div className="relative animate-in fade-in duration-200">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                        <GraduationCap size={18} />
                       </div>
                       <input 
                         type="number" 
@@ -297,89 +340,116 @@ const CreateScholarship = () => {
                       />
                     </div>
                   ) : (
-                    <div className="py-3 px-3 bg-slate-50 border border-slate-200 rounded-xl text-center">
-                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Disabled</span>
+                    <div className="py-3.5 px-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center">
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">No Requirement</span>
                     </div>
                   )}
                 </div>
               </div>
 
+              {/* Coverage Field */}
               <div>
-                <label className={labelStyle}>Coverage <span className="text-red-500">*</span></label>
+                <label className={labelStyle}>Funding Coverage <span className="text-red-500">*</span></label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400"><Shield size={15} /></div>
-                  <select className="w-full pl-10 pr-8 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-[#093fb4] outline-none text-sm font-medium appearance-none text-slate-700" onChange={(e) => setFormData({...formData, fund_type: e.target.value})}>
-                    <option value="">Select coverage type</option>
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400"><Shield size={18} /></div>
+                  <select 
+                    className={`${inputStyle} appearance-none pr-10`}
+                    onChange={(e) => setFormData({...formData, fund_type: e.target.value})}
+                  >
+                    <option value="">Select funding type</option>
                     {["Discount", "Full-Tuition", "Financial-Assistance", "Merit-Based", "Semi-Annual", "Stipend", "Voucher"].map(t => (
                       <option key={t} value={t}>{t}</option>
                     ))}
                   </select>
-                  <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                  <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-500">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
                   </div>
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-slate-100">
-                <label className="block text-[11px] font-black text-slate-700 uppercase tracking-wider mb-2">Forms to be Downloaded <span className="text-slate-400 font-medium lowercase">(Agreement / Forms)</span></label>
-                <div className="space-y-2">
+              {/* Downloads / Attachments Section */}
+              <div className="pt-6 border-t border-slate-100">
+                <label className={labelStyle}>
+                  Attached Forms <span className="text-slate-500 font-medium normal-case tracking-normal ml-1">(Optional guidelines, templates)</span>
+                </label>
+                
+                <div className="space-y-3 mt-3">
                   {attachments.map((file, idx) => (
-                    <div key={idx} className="flex items-center justify-between bg-slate-50 border border-slate-100 p-2 rounded-xl">
-                      <span className="text-xs font-bold text-slate-700 truncate max-w-[200px] pl-1">{file.name}</span>
-                      <button onClick={() => removeAttachment(idx)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors">
-                        <X size={14} strokeWidth={2.5} />
+                    <div key={idx} className="flex items-center justify-between bg-white border border-slate-200 p-3 rounded-xl shadow-sm">
+                      <span className="text-sm font-semibold text-slate-700 truncate max-w-[80%] pl-1">{file.name}</span>
+                      <button onClick={() => removeAttachment(idx)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors" title="Remove file">
+                        <X size={16} strokeWidth={2.5} />
                       </button>
                     </div>
                   ))}
-                  <label className="flex flex-col items-center justify-center w-full py-5 border-2 border-dashed border-slate-200 hover:border-[#093fb4]/40 rounded-2xl cursor-pointer hover:bg-blue-50/20 transition-all text-center group">
-                    <FileUp size={22} className="text-slate-400 group-hover:text-[#093fb4] transition-colors mb-1.5" />
-                    <p className="text-[11px] font-bold text-slate-700 group-hover:text-[#093fb4]">Drag & drop files here or <span className="text-[#093fb4] underline">click to browse</span></p>
-                    <p className="text-[10px] text-slate-400 font-medium mt-0.5">PDF, DOCX, JPG, PNG (Max. 10MB)</p>
+                  
+                  <label className="flex flex-col items-center justify-center w-full py-8 border-2 border-dashed border-slate-300 hover:border-[#093fb4]/60 rounded-2xl cursor-pointer hover:bg-blue-50/30 transition-all text-center group">
+                    <FileUp size={28} className="text-slate-400 group-hover:text-[#093fb4] transition-colors mb-3" />
+                    <p className="text-sm font-bold text-slate-700 group-hover:text-[#093fb4]">Drag & drop files here or <span className="text-[#093fb4] underline">browse</span></p>
+                    <p className="text-xs text-slate-500 font-medium mt-1.5">Supported: PDF, DOCX, JPG, PNG (Max. 10MB)</p>
                     <input type="file" className="hidden" multiple onChange={handleFileChange} />
                   </label>
                 </div>
               </div>
+
             </div>
           </div>
 
-          {/* Column 2: Document Requirements Panel Component */}
-          <ScholarshipRequirements reqs={reqs} setReqs={setReqs} checked={checked} setChecked={setChecked} newReq={newReq} setNewReq={setNewReq} />
+          {/* Column 2: Document Requirements Panel */}
+          <ScholarshipRequirements 
+            reqs={reqs} 
+            setReqs={setReqs} 
+            checked={checked} 
+            setChecked={setChecked} 
+            newReq={newReq} 
+            setNewReq={setNewReq} 
+          />
           
-          {/* Column 3: Criteria Rules Panel Component */}
-          <OrgCriteria criteria={criteria} setCriteria={setCriteria} />
-        </div>
-
-        {/* Full Width Block: Description Area */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs">
-          <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-blue-50 rounded-xl text-[#093fb4]"><BookOpen size={18} /></div>
-              <div>
-                <h2 className="text-sm font-black text-slate-900 uppercase tracking-wide">Scholarship Description</h2>
-                <p className="text-[11px] text-slate-400 font-medium">Provide a detailed description of your scholarship program</p>
-              </div>
-            </div>
-            <span className="text-[10px] font-bold text-slate-400">{(formData.description || '').length}/2000</span>
-          </div>
-          <textarea 
-            maxLength={2000}
-            className="w-full h-44 p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:bg-white focus:border-[#093fb4] focus:ring-2 focus:ring-[#093fb4]/10 transition-all font-medium text-slate-800 text-sm leading-relaxed placeholder:text-slate-400"
-            onChange={(e) => setFormData({...formData, description: sanitize(e.target.value)})}
-            placeholder="Enter at least 50 characters outlining qualifications, updates, and milestones..."
+          {/* Column 3: Criteria Rules Panel */}
+          <OrgCriteria 
+            criteria={criteria} 
+            setCriteria={setCriteria} 
           />
         </div>
 
-        {/* Bottom Workspace Fixed Form Footer Actions Bar */}
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <button type="button" onClick={() => navigate(-1)} className="px-6 py-3.5 bg-slate-100 border border-slate-200 hover:bg-slate-200/70 text-slate-700 rounded-xl font-bold text-xs uppercase tracking-wider transition-all">
+        {/* Full Width Block: Description Area */}
+        <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm mt-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between pb-5 mb-5 border-b border-slate-100 gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-blue-50 rounded-xl text-[#093fb4]"><BookOpen size={20} /></div>
+              <div>
+                <h2 className="text-base font-black text-slate-900 uppercase tracking-wide">Program Description</h2>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">Provide a detailed overview of the scholarship</p>
+              </div>
+            </div>
+            <span className="text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+              {(formData.description || '').length} / 2000 characters
+            </span>
+          </div>
+          
+          <textarea 
+            maxLength={2000}
+            className="w-full h-56 p-5 bg-slate-50 border border-slate-300 rounded-2xl outline-none focus:bg-white focus:border-[#093fb4] focus:ring-4 focus:ring-[#093fb4]/10 transition-all font-medium text-slate-800 text-sm md:text-base leading-relaxed placeholder:text-slate-400 resize-y"
+            onChange={(e) => setFormData({...formData, description: sanitize(e.target.value)})}
+            placeholder="Outline the scholarship qualifications, expected milestones, maintaining requirements, and any other relevant information for the applicants..."
+          />
+        </div>
+
+        {/* Action Bar Footer */}
+        <div className="flex flex-col sm:flex-row items-center justify-end gap-4 pt-4 pb-12">
+          <button 
+            type="button" 
+            onClick={() => navigate(-1)} 
+            className="w-full sm:w-auto px-8 py-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl font-bold text-sm uppercase tracking-wider transition-all shadow-sm"
+          >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="px-8 py-3.5 bg-[#093fb4] hover:bg-[#07369a] text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-md shadow-[#093fb4]/10 flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full sm:w-auto px-10 py-4 bg-[#093fb4] hover:bg-[#07369a] text-white rounded-xl font-black text-sm uppercase tracking-wider transition-all shadow-xl shadow-[#093fb4]/20 flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            {loading ? <Loader2 className="animate-spin w-4 h-4" /> : <><Send size={14} className="-mt-0.5" /> Create Program</>}
+            {loading ? <Loader2 className="animate-spin w-5 h-5" /> : <><Send size={18} className="-mt-0.5" /> Publish Program</>}
           </button>
         </div>
       </div>

@@ -1,6 +1,6 @@
 // controllers/recommendationController.js
 const pool = require('../config/db');
-const { calculateRuleMatch, buildStudentProfile } = require('../utils/ruleMatcher');
+const { calculateRuleMatch, buildStudentProfile, computeInterestScore } = require('../utils/ruleMatcher');
 const redisClient = require('../config/queueConnection'); 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -98,6 +98,26 @@ async function getStudentProfile(studentId) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// MATCH SCORE (0-100) — drives frontend bucketing (Best For You / Recommended)
+// ─────────────────────────────────────────────────────────────────────────────
+function computeMatchScore({ is_eligible, criteria_results, interest_score }) {
+  if (!is_eligible) return 0;
+
+  const total = (criteria_results || []).length;
+  const matched = (criteria_results || []).filter(c => c.passed).length;
+
+  // No criteria at all (open to everyone) counts as a full hit rate.
+  const hitRate = total === 0 ? 1 : matched / total;
+
+  const base = Math.round(hitRate * 100);
+  const interestBoost = Math.round((interest_score || 0) * 10);
+
+  // Eligible items always land at least in the "Recommended" band (>=30),
+  // even when only the single required criterion was hit.
+  return Math.min(100, Math.max(30, base + interestBoost));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // EVALUATION & STACK SORTING
 // ─────────────────────────────────────────────────────────────────────────────
 async function scoreScholarshipsForStudent(studentId, scholarships) {
@@ -112,6 +132,15 @@ async function scoreScholarshipsForStudent(studentId, scholarships) {
     const matched_criteria = (criteria_results || []).filter(c => c.passed).map(c => c.criterion);
     const unmatched_criteria = (criteria_results || []).filter(c => !c.passed).map(c => c.criterion);
 
+    // Soft ranking signal only — computed live, never cached, never affects
+    // is_eligible. Falls back to null (treated as 0) when there's no bio/
+    // profile_summary or no description to compare against.
+    const studentText = [profileData.profile.bio, profileData.profile.profileSummary]
+      .filter(Boolean)
+      .join(' ');
+    const interest_score = computeInterestScore(studentText, scholarship.description);
+    const match_score = computeMatchScore({ is_eligible, criteria_results, interest_score });
+
     return {
       ...scholarship,
       is_eligible,
@@ -120,11 +149,23 @@ async function scoreScholarshipsForStudent(studentId, scholarships) {
       unmatched_criteria,
       summary,
       is_open_to_all: (criteria_results || []).length === 0,
+      interest_score: interest_score ?? 0,
+      match_score,
     };
   }));
 
-  // Sort stack: Eligible scholarships on top (true before false)
-  evaluated.sort((a, b) => (b.is_eligible === a.is_eligible ? 0 : b.is_eligible ? 1 : -1));
+  // Sort by match_score descending — this alone now handles both "eligible
+  // before ineligible" (ineligible always scores 0) and "more criteria hit
+  // ranks higher" in one pass.
+  evaluated.sort((a, b) => b.match_score - a.match_score);
+
+  // Flag only the single top-ranked eligible scholarship for the UI banner
+  // (ScholarshipList.jsx shows one "Best Scholarship For You" banner — ties
+  // are broken by array order after the sort above).
+  evaluated.forEach((s, i) => {
+    s.is_best_match = i === 0 && s.is_eligible && s.match_score > 0;
+  });
+
   return evaluated;
 }
 
