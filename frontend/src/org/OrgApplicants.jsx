@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api, { backendURL } from '../api';
-import { ExternalLink, ArrowLeft, Users, Clock, CheckCircle, RefreshCw, Search, XCircle, AlertTriangle } from 'lucide-react';
+import { 
+  ExternalLink, ArrowLeft, Users, Clock, CheckCircle, 
+  RefreshCw, Search, XCircle, AlertTriangle, Banknote, CheckCircle2 
+} from 'lucide-react';
 import { ActionConfirmModal, ComplianceModal } from './ApplicationModals';
 
 const TABS = [
@@ -41,6 +44,17 @@ export default function OrgApplicants() {
       fetchApplicants();
     } catch (err) {
       console.error("Failed to renew applicant", err);
+    }
+  };
+
+  // Toggle funds disbursement status for a student
+  const handleToggleDisbursement = async (app) => {
+    const nextStatus = !app.is_disbursed;
+    try {
+      await api.patch(`/applications/${app.id}/disbursement`, { is_disbursed: nextStatus });
+      setApplications(prev => prev.map(item => item.id === app.id ? { ...item, is_disbursed: nextStatus } : item));
+    } catch (err) {
+      console.error("Failed to update disbursement status", err);
     }
   };
 
@@ -155,13 +169,14 @@ export default function OrgApplicants() {
                   <th className="py-4 px-6">Gmail / Email</th>
                   <th className="py-4 px-6">Contact Number</th>
                   <th className="py-4 px-6 text-center">Status</th>
+                  <th className="py-4 px-6 text-center">Disbursement</th>
                   <th className="py-4 px-6 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {filteredApps.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="py-12 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">
+                    <td colSpan="6" className="py-12 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">
                       No matching records found in this category
                     </td>
                   </tr>
@@ -172,7 +187,6 @@ export default function OrgApplicants() {
                       ? (app.sprofile_pic.startsWith('http') ? app.sprofile_pic : `${backendURL}/uploads/${app.sprofile_pic}`)
                       : null;
 
-                    // Consolidated dynamic layout lookup path for standard or nested contact numbers
                     const verifiedContactNumber = app.scontact_number || app.contact_number || app.student_contact || '—';
 
                     return (
@@ -224,6 +238,35 @@ export default function OrgApplicants() {
                         {/* Current Application Tracking Status Badge */}
                         <td className="py-4 px-6 text-center">
                           <StatusBadge status={app.status} />
+                        </td>
+
+                        {/* Money Disbursement Toggle Field */}
+                        <td className="py-4 px-6 text-center">
+                          {['approved', 'active'].includes(app.status) ? (
+                            <button
+                              onClick={() => handleToggleDisbursement(app)}
+                              title="Click to toggle disbursement status"
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${
+                                app.is_disbursed
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
+                                  : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100'
+                              }`}
+                            >
+                              {app.is_disbursed ? (
+                                <>
+                                  <CheckCircle2 size={12} className="text-emerald-600" />
+                                  Funds Given
+                                </>
+                              ) : (
+                                <>
+                                  <Banknote size={12} className="text-amber-600" />
+                                  Not Given
+                                </>
+                              )}
+                            </button>
+                          ) : (
+                            <span className="text-[10px] font-extrabold text-slate-300 uppercase tracking-widest">—</span>
+                          )}
                         </td>
 
                         {/* Actions options layout */}

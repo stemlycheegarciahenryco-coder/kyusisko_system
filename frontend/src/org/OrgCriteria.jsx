@@ -3,12 +3,11 @@ import { Plus, Trash2, Shield, GripVertical, Check, Sparkles, BookOpen } from 'l
 import api from '../api';
 
 // Standard eligibility criteria tags aligned with student database profile flags
-// Standard eligibility criteria tags aligned with student database profile flags
 const defaultOptions = [
-  "Government Beneficiary (eg.4PS,AKAP,TUPAD etc...)",
-  "PWD(eg..Blind,Hearing etc...)",
+  "Government Beneficiary (eg.4PS,AKAP,TUPAD etc.)",
+  "PWD(eg.Blind,Hearing etc.)",
   "Working Student",
-  "Indigenous/ Ethnic Student(eg..aeta,badjao like that)",
+  "Indigenous/ Ethnic Student(eg. Aeta, Igorot, Lumad, Mangyan, Moro, etc...)",
   "Athlete",
   "Freshman",
   "No Failing Grades"
@@ -89,7 +88,8 @@ const OrgCriteria = ({ criteria = [], setCriteria }) => {
         </div>
       </div>
 
-      <div className="space-y-2.5 flex-1 overflow-y-auto max-h-[380px] pr-1">
+      {/* UPDATED: Removed max-h-[380px] to allow flex-1 to push the footer perfectly to the bottom */}
+      <div className="space-y-2.5 flex-1 overflow-y-auto min-h-[200px] pr-1">
         {/* Pre-defined Standard Criteria Checklist */}
         {defaultOptions.map((item) => {
           const isSelected = criteria.includes(item);

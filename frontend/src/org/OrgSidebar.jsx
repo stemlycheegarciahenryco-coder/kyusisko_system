@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
-  LayoutDashboard, Form, LucideScroll, Pencil, 
-  LogOut, User, AlertTriangle, Menu,Logs ,Flag, Settings 
+  LayoutDashboard, Form, LucideScroll, 
+  LogOut, User, AlertTriangle, Menu, Logs, Flag, Settings 
 } from 'lucide-react';
 import api from '../api';
 
@@ -10,7 +10,6 @@ export default function OrgSidebar() {
   const [isExpanded, setIsExpanded] = useState(true);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [orgData, setOrgData] = useState(null);
-  const fileInputRef = useRef(null);
 
   useEffect(() => {
     const fetchOrgProfile = async () => {
@@ -37,7 +36,6 @@ export default function OrgSidebar() {
     { name: 'Reports', icon: <Flag size={20} />, path: '/OrgReports' },
     { name: 'Settings', icon: <Settings size={20} />, path: '/OrgSettings' },
     { name: 'Logs', icon: <Logs size={20} />, path: '/OrgLogs' },
-    
   ];
 
   return ( 
@@ -57,10 +55,9 @@ export default function OrgSidebar() {
       {/* Profile Section */}
       <div className="px-4 mb-6 flex flex-col items-center justify-center text-center transition-all">
         <div 
-          className={`relative mx-auto cursor-pointer group transition-all duration-300 ${
+          className={`relative mx-auto transition-all duration-300 ${
             isExpanded ? 'w-24 h-24' : 'w-12 h-12'
           }`}
-          onClick={() => fileInputRef.current.click()}
         >
           {/* Circular Image Container */}
           <div className="w-full h-full rounded-full border-4 border-[#093fb4]/15 overflow-hidden bg-white shadow-md flex items-center justify-center">
@@ -70,39 +67,9 @@ export default function OrgSidebar() {
               <User className="w-full h-full p-3 text-[#093fb4]" />
             )}
           </div>
-
-          <input
-            type="file"
-            ref={fileInputRef}
-            className="hidden"
-            accept="image/*"
-            onChange={async (e) => {
-              const file = e.target.files[0];
-              if (!file) return;
-
-              try {
-                const formData = new FormData();
-                formData.append('org_pic', file);
-
-                await api.patch(`/organizations/profile-picture/me`, formData, {
-                  headers: { 'Content-Type': 'multipart/form-data' }
-                });
-
-                const res = await api.get(`/organizations/profile/me`);
-                setOrgData(res.data.data);
-              } catch (err) {
-                console.error("Upload failed:", err);
-              }
-            }}
-          />
-
-          {/* Edit Badge Icon */}
-          <div className="absolute bottom-0 right-0 bg-[#093fb4] text-white p-1.5 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-all transform group-hover:scale-110">
-            <Pencil size={12} />
-          </div>
         </div>
 
-        {/* Increased Text Size & Boldness */}
+        {/* Org Name */}
         {isExpanded && (
           <h3 className="text-slate-900 font-extrabold uppercase text-sm md:text-base tracking-wide truncate mt-3 w-full px-2">
             {orgData?.org_name || "Provider"}

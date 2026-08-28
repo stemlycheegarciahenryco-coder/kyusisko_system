@@ -3,6 +3,26 @@ import { Shield, CheckCircle, Bell, User, ChevronLeft, ChevronRight } from 'luci
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
+// ─── Helper Function: Time Ago ───────────────────────────────────────────────
+function timeAgo(dateString) {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  const now = new Date();
+  const seconds = Math.floor((now - date) / 1000);
+  
+  let interval = seconds / 31536000;
+  if (interval > 1) return Math.floor(interval) + ' years ago';
+  interval = seconds / 2592000;
+  if (interval > 1) return Math.floor(interval) + ' months ago';
+  interval = seconds / 86400;
+  if (interval > 1) return Math.floor(interval) + ' days ago';
+  interval = seconds / 3600;
+  if (interval > 1) return Math.floor(interval) + ' hours ago';
+  interval = seconds / 60;
+  if (interval > 1) return Math.floor(interval) + ' minutes ago';
+  return Math.floor(seconds) + ' seconds ago';
+}
+
 // ─── Top Right Mini Calendar Widget ──────────────────────────────────────────
 function MiniCalendar({ programs = [] }) {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -22,33 +42,33 @@ function MiniCalendar({ programs = [] }) {
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
 
   return (
-    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex flex-col">
+    <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col">
       {/* Calendar Header */}
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-black text-slate-900">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-base font-black text-slate-900">
           {currentDate.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
         </h3>
         <div className="flex items-center gap-1">
-          <button onClick={prevMonth} className="p-1 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors">
-            <ChevronLeft size={16} />
+          <button onClick={prevMonth} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors">
+            <ChevronLeft size={18} />
           </button>
-          <button onClick={nextMonth} className="p-1 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors">
-            <ChevronRight size={16} />
+          <button onClick={nextMonth} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors">
+            <ChevronRight size={18} />
           </button>
         </div>
       </div>
 
       {/* Weekday Labels */}
-      <div className="grid grid-cols-7 text-center text-[10px] font-black text-slate-400 uppercase mb-2">
+      <div className="grid grid-cols-7 text-center text-xs font-black text-slate-400 uppercase mb-3">
         {['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'].map(day => (
           <div key={day}>{day}</div>
         ))}
       </div>
 
       {/* Days Grid */}
-      <div className="grid grid-cols-7 gap-1 text-center font-bold text-xs">
+      <div className="grid grid-cols-7 gap-1 text-center font-bold text-sm">
         {Array.from({ length: firstDay }).map((_, i) => (
-          <div key={`empty-${i}`} className="p-1.5" />
+          <div key={`empty-${i}`} className="p-2" />
         ))}
         {Array.from({ length: daysInMonth }).map((_, i) => {
           const day = i + 1;
@@ -58,7 +78,7 @@ function MiniCalendar({ programs = [] }) {
           return (
             <div
               key={day}
-              className={`p-1.5 rounded-full flex flex-col items-center justify-center relative cursor-pointer text-xs ${
+              className={`p-2 rounded-full flex flex-col items-center justify-center relative cursor-pointer text-xs md:text-sm ${
                 isToday 
                   ? 'bg-blue-600 text-white font-black shadow-xs' 
                   : 'text-slate-700 hover:bg-slate-100'
@@ -66,7 +86,7 @@ function MiniCalendar({ programs = [] }) {
             >
               {day}
               {isDeadline && (
-                <span className={`w-1 h-1 rounded-full mt-0.5 ${isToday ? 'bg-amber-300' : 'bg-blue-600'}`} />
+                <span className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isToday ? 'bg-amber-300' : 'bg-blue-600'}`} />
               )}
             </div>
           );
@@ -77,23 +97,34 @@ function MiniCalendar({ programs = [] }) {
 }
 
 // ─── Sidebar Component ─────────────────────────────────────────────────────────
-export default function OrgRightBar({ recentApplications = [], programs = [] }) {
+export default function OrgRightBar({ programs = [] }) {
   const navigate = useNavigate();
+  
   const [conflicts, setConflicts] = useState([]);
   const [loadingConflicts, setLoadingConflicts] = useState(true);
 
+  const [activityLogs, setActivityLogs] = useState([]);
+  const [loadingLogs, setLoadingLogs] = useState(true);
+
   useEffect(() => {
-    const fetchConflicts = async () => {
+    const fetchRightBarData = async () => {
       try {
-        const response = await api.get('/organizations/conflicts');
-        setConflicts(response.data?.data || []);
+        // Fetch Conflicts
+        const conflictsRes = await api.get('/organizations/conflicts');
+        setConflicts(conflictsRes.data?.data || []);
+        
+        // Fetch Dynamic Activity Logs
+        const logsRes = await api.get('/organizations/activity-logs');
+        setActivityLogs(logsRes.data?.data || []);
       } catch (err) {
-        console.error("Error fetching conflicts:", err);
+        console.error("Error fetching right bar data:", err);
       } finally {
         setLoadingConflicts(false);
+        setLoadingLogs(false);
       }
     };
-    fetchConflicts();
+    
+    fetchRightBarData();
   }, []);
 
   return (
@@ -103,87 +134,91 @@ export default function OrgRightBar({ recentApplications = [], programs = [] }) 
       <MiniCalendar programs={programs} />
 
       {/* 2. Monitored Applications Section */}
-      <section className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex flex-col items-center text-center">
-        <div className="w-full flex items-center gap-2 text-xs font-extrabold text-slate-900 mb-4">
-          <Shield size={16} className="text-purple-600" />
+      <section className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col items-center text-center">
+        <div className="w-full flex items-center gap-2.5 text-sm font-extrabold text-slate-900 mb-4">
+          <Shield size={18} className="text-purple-600 shrink-0" />
           <span>Student Monitored Applications</span>
         </div>
 
         {loadingConflicts ? (
           <div className="py-6 text-xs font-bold text-slate-400 animate-pulse">Checking status...</div>
         ) : conflicts.length > 0 ? (
-          <div className="w-full space-y-2 max-h-[180px] overflow-y-auto">
+          <div className="w-full space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
             {conflicts.map(c => (
               <div 
                 key={c.id} 
                 onClick={() => navigate(`/scholarship/${c.scholarship_id}/applicants`)}
-                className="p-2.5 bg-red-50/60 rounded-xl border border-red-100 text-left cursor-pointer hover:bg-red-50"
+                className="p-3 bg-red-50/70 rounded-xl border border-red-200/80 text-left cursor-pointer hover:bg-red-50 transition-colors"
               >
-                <p className="font-bold text-xs text-red-950">{c.sfirst_name} {c.slast_name}</p>
-                <p className="text-[10px] text-red-700 font-medium">Conflict found with another organization</p>
+                <p className="font-extrabold text-sm text-red-950">{c.sfirst_name} {c.slast_name}</p>
+                <p className="text-xs text-red-700 font-medium mt-0.5">
+                  Conflict: <span className="font-bold">{c.conflicting_org || 'Unknown Organization'}</span>
+                </p>
               </div>
             ))}
           </div>
         ) : (
           <div className="py-6 flex flex-col items-center justify-center">
-            <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center mb-3">
-              <CheckCircle size={24} className="text-emerald-500" />
+            <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mb-3 border border-emerald-100">
+              <CheckCircle size={26} className="text-emerald-500" />
             </div>
-            <h4 className="text-xs font-extrabold text-slate-800">No Scholarship Application Conflicts</h4>
-            <p className="text-[10px] font-medium text-slate-400 mt-0.5">All monitored applications are in good standing.</p>
+            <h4 className="text-sm font-extrabold text-slate-900">No Scholarship Conflicts</h4>
+            <p className="text-xs font-medium text-slate-500 mt-1">All monitored applications are in good standing.</p>
           </div>
         )}
       </section>
 
       {/* 3. Activity Log Section */}
-      <section className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex-1 flex flex-col">
-        <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-50">
-          <h3 className="text-xs font-extrabold text-slate-900">Activity Log</h3>
+      <section className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex-1 flex flex-col">
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+          <h3 className="text-sm font-extrabold text-slate-900">Activity Log</h3>
           <div className="flex items-center gap-2">
-            <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">6</span>
+            {activityLogs.length > 0 && (
+              <span className="bg-red-500 text-white text-xs font-black px-2 py-0.5 rounded-full">
+                {activityLogs.length > 99 ? '99+' : activityLogs.length}
+              </span>
+            )}
             <button className="text-xs font-bold text-blue-600 hover:underline">View All</button>
           </div>
         </div>
 
-        <div className="space-y-3.5 flex-1 max-h-[320px] overflow-y-auto pr-1">
-          {recentApplications.length === 0 ? (
-            <>
-              <ActivityItem name="AKO NATOY" program="Try Mo nga Ito" time="2 minutes ago" />
-              <ActivityItem name="Hello Henryco" program="PROGRAM TEST" time="15 minutes ago" />
-              <ActivityItem name="Hello Henryco" program="SWEEDY" time="1 hour ago" />
-              <ActivityItem name="Juan Dela Cruz" program="STI College Scholarship Program" time="2 hours ago" />
-              <ActivityItem name="Maria Santos" program="HSLAM" time="3 hours ago" />
-            </>
+        <div className="space-y-4 flex-1 max-h-[360px] overflow-y-auto pr-1">
+          {loadingLogs ? (
+            <div className="text-center text-xs font-bold text-slate-400 animate-pulse py-4">Loading logs...</div>
+          ) : activityLogs.length === 0 ? (
+             <div className="text-center text-xs font-medium text-slate-400 py-4">No recent activities</div>
           ) : (
-            recentApplications.map((app, idx) => (
+            // Slicing to 15 items so the bar doesn't get overwhelmingly long, view all can handle the rest
+            activityLogs.slice(0, 15).map((log) => (
               <ActivityItem 
-                key={app.id || idx}
-                name={app.name} 
-                program={app.program} 
-                time={app.date} 
+                key={log.id}
+                user={log.user} 
+                detail={log.detail} 
+                time={timeAgo(log.createdAt)} 
               />
             ))
           )}
         </div>
 
-        <p className="text-[10px] font-bold text-slate-400 text-center mt-4">Showing latest activities</p>
+        <p className="text-xs font-bold text-slate-400 text-center mt-4">Showing latest activities</p>
       </section>
 
     </div>
   );
 }
 
-function ActivityItem({ name, program, time }) {
+// ─── Dynamic Activity Item Component ───────────────────────────────────────────
+function ActivityItem({ user, detail, time }) {
   return (
-    <div className="flex items-start gap-2.5 text-xs">
-      <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg shrink-0 mt-0.5">
-        <User size={13} />
+    <div className="flex items-start gap-3 text-xs md:text-sm">
+      <div className="p-2 bg-blue-50 text-blue-600 rounded-lg shrink-0 mt-0.5">
+        <User size={15} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-slate-600 leading-snug">
-          <span className="font-extrabold text-slate-900">{name}</span> submitted an application for <span className="font-bold text-slate-800">{program}</span>
+        <p className="text-slate-700 leading-snug">
+          <span className="font-extrabold text-slate-900">{user}</span> {detail}
         </p>
-        <span className="text-[10px] font-semibold text-slate-400 mt-0.5 block">{time}</span>
+        <span className="text-xs font-semibold text-slate-400 mt-1 block">{time}</span>
       </div>
     </div>
   );

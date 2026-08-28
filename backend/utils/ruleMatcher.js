@@ -11,11 +11,31 @@ const Fuse = require('fuse.js');
  * of silently falling through to program-name fuzzy matching.
  */
 const TAG_RULES = [
-  { keywords: ['pwd', 'person with disability'], field: 'is_pwd', label: 'PWD' },
-  { keywords: ['4ps', '4 ps', 'poverty program'], field: 'is_poverty_program', label: '4Ps / Poverty Program' },
-  { keywords: ['working student'], field: 'is_working_student', label: 'Working Student' },
-  { keywords: ['indigenous'], field: 'is_indigenous', label: 'Indigenous' },
-  { keywords: ['athlete'], field: 'is_athlete', label: 'Athlete' },
+  { 
+    keywords: ['pwd', 'person with disability', 'blind', 'hearing'], 
+    field: 'is_pwd', 
+    label: 'PWD' 
+  },
+  { 
+    keywords: ['4ps', 'akap', 'tupad', 'poverty program', 'government beneficiary'], 
+    field: 'is_poverty_program', // Kept as your existing DB column to prevent schema errors
+    label: 'Government Beneficiary' 
+  },
+  { 
+    keywords: ['working student'], 
+    field: 'is_working_student', 
+    label: 'Working Student' 
+  },
+  { 
+    keywords: ['indigenous', 'ethnic', 'aeta', 'badjao'], 
+    field: 'is_indigenous', 
+    label: 'Indigenous/Ethnic Student' 
+  },
+  { 
+    keywords: ['athlete'], 
+    field: 'is_athlete', 
+    label: 'Athlete' 
+  },
 ];
 
 /**

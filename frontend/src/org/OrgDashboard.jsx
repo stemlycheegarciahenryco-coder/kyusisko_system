@@ -6,14 +6,12 @@ import {
   FileText, 
   GraduationCap, 
   Users, 
-  Download, 
   MoreVertical,
   Megaphone,
   ChevronDown,
   Clock
 } from 'lucide-react';
 import OrgRightBar from '../component/OrgRightBar';
-// ADDED: Import the modal component (check this path is correct for your setup!)
 import ForcePasswordChange from '../component/ForcePasswordChange'; 
 
 // ─── SVG Donut Chart Component ───────────────────────────────────────────────
@@ -21,26 +19,23 @@ function ProgramOverviewChart({ active = 0, apps = 0, drafts = 0, pending = 0 })
   const total = active + apps + drafts + pending;
 
   const data = [
-    { label: 'Active Programs', count: active, color: '#A855F7' },   // Purple
-    { label: 'Total Applications', count: apps, color: '#3B82F6' },  // Blue
-    { label: 'Draft Programs', count: drafts, color: '#22C55E' },   // Green
-    { label: 'Pending Review', count: pending, color: '#F97316' },  // Orange
+    { label: 'Active Programs', count: active, color: '#A855F7' },
+    { label: 'Total Applications', count: apps, color: '#3B82F6' },
+    { label: 'Draft Programs', count: drafts, color: '#22C55E' },
+    { label: 'Pending Review', count: pending, color: '#F97316' },
   ];
 
   let cumulativePercent = 0;
 
   return (
-    <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs flex flex-col justify-between h-full">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-sm font-extrabold text-slate-900 tracking-tight">Program Overview</h2>
-        <button className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50/50 px-2.5 py-1 rounded-lg">
-          This Month <ChevronDown size={14} />
-        </button>
+    <div className="bg-white p-6 md:p-8 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-base md:text-lg font-black text-slate-900 tracking-tight">Program Overview</h2>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-6 my-auto">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-8 my-auto">
         {/* Donut Graphic */}
-        <div className="relative w-44 h-44 shrink-0 flex items-center justify-center">
+        <div className="relative w-48 h-48 shrink-0 flex items-center justify-center">
           <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
             {total > 0 ? (
               data.map((item, index) => {
@@ -77,24 +72,24 @@ function ProgramOverviewChart({ active = 0, apps = 0, drafts = 0, pending = 0 })
             )}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-            <span className="text-2xl font-black text-slate-900 leading-none">{total}</span>
-            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-tight mt-1">Total Programs</span>
+            <span className="text-3xl font-black text-slate-900 leading-none">{total}</span>
+            <span className="text-xs font-extrabold text-slate-400 uppercase tracking-wider mt-1.5">Total Programs</span>
           </div>
         </div>
 
         {/* Dynamic Legend */}
-        <div className="flex-1 space-y-3 w-full">
+        <div className="flex-1 space-y-3.5 w-full">
           {data.map((item, idx) => {
             const percentage = total > 0 ? ((item.count / total) * 100).toFixed(1) : "0.0";
             return (
-              <div key={idx} className="flex items-center justify-between text-xs font-medium">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span className="text-slate-700 font-bold">{item.label}</span>
+              <div key={idx} className="flex items-center justify-between text-xs md:text-sm font-semibold">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                  <span className="text-slate-800 font-bold">{item.label}</span>
                 </div>
-                <div className="text-right">
-                  <span className="font-extrabold text-slate-900 mr-1">{item.count}</span>
-                  <span className="text-[10px] text-slate-400 font-semibold">({percentage}%)</span>
+                <div className="text-right shrink-0">
+                  <span className="font-extrabold text-slate-900 mr-1.5">{item.count}</span>
+                  <span className="text-xs text-slate-400 font-bold">({percentage}%)</span>
                 </div>
               </div>
             );
@@ -107,7 +102,6 @@ function ProgramOverviewChart({ active = 0, apps = 0, drafts = 0, pending = 0 })
 
 // ─── Main Org Dashboard Page ──────────────────────────────────────────────────
 export default function OrgDashboard() {
-  // ADDED: Synchronous state check. It fires immediately before rendering.
   const [needsPasswordChange, setNeedsPasswordChange] = useState(() => {
     const orgInfo = JSON.parse(localStorage.getItem('orgInfo') || '{}');
     return orgInfo.isPasswordChanged === false;
@@ -158,7 +152,7 @@ export default function OrgDashboard() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50/50 flex items-center justify-center font-sans">
-        <div className="text-center font-bold text-slate-400 animate-pulse uppercase tracking-widest text-xs">
+        <div className="text-center font-bold text-slate-400 animate-pulse uppercase tracking-widest text-sm">
           Loading Dashboard...
         </div>
       </div>
@@ -168,18 +162,16 @@ export default function OrgDashboard() {
   return (
     <div className="relative bg-slate-50/50 min-h-screen font-sans">
       
-      {/* ADDED: The Modal conditionally renders here */}
       {needsPasswordChange && (
         <ForcePasswordChange onComplete={() => setNeedsPasswordChange(false)} />
       )}
 
-      {/* ADDED: Wrapped dashboard content in a div that blurs if needsPasswordChange is true */}
-      <div className={`p-8 space-y-6 transition-all duration-300 ${needsPasswordChange ? 'blur-sm pointer-events-none select-none' : ''}`}>
+      <div className={`p-6 md:p-8 space-y-8 transition-all duration-300 ${needsPasswordChange ? 'blur-sm pointer-events-none select-none' : ''}`}>
         
         {/* Page Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+            <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">
                Dashboard
             </h1>
           </div>
@@ -188,21 +180,21 @@ export default function OrgDashboard() {
         {/* Main Grid: Left Dashboard Area & Right Sidebar */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           
-          {/* Left Column (2 Cols Wide) */}
-          <div className="lg:col-span-2 space-y-6">
+          {/* Left Column */}
+          <div className="lg:col-span-2 space-y-6 min-w-0">
             
-            {/* Top Metric Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Top Metric Cards - Responsive Grid Fix */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
               <MetricCard 
-                icon={<ClipboardCheck size={20} className="text-amber-500" />}
+                icon={<ClipboardCheck size={22} className="text-amber-500" />}
                 iconBg="bg-amber-50"
-                label=" Application Pending Review"
+                label=" Review Pending"
                 value={stats.pendingApps ?? 0}
-                change="Active applications"
+                change="Pending "
                 changeColor="text-amber-600"
               />
               <MetricCard 
-                icon={<FileText size={20} className="text-emerald-500" />}
+                icon={<FileText size={22} className="text-emerald-500" />}
                 iconBg="bg-emerald-50"
                 label="Draft Programs"
                 value={stats.draftPrograms ?? 0}
@@ -210,19 +202,19 @@ export default function OrgDashboard() {
                 changeColor="text-emerald-600"
               />
               <MetricCard 
-                icon={<GraduationCap size={20} className="text-purple-500" />}
+                icon={<GraduationCap size={22} className="text-purple-500" />}
                 iconBg="bg-purple-50"
                 label="Active Programs"
                 value={stats.activePrograms ?? 0}
-                change="Published programs"
+                change="Publish"
                 changeColor="text-purple-600"
-              />
+              /> 
               <MetricCard 
-                icon={<Users size={20} className="text-blue-500" />}
+                icon={<Users size={22} className="text-blue-500" />}
                 iconBg="bg-blue-50"
                 label="Total Applications"
                 value={stats.totalActiveApps ?? 0}
-                change="All time received"
+                change="Applications"
                 changeColor="text-blue-600"
               />
             </div>
@@ -236,21 +228,21 @@ export default function OrgDashboard() {
             />
 
             {/* Program Status & Applicants Table */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs flex flex-col justify-between">
+            <div className="bg-white p-6 md:p-8 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
               <div>
-                <div className="flex justify-between items-center mb-5">
-                  <h2 className="text-sm font-extrabold text-slate-900">Program Status & Applicants</h2>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-base md:text-lg font-black text-slate-900">Program Status & Applicants</h2>
                   <button 
                     onClick={() => navigate('/ProgramView')}
-                    className="text-xs font-bold text-blue-600 hover:underline"
+                    className="text-xs md:text-sm font-bold text-blue-600 hover:underline"
                   >
                     View All Programs
                   </button>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-3.5">
                   {programs.length === 0 ? (
-                    <div className="text-center py-8 text-slate-400 font-bold text-xs">
+                    <div className="text-center py-10 text-slate-400 font-bold text-sm">
                       No programs created yet. Click "Create New Program" below to add one.
                     </div>
                   ) : (
@@ -267,10 +259,10 @@ export default function OrgDashboard() {
                 </div>
               </div>
 
-              <div className="mt-6 text-center pt-2">
+              <div className="mt-8 text-center pt-2">
                 <button 
                   onClick={() => navigate('/ProgramView')}
-                  className="text-xs font-bold text-blue-600 bg-blue-50/60 hover:bg-blue-100/60 px-5 py-2 rounded-xl transition-all"
+                  className="text-xs md:text-sm font-bold text-blue-600 bg-blue-50/80 hover:bg-blue-100 px-6 py-2.5 rounded-xl transition-all"
                 >
                   View All Programs
                 </button>
@@ -280,27 +272,27 @@ export default function OrgDashboard() {
           </div>
 
           {/* Right Column: Sidebar */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 min-w-0">
             <OrgRightBar recentApplications={recentApplications} programs={programs} />
           </div>
 
         </div>
 
         {/* Bottom Stay Updated Banner */}
-        <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-blue-600 text-white rounded-xl shrink-0">
-              <Megaphone size={18} />
+        <div className="bg-blue-50/80 border border-blue-200/80 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-blue-600 text-white rounded-xl shrink-0">
+              <Megaphone size={22} />
             </div>
             <div>
-              <h4 className="text-xs font-extrabold text-slate-900">Open Scholarship Now!</h4>
-              <p className="text-[11px] font-medium text-slate-500">Quick Creation of Scholarship Programs</p>
+              <h4 className="text-sm md:text-base font-black text-slate-900">Open Scholarship Now!</h4>
+              <p className="text-xs md:text-sm font-medium text-slate-600 mt-0.5">Quick Creation of Scholarship Programs</p>
             </div>
           </div>
 
           <button 
             onClick={() => navigate('/create-scholarship')}
-            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold px-5 py-2.5 rounded-xl shadow-xs transition-all shrink-0"
+            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white text-xs md:text-sm font-extrabold px-6 py-3 rounded-xl shadow-md transition-all shrink-0"
           >
             Create New Program
           </button>
@@ -314,15 +306,15 @@ export default function OrgDashboard() {
 // ─── Helper Components ────────────────────────────────────────────────────────
 function MetricCard({ icon, iconBg, label, value, change, changeColor }) {
   return (
-    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex items-center justify-between">
-      <div className="flex items-center gap-3.5">
-        <div className={`p-3 rounded-xl ${iconBg} shrink-0`}>
+    <div className="bg-white p-4 md:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between min-w-0">
+      <div className="flex items-center gap-3 min-w-0 w-full">
+        <div className={`p-3 rounded-2xl ${iconBg} shrink-0`}>
           {icon}
         </div>
-        <div>
-          <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-tight">{label}</p>
-          <p className="text-2xl font-black text-slate-900 leading-tight mt-0.5">{value}</p>
-          <p className={`text-[10px] font-bold ${changeColor} mt-1`}>{change}</p>
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-extrabold text-slate-500 uppercase tracking-tight leading-snug line-clamp-2">{label}</p>
+          <p className="text-xl md:text-2xl font-black text-slate-900 leading-tight mt-1">{value}</p>
+          <p className={`text-[10px] md:text-xs font-bold ${changeColor} mt-0.5 truncate`}>{change}</p>
         </div>
       </div>
     </div>
@@ -340,41 +332,41 @@ function ProgramRow({ title, status, applicants, navigate }) {
       : 'bg-emerald-50 text-emerald-600';
 
   const badgeStyle = isExpired
-    ? 'bg-amber-50 text-amber-600 border border-amber-100'
+    ? 'bg-amber-50 text-amber-700 border border-amber-200/80'
     : isActive
-      ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-      : 'bg-slate-200/60 text-slate-600';
+      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80'
+      : 'bg-slate-200/80 text-slate-700';
 
   return (
-    <div className="flex items-center justify-between p-3 bg-slate-50/50 hover:bg-slate-50 rounded-xl border border-slate-100/80 transition-all">
-      <div className="flex items-center gap-3 min-w-0">
-        <div className={`p-2 rounded-lg shrink-0 ${iconStyle}`}>
-          {isExpired ? <Clock size={16} /> : isActive ? <GraduationCap size={16} /> : <FileText size={16} />}
+    <div className="flex items-center justify-between p-4 bg-slate-50/60 hover:bg-slate-100/60 rounded-2xl border border-slate-200/60 transition-all gap-4">
+      <div className="flex items-center gap-3.5 min-w-0">
+        <div className={`p-2.5 rounded-xl shrink-0 ${iconStyle}`}>
+          {isExpired ? <Clock size={18} /> : isActive ? <GraduationCap size={18} /> : <FileText size={18} />}
         </div>
         <div className="min-w-0">
-          <p className="text-xs font-bold text-slate-900 truncate">{title}</p>
+          <p className="text-xs md:text-sm font-bold text-slate-900 truncate">{title}</p>
         </div>
       </div>
 
       <div className="flex items-center gap-4 shrink-0">
-        <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider ${badgeStyle}`}>
+        <span className={`text-xs font-extrabold px-2.5 py-1 rounded-lg uppercase tracking-wider ${badgeStyle}`}>
           {status}
         </span>
 
         <div className="text-right">
-          <p className="text-xs font-black text-slate-900">{applicants}</p>
-          <p className="text-[9px] font-semibold text-slate-400">Applicants</p>
+          <p className="text-xs md:text-sm font-black text-slate-900">{applicants}</p>
+          <p className="text-[10px] md:text-xs font-bold text-slate-400">Applicants</p>
         </div>
 
         <button 
           onClick={() => navigate('/ProgramView')}
-          className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-lg hover:bg-blue-100 transition-colors"
+          className="text-xs font-bold text-blue-600 bg-blue-50/80 px-3.5 py-1.5 rounded-xl hover:bg-blue-100 transition-colors"
         >
           Manage
         </button>
 
         <button className="text-slate-400 hover:text-slate-600 p-1">
-          <MoreVertical size={15} />
+          <MoreVertical size={16} />
         </button>
       </div>
     </div>

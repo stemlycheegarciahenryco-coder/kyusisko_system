@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, FileUp, X, AlertTriangle, ClipboardList, Folder, Shield, BookOpen, Info, Calendar, DollarSign, GraduationCap, Send } from 'lucide-react';
+import { ArrowLeft, Loader2, FileUp, X, AlertTriangle, ClipboardList, Folder, Shield, BookOpen, Info, Calendar, PhilippinePeso, GraduationCap, Send } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -24,12 +24,11 @@ const CreateScholarship = () => {
     message: ''
   });
 
-
   const getTomorrow = () => {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  return tomorrow;
-};
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow;
+  };
 
   const [reqs, setReqs] = useState([
     { label: 'Curriculum Vitae', type: 'file' },
@@ -53,8 +52,8 @@ const CreateScholarship = () => {
     fund_type: '' 
   });
 
-  // Updated styles for better readability (larger fonts, darker text)
-  const inputStyle = "w-full pl-10 pr-4 py-3.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-[#093fb4] focus:ring-4 focus:ring-[#093fb4]/10 outline-none text-sm md:text-base transition-all font-medium text-slate-900 placeholder:text-slate-400";
+  // UPDATED: Added h-[52px] to ensure strict uniform height across all inputs
+  const inputStyle = "w-full h-[52px] pl-10 pr-4 py-3.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-[#093fb4] focus:ring-4 focus:ring-[#093fb4]/10 outline-none text-sm md:text-base transition-all font-medium text-slate-900 placeholder:text-slate-400";
   const labelStyle = "block text-xs md:text-sm font-bold text-slate-800 uppercase tracking-wide mb-2";
 
   const sanitize = (value) => value.replace(/[<>&"']/g, '');
@@ -190,7 +189,8 @@ const CreateScholarship = () => {
         </div>
 
         {/* Main 3 Column Layout */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
+        {/* UPDATED: Changed items-start to items-stretch to make all columns equal height */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-stretch">
           
           {/* Column 1: Core Details */}
           <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm flex flex-col h-full">
@@ -267,7 +267,7 @@ const CreateScholarship = () => {
                 {/* Amount Toggle Component */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className={labelStyle}>Amount Range</label>
+                    <label className={labelStyle}>Allocated Budget</label>
                     <button
                       type="button"
                       onClick={() => {
@@ -284,7 +284,7 @@ const CreateScholarship = () => {
                   {hasAmount ? (
                     <div className="relative animate-in fade-in duration-200">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                        <DollarSign size={18} />
+                        <PhilippinePeso size={18} />
                       </div>
                       <input 
                         type="text" 
@@ -295,7 +295,8 @@ const CreateScholarship = () => {
                       />
                     </div>
                   ) : (
-                    <div className="py-3.5 px-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center">
+                    
+                    <div className="h-[52px] px-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center">
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Undisclosed</span>
                     </div>
                   )}
@@ -340,7 +341,8 @@ const CreateScholarship = () => {
                       />
                     </div>
                   ) : (
-                    <div className="py-3.5 px-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center">
+                   
+                    <div className="h-[52px] px-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center">
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">No Requirement</span>
                     </div>
                   )}
