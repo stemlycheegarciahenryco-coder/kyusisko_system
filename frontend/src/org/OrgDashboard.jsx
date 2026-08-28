@@ -183,13 +183,6 @@ export default function OrgDashboard() {
                Dashboard
             </h1>
           </div>
-
-          <button 
-            onClick={() => window.print()}
-            className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-extrabold px-4 py-2.5 rounded-xl border border-slate-200 shadow-xs transition-all w-fit"
-          >
-            <Download size={15} /> Export Report
-          </button>
         </div>
 
         {/* Main Grid: Left Dashboard Area & Right Sidebar */}
@@ -300,8 +293,8 @@ export default function OrgDashboard() {
               <Megaphone size={18} />
             </div>
             <div>
-              <h4 className="text-xs font-extrabold text-slate-900">Stay Updated!</h4>
-              <p className="text-[11px] font-medium text-slate-500">Keep track of your programs and applicant activities.</p>
+              <h4 className="text-xs font-extrabold text-slate-900">Open Scholarship Now!</h4>
+              <p className="text-[11px] font-medium text-slate-500">Quick Creation of Scholarship Programs</p>
             </div>
           </div>
 

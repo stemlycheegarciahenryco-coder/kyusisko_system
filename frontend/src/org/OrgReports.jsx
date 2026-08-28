@@ -155,19 +155,6 @@ export default function OrgReports() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => window.print()}
-            className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 text-sm font-extrabold px-4 py-2.5 rounded-xl border border-slate-200 shadow-xs transition-all"
-          >
-            <Download size={15} /> Export PDF
-          </button>
-          <button
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-extrabold px-4 py-2.5 rounded-xl shadow-xs transition-all"
-          >
-            <FileSpreadsheet size={15} /> Export CSV
-          </button>
-        </div>
       </div>
 
       {/* Key Metric Cards */}

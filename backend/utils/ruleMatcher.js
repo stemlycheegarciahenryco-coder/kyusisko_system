@@ -4,30 +4,31 @@ const Fuse = require('fuse.js');
 
 /**
  * Controlled vocabulary: criteria strings that map to a hard boolean flag
- * on the student's onboarding profile, checked with an EXACT match
- * (not fuzzy) via json-rules-engine. Add synonyms as sub-admins use them.
+ * on the student's onboarding profile, checked with an EXACT-FIELD match
+ * (not fuzzy) via json-rules-engine. Matching itself uses KEYWORD/substring
+ * detection (not exact-string equality) so phrases like "Student Athlete/Arts"
+ * or "PWD (Person with Disability)" still resolve to the right field instead
+ * of silently falling through to program-name fuzzy matching.
  */
-const TAG_MAP = {
-  'pwd': { field: 'is_pwd', label: 'PWD' },
-  'person with disability': { field: 'is_pwd', label: 'PWD' },
-  '4ps': { field: 'is_poverty_program', label: '4Ps / Poverty Program' },
-  'poverty program': { field: 'is_poverty_program', label: 'Poverty Program' },
-  'working student': { field: 'is_working_student', label: 'Working Student' },
-  'indigenous': { field: 'is_indigenous', label: 'Indigenous' },
-  'indigenous group': { field: 'is_indigenous', label: 'Indigenous' },
-  'athlete': { field: 'is_athlete', label: 'Athlete' },
-};
+const TAG_RULES = [
+  { keywords: ['pwd', 'person with disability'], field: 'is_pwd', label: 'PWD' },
+  { keywords: ['4ps', '4 ps', 'poverty program'], field: 'is_poverty_program', label: '4Ps / Poverty Program' },
+  { keywords: ['working student'], field: 'is_working_student', label: 'Working Student' },
+  { keywords: ['indigenous'], field: 'is_indigenous', label: 'Indigenous' },
+  { keywords: ['athlete'], field: 'is_athlete', label: 'Athlete' },
+];
 
 /**
  * Criteria strings that map to student.yearLevel instead of a boolean flag.
- * Adjust the accepted values to match your year_level_enum values exactly.
+ * Keys are matched as substrings against the criterion (see classifyCriterion),
+ * values are the accepted year_level_enum values (lowercased) to compare against.
  */
 const YEAR_LEVEL_MAP = {
-  'freshmen': ['1', 'freshman', 'first year'],
-  'freshman': ['1', 'freshman', 'first year'],
-  'sophomore': ['2', 'sophomore', 'second year'],
-  'junior': ['3', 'junior', 'third year'],
-  'senior': ['4', 'senior', 'fourth year'],
+  'freshmen': ['freshman'],
+  'freshman': ['freshman'],
+  'sophomore': ['sophomore'],
+  'junior': ['junior'],
+  'senior': ['senior'],
   'graduate': ['graduate'],
   'postgraduate': ['postgraduate'],
   'masters': ['masters'],
@@ -37,14 +38,43 @@ const YEAR_LEVEL_MAP = {
 };
 
 /**
+ * Religion is free text (students.religion / student_onboarding_profiles.religion),
+ * not a controlled boolean, so we detect "this criterion is about religion" via a
+ * keyword list, then compare directly against the student's stored religion value
+ * (case-insensitive substring match, so "Islam" matches "Islam" or "Muslim/Islam").
+ */
+const RELIGION_KEYWORDS = [
+  'islam', 'muslim', 'christian', 'christianity', 'catholic', 'protestant',
+  'buddhist', 'buddhism', 'hindu', 'hinduism', 'iglesia ni cristo', 'inc',
+  'jewish', 'judaism', 'baptist', 'born again', 'seventh-day adventist'
+];
+
+/**
  * Classifies a single criterion string from scholarships.criteria into
- * one of: a demographic tag check, a year-level check, or a free-text
- * program/college name (handled by fuzzy match).
+ * one of: a demographic tag check, a year-level check, a religion check,
+ * or a free-text program/college name (handled by fuzzy match).
+ * Uses substring matching throughout so phrasing variations from sub-admins
+ * (e.g. "Student Athlete/Arts") still resolve to the correct field.
  */
 function classifyCriterion(raw) {
   const norm = String(raw).trim().toLowerCase();
-  if (TAG_MAP[norm]) return { type: 'tag', raw, ...TAG_MAP[norm] };
-  if (YEAR_LEVEL_MAP[norm]) return { type: 'year_level', raw, values: YEAR_LEVEL_MAP[norm] };
+
+  for (const rule of TAG_RULES) {
+    if (rule.keywords.some(k => norm.includes(k))) {
+      return { type: 'tag', raw, field: rule.field, label: rule.label };
+    }
+  }
+
+  for (const [key, values] of Object.entries(YEAR_LEVEL_MAP)) {
+    if (norm.includes(key)) {
+      return { type: 'year_level', raw, values };
+    }
+  }
+
+  if (RELIGION_KEYWORDS.some(k => norm.includes(k))) {
+    return { type: 'religion', raw };
+  }
+
   return { type: 'program', raw };
 }
 
@@ -62,6 +92,7 @@ function buildStudentProfile(student, row, meta) {
     // signal (computeInterestScore) — never used in eligibility rules.
     bio: student.bio || '',
     profileSummary: row.profile_summary || '',
+    religion: row.religion || student.religion || '',
     gender: student.gender,
     is_working_student: !!row.is_working_student,
     is_pwd: !!row.is_pwd,
@@ -144,6 +175,17 @@ async function calculateRuleMatch(studentProfile, scholarship) {
         detail = passed
           ? `Student year level (${studentProfile.yearLevel}) matches "${c.raw}".`
           : `Student year level (${studentProfile.yearLevel || 'Unspecified'}) does not match "${c.raw}".`;
+      } else if (c.type === 'religion') {
+        // Free-text field comparison, not fuzzy — checked as substring both ways
+        // so "Islam" matches a stored value of "Islam" or "Muslim/Islam" etc.
+        const studentReligion = String(studentProfile.religion || '').trim().toLowerCase();
+        const criterionNorm = c.raw.trim().toLowerCase();
+        passed = studentReligion.length > 0 &&
+          (studentReligion.includes(criterionNorm) || criterionNorm.includes(studentReligion));
+        label = `Religion: ${c.raw}`;
+        detail = passed
+          ? `Student religion (${studentProfile.religion}) matches "${c.raw}".`
+          : `Student religion (${studentProfile.religion || 'Unspecified'}) does not match "${c.raw}".`;
       } else {
         // program: fuzzy match against course/college name
         passed = fuse.search(c.raw).length > 0;

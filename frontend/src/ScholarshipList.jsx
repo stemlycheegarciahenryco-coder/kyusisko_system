@@ -222,6 +222,30 @@ export default function ScholarshipList() {
                   </p>
                 </div>
 
+                {/* Matched criteria highlight */}
+                {((s.matched_criteria?.length > 0) || (s.unmatched_criteria?.length > 0)) && (
+                  <div className="flex flex-wrap gap-2">
+                    {s.matched_criteria?.map((c, idx) => (
+                      <span
+                        key={`matched-${idx}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold bg-green-50 text-green-700 border border-green-200"
+                      >
+                        <CheckCircle2 size={13} />
+                        {c}
+                      </span>
+                    ))}
+                    {s.unmatched_criteria?.map((c, idx) => (
+                      <span
+                        key={`unmatched-${idx}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-slate-50 text-slate-400 border border-slate-200 line-through decoration-slate-300"
+                      >
+                        <X size={13} />
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
                 {/* Actions */}
                 <div className="flex gap-3">
                   <button 

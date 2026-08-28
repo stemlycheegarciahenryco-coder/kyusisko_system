@@ -84,11 +84,9 @@ export default function OrgApplicantPrograms() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 16, marginBottom: 32 }}>
           <div>
             <h1 style={{ fontSize: 28, fontWeight: 900, color: C.textStrong, letterSpacing: '-0.03em', lineHeight: 1.15, margin: 0 }}>
-              Select a <span style={{ color: C.brand }}>Program</span>
+             Manage Students
             </h1>
-            <p style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, marginTop: 6, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-              Choose a scholarship card to view its tracking table
-            </p>
+    
           </div>
 
           {totalPages > 1 && (
