@@ -46,12 +46,12 @@ export default function OrgApplicantPrograms() {
   const [programs, setPrograms] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
-  const orgId = localStorage.getItem('orgId');
 
   useEffect(() => {
     const fetchPrograms = async () => {
       try {
-        const res = await api.get(`/organizations/dashboard-programs/${orgId}`);
+        // ✅ Updated to secure /me endpoint
+        const res = await api.get('/organizations/dashboard-programs/me');
         const allPrograms = res.data.data || res.data || [];
         setPrograms(allPrograms.filter(p => getDisplayStatus(p.status) !== 'draft'));
       } catch (err) {
@@ -61,7 +61,7 @@ export default function OrgApplicantPrograms() {
       }
     };
     fetchPrograms();
-  }, [orgId]);
+  }, []);
 
   const totalPages     = Math.ceil(programs.length / CARDS_PER_PAGE);
   const paginatedProgs = programs.slice(currentPage * CARDS_PER_PAGE, (currentPage + 1) * CARDS_PER_PAGE);
@@ -84,11 +84,9 @@ export default function OrgApplicantPrograms() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 16, marginBottom: 32 }}>
           <div>
             <h1 style={{ fontSize: 28, fontWeight: 900, color: C.textStrong, letterSpacing: '-0.03em', lineHeight: 1.15, margin: 0 }}>
-              Select a <span style={{ color: C.brand }}>Program</span>
+             Manage Students
             </h1>
-            <p style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, marginTop: 6, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-              Choose a scholarship card to view its tracking table
-            </p>
+    
           </div>
 
           {totalPages > 1 && (

@@ -126,18 +126,12 @@ export default function ForgotPassword() {
           <div className="pt-5 border-t border-slate-100 flex flex-col gap-2">
             <div className="flex items-center justify-center gap-4">
               <button 
-                onClick={() => navigate('/student-login')} 
+                onClick={() => navigate('/login')} 
                 className="text-xs font-black text-slate-600 hover:text-[#093FB4] transition-colors uppercase tracking-wider"
               >
-                Student Sign In
+               Sign In
               </button>
-              <span className="text-slate-300">|</span>
-              <button 
-                onClick={() => navigate('/rootlogin')} 
-                className="text-xs font-black text-[#FF1E1E] hover:text-red-700 transition-colors uppercase tracking-wider"
-              >
-                Admin Sign In
-              </button>
+              
             </div>
           </div>
         </div>

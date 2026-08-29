@@ -95,11 +95,11 @@ export default function OrgSettings() {
     setLoading(true);
     setMessage({ type: '', text: '' });
     try {
-      await api.post('/user-org/change-password', {
+      await api.put('/user-org/change-password', {
         currentPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword
       });
-      setMessage({ type: 'success', text: 'Password updated successfully across all organization accounts.' });
+      setMessage({ type: 'success', text: 'Password updated successfully.' });
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
       setMessage({ type: 'error', text: err.response?.data?.error || err.response?.data?.message || 'Failed to update password.' });
@@ -115,7 +115,7 @@ export default function OrgSettings() {
     setLoading(true);
     setMessage({ type: '', text: '' });
     try {
-      await api.post('/user-management/transfer-ownership', {
+      await api.post('/user-org/transfer-ownership', {
         targetUserId: admin.id
       });
       setMessage({ type: 'success', text: 'Ownership transferred successfully. You are now a co-admin.' });

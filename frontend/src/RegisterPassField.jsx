@@ -1,16 +1,40 @@
 import React, { useState, useEffect } from "react";
 import { Eye, EyeOff, ShieldCheck, ShieldAlert, Check, X } from "lucide-react";
+import PasswordValidator from "password-validator";
+
+// Single source of truth for the password policy. Keep this in sync with
+// whatever schema is used server-side (see passwordSchema.js on the backend)
+// so front-end and back-end never disagree about what counts as "valid".
+const passwordSchema = new PasswordValidator();
+passwordSchema
+    .is().min(12)                // Minimum length 12
+    .is().max(18)                // Maximum length 18
+    .has().uppercase()           // Must have uppercase letters
+    .has().lowercase()           // Must have lowercase letters
+    .has().digits(1)             // Must have at least 1 digit
+    .has().symbols(1)            // Must have at least 1 symbol
+    .has().not().spaces();       // Should not have spaces
+
+// Maps password-validator's failed-rule names to the labels shown in the UI.
+// "min"/"max" both roll up into a single "12-18 Characters" requirement.
+const REQUIREMENT_DEFS = [
+    { rules: ["min", "max"], label: "12-18 Characters" },
+    { rules: ["uppercase"], label: "One Uppercase" },
+    { rules: ["digits"], label: "One Number" },
+    { rules: ["symbols"], label: "One Special Char" },
+];
 
 export default function RegisterPassField({ name, value = "", onChange, placeholder, error, showStrength = false }) {
   const [showPassword, setShowPassword] = useState(false);
   const [strength, setStrength] = useState({ score: 0, label: "Empty", color: "bg-slate-200" });
 
-  const requirements = [
-    { label: "8+ Characters", met: value.length >= 8 },
-    { label: "One Uppercase", met: /[A-Z]/.test(value) },
-    { label: "One Number", met: /[0-9]/.test(value) },
-    { label: "One Special Char", met: /[@$!%*?&]/.test(value) },
-  ];
+  // Ask password-validator which rules currently fail, then flip that into
+  // "met" flags for the checklist below.
+  const failedRules = value ? passwordSchema.validate(value, { list: true }) : ["min", "max", "uppercase", "lowercase", "digits", "symbols"];
+  const requirements = REQUIREMENT_DEFS.map(({ rules, label }) => ({
+      label,
+      met: rules.every(rule => !failedRules.includes(rule)),
+  }));
 
   useEffect(() => {
     if (!showStrength) return;
@@ -40,6 +64,7 @@ export default function RegisterPassField({ name, value = "", onChange, placehol
           name={name}
           value={value}
           onChange={onChange}
+          maxLength={18}
           placeholder={placeholder || "••••••••"}
           className={`w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-black outline-none focus:border-[#093FB4] focus:bg-white transition-all text-sm pr-12 ${error ? "border-red-500 bg-red-50" : ""}`}
         />

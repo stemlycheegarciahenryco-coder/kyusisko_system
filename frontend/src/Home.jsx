@@ -212,7 +212,7 @@ const ScholarshipCarousel = () => {
             {/* Application Direct Prompt Footer Block Action */}
             <div className="p-6 pt-0">
               <button
-                onClick={() => navigate('/student-login')}
+                onClick={() => navigate('/login')}
                 className="w-full py-2.5 bg-slate-50 border border-slate-100 group-hover:bg-[#093FB4] group-hover:text-white group-hover:border-[#093FB4] rounded-xl text-[13px] font-black uppercase tracking-widest text-slate-700 transition-all flex items-center justify-center gap-2"
               >
                 Apply Now <ArrowRight size={15} strokeWidth={3} />

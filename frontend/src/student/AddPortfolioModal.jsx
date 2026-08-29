@@ -39,7 +39,6 @@ export default function AddPortfolioModal({ onClose, studentData }) {
 
     setUploading(true);
     const formData = new FormData();
-    formData.append('student_id', localStorage.getItem('studentId'));
     
     // Pass baseline values unaltered so endpoint doesn't erase them
     formData.append('bio', studentData?.bio || '');

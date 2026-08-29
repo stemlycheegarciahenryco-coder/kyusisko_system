@@ -7,6 +7,19 @@ import TermsModal from "../TermsModal";
 import { SuccessModal, ErrorModal, OtpModal } from "../component/RegisterModals";
 import RegisterActions from "../component/RegisterActions";
 import StudentAddress from "../student/StudentAddress";
+import PasswordValidator from "password-validator";
+
+// Same policy as RegisterPassField.jsx / the backend schema — 12-18 chars,
+// upper, lower, digit, symbol, no spaces.
+const passwordSchema = new PasswordValidator();
+passwordSchema
+    .is().min(12)
+    .is().max(18)
+    .has().uppercase()
+    .has().lowercase()
+    .has().digits(1)
+    .has().symbols(1)
+    .has().not().spaces();
 
 export default function StudentRegister() {
     const navigate = useNavigate();
@@ -19,6 +32,15 @@ export default function StudentRegister() {
     const [showError, setShowError] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
 
+    //BIRTHDATE CLAMPS
+    // Calculate min and max dates for the birthdate clamp
+    const today = new Date();
+    const minYear = today.getFullYear() - 60; // Max age 60
+    const maxYear = today.getFullYear() - 15; // Min age 15
+    // Format to YYYY-MM-DD
+    const minDate = `${minYear}-01-01`;
+    const maxDate = `${maxYear}-12-31`;
+
     // Verification States
     const [showOtpModal, setShowOtpModal] = useState(false);
     const [verifying, setVerifying] = useState(false);
@@ -29,13 +51,76 @@ export default function StudentRegister() {
         district: '', barangay: '', street: '', zipCode: '', 
         email: '', password: '', confirmPassword: ''
     });
-    
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    const isPasswordValid = passwordRegex.test(regform.password || "");
+
+    // BIRTHDATE — custom Month/Day/Year selects instead of the native
+    // <input type="date">. Native date pickers are inconsistent about which
+    // month they open on when the field is empty (some browsers default to
+    // ~1970 instead of the current year), which meant users had to scroll
+    // back decades by hand. Selects give predictable, instant access to any
+    // year in range, and the year list is sorted newest-first (closest to
+    // today) since most registrants are near the young end of the 15-60
+    // range.
+    const [birthMonth, setBirthMonth] = useState("");
+    const [birthDay, setBirthDay] = useState("");
+    const [birthYear, setBirthYear] = useState("");
+
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    // Full, ungated year list: current year down to 1975. The 15-60 age
+    // eligibility check still runs on submit (isBirthDateValid below) — this
+    // dropdown just shouldn't silently hide years to enforce that itself.
+    const currentYear = today.getFullYear();
+    const oldestBirthYear = 1975;
+    const yearOptions = Array.from({ length: currentYear - oldestBirthYear + 1 }, (_, i) => currentYear - i); // newest first
+
+    const daysInMonth = (month, year) => {
+        if (!month) return 31;
+        const m = Number(month);
+        if (m === 2) {
+            // Default to a leap year (29 days) until an actual year is chosen,
+            // so Feb 29 is selectable up front instead of being hidden.
+            const y = year ? Number(year) : 2000;
+            return new Date(y, 2, 0).getDate();
+        }
+        return new Date(2000, m, 0).getDate(); // day count for non-Feb months doesn't depend on year
+    };
+
+    // Keep the selected day valid if the month/year changes to one with fewer days (e.g. Feb 30 -> Feb).
+    useEffect(() => {
+        if (birthDay && Number(birthDay) > daysInMonth(birthMonth, birthYear)) {
+            setBirthDay("");
+        }
+    }, [birthMonth, birthYear]);
+
+    // Combine the three selects into the regform.birthDate string the rest of the form expects.
+    useEffect(() => {
+        if (birthMonth && birthDay && birthYear) {
+            const mm = String(birthMonth).padStart(2, "0");
+            const dd = String(birthDay).padStart(2, "0");
+            setRegForm(prev => ({ ...prev, birthDate: `${birthYear}-${mm}-${dd}` }));
+        } else {
+            setRegForm(prev => ({ ...prev, birthDate: "" }));
+        }
+    }, [birthMonth, birthDay, birthYear]);
+
+
+
+    //PASSWORD VALIDATION (via password-validator)
+    const isPasswordValid = passwordSchema.validate(regform.password || "");
     const passwordsMatch = regform.password !== "" && regform.password === regform.confirmPassword;
 
 
     const showMismatch = regform.confirmPassword.length > 0 && !passwordsMatch;
+
+    // BIRTHDATE CLAMP CHECK
+    // The <input type="date" min/max> attributes stop most users, but they
+    // don't stop someone pasting a value in or editing devtools, so we
+    // re-check the actual age here too.
+    const isBirthDateValid = (() => {
+        if (!regform.birthDate) return false;
+        const entered = new Date(regform.birthDate);
+        if (Number.isNaN(entered.getTime())) return false;
+        return entered >= new Date(minDate) && entered <= new Date(maxDate);
+    })();
 
   const isFormInvalid = (() => {
     const optionalFields = ["middleName", "suffix"];
@@ -43,7 +128,7 @@ export default function StudentRegister() {
         optionalFields.includes(key) ? true : value.trim() !== ""
     );
     
-    return !requiredFilled || !isPasswordValid || !passwordsMatch;
+    return !requiredFilled || !isPasswordValid || !passwordsMatch || !isBirthDateValid;
 })();
 
     const handleChange = (e) => {
@@ -70,8 +155,13 @@ export default function StudentRegister() {
         e.preventDefault();
         
         // Front-end validations
+        if (!isBirthDateValid) {
+            setErrorMessage("Birth date must reflect an age between 15 and 60 years old.");
+            setShowError(true);
+            return;
+        }
         if (!isPasswordValid) {
-            setErrorMessage("Password must be at least 8 characters with uppercase, lowercase, number, and symbol.");
+            setErrorMessage("Password must be 12-18 characters with uppercase, lowercase, number, and symbol.");
             setShowError(true);
             return;
         }
@@ -174,10 +264,48 @@ export default function StudentRegister() {
                             <Label text="Suffix" />
                             <input type="text" name="suffix" value={regform.suffix} onChange={handleChange} placeholder="Jr" className={`${inputClass} uppercase`} />
                         </div>
+                        {/*birthdate */}
                         <div className="space-y-1">
-                            <Label text="Birth Date" required />
-                            <input type="date" name="birthDate" value={regform.birthDate} onChange={handleChange} required className={inputClass} />
-                        </div>
+    <Label text="Birth Date" required />
+    <div className="grid grid-cols-3 gap-2">
+        <select
+            name="birthMonth"
+            value={birthMonth}
+            onChange={(e) => setBirthMonth(e.target.value)}
+            required
+            className={inputClass}
+        >
+            <option value="" disabled>Month</option>
+            {monthNames.map((m, i) => (
+                <option key={m} value={i + 1}>{m}</option>
+            ))}
+        </select>
+        <select
+            name="birthDay"
+            value={birthDay}
+            onChange={(e) => setBirthDay(e.target.value)}
+            required
+            className={inputClass}
+        >
+            <option value="" disabled>Day</option>
+            {Array.from({ length: daysInMonth(birthMonth, birthYear) }, (_, i) => i + 1).map(d => (
+                <option key={d} value={d}>{d}</option>
+            ))}
+        </select>
+        <select
+            name="birthYear"
+            value={birthYear}
+            onChange={(e) => setBirthYear(e.target.value)}
+            required
+            className={inputClass}
+        >
+            <option value="" disabled>Year</option>
+            {yearOptions.map(y => (
+                <option key={y} value={y}>{y}</option>
+            ))}
+        </select>
+    </div>
+</div>
                         <div className="space-y-1">
                             <Label text="Gender" />
                             <select name="gender" value={regform.gender} onChange={handleChange} className={inputClass}>

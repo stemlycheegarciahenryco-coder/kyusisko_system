@@ -39,6 +39,7 @@ import ApplicationDetails from './org/ApplicationDetails';
 import OrgProfile from './org/OrgProfile';
 import ProtectedRoutes from './ProtectedRoutes'; // Import the guard
 import OrgSettings from './org/OrgSettings';
+import OrgReports from './org/OrgReports';
 //might delete this 
 import OrgLogs from './org/OrgLogs';
 import CreateScholarship from './component/CreateScholarship';
@@ -102,7 +103,7 @@ export default function App() {
       <Route path="/scholarship-applications/:id/applicants" element={<OrgApplicants />} />
         <Route path="/ProgramView" element={<ProgramView />} />
           
-
+        <Route path="/OrgReports" element={<OrgReports />} />
         <Route path="/OrgProfile" element={<OrgProfile />} />
         <Route path="/OrgLogs" element={<OrgLogs />} />
         <Route path="/OrgSettings" element={<OrgSettings />} />

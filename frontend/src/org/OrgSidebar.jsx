@@ -1,149 +1,120 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
-  LayoutDashboard, Form, LucideScroll, Pencil, 
-  LogOut, User, AlertTriangle, ChevronRight, Menu,Archive, Mails,Settings 
+  LayoutDashboard, Form, LucideScroll, 
+  LogOut, User, AlertTriangle, Menu, Logs, Flag, Settings 
 } from 'lucide-react';
 import api from '../api';
 
 export default function OrgSidebar() {
-  const [isExpanded, setIsExpanded] = useState(true); // Toggle State
+  const [isExpanded, setIsExpanded] = useState(true);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [orgData, setOrgData] = useState(null);
-  const fileInputRef = useRef(null);
-  
-  const orgId = localStorage.getItem('orgId');
-  const orgInfo = JSON.parse(localStorage.getItem('orgInfo') || '{}');
-  const isCoAdmin = orgInfo.accountType === 'co_admin';
 
   useEffect(() => {
     const fetchOrgProfile = async () => {
       try {
-        if (!orgId) return;
-        const res = await api.get(`/organizations/profile/${orgId}`);
+        const res = await api.get(`/organizations/profile/me`);
         setOrgData(res.data.data); 
-      } catch (err) { console.error(err); }
+      } catch (err) { 
+        console.error("Failed to fetch org profile:", err); 
+      }
     };
     fetchOrgProfile();
-  }, [orgId]);
-
+  }, []);
 
   const handleLogout = () => {
     localStorage.clear();
     window.location.href = '/';
   };
+
   const menuItems = [
     { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/OrgDashboard' },
     { name: 'Manage Programs', icon: <LucideScroll size={20} />, path: '/ProgramView' },
     { name: 'Manage Students', icon: <Form size={20} />, path: '/OrgApplicantPrograms' }, 
     { name: 'Profile', icon: <User size={20} />, path: '/OrgProfile' }, 
-    { name: 'Reports & Logs', icon: <Archive size={20} />, path: '/OrgLogs' },
+    { name: 'Reports', icon: <Flag size={20} />, path: '/OrgReports' },
     { name: 'Settings', icon: <Settings size={20} />, path: '/OrgSettings' },
-
-  ].filter(item => !item.mainOnly || !isCoAdmin);
+    { name: 'Logs', icon: <Logs size={20} />, path: '/OrgLogs' },
+  ];
 
   return ( 
-    <div className={`h-screen bg-[#FFFCFB] flex flex-col border-r-2 border-black/10 shadow-2xl relative z-40 transition-all duration-300 ${isExpanded ? 'w-64' : 'w-20'}`}>
+    <div className={`h-screen bg-[#FFFCFB] flex flex-col border-r border-slate-200/80 shadow-2xl relative z-40 transition-all duration-300 ${isExpanded ? 'w-64' : 'w-20'}`}>
       
-      {/* Toggle Button */}
-      <button onClick={() => setIsExpanded(!isExpanded)} className="p-4 text-black/50 hover:text-[#093fb4]">
-        <Menu size={24} />
-      </button>
+      {/* Header / Toggle Button Area */}
+      <div className={`p-4 flex items-center ${isExpanded ? 'justify-between' : 'justify-center'}`}>
+        <button 
+          onClick={() => setIsExpanded(!isExpanded)} 
+          className="p-2 text-slate-500 hover:text-[#093fb4] hover:bg-slate-100 rounded-xl transition-all"
+          title={isExpanded ? "Collapse Sidebar" : "Expand Sidebar"}
+        >
+          <Menu size={22} />
+        </button>
+      </div>
 
-      {/* Profile Section - Shrinks when collapsed */}
-      <div className={`px-4 mb-8 text-center transition-all`}>
-  
-  <div 
-    className={`relative mx-auto cursor-pointer group transition-all 
-    ${isExpanded ? 'w-20 h-20' : 'w-14 h-14'}`}
-    onClick={() => fileInputRef.current.click()}
-  >
-    
-    {/* IMAGE */}
-    <div className="w-full h-full rounded-2xl border-4 border-[#093fb4]/10 overflow-hidden bg-white shadow-md">
-      {orgData?.org_pic ? (
-        <img 
-          src={orgData.org_pic} 
-          className="w-full h-full object-cover"
-        />
-      ) : (
-        <User className="w-full h-full p-3 text-[#093fb4]" />
-      )}
-    </div>
-    <input
-  type="file"
-  ref={fileInputRef}
-  className="hidden"
-  accept="image/*"
-  onChange={async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+      {/* Profile Section */}
+      <div className="px-4 mb-6 flex flex-col items-center justify-center text-center transition-all">
+        <div 
+          className={`relative mx-auto transition-all duration-300 ${
+            isExpanded ? 'w-24 h-24' : 'w-12 h-12'
+          }`}
+        >
+          {/* Circular Image Container */}
+          <div className="w-full h-full rounded-full border-4 border-[#093fb4]/15 overflow-hidden bg-white shadow-md flex items-center justify-center">
+            {orgData?.org_pic ? (
+              <img src={orgData.org_pic} className="w-full h-full object-cover" alt="Org Profile" />
+            ) : (
+              <User className="w-full h-full p-3 text-[#093fb4]" />
+            )}
+          </div>
+        </div>
 
-    try {
-      const formData = new FormData();
-      formData.append('org_pic', file);
+        {/* Org Name */}
+        {isExpanded && (
+          <h3 className="text-slate-900 font-extrabold uppercase text-sm md:text-base tracking-wide truncate mt-3 w-full px-2">
+            {orgData?.org_name || "Provider"}
+          </h3>
+        )}
+      </div>
 
-      await api.patch(`/organizations/profile-picture/${orgId}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-
-      // 🔄 refresh image
-      const res = await api.get(`/organizations/profile/${orgId}`);
-      setOrgData(res.data.data);
-
-    } catch (err) {
-      console.error("Upload failed:", err);
-    }
-  }}
-/>
-
-    {/* ✏️ EDIT ICON (RESTORED) */}
-    <div className="absolute -bottom-1 -right-1 bg-[#093fb4] text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition">
-      <Pencil size={12} />
-    </div>
-
-  </div>
-
-  {/* NAME */}
-  {isExpanded && (
-    <h3 className="text-black font-black uppercase text-xs truncate mt-2">
-      {orgData?.org_name || "Provider"}
-    </h3>
-  )}
-</div>
-
-      {/* Navigation */}
-      <nav className="flex-1 px-4 space-y-2">
+      {/* Navigation Links */}
+      <nav className="flex-1 px-3 space-y-1.5 overflow-y-auto">
         {menuItems.map((item) => (
-          <NavLink key={item.name} to={item.path} className={({ isActive }) => `
-            flex items-center gap-4 px-4 py-3 rounded-xl text-[12px] font-black uppercase transition-all
-            ${isActive ? 'bg-[#093fb4] text-white' : 'text-black/60 hover:bg-[#093fb4]/5'}
-          `}>
-            {item.icon}
-            {isExpanded && <span>{item.name}</span>}
+          <NavLink 
+            key={item.name} 
+            to={item.path} 
+            title={!isExpanded ? item.name : undefined}
+            className={({ isActive }) => `
+              flex items-center rounded-xl text-xs font-black uppercase tracking-wider transition-all
+              ${isExpanded ? 'gap-3.5 px-4 py-3' : 'justify-center py-3 px-0'}
+              ${isActive ? 'bg-[#093fb4] text-white shadow-md shadow-[#093fb4]/20' : 'text-slate-600 hover:bg-[#093fb4]/10 hover:text-[#093fb4]'}
+            `}
+          >
+            <span className="shrink-0">{item.icon}</span>
+            {isExpanded && <span className="truncate">{item.name}</span>}
           </NavLink>
         ))}
       </nav>
 
-      <div className="p-4 border-t border-black/10">
-  <button 
-    onClick={() => setShowLogoutDialog(true)}
-    className={`
-      w-full flex items-center justify-center rounded-xl transition-all
-      ${isExpanded 
-        ? 'gap-3 px-4 py-3 text-sm font-medium text-slate-500 hover:bg-red-500/10 hover:text-red-500'
-        : 'py-3 text-slate-500 hover:text-red-500'
-      }
-    `}
-  >
-    <LogOut size={20} />
-    
-    {/* TEXT ONLY WHEN EXPANDED */}
-    {isExpanded && <span>Sign Out</span>}
-  </button>
-</div>
+      {/* Logout Action */}
+      <div className="p-3 border-t border-slate-200/80">
+        <button 
+          onClick={() => setShowLogoutDialog(true)}
+          title={!isExpanded ? "Sign Out" : undefined}
+          className={`
+            w-full flex items-center rounded-xl transition-all font-bold text-xs uppercase tracking-wider
+            ${isExpanded 
+              ? 'gap-3.5 px-4 py-3 text-slate-600 hover:bg-red-50 hover:text-red-600'
+              : 'justify-center py-3 text-slate-600 hover:bg-red-50 hover:text-red-600'
+            }
+          `}
+        >
+          <LogOut size={20} className="shrink-0" />
+          {isExpanded && <span>Sign Out</span>}
+        </button>
+      </div>
 
-      {/* 🚪 LOGOUT CONFIRMATION DIALOG */}
+      {/* Logout Dialog */}
       {showLogoutDialog && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[999] flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-300">
@@ -174,6 +145,5 @@ export default function OrgSidebar() {
         </div>
       )}
     </div>
-
   );
 }

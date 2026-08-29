@@ -38,7 +38,8 @@ const ScholarshipRequirements = ({ reqs, setReqs, checked = [], setChecked = () 
       </div>
 
       {/* Active Items Feed View */}
-      <div className="space-y-2.5 flex-1 overflow-y-auto max-h-[380px] pr-1">
+      {/* UPDATED: Removed max-h-[380px] to allow flex-1 to push the footer perfectly to the bottom */}
+      <div className="space-y-2.5 flex-1 overflow-y-auto min-h-[200px] pr-1">
         {reqs.map((req) => {
           const isSelected = checked.includes(req.label);
           return (

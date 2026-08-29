@@ -111,8 +111,8 @@ exports.updateStudentStatus = async (req, res) => {
 
 // Profile student achievements & academic updates
 exports.updatePortfolio = async (req, res) => {
+  const  student_id = req.user.id;
   const { 
-    student_id, 
     type, 
     title, 
     bio, 
@@ -239,7 +239,7 @@ exports.updatePortfolio = async (req, res) => {
 
 // PERSONAL EDIT INFO UPDATE
 exports.updatePersonalInfo = async (req, res) => {
-  const { id } = req.params;
+  const  id = req.user.id;
   const { scontact_number, sstreet, sbarangay, sgender, religion, other_religion } = req.body;
 
   try {
@@ -276,7 +276,7 @@ exports.updatePersonalInfo = async (req, res) => {
 
 // Fetching full profile info (Read-only GET function)
 exports.getFullProfile = async (req, res) => {
-  const { id } = req.params;
+  const id = req.user.id;
   try {
     const result = await pool.query(
       `SELECT 
@@ -316,8 +316,8 @@ exports.getFullProfile = async (req, res) => {
 };
 
 exports.updateProfilePic = async (req, res) => {
-  const { id } = req.params;
-  
+  const id = req.user.id;
+
   if (!req.file) {
     return res.status(400).json({ error: "No image provided" });
   }
@@ -367,7 +367,8 @@ exports.updateProfilePic = async (req, res) => {
 };
 
 exports.update2FA = async (req, res) => {
-    const { studentId, two_factor_enabled, preferred_2fa_method } = req.body;
+    const studentId = req.user.id;
+    const {  two_factor_enabled, preferred_2fa_method } = req.body;
 
     try {
         await pool.query(
@@ -434,7 +435,7 @@ exports.getMyScholarships = async (req, res) => {
 };
 
 exports.saveOrUpdateParentProfile = async (req, res) => {
-    const { studentId } = req.params;
+    const  studentId  = req.user.id;
     const {
         mother_name, mother_contact, mother_occupation,
         father_name, father_contact, father_occupation,
@@ -508,7 +509,8 @@ exports.saveOrUpdateParentProfile = async (req, res) => {
 };
 
 exports.changePassword = async (req, res) => {
-    const { studentId, currentPassword, newPassword } = req.body;
+  const studentId = req.user.id;
+    const {  currentPassword, newPassword } = req.body;
 
     try {
         const result = await pool.query(

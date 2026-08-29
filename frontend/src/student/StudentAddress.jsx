@@ -56,7 +56,7 @@ export default function StudentAddress({ regform, setRegForm, handleChange }) {
                     >
                         <option value="">Select District</option>
                         {[1, 2, 3, 4, 5, 6].map(d => (
-                            <option key={d} value={d}>District {d}</option>
+                            <option key={d} value={`District ${d}`}>District {d}</option>
                         ))}
                     </select>
                 </div>

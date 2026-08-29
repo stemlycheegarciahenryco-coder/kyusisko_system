@@ -18,7 +18,7 @@ export default function LogIn() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [attempts, setAttempts] = useState(null);
+  const [errorMessage, setErrorMessage] = useState(''); // Replaces attempts state
   const [verifiedStatus, setVerifiedStatus] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -35,26 +35,22 @@ export default function LogIn() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMessage('');
+
     try {
-      // 🚀 Single unified endpoint for all 3 portals
       const response = await api.post('/auth/portal-login', { 
         identifier: identifier.trim(), 
         password 
       });
       
-      const { token, role, data } = response.data; 
-      if (token) {
-        localStorage.setItem('token', token);
-      }
+      // We no longer extract or save 'token' here!
+      const { role, data } = response.data; 
+
       if (role === 'root_admin' || role === 'co_admin') {
-        localStorage.setItem('systemUid', data.uid);
-        localStorage.setItem('adminEmail', data.email);
         localStorage.setItem('userRole', role);
-    
         navigate('/RootDashboard');
+
       } else if (role === 'sub_admin') {
-        localStorage.setItem('orgId', data.id); 
-        localStorage.setItem('adminEmail', data.email);
         localStorage.setItem('userRole', role);
         localStorage.setItem('orgInfo', JSON.stringify({
           isPasswordChanged: data.isPasswordChanged,
@@ -63,10 +59,9 @@ export default function LogIn() {
         }));
         
         navigate('/OrgDashboard');
+
       } else if (role === 'student') {
-        localStorage.setItem('studentId', data.id);
         localStorage.setItem('userRole', role);
-        localStorage.setItem('studentInfo', JSON.stringify(data));
        
         if (!data.isProfileComplete) {
           navigate('/student-onboard');
@@ -76,8 +71,11 @@ export default function LogIn() {
       }
     } catch (err) {
       const errorData = err.response?.data;
-      alert(errorData?.error || "Login failed");
-      setAttempts(errorData?.blocked ? 0 : errorData?.attempts);
+      if (errorData?.error === "Invalid Credentials") {
+        setErrorMessage("Invalid or Unknown Credentials");
+      } else {
+        setErrorMessage(errorData?.error || "Invalid or Unknown Credentials");
+      }
     } finally {
       setLoading(false);
     }
@@ -90,7 +88,6 @@ export default function LogIn() {
         style={{ backgroundImage: `url('/bg2.png')` }}
       />
 
-      {/* Glassmorphism Container with Increased Max Width */}
       <div className="max-w-md w-full bg-white/70 backdrop-blur-xl rounded-[2.5rem] shadow-2xl p-10 border border-white/40 relative z-10">
         <button 
           onClick={() => navigate('/')} 
@@ -107,7 +104,6 @@ export default function LogIn() {
         )}
 
         <div className="text-center mb-8 mt-2">
-          {/* Increased Logo Size */}
           <div className="inline-flex items-center justify-center mb-4">
             <img src="/logo.png" alt="Logo" className="h-24 w-auto object-contain" />
           </div>
@@ -158,11 +154,12 @@ export default function LogIn() {
             </div>
           </div>
 
-          {attempts !== null && (
+          {/* Alert Banner for Invalid Credentials or Lockout Error */}
+          {errorMessage && (
             <div className="flex items-center gap-2.5 p-4 rounded-2xl bg-[#FF1E1E]/10 border border-[#FF1E1E]/20 text-[#FF1E1E] backdrop-blur-sm">
-              <IconAlertCircle size={20} stroke={2.5} />
+              <IconAlertCircle size={20} stroke={2.5} className="shrink-0" />
               <p className="text-xs font-black uppercase tracking-wide">
-                {attempts === 0 ? "Blocked" : `${attempts} Attempts left`}
+                {errorMessage}
               </p>
             </div>
           )}

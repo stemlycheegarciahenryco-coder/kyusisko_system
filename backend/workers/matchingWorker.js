@@ -1,18 +1,15 @@
-// workers/aiMatchingWorker.js
+// workers/matchingWorker.js
 const { Worker } = require('bullmq');
-const IORedis = require('ioredis');
 const pool = require('../config/db');
 const redisClient = require('../config/queueConnection');
-const { getAIMatch, buildStudentProfileForAI } = require('../utils/engineMatcher');
-
-
+const { calculateRuleMatch, buildStudentProfile } = require('../utils/ruleMatcher');
 
 const engineMatchingWorker = new Worker(
   'engineMatching',
   async (job) => {
     const { studentId, scholarshipId } = job.data;
 
-    // 1. Fetch Student Profile Data
+    // 1. Fetch Student Profile
     const profileResult = await pool.query(
       `SELECT sop.*, s.bio, s.portfolio_data, s.year_level, s.sgender AS gender,
               c.name AS course_name, col.name AS college_name
@@ -27,55 +24,54 @@ const engineMatchingWorker = new Worker(
     if (profileResult.rows.length === 0) return;
 
     const pRow = profileResult.rows[0];
-    const student = { bio: pRow.bio, portfolio_data: pRow.portfolio_data, year_level: pRow.year_level, gender: pRow.gender };
-    const aiProfile = buildStudentProfileForAI(student, pRow, { courseName: pRow.course_name, collegeName: pRow.college_name });
+    const student = { bio: pRow.bio, year_level: pRow.year_level, gender: pRow.gender };
+    const studentProfile = buildStudentProfile(student, pRow, { courseName: pRow.course_name, collegeName: pRow.college_name });
 
     // 2. Fetch Scholarship Details
     const scholarshipResult = await pool.query(
-      `SELECT id, title, description, criteria FROM scholarships WHERE id = $1`,
+      `SELECT id, title, description, criteria, gwa_requirement, district_requirement FROM scholarships WHERE id = $1`,
       [scholarshipId]
     );
 
     if (scholarshipResult.rows.length === 0) return;
     const scholarship = scholarshipResult.rows[0];
 
-    // 3. Call Gemini AI Engine
-    const result = await getAIMatch(aiProfile, scholarship);
-    if (!result) return; // Retries handled by BullMQ if it threw an error
+    // 3. Execute Rule Matcher
+    const result = await calculateRuleMatch(studentProfile, scholarship);
 
-    // 4. Save to PostgreSQL Database
+    // 4. Save Rule Results to PostgreSQL
     const computedNow = new Date().toISOString();
     await pool.query(
-      `INSERT INTO match_scores (student_id, scholarship_id, match_score, criteria_results, ai_summary, computed_at)
+      `INSERT INTO match_scores (student_id, scholarship_id, is_eligible, criteria_results, summary, computed_at)
        VALUES ($1, $2, $3, $4, $5, NOW())
        ON CONFLICT (student_id, scholarship_id)
-       DO UPDATE SET match_score = $3, criteria_results = $4, ai_summary = $5, computed_at = NOW()`,
-      [studentId, scholarshipId, result.match_score, JSON.stringify(result.criteria_results), result.ai_summary]
+       DO UPDATE SET is_eligible = $3, criteria_results = $4, summary = $5, computed_at = NOW()`,
+      [
+        studentId, 
+        scholarshipId, 
+        result.is_eligible, 
+        JSON.stringify(result.criteria_results), 
+        result.summary
+      ]
     );
 
     // 5. Update Redis Cache
     const redisKey = `match:${studentId}:${scholarshipId}`;
     const cachePayload = {
-      match_score: result.match_score,
+      is_eligible: result.is_eligible,
       criteria_results: result.criteria_results,
-      ai_summary: result.ai_summary,
+      summary: result.summary,
       computed_at: computedNow
     };
     await redisClient.setex(redisKey, 86400, JSON.stringify(cachePayload));
   },
   {
-    connection: redisClient,
-    // 🛡️ CRITICAL RATE LIMITER: Processes max 10 jobs per second (1000ms).
-    // This mathematically guarantees you stay within Gemini's API limits!
-    limiter: {
-      max: 10,
-      duration: 1000
-    }
+    connection: redisClient
   }
 );
 
 engineMatchingWorker.on('failed', (job, err) => {
-  console.error(`Engine Matching Job ${job?.id} failed with error: ${err.message}`);
+  console.error(`Matching Job ${job?.id} failed with error: ${err.message}`);
 });
 
 module.exports = { engineMatchingWorker };

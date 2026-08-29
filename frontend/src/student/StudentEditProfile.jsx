@@ -126,7 +126,7 @@ function AcademicSection({ studentData, onRefresh }) {
     setErrorMsg('');
 
     const formData = new FormData();
-    formData.append('student_id', localStorage.getItem('studentId')); // Lookup reference key
+    
     formData.append('bio', form.bio);
     formData.append('college_id', form.college_id);
     formData.append('course_id', form.course_id);
@@ -170,11 +170,12 @@ function AcademicSection({ studentData, onRefresh }) {
           <input
             type="text"
             placeholder="e.g. 2026-00123-MN-0"
+            maxLength={20}
             className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:border-[#093fb4] outline-none text-sm font-medium text-black transition-all"
             value={form.student_id}
             onChange={e => {
-              // Allows only letters, numbers, and hyphens (-)
-              const sanitized = e.target.value.replace(/[^a-zA-Z0-9-]/g, '');
+              // Allows only letters, numbers, and hyphens (-), capped at 20 chars
+              const sanitized = e.target.value.replace(/[^a-zA-Z0-9-]/g, '').slice(0, 20);
               setForm({ ...form, student_id: sanitized });
             }}
           />
@@ -323,8 +324,8 @@ function PersonalSection({ studentData, onRefresh }) {
     }
 
     try {
-      const studentId = localStorage.getItem('studentId');
-      await api.put(`/students/personal-info/${studentId}`, form);
+     
+      await api.put(`/students/personal-info/me`, form);
       if (onRefresh) onRefresh();
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
@@ -476,8 +477,8 @@ function FamilySection({ studentData, onRefresh }) {
     }
 
     try {
-      const studentId = localStorage.getItem('studentId');
-      await api.put(`/students/parent-profile/${studentId}`, form);
+      
+      await api.put(`/students/parent-profile/me`, form);
       if (onRefresh) onRefresh();
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);

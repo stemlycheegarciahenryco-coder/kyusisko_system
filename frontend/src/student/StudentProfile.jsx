@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useStudent } from './StudentContext';
-import { Camera, User, MapPin, Phone, Mail, Plus, Award, FileText, GraduationCap, School, Users, Calendar, Edit2, ExternalLink, ShieldAlert } from 'lucide-react';
+import { Camera, User, MapPin, Plus, Award, FileText, GraduationCap, School, Edit2, ExternalLink } from 'lucide-react';
 import api from '../api';
 import AddPortfolioModal from './AddPortfolioModal'; 
 import StudentEditProfile from './StudentEditProfile';
+import StudentParent from './StudentParent';
 
 const backendURL = "http://localhost:5000";
 
@@ -44,8 +45,8 @@ export default function StudentProfile() {
     formData.append('profile_image', file);
 
     try {
-      const id = localStorage.getItem('studentId');
-      await api.put(`/upload-profile/${id}`, formData);
+      
+      await api.put(`/upload-profile/me`, formData);
       refreshProfile(); 
       window.dispatchEvent(new Event('profilePicUpdated'));
     } catch (err) {
@@ -78,12 +79,9 @@ export default function StudentProfile() {
   }
 
   // Primary Caretaker display selectors
-  const parentName = student.guardian_name || student.father_name || student.mother_name || '—';
-  const parentRelationship = student.guardian_name ? 'Guardian' : student.father_name ? 'Father' : student.mother_name ? 'Mother' : 'Parent';
-  const parentContact = student.guardian_contact || student.father_contact || student.mother_contact || '—';
   const schoolName = student?.other_school ? student.other_school : (student?.college_name || "School not set");
   const degreeName = student?.other_degree_program ? student.other_degree_program : (student?.course_name || "Course not set");
-  const fullAddress = [student?.sstreet, student?.sbarangay, student?.szip_code].filter(Boolean).join(', ') || "Not provided";
+  const fullAddress = [student?.sbarangay, student?.sdistrict, student?.sstreet,  student?.szip_code].filter(Boolean).join(', ') || "Not provided";
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6 text-slate-800 antialiased relative">
@@ -226,31 +224,7 @@ export default function StudentProfile() {
       </div>
 
       {/* 4. FAMILY / PARENT SECTION */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-3">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-100 text-slate-500 font-bold text-xs uppercase tracking-wider">
-          <div className="flex items-center gap-2">
-            <Users size={14} className="text-[#093fb4]" />
-            <span>Family Information</span>
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50/50 border border-slate-100 rounded-xl p-4 text-sm">
-          <div>
-            <p className="text-xs font-bold text-black uppercase tracking-wider mb-1">Guardian Name</p>
-            <p className="font-semibold text-slate-600">{parentName}</p>
-          </div>
-          <div>
-            <p className="text-xs font-bold text-black uppercase tracking-wider mb-1">Relationship</p>
-            <p className="font-semibold text-slate-600">{parentRelationship}</p>
-          </div>
-          <div>
-            <p className="text-xs font-bold text-black uppercase tracking-wider mb-1">Contact Link</p>
-            <p className="font-semibold text-slate-600 flex items-center gap-1.5">
-              <Phone size={14} className="text-slate-400" /> {parentContact}
-            </p>
-          </div>
-        </div>
-      </div>
+      <StudentParent student={student} onRefresh={refreshProfile} />
 
       {/* 5. ACHIEVEMENTS & PORTFOLIO COMPONENT ROW */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">

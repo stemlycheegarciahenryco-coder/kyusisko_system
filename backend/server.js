@@ -8,7 +8,7 @@ require('dotenv').config();
 // 🚀 1. BOOT UP THE BULLMQ BACKGROUND WORKER PROCESS
 // This wakes up your worker file so it listens to Redis queue jobs cleanly in the background
 require('./queues/applicationQueue');
-require('./workers/engineMatchingWorker'); // <-- Dedicated AI background processing queue
+require('./workers/matchingWorker'); // <-- Dedicated AI background processing queue
 
 // Route Imports
 const subAdminRoutes = require('./routes/subAdminRoutes');
@@ -23,6 +23,7 @@ const orgRoutes = require('./routes/orgRoutes');
 const notifRoutes = require('./routes/notifRoutes');
 const renewRoutes = require('./routes/renewRoutes');
 const userOrgRoutes = require('./routes/userOrgRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 const searchRoutes = require('./routes/searchRoutes');
 const lookupRouter = require('./routes/lookup');
 const systemAdminRouter = require('./routes/systemadmin');
@@ -71,6 +72,7 @@ app.use('/api',  authRoutes);
 app.use('/api/scholarships', scholarshipRoutes);
 app.use('/api/user-org', userOrgRoutes);
 app.use('/api/applications', applicationRoutes);
+app.use('/api/reports', reportRoutes);
 app.use('/api/renewals', renewRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/system-admin', systemAdminRouter);
