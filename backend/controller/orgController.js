@@ -521,33 +521,59 @@ const getActivityLogs = async (req, res) => {
         const orgId = await resolveOrgId(req.user.id);
         if (!orgId) return res.status(404).json({ success: false, message: "Org not found." });
 
+        // UNION ALL combines the admin audit logs with student application records
         const result = await pool.query(
-            `SELECT 
-                pat.id,
-                pat.action_type,
-                pat.details,
-                pat.created_at,
-                COALESCE(NULLIF(TRIM(CONCAT(actor.first_name, ' ', actor.last_name)), ''), actor.org_name, 'System') AS actor_name,
-                actor.account_type AS actor_role,
-                st.sfirst_name AS student_first_name,
-                st.slast_name AS student_last_name
-             FROM provider_audit_trails pat
-             LEFT JOIN sub_admins actor ON pat.actor_id = actor.id
-             LEFT JOIN students st ON pat.student_id = st.id
-             WHERE pat.sub_admin_id = $1
-             ORDER BY pat.created_at DESC
-             LIMIT 200`,
+            `SELECT * FROM (
+                -- 1. Admin/Org Logs (from provider_audit_trails)
+                SELECT 
+                    pat.id::text,
+                    pat.action_type AS type,
+                    pat.details AS detail,
+                    pat.created_at,
+                    COALESCE(NULLIF(TRIM(CONCAT(actor.first_name, ' ', actor.last_name)), ''), actor.org_name, 'System') AS user_name,
+                    actor.account_type AS role,
+                    st.sfirst_name AS student_first_name,
+                    st.slast_name AS student_last_name
+                FROM provider_audit_trails pat
+                LEFT JOIN sub_admins actor ON pat.actor_id = actor.id
+                LEFT JOIN students st ON pat.student_id = st.id
+                WHERE pat.sub_admin_id = $1
+
+                UNION ALL
+
+                -- 2. Student Application Logs (from applications table)
+                SELECT 
+                    a.id::text,
+                    CASE 
+                        -- Adjust this condition based on how you track renewals in your DB
+                        WHEN a.status = 'renewal' THEN 'Student Renewal' 
+                        ELSE 'New Application' 
+                    END AS type,
+                    CONCAT('Applied for ', prog.title) AS detail,
+                    a.created_at,
+                    CONCAT(st.sfirst_name, ' ', st.slast_name) AS user_name,
+                    'Student' AS role,
+                    st.sfirst_name AS student_first_name,
+                    st.slast_name AS student_last_name
+                FROM applications a
+                JOIN scholarships prog ON a.scholarship_id = prog.id
+                JOIN students st ON a.student_id = st.id
+                WHERE prog.sub_admin_id = $1
+            ) AS combined_logs
+            ORDER BY created_at DESC
+            LIMIT 200`,
             [orgId]
         );
 
+        // Map the results so the frontend gets a clean array
         const data = result.rows.map(r => ({
             id: r.id,
-            user: r.actor_name,
-            role: r.actor_role === 'co_admin' ? 'Co-Admin' : r.actor_role === 'main' ? 'Org Admin' : 'System',
-            type: r.action_type || 'Activity',
-            detail: r.student_first_name
-                ? `${r.details || ''} (Student: ${r.student_first_name} ${r.student_last_name})`.trim()
-                : (r.details || ''),
+            user: r.user_name,
+            role: r.role === 'co_admin' ? 'Co-Admin' : r.role === 'main' ? 'Org Admin' : r.role,
+            type: r.type,
+            detail: r.student_first_name && r.role !== 'Student'
+                ? `${r.detail || ''} (Student: ${r.student_first_name} ${r.student_last_name})`.trim()
+                : (r.detail || ''),
             createdAt: r.created_at,
         }));
 
@@ -564,46 +590,60 @@ const monitorApplications = async (req, res) => {
         const subAdminId = await resolveOrgId(req.user.id);
         if (!subAdminId) return res.status(404).json({ success: false, message: "Org not found." });
 
-        // This revised query surfaces cross-applications regardless of their current status string
+        // Groups by student to avoid redundancy and counts active external programs
         const conflictsQuery = `
             SELECT 
-                a.id,
-                a.scholarship_id,
-                a.status,
-                a.created_at AS submitted_at,
+                s.id AS student_id,
                 s.sfirst_name,
                 s.slast_name,
                 s.student_email,
-                prog.title AS scholarship_name,
+                MAX(a.created_at) AS latest_application_date,
                 (
                     SELECT o.org_name
                     FROM applications a2
                     JOIN scholarships s2 ON a2.scholarship_id = s2.id
                     JOIN sub_admins o ON s2.sub_admin_id = o.id
-                    WHERE a2.student_id = a.student_id 
+                    WHERE a2.student_id = s.id 
                       AND s2.sub_admin_id != $1
+                      AND a2.status IN ('approved', 'active')
                     LIMIT 1
-                ) AS conflicting_org
+                ) AS conflicting_org,
+                (
+                    SELECT COUNT(DISTINCT s2.id)
+                    FROM applications a2
+                    JOIN scholarships s2 ON a2.scholarship_id = s2.id
+                    WHERE a2.student_id = s.id 
+                      AND s2.sub_admin_id != $1
+                      AND a2.status IN ('approved', 'active')
+                ) AS active_programs_count
             FROM applications a
             JOIN students s ON s.id = a.student_id
             JOIN scholarships prog ON a.scholarship_id = prog.id
             WHERE prog.sub_admin_id = $1
-              -- Triggers an indicator if they exist anywhere else at all
-              AND EXISTS (
-                  SELECT 1 
-                  FROM applications a3
-                  JOIN scholarships s3 ON a3.scholarship_id = s3.id
-                  WHERE a3.student_id = a.student_id 
-                    AND s3.sub_admin_id != $1
-              )
-            ORDER BY a.created_at DESC
+            GROUP BY s.id, s.sfirst_name, s.slast_name, s.student_email
+            -- Only pull students who ACTUALLY have approved/active external programs
+            HAVING (
+                SELECT COUNT(DISTINCT s2.id)
+                FROM applications a2
+                JOIN scholarships s2 ON a2.scholarship_id = s2.id
+                WHERE a2.student_id = s.id 
+                  AND s2.sub_admin_id != $1
+                  AND a2.status IN ('approved', 'active')
+            ) > 0
+            ORDER BY latest_application_date DESC
         `;
 
         const result = await pool.query(conflictsQuery, [subAdminId]);
 
+        // Format a clean message for your React frontend
+        const formattedData = result.rows.map(row => ({
+            ...row,
+            conflict_display: `Conflict: ${row.conflicting_org} (Active in ${row.active_programs_count} program${row.active_programs_count > 1 ? 's' : ''})`
+        }));
+
         res.status(200).json({
             success: true,
-            data: result.rows
+            data: formattedData
         });
     } catch (err) {
         console.error("Monitor Applications Error:", err.message);
