@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'; 
 import api from './api';
-import { ArrowRight, Bookmark, AlertTriangle, Building2Icon, CheckCircle2, Calendar, X } from 'lucide-react';
+import { ArrowRight, Bookmark, AlertTriangle, Building2Icon, CheckCircle2, Calendar, X, MoreVertical } from 'lucide-react';
 import StudentRecommendations from './student/StudentRecommendations';
 
 // 📋 Pre-defined lists of report reasons
@@ -93,7 +93,6 @@ export default function ScholarshipList() {
       return;
     }
 
-    // Join with a recognizable separator bar
     const combinedReason = finalReasons.join(' | ');
 
     try {
@@ -146,73 +145,85 @@ export default function ScholarshipList() {
     return (
       <div className="space-y-5">
         {scholarships.map((s) => {
-
           return (
             <div
               key={s.id}
               className={`bg-white rounded-3xl border shadow-sm p-6 transition-all hover:shadow-md relative overflow-hidden ${
-                s.is_best_match ? 'border-[#093fb4]/30 shadow-blue-900/5' : 'border-black/5'
+                s.is_best_match ? 'border-[#093fb4]/40 shadow-blue-900/5 ring-1 ring-[#093fb4]/10' : 'border-black/5'
               }`}
             >
-              {/* Best match banner */}
-              {s.is_best_match && (
-                <div className="absolute top-0 left-0 right-0 bg-[#093fb4] px-5 py-1.5 flex items-center gap-2">
-                  <span className="text-[11px] font-black text-white uppercase tracking-[0.2em]">
-                    ✦ Best Scholarship For You
-                  </span>
-                </div>
-              )}
-
-              {/* Open modal structure */}
-              <button 
-                onClick={() => setReportModal({ open: true, id: s.id, selectedReasons: [], otherReason: '' })} 
-                className={`absolute right-6 p-2 rounded-xl bg-slate-50 text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all z-10 ${s.is_best_match ? 'top-14' : 'top-6'}`}
-                title="Report this scholarship"
-              >
-                <AlertTriangle size={18} />
-              </button>
-
-              <div className={`flex flex-col gap-5 ${s.is_best_match ? 'mt-6' : ''}`}>
-                {/* Org header */}
-                <div className="flex items-center gap-4">
-                  {/* Increased size to w-20 h-20 and made circular with rounded-full */}
-                  <div className="w-20 h-20 rounded-full overflow-hidden flex items-center justify-center bg-white border border-slate-100 shadow-sm shrink-0">
-                    {s.org_pic ? (
-                      <img src={s.org_pic} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-xl font-black text-slate-300">
-                        {s.org_name?.substring(0, 2).toUpperCase()}
+              <div className="flex flex-col gap-4">
+                
+                {/* 1. Matched criteria highlight displayed at the top */}
+                {s.matched_criteria?.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {s.matched_criteria.map((c, idx) => (
+                      <span
+                        key={`matched-${idx}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold bg-green-50 text-green-700 border border-green-200"
+                      >
+                        <CheckCircle2 size={13} />
+                        {c}
                       </span>
-                    )}
+                    ))}
                   </div>
-                  
-                  <div className="flex flex-col justify-center">
-                    {/* Increased text size for org_name */}
-                    <h1 className="text-[#093fb4] text-xl md:text-2xl font-black uppercase tracking-tight leading-tight">
-                      {s.org_name}
-                    </h1>
-                    {/* Increased text size for provider_type and removed Mail/Phone */}
-                    <div className="flex items-center gap-1.5 text-slate-700 font-bold text-base md:text-lg mt-1">
-                      <Building2Icon size={18} className="text-[#093fb4]" /> {s.provider_type || 'N/A'}
+                )}
+
+                {/* Org header & Top Right Corner (Provider Type + 3-Dot Report Icon) */}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-full overflow-hidden flex items-center justify-center bg-white border border-slate-100 shadow-sm shrink-0">
+                      {s.org_pic ? (
+                        <img src={s.org_pic} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-xl font-black text-slate-300">
+                          {s.org_name?.substring(0, 2).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="flex flex-col justify-center">
+                      <h1 className="text-[#093fb4] text-xl md:text-2xl font-black uppercase tracking-tight leading-tight">
+                        {s.org_name}
+                      </h1>
                     </div>
                   </div>
+
+                  {/* Top Right Corner: Provider Type & 3-Dot Report Button */}
+                  <div className="flex items-center gap-2">
+                    <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-blue-50/60 border border-blue-100 rounded-xl text-[#093fb4] font-extrabold text-xs uppercase tracking-wider">
+                      <Building2Icon size={14} /> {s.provider_type || 'N/A'}
+                    </div>
+                    <button 
+                      onClick={() => setReportModal({ open: true, id: s.id, selectedReasons: [], otherReason: '' })} 
+                      className="p-2 rounded-xl bg-slate-50 text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all border border-slate-100"
+                      title="Report this scholarship"
+                    >
+                      <MoreVertical size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Mobile view provider type badge */}
+                <div className="sm:hidden flex items-center gap-1.5 px-3 py-1.5 bg-blue-50/60 border border-blue-100 rounded-xl text-[#093fb4] font-extrabold text-xs uppercase tracking-wider w-fit">
+                  <Building2Icon size={14} /> {s.provider_type || 'N/A'}
                 </div>
 
                 {/* Title */}
-                <div className="flex flex-col items-center justify-center gap-4 py-2">
-                  <h3 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight tracking-tight text-center max-w-2xl">
+                <div className="flex flex-col justify-start py-1">
+                  <h3 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight tracking-tight max-w-2xl">
                     {s.title}
                   </h3>
                 </div>
 
-                {/* Deadline (Moved above description) */}
-                <div className="flex items-center justify-center py-2 border-y border-dashed border-slate-200">
-                  <div className="flex items-center gap-2 text-[#FF1E1E] font-black text-[13px] uppercase tracking-[0.15em]">
-                    <Calendar size={16} />
+                {/* Deadline (Black text, non-horizontal layout) */}
+                <div className="flex items-center gap-2 text-slate-900 font-bold text-xs uppercase tracking-wider">
+                  <Calendar size={15} className="text-slate-500" />
+                  <span>
                     Deadline: {new Date(s.deadline).toLocaleDateString('en-US', {
                       month: 'long', day: 'numeric', year: 'numeric'
                     })}
-                  </div>
+                  </span>
                 </div>
 
                 {/* Description */}
@@ -222,32 +233,8 @@ export default function ScholarshipList() {
                   </p>
                 </div>
 
-                {/* Matched criteria highlight */}
-                {((s.matched_criteria?.length > 0) || (s.unmatched_criteria?.length > 0)) && (
-                  <div className="flex flex-wrap gap-2">
-                    {s.matched_criteria?.map((c, idx) => (
-                      <span
-                        key={`matched-${idx}`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold bg-green-50 text-green-700 border border-green-200"
-                      >
-                        <CheckCircle2 size={13} />
-                        {c}
-                      </span>
-                    ))}
-                    {s.unmatched_criteria?.map((c, idx) => (
-                      <span
-                        key={`unmatched-${idx}`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-slate-50 text-slate-400 border border-slate-200 line-through decoration-slate-300"
-                      >
-                        <X size={13} />
-                        {c}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
                 {/* Actions */}
-                <div className="flex gap-3">
+                <div className="flex gap-3 pt-2">
                   <button 
                     onClick={() => handleSaveToggle(s.id, s.is_saved)}
                     className={`flex-none px-8 py-4 font-black rounded-2xl flex items-center justify-center gap-2 uppercase text-[12px] tracking-widest transition-all ${
@@ -328,7 +315,6 @@ export default function ScholarshipList() {
                 <span className="leading-tight select-none uppercase tracking-wider text-[11px]">Select All Reasons</span>
               </label>
 
-              {/* Decorative dividing line beneath the control checkbox */}
               <div className="border-t border-slate-100 my-1" />
 
               {PREDEFINED_REPORTS.map((reason, index) => {
