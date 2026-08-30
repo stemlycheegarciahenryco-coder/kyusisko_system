@@ -10,7 +10,8 @@ import {
   IconEye,
   IconEyeOff,
   IconX,
-  IconCircleCheckFilled
+  IconCircleCheckFilled,
+  IconLoader2 
 } from '@tabler/icons-react';
 
 export default function LogIn() {
@@ -18,7 +19,7 @@ export default function LogIn() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState(''); // Replaces attempts state
+  const [errorMessage, setErrorMessage] = useState(''); 
   const [verifiedStatus, setVerifiedStatus] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -43,7 +44,6 @@ export default function LogIn() {
         password 
       });
       
-      // We no longer extract or save 'token' here!
       const { role, data } = response.data; 
 
       if (role === 'root_admin' || role === 'co_admin') {
@@ -83,10 +83,22 @@ export default function LogIn() {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-6 relative overflow-hidden bg-[#FFFCFB]">
+      
+      {/* Background Image */}
       <div 
         className="absolute inset-0 bg-no-repeat bg-cover bg-center pointer-events-none"
         style={{ backgroundImage: `url('/bg2.png')` }}
       />
+
+      {/* POPUP FULLSCREEN LOADING OVERLAY */}
+      {loading && (
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center transition-all duration-300">
+          <div className="bg-white p-8 w-40 h-40 rounded-3xl shadow-2xl flex flex-col items-center justify-center gap-4 border border-slate-100 animate-in fade-in zoom-in duration-300">
+            <IconLoader2 className="animate-spin text-[#5C5CFF]" size={46} stroke={2.5} />
+            <p className="text-slate-600 font-medium text-sm">Loading...</p>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-md w-full bg-white/70 backdrop-blur-xl rounded-[2.5rem] shadow-2xl p-10 border border-white/40 relative z-10">
         <button 
@@ -154,7 +166,6 @@ export default function LogIn() {
             </div>
           </div>
 
-          {/* Alert Banner for Invalid Credentials or Lockout Error */}
           {errorMessage && (
             <div className="flex items-center gap-2.5 p-4 rounded-2xl bg-[#FF1E1E]/10 border border-[#FF1E1E]/20 text-[#FF1E1E] backdrop-blur-sm">
               <IconAlertCircle size={20} stroke={2.5} className="shrink-0" />
@@ -167,10 +178,10 @@ export default function LogIn() {
           <button 
             type="submit" 
             disabled={loading}
-            className="w-full bg-[#093fb4] hover:bg-[#073496] text-white font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-2.5 group shadow-xl shadow-[#093fb4]/25 active:scale-[0.98] disabled:bg-black/10 text-sm tracking-wider uppercase"
+            className="w-full bg-[#093fb4] hover:bg-[#073496] text-white font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-2.5 group shadow-xl shadow-[#093fb4]/25 active:scale-[0.98] disabled:bg-[#093fb4]/70 disabled:active:scale-100 text-sm tracking-wider uppercase"
           >
             {loading ? (
-              <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
+              <span>Loading...</span>
             ) : (
               <>
                 LOG IN

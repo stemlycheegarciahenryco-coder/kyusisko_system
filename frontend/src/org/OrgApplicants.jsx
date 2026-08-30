@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api, { backendURL } from '../api';
 import { 
-  ExternalLink, ArrowLeft, Users, Clock, CheckCircle, 
+  ArrowLeft, Users, Clock, CheckCircle, 
   RefreshCw, Search, XCircle, AlertTriangle, Banknote, CheckCircle2 
 } from 'lucide-react';
 import { ActionConfirmModal, ComplianceModal } from './ApplicationModals';
@@ -47,7 +47,6 @@ export default function OrgApplicants() {
     }
   };
 
-  // Toggle funds disbursement status for a student
   const handleToggleDisbursement = async (app) => {
     const nextStatus = !app.is_disbursed;
     try {
@@ -190,7 +189,11 @@ export default function OrgApplicants() {
                     const verifiedContactNumber = app.scontact_number || app.contact_number || app.student_contact || '—';
 
                     return (
-                      <tr key={app.id} className="hover:bg-slate-50 transition-colors text-black">
+                      <tr 
+                        key={app.id} 
+                        onClick={() => navigate(`/scholarship-applications/${id}/applicants/${app.id}`)}
+                        className="hover:bg-slate-50 transition-colors text-black cursor-pointer"
+                      >
                         
                         {/* Avatar Profile Pic + Name */}
                         <td className="py-4 px-6">
@@ -244,7 +247,10 @@ export default function OrgApplicants() {
                         <td className="py-4 px-6 text-center">
                           {['approved', 'active'].includes(app.status) ? (
                             <button
-                              onClick={() => handleToggleDisbursement(app)}
+                              onClick={(e) => {
+                                e.stopPropagation(); // Prevents row click navigation
+                                handleToggleDisbursement(app);
+                              }}
                               title="Click to toggle disbursement status"
                               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${
                                 app.is_disbursed
@@ -272,17 +278,15 @@ export default function OrgApplicants() {
                         {/* Actions options layout */}
                         <td className="py-4 px-6 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => navigate(`/scholarship-applications/${id}/applicants/${app.id}`)}
-                              className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest bg-white border border-slate-300 hover:bg-[#093fb4] hover:text-white text-slate-700 px-3 py-2 rounded-xl transition-colors"
-                            >
-                              View <ExternalLink size={10} />
-                            </button>
-
-                            {['approved', 'active', 'renewing', 'submitted'].includes(app.status) && (
+                            {['approved', 'active', 'renewing', 'submitted'].includes(app.status) ? (
                               <>
                                 <button
-                                  onClick={() => ['approved', 'active'].includes(app.status) && setRenewModal({ show: true, app })}
+                                  onClick={(e) => {
+                                    e.stopPropagation(); // Prevents row click navigation
+                                    if (['approved', 'active'].includes(app.status)) {
+                                      setRenewModal({ show: true, app });
+                                    }
+                                  }}
                                   disabled={['renewing', 'submitted'].includes(app.status)}
                                   className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-xl transition-colors ${
                                     ['approved', 'active'].includes(app.status)
@@ -295,12 +299,17 @@ export default function OrgApplicants() {
                                 </button>
 
                                 <button
-                                  onClick={() => setTerminateModal({ show: true, app })}
+                                  onClick={(e) => {
+                                    e.stopPropagation(); // Prevents row click navigation
+                                    setTerminateModal({ show: true, app });
+                                  }}
                                   className="text-[10px] font-black uppercase tracking-widest bg-[#FF1E1E]/10 text-[#FF1E1E] px-3 py-2 rounded-xl hover:bg-[#FF1E1E]/20 transition-colors border border-[#FF1E1E]/30"
                                 >
                                   Terminate
                                 </button>
                               </>
+                            ) : (
+                              <span className="text-[10px] font-extrabold text-slate-300 uppercase tracking-widest">—</span>
                             )}
                           </div>
                         </td>

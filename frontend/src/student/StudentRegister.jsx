@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
-import { X, Mail } from "lucide-react";
+import { X, Mail, Loader2 } from "lucide-react";
 import RegisterPassField from "../RegisterPassField";
 import TermsModal from "../TermsModal"; 
 import { SuccessModal, ErrorModal, OtpModal } from "../component/RegisterModals";
@@ -32,12 +32,10 @@ export default function StudentRegister() {
     const [showError, setShowError] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
 
-    //BIRTHDATE CLAMPS
-    // Calculate min and max dates for the birthdate clamp
+    // BIRTHDATE CLAMPS (Sealed to 18 to 60 years old)
     const today = new Date();
     const minYear = today.getFullYear() - 60; // Max age 60
-    const maxYear = today.getFullYear() - 15; // Min age 15
-    // Format to YYYY-MM-DD
+    const maxYear = today.getFullYear() - 18; // Min age 18 (Strictly 18+)
     const minDate = `${minYear}-01-01`;
     const maxDate = `${maxYear}-12-31`;
 
@@ -52,46 +50,33 @@ export default function StudentRegister() {
         email: '', password: '', confirmPassword: ''
     });
 
-    // BIRTHDATE — custom Month/Day/Year selects instead of the native
-    // <input type="date">. Native date pickers are inconsistent about which
-    // month they open on when the field is empty (some browsers default to
-    // ~1970 instead of the current year), which meant users had to scroll
-    // back decades by hand. Selects give predictable, instant access to any
-    // year in range, and the year list is sorted newest-first (closest to
-    // today) since most registrants are near the young end of the 15-60
-    // range.
     const [birthMonth, setBirthMonth] = useState("");
     const [birthDay, setBirthDay] = useState("");
     const [birthYear, setBirthYear] = useState("");
 
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    // Full, ungated year list: current year down to 1975. The 15-60 age
-    // eligibility check still runs on submit (isBirthDateValid below) — this
-    // dropdown just shouldn't silently hide years to enforce that itself.
-    const currentYear = today.getFullYear();
-    const oldestBirthYear = 1975;
-    const yearOptions = Array.from({ length: currentYear - oldestBirthYear + 1 }, (_, i) => currentYear - i); // newest first
+    
+    // Dynamically generate year options strictly bound to the 18 to 60 age restriction display
+    const yearOptions = Array.from({ length: maxYear - minYear + 1 }, (_, i) => maxYear - i); // newest valid 18yo year down to max age
 
     const daysInMonth = (month, year) => {
         if (!month) return 31;
         const m = Number(month);
         if (m === 2) {
-            // Default to a leap year (29 days) until an actual year is chosen,
-            // so Feb 29 is selectable up front instead of being hidden.
             const y = year ? Number(year) : 2000;
             return new Date(y, 2, 0).getDate();
         }
-        return new Date(2000, m, 0).getDate(); // day count for non-Feb months doesn't depend on year
+        return new Date(2000, m, 0).getDate();
     };
 
-    // Keep the selected day valid if the month/year changes to one with fewer days (e.g. Feb 30 -> Feb).
+    // Keep the selected day valid if the month/year changes
     useEffect(() => {
         if (birthDay && Number(birthDay) > daysInMonth(birthMonth, birthYear)) {
             setBirthDay("");
         }
     }, [birthMonth, birthYear]);
 
-    // Combine the three selects into the regform.birthDate string the rest of the form expects.
+    // Combine the three selects into regform.birthDate
     useEffect(() => {
         if (birthMonth && birthDay && birthYear) {
             const mm = String(birthMonth).padStart(2, "0");
@@ -102,19 +87,20 @@ export default function StudentRegister() {
         }
     }, [birthMonth, birthDay, birthYear]);
 
+    // EMAIL VALIDATION CHECK
+    const isEmailValid = (() => {
+        if (!regform.email) return false;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(regform.email);
+    })();
+    const showEmailError = regform.email.length > 0 && !isEmailValid;
 
-
-    //PASSWORD VALIDATION (via password-validator)
+    // PASSWORD VALIDATION
     const isPasswordValid = passwordSchema.validate(regform.password || "");
     const passwordsMatch = regform.password !== "" && regform.password === regform.confirmPassword;
-
-
     const showMismatch = regform.confirmPassword.length > 0 && !passwordsMatch;
 
     // BIRTHDATE CLAMP CHECK
-    // The <input type="date" min/max> attributes stop most users, but they
-    // don't stop someone pasting a value in or editing devtools, so we
-    // re-check the actual age here too.
     const isBirthDateValid = (() => {
         if (!regform.birthDate) return false;
         const entered = new Date(regform.birthDate);
@@ -122,14 +108,14 @@ export default function StudentRegister() {
         return entered >= new Date(minDate) && entered <= new Date(maxDate);
     })();
 
-  const isFormInvalid = (() => {
-    const optionalFields = ["middleName", "suffix"];
-    const requiredFilled = Object.entries(regform).every(([key, value]) => 
-        optionalFields.includes(key) ? true : value.trim() !== ""
-    );
-    
-    return !requiredFilled || !isPasswordValid || !passwordsMatch || !isBirthDateValid;
-})();
+    const isFormInvalid = (() => {
+        const optionalFields = ["middleName", "suffix"];
+        const requiredFilled = Object.entries(regform).every(([key, value]) => 
+            optionalFields.includes(key) ? true : value.trim() !== ""
+        );
+        
+        return !requiredFilled || !isPasswordValid || !passwordsMatch || !isBirthDateValid || !isEmailValid;
+    })();
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -150,13 +136,16 @@ export default function StudentRegister() {
         setRegForm(prev => ({ ...prev, [name]: value }));
     };
 
-    // PHASE 1: User clicks Register. Validate fields then Send OTP.
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        // Front-end validations
+        if (!isEmailValid) {
+            setErrorMessage("Please enter a valid email address format.");
+            setShowError(true);
+            return;
+        }
         if (!isBirthDateValid) {
-            setErrorMessage("Birth date must reflect an age between 15 and 60 years old.");
+            setErrorMessage("You must be at least 18 years old to register.");
             setShowError(true);
             return;
         }
@@ -178,7 +167,6 @@ export default function StudentRegister() {
 
         setVerifying(true);
         try {
-            // Check if email/user exists and send OTP
             await api.post('/send-registration-otp', { email: regform.email });
             setShowOtpModal(true);
         } catch (err) {
@@ -189,23 +177,17 @@ export default function StudentRegister() {
         }
     };
 
-    // PHASE 2: User enters OTP in modal. Verify then finalize registration.
     const handleVerifyOtp = async (otp) => {
         setVerifying(true);
         try {
-            // 1. Verify the code
             await api.post('/verify-registration-otp', { email: regform.email, otp });
-            
-            // 2. Code is correct, proceed to finalize registration
             setLoading(true);
             await api.post('/register', regform);
-            
             setShowOtpModal(false);
             setShowSuccess(true);
         } catch (err) {
-            // Usually invalid or expired OTP
             setErrorMessage(err.response?.data?.error || "Invalid OTP code.");
-        setShowError(true);
+            setShowError(true);
         } finally {
             setVerifying(false);
             setLoading(false);
@@ -222,9 +204,22 @@ export default function StudentRegister() {
 
     return (
         <div 
-            className="min-h-screen w-full flex items-center justify-center p-4 bg-[#FFFCFB] bg-no-repeat bg-contain bg-bottom"
+            className="min-h-screen w-full flex items-center justify-center p-4 bg-[#FFFCFB] bg-no-repeat bg-contain bg-bottom relative"
             style={{ backgroundImage: `url('/bg2.png')` }}
         >
+            {/* POPUP FULLSCREEN LOADING OVERLAY */}
+            {(loading || verifying) && (
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-xs z-50 flex flex-col items-center justify-center">
+                    <div className="bg-white px-8 py-6 rounded-3xl shadow-2xl flex items-center gap-4 border border-slate-100">
+                        <Loader2 className="animate-spin text-[#093FB4]" size={36} />
+                        <div>
+                            <p className="text-black font-bold text-sm">Processing Request...</p>
+                            <p className="text-slate-500 text-xs">Please wait a moment.</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="w-full max-w-4xl bg-white/80 backdrop-blur-sm border border-slate-200 rounded-[2.5rem] shadow-2xl p-8 max-h-[95vh] overflow-y-auto relative">
                 <button 
                     onClick={() => navigate("/")} 
@@ -264,48 +259,48 @@ export default function StudentRegister() {
                             <Label text="Suffix" />
                             <input type="text" name="suffix" value={regform.suffix} onChange={handleChange} placeholder="Jr" className={`${inputClass} uppercase`} />
                         </div>
-                        {/*birthdate */}
+                        {/* Birthdate Dropdowns */}
                         <div className="space-y-1">
-    <Label text="Birth Date" required />
-    <div className="grid grid-cols-3 gap-2">
-        <select
-            name="birthMonth"
-            value={birthMonth}
-            onChange={(e) => setBirthMonth(e.target.value)}
-            required
-            className={inputClass}
-        >
-            <option value="" disabled>Month</option>
-            {monthNames.map((m, i) => (
-                <option key={m} value={i + 1}>{m}</option>
-            ))}
-        </select>
-        <select
-            name="birthDay"
-            value={birthDay}
-            onChange={(e) => setBirthDay(e.target.value)}
-            required
-            className={inputClass}
-        >
-            <option value="" disabled>Day</option>
-            {Array.from({ length: daysInMonth(birthMonth, birthYear) }, (_, i) => i + 1).map(d => (
-                <option key={d} value={d}>{d}</option>
-            ))}
-        </select>
-        <select
-            name="birthYear"
-            value={birthYear}
-            onChange={(e) => setBirthYear(e.target.value)}
-            required
-            className={inputClass}
-        >
-            <option value="" disabled>Year</option>
-            {yearOptions.map(y => (
-                <option key={y} value={y}>{y}</option>
-            ))}
-        </select>
-    </div>
-</div>
+                            <Label text="Birth Date" required />
+                            <div className="grid grid-cols-3 gap-2">
+                                <select
+                                    name="birthMonth"
+                                    value={birthMonth}
+                                    onChange={(e) => setBirthMonth(e.target.value)}
+                                    required
+                                    className={inputClass}
+                                >
+                                    <option value="" disabled>Month</option>
+                                    {monthNames.map((m, i) => (
+                                        <option key={m} value={i + 1}>{m}</option>
+                                    ))}
+                                </select>
+                                <select
+                                    name="birthDay"
+                                    value={birthDay}
+                                    onChange={(e) => setBirthDay(e.target.value)}
+                                    required
+                                    className={inputClass}
+                                >
+                                    <option value="" disabled>Day</option>
+                                    {Array.from({ length: daysInMonth(birthMonth, birthYear) }, (_, i) => i + 1).map(d => (
+                                        <option key={d} value={d}>{d}</option>
+                                    ))}
+                                </select>
+                                <select
+                                    name="birthYear"
+                                    value={birthYear}
+                                    onChange={(e) => setBirthYear(e.target.value)}
+                                    required
+                                    className={inputClass}
+                                >
+                                    <option value="" disabled>Year</option>
+                                    {yearOptions.map(y => (
+                                        <option key={y} value={y}>{y}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
                         <div className="space-y-1">
                             <Label text="Gender" />
                             <select name="gender" value={regform.gender} onChange={handleChange} className={inputClass}>
@@ -325,7 +320,7 @@ export default function StudentRegister() {
 
                     <div className="space-y-6 pt-4 border-t border-slate-100">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Email */}
+                            {/* Email with Inline Validation Error UI */}
                             <div className="space-y-1">
                                 <Label text="Email Address" required />
                                 <div className="relative flex items-center">
@@ -338,9 +333,14 @@ export default function StudentRegister() {
                                         value={regform.email} 
                                         onChange={handleChange} 
                                         required 
-                                        className={`${inputClass} pl-12`} 
+                                        className={`${inputClass} pl-12 ${showEmailError ? 'border-red-500 focus:border-red-500' : ''}`} 
                                     />
                                 </div>
+                                {showEmailError && (
+                                    <span className="text-[9px] font-black text-red-500 uppercase tracking-tighter ml-2">
+                                        Please enter a valid email format (e.g., name@domain.com)
+                                    </span>
+                                )}
                             </div>
 
                             {/* Contact */}
@@ -362,44 +362,42 @@ export default function StudentRegister() {
                                     />
                                 </div>
                             </div>
-
-                            
                         </div>
 
                         {/* Passwords */}
-<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div className="space-y-1">
-        <Label text="Password" required />
-        <RegisterPassField 
-            name="password" 
-            value={regform.password} 
-            onChange={handleChange} 
-            showStrength={true} 
-        />
-    </div>
-    <div className="space-y-1">
-        <Label text="Confirm Password" required />
-        <RegisterPassField 
-            name="confirmPassword" 
-            value={regform.confirmPassword} 
-            onChange={handleChange} 
-            error={showMismatch} // This turns the field red
-        />
-        {showMismatch && (
-            <span className="text-[9px] font-black text-red-500 uppercase tracking-tighter ml-2">
-                Passwords do not match
-            </span>
-        )}
-    </div>
-</div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <Label text="Password" required />
+                                <RegisterPassField 
+                                    name="password" 
+                                    value={regform.password} 
+                                    onChange={handleChange} 
+                                    showStrength={true} 
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <Label text="Confirm Password" required />
+                                <RegisterPassField 
+                                    name="confirmPassword" 
+                                    value={regform.confirmPassword} 
+                                    onChange={handleChange} 
+                                    error={showMismatch} 
+                                />
+                                {showMismatch && (
+                                    <span className="text-[9px] font-black text-red-500 uppercase tracking-tighter ml-2">
+                                        Passwords do not match
+                                    </span>
+                                )}
+                            </div>
+                        </div>
                     </div>
 
-                  <RegisterActions 
-    loading={loading || verifying} 
-    acceptedTerms={acceptedTerms} 
-    onShowTerms={() => setShowTerms(true)} 
-    disabled={isFormInvalid || !acceptedTerms} 
-/>
+                    <RegisterActions 
+                        loading={false} // Handled by custom loader overlay popup above
+                        acceptedTerms={acceptedTerms} 
+                        onShowTerms={() => setShowTerms(true)} 
+                        disabled={isFormInvalid || !acceptedTerms} 
+                    />
                 </form>
             </div>
 
@@ -412,7 +410,6 @@ export default function StudentRegister() {
             <SuccessModal 
                 isOpen={showSuccess} 
                 onConfirm={() => {setShowSuccess(false); navigate("/student-login");}} 
- 
             />
 
             <ErrorModal 
@@ -421,13 +418,13 @@ export default function StudentRegister() {
                 message={errorMessage} 
             />
 
-           <OtpModal 
-    isOpen={showOtpModal} 
-    email={regform.email} // Pass the email to show the user where it was sent
-    onClose={() => setShowOtpModal(false)} 
-    onVerify={handleVerifyOtp} 
-    loading={verifying}
-/>
+            <OtpModal 
+                isOpen={showOtpModal} 
+                email={regform.email} 
+                onClose={() => setShowOtpModal(false)} 
+                onVerify={handleVerifyOtp} 
+                loading={verifying}
+            />
         </div>
     );
 }

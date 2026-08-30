@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, CheckCircle, Bell, User, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import api from '../api';
+// Make sure this path correctly points to your api setup
+import api from '../api'; 
 
 // ─── Helper Function: Time Ago ───────────────────────────────────────────────
 function timeAgo(dateString) {
@@ -98,8 +98,6 @@ function MiniCalendar({ programs = [] }) {
 
 // ─── Sidebar Component ─────────────────────────────────────────────────────────
 export default function OrgRightBar({ programs = [] }) {
-  const navigate = useNavigate();
-  
   const [conflicts, setConflicts] = useState([]);
   const [loadingConflicts, setLoadingConflicts] = useState(true);
 
@@ -146,13 +144,13 @@ export default function OrgRightBar({ programs = [] }) {
           <div className="w-full space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
             {conflicts.map(c => (
               <div 
-                key={c.id} 
-                onClick={() => navigate(`/scholarship/${c.scholarship_id}/applicants`)}
-                className="p-3 bg-red-50/70 rounded-xl border border-red-200/80 text-left cursor-pointer hover:bg-red-50 transition-colors"
+                key={c.student_id} // Switched to student_id since we group by student now
+                className="p-3 bg-red-50/70 rounded-xl border border-red-200/80 text-left transition-colors"
               >
                 <p className="font-extrabold text-sm text-red-950">{c.sfirst_name} {c.slast_name}</p>
                 <p className="text-xs text-red-700 font-medium mt-0.5">
-                  Conflict: <span className="font-bold">{c.conflicting_org || 'Unknown Organization'}</span>
+                  {/* Using the pre-formatted display string from our backend update */}
+                  {c.conflict_display} 
                 </p>
               </div>
             ))}
@@ -188,13 +186,13 @@ export default function OrgRightBar({ programs = [] }) {
           ) : activityLogs.length === 0 ? (
              <div className="text-center text-xs font-medium text-slate-400 py-4">No recent activities</div>
           ) : (
-            // Slicing to 15 items so the bar doesn't get overwhelmingly long, view all can handle the rest
             activityLogs.slice(0, 15).map((log) => (
               <ActivityItem 
                 key={log.id}
                 user={log.user} 
                 detail={log.detail} 
                 time={timeAgo(log.createdAt)} 
+                role={log.role} 
               />
             ))
           )}
@@ -208,11 +206,17 @@ export default function OrgRightBar({ programs = [] }) {
 }
 
 // ─── Dynamic Activity Item Component ───────────────────────────────────────────
-function ActivityItem({ user, detail, time }) {
+function ActivityItem({ user, detail, time, role }) {
+  // Identify if this log was triggered by a student application/renewal
+  const isStudent = role === 'Student';
+
   return (
     <div className="flex items-start gap-3 text-xs md:text-sm">
-      <div className="p-2 bg-blue-50 text-blue-600 rounded-lg shrink-0 mt-0.5">
-        <User size={15} />
+      <div className={`p-2 rounded-lg shrink-0 mt-0.5 ${
+        isStudent ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'
+      }`}>
+        {/* Different icons for student actions vs admin actions */}
+        {isStudent ? <Bell size={15} /> : <User size={15} />}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-slate-700 leading-snug">

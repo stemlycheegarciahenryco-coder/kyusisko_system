@@ -52,7 +52,6 @@ const CreateScholarship = () => {
     fund_type: '' 
   });
 
-  // UPDATED: Added h-[52px] to ensure strict uniform height across all inputs
   const inputStyle = "w-full h-[52px] pl-10 pr-4 py-3.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-[#093fb4] focus:ring-4 focus:ring-[#093fb4]/10 outline-none text-sm md:text-base transition-all font-medium text-slate-900 placeholder:text-slate-400";
   const labelStyle = "block text-xs md:text-sm font-bold text-slate-800 uppercase tracking-wide mb-2";
 
@@ -188,8 +187,7 @@ const CreateScholarship = () => {
           </div>
         </div>
 
-        {/* Main 3 Column Layout */}
-        {/* UPDATED: Changed items-start to items-stretch to make all columns equal height */}
+        {/* Main 3 Column Layout (Now aligned beautifully) */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-stretch">
           
           {/* Column 1: Core Details */}
@@ -263,7 +261,6 @@ const CreateScholarship = () => {
 
               {/* Toggles: Amount & GWA */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-4">
-                
                 {/* Amount Toggle Component */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
@@ -295,7 +292,6 @@ const CreateScholarship = () => {
                       />
                     </div>
                   ) : (
-                    
                     <div className="h-[52px] px-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center">
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Undisclosed</span>
                     </div>
@@ -341,7 +337,6 @@ const CreateScholarship = () => {
                       />
                     </div>
                   ) : (
-                   
                     <div className="h-[52px] px-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center">
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">No Requirement</span>
                     </div>
@@ -368,32 +363,6 @@ const CreateScholarship = () => {
                   </div>
                 </div>
               </div>
-
-              {/* Downloads / Attachments Section */}
-              <div className="pt-6 border-t border-slate-100">
-                <label className={labelStyle}>
-                  Attached Forms <span className="text-slate-500 font-medium normal-case tracking-normal ml-1">(Optional guidelines, templates)</span>
-                </label>
-                
-                <div className="space-y-3 mt-3">
-                  {attachments.map((file, idx) => (
-                    <div key={idx} className="flex items-center justify-between bg-white border border-slate-200 p-3 rounded-xl shadow-sm">
-                      <span className="text-sm font-semibold text-slate-700 truncate max-w-[80%] pl-1">{file.name}</span>
-                      <button onClick={() => removeAttachment(idx)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors" title="Remove file">
-                        <X size={16} strokeWidth={2.5} />
-                      </button>
-                    </div>
-                  ))}
-                  
-                  <label className="flex flex-col items-center justify-center w-full py-8 border-2 border-dashed border-slate-300 hover:border-[#093fb4]/60 rounded-2xl cursor-pointer hover:bg-blue-50/30 transition-all text-center group">
-                    <FileUp size={28} className="text-slate-400 group-hover:text-[#093fb4] transition-colors mb-3" />
-                    <p className="text-sm font-bold text-slate-700 group-hover:text-[#093fb4]">Drag & drop files here or <span className="text-[#093fb4] underline">browse</span></p>
-                    <p className="text-xs text-slate-500 font-medium mt-1.5">Supported: PDF, DOCX, JPG, PNG (Max. 10MB)</p>
-                    <input type="file" className="hidden" multiple onChange={handleFileChange} />
-                  </label>
-                </div>
-              </div>
-
             </div>
           </div>
 
@@ -435,6 +404,35 @@ const CreateScholarship = () => {
             onChange={(e) => setFormData({...formData, description: sanitize(e.target.value)})}
             placeholder="Outline the scholarship qualifications, expected milestones, maintaining requirements, and any other relevant information for the applicants..."
           />
+        </div>
+
+        {/* Full Width Block: Attached Form Upload */}
+        <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm mt-6">
+          <div className="flex items-center gap-3 pb-5 mb-5 border-b border-slate-100">
+            <div className="p-2.5 bg-blue-50 rounded-xl text-[#093fb4]"><FileUp size={20} /></div>
+            <div>
+              <h2 className="text-base font-black text-slate-900 uppercase tracking-wide">Attached Form Upload</h2>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">Upload optional guidelines, templates, or forms for applicants</p>
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            {attachments.map((file, idx) => (
+              <div key={idx} className="flex items-center justify-between bg-white border border-slate-200 p-3 rounded-xl shadow-sm">
+                <span className="text-sm font-semibold text-slate-700 truncate max-w-[80%] pl-1">{file.name}</span>
+                <button onClick={() => removeAttachment(idx)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors" title="Remove file">
+                  <X size={16} strokeWidth={2.5} />
+                </button>
+              </div>
+            ))}
+            
+            <label className="flex flex-col items-center justify-center w-full py-10 border-2 border-dashed border-slate-300 hover:border-[#093fb4]/60 rounded-2xl cursor-pointer hover:bg-blue-50/30 transition-all text-center group">
+              <FileUp size={32} className="text-slate-400 group-hover:text-[#093fb4] transition-colors mb-3" />
+              <p className="text-sm font-bold text-slate-700 group-hover:text-[#093fb4]">Drag & drop files here or <span className="text-[#093fb4] underline">browse</span></p>
+              <p className="text-xs text-slate-500 font-medium mt-1.5">Supported: PDF, DOCX, JPG, PNG (Max. 10MB)</p>
+              <input type="file" className="hidden" multiple onChange={handleFileChange} />
+            </label>
+          </div>
         </div>
 
         {/* Action Bar Footer */}

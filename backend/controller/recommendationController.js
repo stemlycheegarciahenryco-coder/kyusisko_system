@@ -4,81 +4,125 @@ const { calculateRuleMatch, buildStudentProfile, computeInterestScore } = requir
 const redisClient = require('../config/queueConnection'); 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CACHE LAYER (Redis + Postgres)
+// CACHE LAYER (Redis + Postgres) — BATCHED
 // ─────────────────────────────────────────────────────────────────────────────
-async function getOrComputeMatch(studentId, scholarship, studentProfile, profileUpdatedAt) {
-  const redisKey = `match:${studentId}:${scholarship.id}`;
-  const scholarshipUpdatedAt = scholarship.updated_at ? new Date(scholarship.updated_at) : new Date(0);
-  const profileUpdated = profileUpdatedAt ? new Date(profileUpdatedAt) : new Date(0);
+// Resolves match results for ALL scholarships in one pass instead of one
+// getOrComputeMatch() call per scholarship. A single recommendations request
+// can carry up to 20 scholarships, so the old per-item version meant up to
+// 20 sequential Redis round-trips (GET) + up to 20 sequential Postgres
+// round-trips for whatever missed the cache. This version does:
+//   1 Redis MGET for all keys
+//   1 Postgres query (WHERE scholarship_id = ANY(...)) for whatever Redis missed
+//   Parallel compute for whatever both caches missed
+//   1 Redis pipeline for all resulting writes
+// Returns a Map<scholarshipId, matchResult>.
+async function getOrComputeMatchesBatch(studentId, scholarships, studentProfile, profileUpdatedAt) {
+  const results = new Map();
+  if (scholarships.length === 0) return results;
 
-  // 1. Check Redis In-Memory Cache
+  const profileUpdated = profileUpdatedAt ? new Date(profileUpdatedAt) : new Date(0);
+  const freshnessOf = (scholarship) => scholarship.updated_at ? new Date(scholarship.updated_at) : new Date(0);
+  const isFresh = (computedAt, scholarship) =>
+    new Date(computedAt) >= freshnessOf(scholarship) && new Date(computedAt) >= profileUpdated;
+
+  // ── 1. BATCH Redis read ────────────────────────────────────────────────
+  const redisKeyOf = (scholarshipId) => `match:${studentId}:${scholarshipId}`;
+  let redisValues = new Array(scholarships.length).fill(null);
   try {
-    const cachedRedis = await redisClient.get(redisKey);
-    if (cachedRedis) {
-      const parsed = JSON.parse(cachedRedis);
-      const computedAt = new Date(parsed.computed_at);
-      
-      if (computedAt >= scholarshipUpdatedAt && computedAt >= profileUpdated) {
-        return parsed; 
-      }
-    }
+    redisValues = await redisClient.mget(scholarships.map(s => redisKeyOf(s.id)));
   } catch (err) {
-    console.error("Redis Cache Error:", err.message);
+    console.error("Redis MGET Error:", err.message);
   }
 
-  // 2. Check PostgreSQL Database Cache
-  const cached = await pool.query(
-    `SELECT is_eligible, criteria_results, summary, computed_at FROM match_scores WHERE student_id = $1 AND scholarship_id = $2`,
-    [studentId, scholarship.id]
-  );
+  const stillNeeded = [];
+  scholarships.forEach((scholarship, i) => {
+    const raw = redisValues[i];
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (isFresh(parsed.computed_at, scholarship)) {
+          results.set(scholarship.id, parsed);
+          return;
+        }
+      } catch (e) { /* fall through to recompute */ }
+    }
+    stillNeeded.push(scholarship);
+  });
+  if (stillNeeded.length === 0) return results;
 
-  if (cached.rows.length > 0) {
-    const row = cached.rows[0];
-    const computedAt = new Date(row.computed_at);
-    const isFresh = computedAt >= scholarshipUpdatedAt && computedAt >= profileUpdated;
-    
-    if (isFresh) {
+  // ── 2. BATCH Postgres read for whatever Redis didn't resolve ───────────
+  const cachedRows = await pool.query(
+    `SELECT scholarship_id, is_eligible, criteria_results, summary, computed_at
+     FROM match_scores WHERE student_id = $1 AND scholarship_id = ANY($2::int[])`,
+    [studentId, stillNeeded.map(s => s.id)]
+  );
+  const cachedByScholarship = new Map(cachedRows.rows.map(r => [r.scholarship_id, r]));
+
+  const toCompute = [];
+  const redisBackfill = redisClient.pipeline();
+  let backfillCount = 0;
+
+  for (const scholarship of stillNeeded) {
+    const row = cachedByScholarship.get(scholarship.id);
+    if (row && isFresh(row.computed_at, scholarship)) {
       const result = {
         is_eligible: row.is_eligible,
         criteria_results: row.criteria_results,
         summary: row.summary,
         computed_at: row.computed_at
       };
-      try { await redisClient.setEx(redisKey, 86400, JSON.stringify(result)); } catch (e) {}
-      return result;
+      results.set(scholarship.id, result);
+      redisBackfill.set(redisKeyOf(scholarship.id), JSON.stringify(result), 'EX', 86400);
+      backfillCount++;
+    } else {
+      toCompute.push(scholarship);
     }
   }
+  if (backfillCount > 0) {
+    try { await redisBackfill.exec(); } catch (e) { console.error("Redis pipeline backfill error:", e.message); }
+  }
+  if (toCompute.length === 0) return results;
 
-  // 3. Compute Rule-Based Eligibility
-  const result = await calculateRuleMatch(studentProfile, scholarship);
-
-  // 4. Save to PostgreSQL and Redis
+  // ── 3. Compute live for whatever both caches missed — parallelized ─────
   const computedNow = new Date().toISOString();
-  
-  await pool.query(
-    `INSERT INTO match_scores (student_id, scholarship_id, is_eligible, criteria_results, summary, computed_at)
-     VALUES ($1, $2, $3, $4, $5, NOW())
-     ON CONFLICT (student_id, scholarship_id)
-     DO UPDATE SET is_eligible = $3, criteria_results = $4, summary = $5, computed_at = NOW()`,
-    [studentId, scholarship.id, result.is_eligible, JSON.stringify(result.criteria_results), result.summary]
+  const computedResults = await Promise.all(
+    toCompute.map(async (scholarship) => ({
+      scholarship,
+      result: await calculateRuleMatch(studentProfile, scholarship)
+    }))
   );
 
-  const finalData = {
-    is_eligible: result.is_eligible,
-    criteria_results: result.criteria_results,
-    summary: result.summary,
-    computed_at: computedNow
-  };
+  // ── 4. BATCH write: Postgres upserts in parallel + one Redis pipeline ──
+  const writePipeline = redisClient.pipeline();
+  await Promise.all(computedResults.map(({ scholarship, result }) => {
+    results.set(scholarship.id, {
+      is_eligible: result.is_eligible,
+      criteria_results: result.criteria_results,
+      summary: result.summary,
+      computed_at: computedNow
+    });
+    writePipeline.set(
+      redisKeyOf(scholarship.id),
+      JSON.stringify(results.get(scholarship.id)),
+      'EX', 86400
+    );
+    return pool.query(
+      `INSERT INTO match_scores (student_id, scholarship_id, is_eligible, criteria_results, summary, computed_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())
+       ON CONFLICT (student_id, scholarship_id)
+       DO UPDATE SET is_eligible = $3, criteria_results = $4, summary = $5, computed_at = NOW()`,
+      [studentId, scholarship.id, result.is_eligible, JSON.stringify(result.criteria_results), result.summary]
+    );
+  }));
+  try { await writePipeline.exec(); } catch (e) { console.error("Redis pipeline write error:", e.message); }
 
-  try { await redisClient.setEx(redisKey, 86400, JSON.stringify(finalData)); } catch (e) {}
-
-  return finalData;
+  return results;
 }
 
 // Fetches student profile data
 async function getStudentProfile(studentId) {
   const profileResult = await pool.query(
-    `SELECT sop.*, s.bio, s.portfolio_data, s.year_level, s.sgender AS gender,
+    `SELECT sop.*, s.bio, s.portfolio_data, s.year_level, s.sgender AS gender, s.gwa,
             c.name AS course_name, col.name AS college_name
      FROM student_onboarding_profiles sop
      JOIN students s ON s.id = sop.student_id
@@ -91,7 +135,7 @@ async function getStudentProfile(studentId) {
   if (profileResult.rows.length === 0) return null;
 
   const row = profileResult.rows[0];
-  const student = { bio: row.bio, portfolio_data: row.portfolio_data, year_level: row.year_level, gender: row.gender };
+  const student = { bio: row.bio, portfolio_data: row.portfolio_data, year_level: row.year_level, gender: row.gender, gwa: row.gwa };
   const profile = buildStudentProfile(student, row, { courseName: row.course_name, collegeName: row.college_name });
 
   return { profile, updatedAt: row.updated_at };
@@ -124,10 +168,15 @@ async function scoreScholarshipsForStudent(studentId, scholarships) {
   const profileData = await getStudentProfile(studentId);
   if (!profileData) return scholarships.map(s => ({ ...s, is_eligible: false, criteria_results: [], summary: null }));
 
-  const evaluated = await Promise.all(scholarships.map(async (scholarship) => {
-    const { is_eligible, criteria_results, summary } = await getOrComputeMatch(
-      studentId, scholarship, profileData.profile, profileData.updatedAt
-    );
+  // One batched resolution pass for every scholarship on this page, instead
+  // of a separate Redis + Postgres round-trip per scholarship.
+  const matchResults = await getOrComputeMatchesBatch(
+    studentId, scholarships, profileData.profile, profileData.updatedAt
+  );
+
+  const evaluated = scholarships.map((scholarship) => {
+    const { is_eligible, criteria_results, summary } =
+      matchResults.get(scholarship.id) || { is_eligible: false, criteria_results: [], summary: null };
 
     const matched_criteria = (criteria_results || []).filter(c => c.passed).map(c => c.criterion);
     const unmatched_criteria = (criteria_results || []).filter(c => !c.passed).map(c => c.criterion);
@@ -152,7 +201,7 @@ async function scoreScholarshipsForStudent(studentId, scholarships) {
       interest_score: interest_score ?? 0,
       match_score,
     };
-  }));
+  });
 
   // Sort by match_score descending — this alone now handles both "eligible
   // before ineligible" (ineligible always scores 0) and "more criteria hit

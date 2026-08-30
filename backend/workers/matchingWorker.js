@@ -11,7 +11,7 @@ const engineMatchingWorker = new Worker(
 
     // 1. Fetch Student Profile
     const profileResult = await pool.query(
-      `SELECT sop.*, s.bio, s.portfolio_data, s.year_level, s.sgender AS gender,
+      `SELECT sop.*, s.bio, s.portfolio_data, s.year_level, s.sgender AS gender, s.gwa,
               c.name AS course_name, col.name AS college_name
        FROM student_onboarding_profiles sop
        JOIN students s ON s.id = sop.student_id
@@ -24,7 +24,7 @@ const engineMatchingWorker = new Worker(
     if (profileResult.rows.length === 0) return;
 
     const pRow = profileResult.rows[0];
-    const student = { bio: pRow.bio, year_level: pRow.year_level, gender: pRow.gender };
+    const student = { bio: pRow.bio, year_level: pRow.year_level, gender: pRow.gender, gwa: pRow.gwa };
     const studentProfile = buildStudentProfile(student, pRow, { courseName: pRow.course_name, collegeName: pRow.college_name });
 
     // 2. Fetch Scholarship Details

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, MessageSquare, Loader2 } from 'lucide-react';
+import { Send, MessageSquare, Loader2, Pin } from 'lucide-react';
 import api from '../api';
 
 const dayKey = (d) => new Date(d).toDateString();
@@ -18,19 +18,14 @@ const formatDateLabel = (dateStr) => {
 const formatTime = (dateStr) =>
   new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-// Notes/log style timeline — compact rows instead of chat bubbles.
-// Height is now a MAX height: the card shrinks to fit its content (no more
-// dead whitespace when there are few or zero comments) and only scrolls
-// once content exceeds this cap. `height` is kept as an alias for
-// backward-compat with existing callers.
 export default function ApplicationTimeline({
   applicationId,
   currentUserRole,
   currentUserId,
   maxHeight,
-  height, // legacy prop name, treated as maxHeight if maxHeight isn't passed
+  height, 
 }) {
-  const cappedHeight = maxHeight ?? height ?? 320;
+  const cappedHeight = maxHeight ?? height ?? 420;
 
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
@@ -57,7 +52,6 @@ export default function ApplicationTimeline({
     setInitialLoading(true);
     fetchComments(true);
 
-    // Silently pulls fresh notes every 15 seconds
     const intervalId = setInterval(() => fetchComments(false), 15000);
     return () => clearInterval(intervalId);
   }, [applicationId]);
@@ -93,7 +87,6 @@ export default function ApplicationTimeline({
     }
   };
 
-  // Group comments by calendar day so we can render date separators
   const groups = [];
   comments.forEach((comment) => {
     const key = dayKey(comment.created_at);
@@ -107,117 +100,155 @@ export default function ApplicationTimeline({
 
   return (
     <div
-      className="bg-white border border-black/5 rounded-2xl shadow-[0_1px_10px_-2px_rgba(9,63,180,0.06)] flex flex-col w-full overflow-hidden"
+      className="bg-[#FFFCFB] border border-black/8 rounded-2xl shadow-sm flex flex-col w-full overflow-hidden relative"
       style={{ maxHeight: typeof cappedHeight === 'number' ? `${cappedHeight}px` : cappedHeight }}
     >
       {/* Header */}
-      <div className="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between shrink-0">
+      <div className="px-5 py-3 border-b border-black/5 flex items-center justify-between shrink-0 bg-white/50 backdrop-blur-sm z-10">
         <div className="flex items-center gap-2">
-          <MessageSquare size={12} className="text-[#093fb4]" />
-          <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-600">Notes &amp; Updates</h4>
+          <MessageSquare size={14} className="text-[#093fb4]" />
+          <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-800">Application Notes</h4>
         </div>
         {comments.length > 0 && (
-          <span className="text-[9px] font-black text-[#093fb4] bg-[#093fb4]/10 px-1.5 py-0.5 rounded-full">
+          <span className="text-[10px] font-black text-white bg-[#093fb4] px-2 py-0.5 rounded-full shadow-sm">
             {comments.length}
           </span>
         )}
       </div>
 
-      {/* Feed */}
-      <div className="flex-1 overflow-y-auto px-4 py-1 timeline-scroll">
+      {/* Feed Area */}
+      <div className="flex-1 overflow-y-auto p-5 timeline-scroll relative">
+        {/* Background Vertical Timeline Dashed Line */}
+        <div className="absolute top-0 bottom-0 left-[35px] w-px border-l-2 border-dashed border-slate-200 -z-0" />
+
         {initialLoading ? (
-          <div className="py-6 flex flex-col items-center justify-center gap-2">
-            <Loader2 size={16} className="text-[#093fb4] animate-spin" />
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-300">Loading...</p>
+          <div className="py-10 flex flex-col items-center justify-center gap-3">
+            <Loader2 size={20} className="text-[#093fb4] animate-spin" />
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Loading Notes...</p>
           </div>
         ) : groups.length > 0 ? (
-          groups.map((group) => (
-            <div key={group.key} className="py-2">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[8px] font-black uppercase tracking-widest text-slate-300">
-                  {formatDateLabel(group.items[0].created_at)}
-                </span>
-                <div className="flex-1 h-px bg-slate-100" />
-              </div>
+          <div className="space-y-6 z-10 relative">
+            {groups.map((group) => (
+              <div key={group.key} className="space-y-4">
+                
+                {/* Date Separator Pill */}
+                <div className="flex items-center gap-4 relative">
+                  <div className="w-4 h-4 rounded-full bg-slate-200 border-4 border-[#FFFCFB] z-10 shrink-0 shadow-sm ml-[7px]" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 bg-white px-3 py-1 rounded-full border border-slate-100 shadow-sm">
+                    {formatDateLabel(group.items[0].created_at)}
+                  </span>
+                </div>
 
-              <div className="space-y-0">
-                {group.items.map((comment) => {
-                  const isAdmin = comment.sender_role !== 'student';
-                  const isMe =
-                    (currentUserRole === 'student' &&
-                      comment.sender_role === 'student' &&
-                      String(comment.student_id) === String(currentUserId)) ||
-                    (currentUserRole === 'sub_admin' &&
-                      comment.sender_role === 'sub_admin' &&
-                      String(comment.sub_admin_id) === String(currentUserId));
+                <div className="space-y-4 pl-[38px]">
+                  {group.items.map((comment) => {
+                    const isAdmin = comment.sender_role !== 'student';
+                    const isMe =
+                      (currentUserRole === 'student' &&
+                        comment.sender_role === 'student' &&
+                        String(comment.student_id) === String(currentUserId)) ||
+                      (currentUserRole === 'sub_admin' &&
+                        comment.sender_role === 'sub_admin' &&
+                        String(comment.sub_admin_id) === String(currentUserId));
 
-                  const name =
-                    comment.sender_role === 'student'
-                      ? `${comment.sfirst_name || ''} ${comment.slast_name || ''}`.trim() || 'Student'
-                      : comment.admin_username || 'Portal Operations';
+                    const name =
+                      comment.sender_role === 'student'
+                        ? `${comment.sfirst_name || ''} ${comment.slast_name || ''}`.trim() || 'Student'
+                        : comment.admin_username || 'Portal Operations';
 
-                  return (
-                    <div
-                      key={comment.id}
-                      className="flex gap-2 py-1.5 border-b border-slate-50 last:border-0"
-                    >
-                      <div
-                        className={`w-[3px] rounded-full self-stretch shrink-0 ${
-                          isAdmin ? 'bg-[#093fb4]' : 'bg-emerald-400'
-                        }`}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="text-[10px] font-black text-slate-700 truncate">
-                            {isMe ? 'You' : name}
-                          </span>
-                          <span className="text-[9px] font-bold text-slate-300 shrink-0">
-                            {formatTime(comment.created_at)}
-                          </span>
+                    // Sticky Note Theming based on role
+                    const noteTheme = isAdmin 
+                      ? 'bg-blue-50/80 border-blue-100 shadow-blue-900/5 text-blue-900' 
+                      : 'bg-emerald-50/80 border-emerald-100 shadow-emerald-900/5 text-emerald-900';
+                      
+                    const headerTheme = isAdmin ? 'text-blue-700' : 'text-emerald-700';
+                    const avatarTheme = isAdmin ? 'bg-blue-200 text-blue-700' : 'bg-emerald-200 text-emerald-700';
+
+                    return (
+                      <div key={comment.id} className="relative group">
+                        {/* Pin Icon on top center of the note */}
+                        <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-slate-300 group-hover:text-slate-400 transition-colors z-10">
+                          <Pin size={16} className="fill-slate-100" />
                         </div>
-                        <p className="text-[11px] text-slate-600 font-medium leading-snug break-words mt-0.5">
-                          {comment.comment_text}
-                        </p>
+
+                        {/* Sticky Note Container */}
+                        <div className={`relative p-4 rounded-xl rounded-br-2xl border shadow-sm transition-all hover:shadow-md ${noteTheme}`}>
+                          
+                          {/* Folded Corner Effect */}
+                          <div className={`absolute bottom-0 right-0 w-4 h-4 rounded-tl-xl border-t border-l ${isAdmin ? 'bg-blue-100 border-blue-200' : 'bg-emerald-100 border-emerald-200'}`} />
+
+                          {/* Note Header */}
+                          <div className="flex items-start justify-between mb-3 border-b border-black/5 pb-2">
+                            <div className="flex items-center gap-2.5">
+                              {/* Avatar Initials */}
+                              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black uppercase shrink-0 ${avatarTheme}`}>
+                                {isMe ? 'ME' : name.substring(0, 2)}
+                              </div>
+                              <div>
+                                <p className={`text-[12px] font-black leading-none ${headerTheme}`}>
+                                  {isMe ? 'You' : name}
+                                </p>
+                                <p className="text-[10px] font-bold text-black/40 mt-1 uppercase tracking-wider">
+                                  {formatTime(comment.created_at)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Note Body */}
+                          <p className="text-[13px] font-medium leading-relaxed whitespace-pre-wrap break-words pr-2">
+                            {comment.comment_text}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))
+            ))}
+          </div>
         ) : (
-          <div className="py-6 flex flex-col items-center justify-center text-center">
-            <p className="text-[9px] text-slate-300 font-black uppercase tracking-widest">No notes yet</p>
+          <div className="py-12 flex flex-col items-center justify-center text-center z-10 relative">
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-3">
+              <MessageSquare size={24} className="text-slate-300" />
+            </div>
+            <p className="text-[11px] text-slate-400 font-black uppercase tracking-widest">No notes pinned yet</p>
+            <p className="text-[12px] text-slate-400 font-medium mt-1 max-w-[200px]">Updates and messages will appear here as sticky notes.</p>
           </div>
         )}
         <div ref={bottomRef} />
       </div>
 
-      {/* Composer */}
-      <form onSubmit={handlePostComment} className="px-3 py-2 border-t border-slate-100 flex items-center gap-2 shrink-0">
-        <input
+      {/* Note Input Form */}
+      <form onSubmit={handlePostComment} className="p-3 border-t border-black/5 bg-white shrink-0 flex items-end gap-2">
+        <textarea
           ref={inputRef}
-          type="text"
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
-          placeholder="Add a note..."
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handlePostComment(e);
+            }
+          }}
+          placeholder="Type a new note... (Press Enter to post)"
           disabled={!applicationId}
-          className="flex-1 px-3 py-2 bg-slate-50 border border-slate-100 rounded-xl outline-none text-[11px] text-black font-semibold placeholder-slate-400 focus:border-[#093fb4] focus:bg-white transition-all disabled:opacity-50"
+          rows={2}
+          className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-[12px] text-black font-semibold placeholder-slate-400 focus:border-[#093fb4] focus:bg-white focus:ring-4 focus:ring-[#093fb4]/10 transition-all disabled:opacity-50 resize-none"
         />
         <button
           type="submit"
           disabled={!newComment.trim() || sending || !applicationId}
-          className="p-2 bg-[#093fb4] hover:bg-[#093fb4]/90 disabled:opacity-40 text-white rounded-xl transition-all active:scale-95 shrink-0 flex items-center justify-center w-8 h-8"
+          className="p-3 bg-[#093fb4] hover:bg-[#08308b] disabled:opacity-50 disabled:hover:bg-[#093fb4] text-white rounded-xl transition-all active:scale-95 shrink-0 flex items-center justify-center h-[46px] w-[46px] shadow-md shadow-[#093fb4]/20"
         >
-          {sending ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} className="stroke-[2.5]" />}
+          {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} className="stroke-[2.5]" />}
         </button>
       </form>
 
       <style>{`
-        .timeline-scroll::-webkit-scrollbar { width: 5px; }
+        .timeline-scroll::-webkit-scrollbar { width: 6px; }
         .timeline-scroll::-webkit-scrollbar-track { background: transparent; }
-        .timeline-scroll::-webkit-scrollbar-thumb { background: rgba(9,63,180,0.15); border-radius: 999px; }
-        .timeline-scroll::-webkit-scrollbar-thumb:hover { background: rgba(9,63,180,0.3); }
+        .timeline-scroll::-webkit-scrollbar-thumb { background: rgba(9,63,180,0.1); border-radius: 999px; }
+        .timeline-scroll::-webkit-scrollbar-thumb:hover { background: rgba(9,63,180,0.25); }
       `}</style>
     </div>
   );
