@@ -21,27 +21,27 @@ export default function StudentEditProfile({ initialTab = 'academic', studentDat
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-5 overflow-y-auto">
-      <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden my-auto transition-all">
-        <div className="h-1 bg-[#093fb4]" />
+      <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden my-auto transition-all">
+        <div className="h-1.5 bg-[#093fb4]" />
 
         {/* Shell Header */}
-        <div className="flex justify-between items-center px-7 pt-6 pb-4">
+        <div className="flex justify-between items-center px-8 pt-8 pb-6">
           <div>
-            <h2 className="text-lg font-bold text-black uppercase tracking-tight">Edit My Profile</h2>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+            <h2 className="text-2xl font-bold text-black uppercase tracking-tight">Edit My Profile</h2>
+            <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mt-1">
               Keep your academic, personal, and family records up to date
             </p>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:text-[#093fb4] hover:border-[#093fb4] transition-all"
+            className="w-10 h-10 rounded-xl border border-slate-300 flex items-center justify-center text-slate-500 hover:text-[#093fb4] hover:border-[#093fb4] transition-all"
           >
-            <X size={14} />
+            <X size={20} />
           </button>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex gap-1 px-7 border-b border-slate-100">
+        <div className="flex gap-4 px-8 border-b border-slate-200">
           {TABS.map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.key;
@@ -49,23 +49,29 @@ export default function StudentEditProfile({ initialTab = 'academic', studentDat
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-1.5 px-4 py-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${
+                className={`flex items-center gap-2 px-4 py-4 text-sm font-black uppercase tracking-wider border-b-2 transition-all ${
                   isActive
                     ? 'border-[#093fb4] text-[#093fb4]'
-                    : 'border-transparent text-slate-400 hover:text-slate-600'
+                    : 'border-transparent text-slate-500 hover:text-slate-700'
                 }`}
               >
-                <Icon size={14} /> {tab.label}
+                <Icon size={18} /> {tab.label}
               </button>
             );
           })}
         </div>
 
-        {/* Tab Content */}
-        <div className="p-7 max-h-[65vh] overflow-y-auto scrollbar-thin text-left">
-          {activeTab === 'academic' && <AcademicSection studentData={studentData} onRefresh={onRefresh} />}
-          {activeTab === 'personal' && <PersonalSection studentData={studentData} onRefresh={onRefresh} />}
-          {activeTab === 'family' && <FamilySection studentData={studentData} onRefresh={onRefresh} />}
+        {/* Tab Content (Using "hidden" to persist form state across tab changes) */}
+        <div className="p-8 max-h-[70vh] overflow-y-auto scrollbar-thin text-left">
+          <div className={activeTab === 'academic' ? 'block' : 'hidden'}>
+            <AcademicSection studentData={studentData} onRefresh={onRefresh} />
+          </div>
+          <div className={activeTab === 'personal' ? 'block' : 'hidden'}>
+            <PersonalSection studentData={studentData} onRefresh={onRefresh} />
+          </div>
+          <div className={activeTab === 'family' ? 'block' : 'hidden'}>
+            <FamilySection studentData={studentData} onRefresh={onRefresh} />
+          </div>
         </div>
       </div>
     </div>
@@ -74,14 +80,14 @@ export default function StudentEditProfile({ initialTab = 'academic', studentDat
 
 function SuccessBanner({ message }) {
   return (
-    <div className="mb-4 p-3.5 bg-[#093fb4]/10 border border-[#093fb4]/20 text-[#093fb4] text-xs font-bold rounded-xl flex items-center gap-2">
-      <CheckCircle2 size={16} className="shrink-0" /> {message}
+    <div className="mb-6 p-4 bg-blue-50 border border-blue-200 text-[#093fb4] text-sm font-bold rounded-xl flex items-center gap-3">
+      <CheckCircle2 size={20} className="shrink-0" /> {message}
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────
-// 1. ACADEMIC PROFILE SECTION (With Student ID & Education Level Added)
+// 1. ACADEMIC PROFILE SECTION
 // ─────────────────────────────────────────────────────────
 function AcademicSection({ studentData, onRefresh }) {
   const [form, setForm] = useState({
@@ -126,15 +132,12 @@ function AcademicSection({ studentData, onRefresh }) {
     setErrorMsg('');
 
     const formData = new FormData();
-    
     formData.append('bio', form.bio);
     formData.append('college_id', form.college_id);
     formData.append('course_id', form.course_id);
     formData.append('other_school', form.other_school);
     formData.append('other_degree_program', form.other_degree_program);
     formData.append('sports_interests', form.sports_interests);
-    
-    // Pass the new columns to backend
     formData.append('academic_student_id', form.student_id); 
     formData.append('year_level', form.year_level);
     formData.append('gwa', form.gwa);
@@ -143,7 +146,7 @@ function AcademicSection({ studentData, onRefresh }) {
       await api.patch('/students/update-portfolio', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      if (onRefresh) onRefresh();
+      if (onRefresh) await onRefresh();
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (err) {
@@ -155,26 +158,24 @@ function AcademicSection({ studentData, onRefresh }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {showSuccess && <SuccessBanner message="Academic profile updated successfully." />}
       {errorMsg && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-600 text-xs font-semibold rounded-xl">
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-600 text-sm font-semibold rounded-xl">
           {errorMsg}
         </div>
       )}
 
-      {/* NEW: Student ID and Year Level Side-By-Side Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <div>
-          <label className="block text-xs font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">Student ID</label>
+          <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">Student ID</label>
           <input
             type="text"
             placeholder="e.g. 2026-00123-MN-0"
             maxLength={20}
-            className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:border-[#093fb4] outline-none text-sm font-medium text-black transition-all"
+            className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-black transition-all"
             value={form.student_id}
             onChange={e => {
-              // Allows only letters, numbers, and hyphens (-), capped at 20 chars
               const sanitized = e.target.value.replace(/[^a-zA-Z0-9-]/g, '').slice(0, 20);
               setForm({ ...form, student_id: sanitized });
             }}
@@ -182,9 +183,9 @@ function AcademicSection({ studentData, onRefresh }) {
         </div>
 
         <div>
-          <label className="block text-xs font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">Year / Education Level</label>
+          <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">Year / Level</label>
           <select
-            className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:border-[#093fb4] outline-none text-sm font-medium text-slate-800 cursor-pointer transition-all"
+            className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-slate-800 cursor-pointer transition-all"
             value={form.year_level}
             onChange={e => setForm({ ...form, year_level: e.target.value })}
           >
@@ -200,35 +201,35 @@ function AcademicSection({ studentData, onRefresh }) {
           </select>
         </div>
       </div>
-      {/* 👈 3. NEW GWA INPUT FIELD */}
-  <div>
-    <label className="block text-xs font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">GWA</label>
-    <input
-      type="number"
-      step="0.01"
-      min="1.00"
-      max="5.00"
-      placeholder="e.g. 1.50"
-      className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:border-[#093fb4] outline-none text-sm font-medium text-black transition-all"
-      value={form.gwa}
-      onChange={e => setForm({ ...form, gwa: e.target.value })}
-    />
-  </div>
+      
+      <div>
+        <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">GWA</label>
+        <input
+          type="number"
+          step="0.01"
+          min="1.00"
+          max="5.00"
+          placeholder="e.g. 1.50"
+          className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-black transition-all"
+          value={form.gwa}
+          onChange={e => setForm({ ...form, gwa: e.target.value })}
+        />
+      </div>
 
       <div>
-        <label className="block text-xs font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">About Yourself (Bio)</label>
+        <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">About Yourself (Bio)</label>
         <textarea
           placeholder="Write a short summary about yourself..."
-          className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:border-[#093fb4] outline-none text-sm text-black font-medium transition-all resize-none min-h-[80px]"
+          className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base text-black font-medium transition-all resize-none min-h-[100px]"
           value={form.bio}
           onChange={e => setForm({ ...form, bio: e.target.value })}
         />
       </div>
 
       <div>
-        <label className="block text-xs font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">Current College / University</label>
+        <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">Current College / University</label>
         <select
-          className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:border-[#093fb4] outline-none text-sm font-medium text-slate-800 cursor-pointer transition-all"
+          className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-slate-800 cursor-pointer transition-all"
           value={form.college_id}
           onChange={e => setForm({ ...form, college_id: e.target.value, other_school: e.target.value === 'Others' ? form.other_school : '' })}
         >
@@ -242,7 +243,7 @@ function AcademicSection({ studentData, onRefresh }) {
           <input
             type="text"
             placeholder="Enter school name..."
-            className="w-full mt-2 p-3 bg-slate-50 rounded-xl border border-slate-200 focus:border-[#093fb4] outline-none text-sm font-medium text-black transition-all"
+            className="w-full mt-3 p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-black transition-all"
             value={form.other_school}
             onChange={e => setForm({ ...form, other_school: e.target.value })}
           />
@@ -250,9 +251,9 @@ function AcademicSection({ studentData, onRefresh }) {
       </div>
 
       <div>
-        <label className="block text-xs font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">Degree Program / Course</label>
+        <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">Degree Program / Course</label>
         <select
-          className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:border-[#093fb4] outline-none text-sm font-medium text-slate-800 cursor-pointer transition-all"
+          className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-slate-800 cursor-pointer transition-all"
           value={form.course_id}
           onChange={e => setForm({ ...form, course_id: e.target.value, other_degree_program: e.target.value === 'Others' ? form.other_degree_program : '' })}
         >
@@ -266,7 +267,7 @@ function AcademicSection({ studentData, onRefresh }) {
           <input
             type="text"
             placeholder="Enter course name..."
-            className="w-full mt-2 p-3 bg-slate-50 rounded-xl border border-slate-200 focus:border-[#093fb4] outline-none text-sm font-medium text-black transition-all"
+            className="w-full mt-3 p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-black transition-all"
             value={form.other_degree_program}
             onChange={e => setForm({ ...form, other_degree_program: e.target.value })}
           />
@@ -274,11 +275,11 @@ function AcademicSection({ studentData, onRefresh }) {
       </div>
 
       <div>
-        <label className="block text-xs font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">Sports Interests</label>
+        <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">Sports Interests</label>
         <input
           type="text"
           placeholder="Basketball, Volleyball, Chess (Comma separated)"
-          className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:border-[#093fb4] outline-none text-sm font-medium text-black transition-all"
+          className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-black transition-all"
           value={form.sports_interests}
           onChange={e => setForm({ ...form, sports_interests: e.target.value })}
         />
@@ -287,9 +288,16 @@ function AcademicSection({ studentData, onRefresh }) {
       <button
         type="submit"
         disabled={saving}
-        className="w-full bg-[#093fb4] text-white py-3 rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-[#093fb4]/90 transition-all shadow-lg active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2"
+        className="w-full bg-[#093fb4] text-white py-4 mt-2 rounded-xl font-bold text-base uppercase tracking-widest hover:bg-[#093fb4]/90 transition-all shadow-lg active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2"
       >
-        {saving ? "Saving..." : "Save Academic Info"} {!saving && <ChevronRight size={16} />}
+        {saving ? (
+          <>
+            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            Saving Profile...
+          </>
+        ) : (
+          <>Save Academic Info <ChevronRight size={18} /></>
+        )}
       </button>
     </form>
   );
@@ -324,9 +332,8 @@ function PersonalSection({ studentData, onRefresh }) {
     }
 
     try {
-     
       await api.put(`/students/personal-info/me`, form);
-      if (onRefresh) onRefresh();
+      if (onRefresh) await onRefresh();
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (err) {
@@ -338,53 +345,53 @@ function PersonalSection({ studentData, onRefresh }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {showSuccess && <SuccessBanner message="Personal info updated successfully." />}
       {errorMsg && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-600 text-xs font-semibold rounded-xl">
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-600 text-sm font-semibold rounded-xl">
           {errorMsg}
         </div>
       )}
 
       <div>
-        <label className="block text-xs font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">Contact Number</label>
+        <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">Contact Number</label>
         <input
           type="text"
           placeholder="e.g. 9123456789"
-          className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:border-[#093fb4] outline-none text-sm font-medium text-black transition-all"
+          className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-black transition-all"
           value={form.scontact_number}
           onChange={e => setForm(prev => ({ ...prev, scontact_number: sanitizeContact(e.target.value, prev.scontact_number) }))}
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-6">
         <div>
-          <label className="block text-xs font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">Street Address</label>
+          <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">Street Address</label>
           <input
             type="text"
             placeholder="House No. & Street"
-            className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:border-[#093fb4] outline-none text-sm font-medium text-black transition-all"
+            className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-black transition-all"
             value={form.sstreet}
             onChange={e => setForm({ ...form, sstreet: e.target.value })}
           />
         </div>
         <div>
-          <label className="block text-xs font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">Barangay</label>
+          <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">Barangay</label>
           <input
             type="text"
             placeholder="Barangay"
-            className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:border-[#093fb4] outline-none text-sm font-medium text-black transition-all"
+            className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-black transition-all"
             value={form.sbarangay}
             onChange={e => setForm({ ...form, sbarangay: e.target.value })}
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-6">
         <div>
-          <label className="block text-xs font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">Gender</label>
+          <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">Gender</label>
           <select
-            className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:border-[#093fb4] outline-none text-sm font-medium text-slate-800 cursor-pointer transition-all"
+            className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-slate-800 cursor-pointer transition-all"
             value={form.sgender}
             onChange={e => setForm({ ...form, sgender: e.target.value })}
           >
@@ -397,9 +404,9 @@ function PersonalSection({ studentData, onRefresh }) {
         </div>
 
         <div>
-          <label className="block text-xs font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">Religion</label>
+          <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">Religion</label>
           <select
-            className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:border-[#093fb4] outline-none text-sm font-medium text-slate-800 cursor-pointer transition-all"
+            className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-slate-800 cursor-pointer transition-all"
             value={form.religion}
             onChange={e => setForm({ ...form, religion: e.target.value, other_religion: e.target.value === 'Others' ? form.other_religion : '' })}
           >
@@ -414,11 +421,11 @@ function PersonalSection({ studentData, onRefresh }) {
 
       {form.religion === 'Others' && (
         <div>
-          <label className="block text-xs font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">Specify Religion</label>
+          <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">Specify Religion</label>
           <input
             type="text"
             placeholder="Enter religion..."
-            className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:border-[#093fb4] outline-none text-sm font-medium text-black transition-all"
+            className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-black transition-all"
             value={form.other_religion}
             onChange={e => setForm({ ...form, other_religion: e.target.value })}
           />
@@ -428,9 +435,16 @@ function PersonalSection({ studentData, onRefresh }) {
       <button
         type="submit"
         disabled={saving}
-        className="w-full bg-[#093fb4] text-white py-3 mt-4 rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-[#093fb4]/90 transition-all shadow-lg active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2"
+        className="w-full bg-[#093fb4] text-white py-4 mt-2 rounded-xl font-bold text-base uppercase tracking-widest hover:bg-[#093fb4]/90 transition-all shadow-lg active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2"
       >
-        {saving ? "Saving..." : "Save Personal Info"} {!saving && <ChevronRight size={16} />}
+        {saving ? (
+          <>
+            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            Saving Info...
+          </>
+        ) : (
+          <>Save Personal Info <ChevronRight size={18} /></>
+        )}
       </button>
     </form>
   );
@@ -477,9 +491,8 @@ function FamilySection({ studentData, onRefresh }) {
     }
 
     try {
-      
       await api.put(`/students/parent-profile/me`, form);
-      if (onRefresh) onRefresh();
+      if (onRefresh) await onRefresh();
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (err) {
@@ -494,23 +507,25 @@ function FamilySection({ studentData, onRefresh }) {
     }
   };
 
+  const uniformInputStyle = "p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-black transition-all";
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-8">
       {showSuccess && <SuccessBanner message="Family records updated successfully." />}
       {errorMsg && (
-        <div className="mb-4 p-3.5 bg-red-50 border border-red-100 text-red-600 text-xs font-semibold rounded-xl">
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-600 text-sm font-semibold rounded-xl">
           {errorMsg}
         </div>
       )}
 
       {/* MOTHER SECTION */}
-      <div className="bg-slate-50/60 p-4 rounded-xl border border-slate-100 space-y-3">
-        <p className="text-xs font-black text-[#093fb4] uppercase tracking-wider">Mother's Information (Optional)</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div>
+        <p className="text-sm font-black text-[#093fb4] uppercase tracking-widest mb-3">Mother's Information (Optional)</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <input
             type="text"
             placeholder="Mother's Full Name"
-            className="p-2.5 bg-white rounded-lg border border-slate-200 focus:border-[#093fb4] outline-none text-xs font-medium text-black transition-all sm:col-span-2"
+            className={`${uniformInputStyle} sm:col-span-2`}
             value={form.mother_name}
             onChange={e => setForm({ ...form, mother_name: e.target.value })}
           />
@@ -518,14 +533,14 @@ function FamilySection({ studentData, onRefresh }) {
             type="text"
             maxLength={11}
             placeholder="Contact Number (e.g. 9123456789)"
-            className="p-2.5 bg-white rounded-lg border border-slate-200 focus:border-[#093fb4] outline-none text-xs font-medium text-black transition-all"
+            className={uniformInputStyle}
             value={form.mother_contact}
             onChange={e => handleContactChange('mother_contact', e.target.value)}
           />
           <input
             type="text"
             placeholder="Occupation"
-            className="p-2.5 bg-white rounded-lg border border-slate-200 focus:border-[#093fb4] outline-none text-xs font-medium text-black transition-all"
+            className={uniformInputStyle}
             value={form.mother_occupation}
             onChange={e => setForm({ ...form, mother_occupation: e.target.value })}
           />
@@ -533,13 +548,13 @@ function FamilySection({ studentData, onRefresh }) {
       </div>
 
       {/* FATHER SECTION */}
-      <div className="bg-slate-50/60 p-4 rounded-xl border border-slate-100 space-y-3">
-        <p className="text-xs font-black text-[#093fb4] uppercase tracking-wider">Father's Information (Optional)</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="pt-6 border-t border-slate-200">
+        <p className="text-sm font-black text-[#093fb4] uppercase tracking-widest mb-3">Father's Information (Optional)</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <input
             type="text"
             placeholder="Father's Full Name"
-            className="p-2.5 bg-white rounded-lg border border-slate-200 focus:border-[#093fb4] outline-none text-xs font-medium text-black transition-all sm:col-span-2"
+            className={`${uniformInputStyle} sm:col-span-2`}
             value={form.father_name}
             onChange={e => setForm({ ...form, father_name: e.target.value })}
           />
@@ -547,14 +562,14 @@ function FamilySection({ studentData, onRefresh }) {
             type="text"
             maxLength={11}
             placeholder="Contact Number (e.g. 9123456789)"
-            className="p-2.5 bg-white rounded-lg border border-slate-200 focus:border-[#093fb4] outline-none text-xs font-medium text-black transition-all"
+            className={uniformInputStyle}
             value={form.father_contact}
             onChange={e => handleContactChange('father_contact', e.target.value)}
           />
           <input
             type="text"
             placeholder="Occupation"
-            className="p-2.5 bg-white rounded-lg border border-slate-200 focus:border-[#093fb4] outline-none text-xs font-medium text-black transition-all"
+            className={uniformInputStyle}
             value={form.father_occupation}
             onChange={e => setForm({ ...form, father_occupation: e.target.value })}
           />
@@ -562,15 +577,15 @@ function FamilySection({ studentData, onRefresh }) {
       </div>
 
       {/* GUARDIAN SECTION */}
-      <div className="bg-amber-50/40 p-4 rounded-xl border border-amber-100/70 space-y-3">
-        <p className="text-xs font-black text-amber-700 uppercase tracking-wider flex items-center gap-1">
-          Guardian Backup Details <span className="text-slate-400 font-normal normal-case">(Optional)</span>
+      <div className="pt-6 border-t border-slate-200">
+        <p className="text-sm font-black text-[#093fb4] uppercase tracking-widest mb-3 flex items-center gap-2">
+          Guardian Backup Details <span className="text-slate-500 font-normal normal-case">(Optional)</span>
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <input
             type="text"
             placeholder="Guardian Full Name"
-            className="p-2.5 bg-white rounded-lg border border-slate-200 focus:border-[#093fb4] outline-none text-xs font-medium text-black transition-all sm:col-span-2"
+            className={`${uniformInputStyle} sm:col-span-2`}
             value={form.guardian_name}
             onChange={e => setForm({ ...form, guardian_name: e.target.value })}
           />
@@ -578,14 +593,14 @@ function FamilySection({ studentData, onRefresh }) {
             type="text"
             maxLength={11}
             placeholder="Guardian Contact Number"
-            className="p-2.5 bg-white rounded-lg border border-slate-200 focus:border-[#093fb4] outline-none text-xs font-medium text-black transition-all"
+            className={uniformInputStyle}
             value={form.guardian_contact}
             onChange={e => handleContactChange('guardian_contact', e.target.value)}
           />
           <input
             type="text"
             placeholder="Relationship / Occupation"
-            className="p-2.5 bg-white rounded-lg border border-slate-200 focus:border-[#093fb4] outline-none text-xs font-medium text-black transition-all"
+            className={uniformInputStyle}
             value={form.guardian_occupation}
             onChange={e => setForm({ ...form, guardian_occupation: e.target.value })}
           />
@@ -593,11 +608,11 @@ function FamilySection({ studentData, onRefresh }) {
       </div>
 
       {/* HOUSING ADDRESS FIELD */}
-      <div>
-        <label className="block text-xs font-bold uppercase text-[#093fb4] tracking-widest mb-1.5">Family Household Address</label>
+      <div className="pt-6 border-t border-slate-200">
+        <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-3">Family Household Address</label>
         <textarea
           placeholder="Enter complete family residential home address..."
-          className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:border-[#093fb4] outline-none text-xs text-black font-medium transition-all resize-none min-h-[60px]"
+          className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base text-black font-medium transition-all resize-none min-h-[100px]"
           value={form.house_address}
           onChange={e => setForm({ ...form, house_address: e.target.value })}
         />
@@ -606,9 +621,16 @@ function FamilySection({ studentData, onRefresh }) {
       <button
         type="submit"
         disabled={saving}
-        className="w-full bg-[#093fb4] text-white py-3 rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-[#093fb4]/90 transition-all shadow-lg active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2"
+        className="w-full bg-[#093fb4] text-white py-4 mt-2 rounded-xl font-bold text-base uppercase tracking-widest hover:bg-[#093fb4]/90 transition-all shadow-lg active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2"
       >
-        {saving ? "Saving Changes..." : "Save Family Info"} {!saving && <ChevronRight size={16} />}
+        {saving ? (
+          <>
+            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            Saving Records...
+          </>
+        ) : (
+          <>Save Family Info <ChevronRight size={18} /></>
+        )}
       </button>
     </form>
   );
