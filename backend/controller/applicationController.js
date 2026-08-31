@@ -574,5 +574,6 @@ module.exports = {
   sendComplianceRequest,
   getComplianceRequest,
   submitComplianceDocuments,
+  resolveOrgId,
 
 };

@@ -43,7 +43,7 @@ import OrgReports from './org/OrgReports';
 //might delete this 
 import OrgLogs from './org/OrgLogs';
 import CreateScholarship from './component/CreateScholarship';
-
+import DisbursementLedger from './component/DisbursementLedger';
 import {CompliancePage} from './CompliancePage';
 
 import ApplicationForm from './ApplicationForm';
@@ -102,7 +102,7 @@ export default function App() {
        <Route path="/OrgApplicantPrograms" element={<OrgApplicantPrograms />} />
       <Route path="/scholarship-applications/:id/applicants" element={<OrgApplicants />} />
         <Route path="/ProgramView" element={<ProgramView />} />
-          
+          <Route path="/scholarship-applications/:id/disbursements" element={<DisbursementLedger />} />
         <Route path="/OrgReports" element={<OrgReports />} />
         <Route path="/OrgProfile" element={<OrgProfile />} />
         <Route path="/OrgLogs" element={<OrgLogs />} />

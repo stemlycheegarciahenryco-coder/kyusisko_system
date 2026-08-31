@@ -161,11 +161,12 @@ export default function ApplicationForm() {
     }
   };
 
+  // Initial Data Loading Screen updated to match new style
   if (loading) return (
     <div className="flex justify-center items-center min-h-screen bg-[#FFFCFB] font-['Inter']">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-10 h-10 border-4 border-[#093fb4] border-t-transparent rounded-full animate-spin" />
-        <p className="text-[11px] font-black uppercase tracking-widest text-slate-500">Loading...</p>
+      <div className="bg-white p-8 w-40 h-40 rounded-3xl shadow-2xl flex flex-col items-center justify-center gap-4 border border-slate-100 animate-in fade-in zoom-in duration-300">
+        <Loader2 className="animate-spin text-[#5C5CFF]" size={46} strokeWidth={2.5} />
+        <p className="text-slate-600 font-medium text-sm">Loading...</p>
       </div>
     </div>
   );
@@ -181,7 +182,18 @@ export default function ApplicationForm() {
     .join(', ');
 
   return (
-    <div className="min-h-screen bg-slate-50 font-['Inter'] antialiased">
+    <div className="min-h-screen bg-slate-50 font-['Inter'] antialiased relative">
+      
+      {/* FULLSCREEN LOADING OVERLAY FOR FORM SUBMISSION */}
+      {submitting && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[150] flex items-center justify-center transition-all duration-300">
+          <div className="bg-white p-8 w-40 h-40 rounded-3xl shadow-2xl flex flex-col items-center justify-center gap-4 border border-slate-100 animate-in fade-in zoom-in duration-300">
+            <Loader2 className="animate-spin text-[#5C5CFF]" size={46} strokeWidth={2.5} />
+            <p className="text-slate-600 font-medium text-sm">Loading...</p>
+          </div>
+        </div>
+      )}
+
       <nav className="bg-[#FFFCFB] border-b border-black/5 px-6 py-4 sticky top-0 z-30">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <button
@@ -447,7 +459,6 @@ export default function ApplicationForm() {
                 disabled={submitting}
                 className="w-full bg-[#093fb4] hover:bg-[#FF1E1E] text-white font-black py-5 rounded-2xl flex items-center justify-center gap-3 uppercase text-sm tracking-[0.15em] transition-all active:scale-[0.98] shadow-lg shadow-blue-900/10"
               >
-                {submitting ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
                 {submitting ? 'Processing Application...' : 'Submit Complete Application'}
               </button>
             </div>

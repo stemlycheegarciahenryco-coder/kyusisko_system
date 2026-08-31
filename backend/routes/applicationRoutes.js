@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const application = require('../controller/applicationController.js');
+const disbursement = require('../controller/disbursementController.js');
 const { verifyToken, isSubAdmin, isStudent } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
@@ -20,4 +21,10 @@ router.patch('/scholarship/:id/applications/:appId/status', verifyToken, isSubAd
 router.post('/scholarship/:id/applications/:appId/comply', verifyToken, isSubAdmin, application.sendComplianceRequest);
 router.get('/:appId/compliance', verifyToken, isStudent, application.getComplianceRequest);
 router.post('/:appId/comply-submit', verifyToken, isStudent, upload.array('files', 5), application.submitComplianceDocuments);
+
+// for disbursement management (sub_admin only)
+router.post('/scholarship/:id/applications/:appId/disburse', verifyToken, isSubAdmin, disbursement.recordDisbursement);
+router.get('/scholarship/:id/disbursements', verifyToken, isSubAdmin, disbursement.getDisbursementLedger);
+router.get('/disbursements', verifyToken, isSubAdmin, disbursement.getOrgDisbursementLedger);
+
 module.exports = router;

@@ -3,9 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api, { backendURL } from '../api';
 import { 
   ArrowLeft, Users, Clock, CheckCircle, 
-  RefreshCw, Search, XCircle, AlertTriangle, Banknote, CheckCircle2 
+  RefreshCw, Search, XCircle, AlertTriangle, Banknote, CheckCircle2, Heart, ListOrdered
 } from 'lucide-react';
 import { ActionConfirmModal, ComplianceModal } from './ApplicationModals';
+import DisbursementModal from '../component/DisbursementModal';
 
 const TABS = [
   { key: 'all',            label: 'All',                   icon: Users,        statuses: null },
@@ -26,6 +27,8 @@ export default function OrgApplicants() {
 
   const [terminateModal, setTerminateModal] = useState({ show: false, app: null });
   const [renewModal, setRenewModal] = useState({ show: false, app: null });
+  const [disbursementModal, setDisbursementModal] = useState({ show: false, app: null });
+  const [remainingBudget, setRemainingBudget] = useState(null);
 
   const handleTerminateConfirm = async () => {
     try {
@@ -47,14 +50,24 @@ export default function OrgApplicants() {
     }
   };
 
-  const handleToggleDisbursement = async (app) => {
-    const nextStatus = !app.is_disbursed;
-    try {
-      await api.patch(`/applications/${app.id}/disbursement`, { is_disbursed: nextStatus });
-      setApplications(prev => prev.map(item => item.id === app.id ? { ...item, is_disbursed: nextStatus } : item));
-    } catch (err) {
-      console.error("Failed to update disbursement status", err);
-    }
+  // Opens the modal instead of firing a blind toggle — a real amount now has
+  // to be entered and gets deducted from the program's remaining budget.
+  const handleOpenDisbursement = (app) => {
+    setDisbursementModal({ show: true, app });
+  };
+
+  const handleDisbursementSubmit = async ({ amount, remarks }) => {
+    const app = disbursementModal.app;
+    const res = await api.post(`/applications/scholarship/${id}/applications/${app.id}/disburse`, { amount, remarks });
+    const updatedAmount = res.data.data.amount;
+
+    setApplications(prev => prev.map(item =>
+      item.id === app.id
+        ? { ...item, is_disbursed: true, total_disbursed: Number(item.total_disbursed || 0) + Number(updatedAmount) }
+        : item
+    ));
+    setRemainingBudget(prev => prev != null ? prev - Number(updatedAmount) : prev);
+    setDisbursementModal({ show: false, app: null });
   };
 
   const fetchApplicants = async () => {
@@ -68,7 +81,17 @@ export default function OrgApplicants() {
     }   
   };
 
-  useEffect(() => { fetchApplicants(); }, [id]);
+  const fetchBudget = async () => {
+    try {
+      const res = await api.get(`/applications/scholarship/${id}/disbursements`);
+      const data = res.data.data || res.data;
+      setRemainingBudget(data.scholarship?.remaining_budget ?? null);
+    } catch (err) {
+      console.error("Failed to fetch program budget", err);
+    }
+  };
+
+  useEffect(() => { fetchApplicants(); fetchBudget(); }, [id]);
 
   const activeTabConfig = TABS.find(t => t.key === activeTab);
 
@@ -99,12 +122,21 @@ export default function OrgApplicants() {
       <div className="max-w-6xl mx-auto">
 
         {/* Back Button */}
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-black hover:text-[#093fb4] transition-colors mb-6"
-        >
-          <ArrowLeft size={16} /> Back to Programs
-        </button>
+        <div className="flex items-center justify-between mb-6">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-black hover:text-[#093fb4] transition-colors"
+          >
+            <ArrowLeft size={16} /> Back to Programs
+          </button>
+
+          <button
+            onClick={() => navigate(`/scholarship-applications/${id}/disbursements`)}
+            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#093fb4] hover:text-[#0730a0] transition-colors"
+          >
+            <ListOrdered size={14} /> View Disbursement Ledger
+          </button>
+        </div>
 
         {/* Page Header + Searchbar Row */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
@@ -114,6 +146,9 @@ export default function OrgApplicants() {
             </h1>
             <p className="text-[11px] font-bold text-black mt-1 uppercase tracking-widest">
               {applications.length} total applications found
+              {remainingBudget != null && (
+                <span className="text-[#093fb4]"> · ₱{Number(remainingBudget).toLocaleString()} budget remaining</span>
+              )}
             </p>
           </div>
 
@@ -243,33 +278,32 @@ export default function OrgApplicants() {
                           <StatusBadge status={app.status} />
                         </td>
 
-                        {/* Money Disbursement Toggle Field */}
+                        {/* Money Disbursement Field — click the heart to log a new release */}
                         <td className="py-4 px-6 text-center">
                           {['approved', 'active'].includes(app.status) ? (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation(); // Prevents row click navigation
-                                handleToggleDisbursement(app);
-                              }}
-                              title="Click to toggle disbursement status"
-                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${
-                                app.is_disbursed
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
-                                  : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100'
-                              }`}
-                            >
-                              {app.is_disbursed ? (
-                                <>
-                                  <CheckCircle2 size={12} className="text-emerald-600" />
-                                  Funds Given
-                                </>
-                              ) : (
-                                <>
-                                  <Banknote size={12} className="text-amber-600" />
-                                  Not Given
-                                </>
-                              )}
-                            </button>
+                            <div className="inline-flex items-center gap-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation(); // Prevents row click navigation
+                                  handleOpenDisbursement(app);
+                                }}
+                                title="Give funds"
+                                className={`w-7 h-7 flex items-center justify-center rounded-full border transition-all ${
+                                  app.is_disbursed
+                                    ? 'bg-rose-50 border-rose-300 text-rose-500 hover:bg-rose-100'
+                                    : 'bg-white border-slate-300 text-slate-400 hover:border-rose-300 hover:text-rose-400'
+                                }`}
+                              >
+                                <Heart size={13} fill={app.is_disbursed ? 'currentColor' : 'none'} />
+                              </button>
+                              <span className={`text-[9px] font-black uppercase tracking-widest ${
+                                app.is_disbursed ? 'text-emerald-700' : 'text-slate-400'
+                              }`}>
+                                {app.is_disbursed
+                                  ? `₱${Number(app.total_disbursed || 0).toLocaleString()} Given`
+                                  : 'Not Given'}
+                              </span>
+                            </div>
                           ) : (
                             <span className="text-[10px] font-extrabold text-slate-300 uppercase tracking-widest">—</span>
                           )}
@@ -334,6 +368,13 @@ export default function OrgApplicants() {
         mode="renew"
         onClose={() => setRenewModal({ show: false, app: null })}
         onSend={handleRenewConfirm}
+      />
+      <DisbursementModal
+        isOpen={disbursementModal.show}
+        app={disbursementModal.app}
+        remainingBudget={remainingBudget}
+        onClose={() => setDisbursementModal({ show: false, app: null })}
+        onSubmit={handleDisbursementSubmit}
       />
     </div>
   );

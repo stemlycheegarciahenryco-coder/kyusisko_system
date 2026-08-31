@@ -183,7 +183,7 @@ function AcademicSection({ studentData, onRefresh }) {
         </div>
 
         <div>
-          <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">Year / Level</label>
+          <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">Academic Level</label>
           <select
             className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-slate-800 cursor-pointer transition-all"
             value={form.year_level}
@@ -194,7 +194,6 @@ function AcademicSection({ studentData, onRefresh }) {
             <option value="Sophomore">Sophomore</option>
             <option value="Junior">Junior</option>
             <option value="Senior">Senior</option>
-            <option value="Graduate">Graduate</option>
             <option value="PostGraduate">PostGraduate</option>
             <option value="Masters">Masters</option>
             <option value="Doctorate">Doctorate</option>

@@ -164,7 +164,7 @@ export default function StudentProfile() {
               </div>
               <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold text-slate-700">
                 <School size={16} className="text-slate-400" />
-                <span>Year Level: <strong className="text-slate-900">{student.year_level || '—'}</strong></span>
+                <span>Academic Level: <strong className="text-slate-900">{student.year_level || '—'}</strong></span>
               </div>
               <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold text-slate-700">
                 <Award size={16} className="text-[#093fb4]" />
