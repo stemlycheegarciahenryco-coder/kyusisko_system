@@ -27,4 +27,7 @@ router.post('/scholarship/:id/applications/:appId/disburse', verifyToken, isSubA
 router.get('/scholarship/:id/disbursements', verifyToken, isSubAdmin, disbursement.getDisbursementLedger);
 router.get('/disbursements', verifyToken, isSubAdmin, disbursement.getOrgDisbursementLedger);
 
+// student view — their own receipt history across every program
+router.get('/my-disbursements', verifyToken, isStudent, disbursement.getMyDisbursements);
+
 module.exports = router;

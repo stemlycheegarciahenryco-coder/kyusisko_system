@@ -226,8 +226,45 @@ const getOrgDisbursementLedger = async (req, res) => {
   }
 };
 
+// GET /my-disbursements — student views their own receipt history, across
+// every program/org that has ever released funds to them.
+const getMyDisbursements = async (req, res) => {
+  try {
+    const student_id = req.user.id;
+
+    const ledger = await pool.query(
+      `SELECT
+          d.id,
+          d.amount,
+          d.remarks,
+          d.disbursed_at,
+          sch.id AS scholarship_id,
+          sch.title AS program_name,
+          sa.org_name,
+          sa.org_pic
+       FROM disbursements d
+       JOIN scholarships sch ON sch.id = d.scholarship_id
+       JOIN sub_admins sa ON sa.id = sch.sub_admin_id
+       WHERE d.student_id = $1
+       ORDER BY d.disbursed_at DESC`,
+      [student_id]
+    );
+
+    const totalReceived = ledger.rows.reduce((sum, row) => sum + Number(row.amount), 0);
+
+    res.status(200).json({
+      success: true,
+      data: { total_received: totalReceived, entries: ledger.rows }
+    });
+  } catch (err) {
+    console.error('Get My Disbursements Error:', err.message);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   recordDisbursement,
   getDisbursementLedger,
   getOrgDisbursementLedger,
+  getMyDisbursements,
 };

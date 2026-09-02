@@ -2,14 +2,18 @@
 const IORedis = require('ioredis');
 require('dotenv').config();
 
-const redisConfig = {
-    url: process.env.REDIS_URL || 'redis://127.0.0.1:6379',
+// Explicitly use IPv4 127.0.0.1 to avoid the ::1 ECONNREFUSED error
+const redisUrl = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
+
+const redisOptions = {
     maxRetriesPerRequest: null, 
     enableReadyCheck: false
 };
 
-// Create the shared Redis client instance
-const redisClient = new IORedis(redisConfig.url, redisConfig);
+console.log(`[Redis] Connecting to: ${redisUrl.replace(/:([^:@]+)@/, ':[PROTECTED]@')}`);
+
+// Create the shared Redis client instance cleanly
+const redisClient = new IORedis(redisUrl, redisOptions);
 
 redisClient.on('connect', () => {
     console.log('[Redis] Connected successfully');
@@ -26,4 +30,4 @@ redisClient.setEx = async function(key, seconds, value) {
 
 // Export the active client as the default export, and attach the raw config
 module.exports = redisClient;
-module.exports.redisConfig = redisConfig;
+module.exports.redisConfig = { url: redisUrl, ...redisOptions };

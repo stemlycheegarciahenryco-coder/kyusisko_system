@@ -5,10 +5,7 @@ import {
   UserPlus, 
   LogIn, 
   FileText,
-  UserCircle,
-  GraduationCap,
-  Mail,
-  Menu
+  UserCircle
 } from 'lucide-react';
 
 const HomeNav = () => {
@@ -47,6 +44,9 @@ const HomeNav = () => {
     if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Shared navbar text & layout styles for perfect consistency
+  const navItemClass = "text-[13px] font-black tracking-[0.12em] uppercase transition-colors flex items-center gap-1.5 cursor-pointer";
+
   return (
     <header
       className={`sticky top-0 z-[60] font-['Inter'] transition-all duration-500 ${
@@ -63,14 +63,34 @@ const HomeNav = () => {
         </div>
 
         {/* Center Nav Links */}
-        <nav className="hidden lg:flex items-center gap-8 text-[13px] font-black tracking-[0.12em] uppercase text-white">
-          <button onClick={() => scrollToSection('about')} className="transition-colors hover:text-blue-400">About Us</button>
-          <button onClick={() => scrollToSection('contact')} className="transition-colors hover:text-blue-400 flex items-center gap-1.5"><Mail size={15} strokeWidth={2.5} /> Contact Us</button>
-          <button onClick={() => scrollToSection('scholarships')} className="transition-colors hover:text-blue-400 flex items-center gap-1.5"><GraduationCap size={15} strokeWidth={2.5} /> Scholarships</button>
+        <nav className="hidden lg:flex items-center gap-8">
+          <button 
+            onClick={() => scrollToSection('about')} 
+            className={`${navItemClass} text-white hover:text-blue-400`}
+          >
+            About Us
+          </button>
+          
+          <button 
+            onClick={() => scrollToSection('contact')} 
+            className={`${navItemClass} text-white hover:text-blue-400`}
+          >
+            Contact Us
+          </button>
+          
+          <button 
+            onClick={() => scrollToSection('scholarships')} 
+            className={`${navItemClass} text-white hover:text-blue-400`}
+          >
+            Scholarships
+          </button>
 
           {/* Provider Dropdown */}
           <div className="relative" ref={partnerMenuRef}>
-            <button onClick={() => setShowPartnerMenu(!showPartnerMenu)} className={`flex items-center gap-1.5 transition-all uppercase ${showPartnerMenu ? 'text-blue-400' : 'hover:text-blue-400'}`}>
+            <button 
+              onClick={() => setShowPartnerMenu(!showPartnerMenu)} 
+              className={`${navItemClass} ${showPartnerMenu ? 'text-blue-400' : 'text-white hover:text-blue-400'}`}
+            >
               Provider 
               <ChevronDown size={16} strokeWidth={2.5} className={`transition-transform duration-300 ${showPartnerMenu ? 'rotate-180' : ''}`} />
             </button>
@@ -80,15 +100,15 @@ const HomeNav = () => {
                 <div className="p-2 flex flex-col gap-1">
                   <button 
                     onClick={() => { navigate('/organization-register'); setShowPartnerMenu(false); }} 
-                    className="flex items-center gap-3 px-3.5 py-3 text-white text-[13px] font-black tracking-[0.12em] uppercase hover:bg-white/10 hover:text-blue-400 rounded-xl transition-all text-left"
+                    className="flex items-center gap-3 px-3.5 py-3 text-white text-[13px] font-black tracking-[0.12em] uppercase hover:bg-white/10 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
                   >
-                    <UserPlus size={18} strokeWidth={2.5} /> Create Provider Account
+                    <UserPlus size={16} strokeWidth={2.5} /> Create Provider Account
                   </button>
                   <button 
                     onClick={() => { navigate('/provider-guidelines'); setShowPartnerMenu(false); }} 
-                    className="flex items-center gap-3 px-3.5 py-3 text-white text-[13px] font-black tracking-[0.12em] uppercase hover:bg-white/10 hover:text-blue-400 rounded-xl transition-all text-left"
+                    className="flex items-center gap-3 px-3.5 py-3 text-white text-[13px] font-black tracking-[0.12em] uppercase hover:bg-white/10 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
                   >
-                    <FileText size={18} strokeWidth={2.5} /> Provider Guidelines
+                    <FileText size={16} strokeWidth={2.5} /> Provider Guidelines
                   </button>
                 </div>
               </div>
@@ -97,8 +117,11 @@ const HomeNav = () => {
 
           {/* Students Dropdown */}
           <div className="relative" ref={studentMenuRef}>
-            <button onClick={() => setShowStudentMenu(!showStudentMenu)} className={`flex items-center gap-1.5 transition-all uppercase ${showStudentMenu ? 'text-blue-400' : 'hover:text-blue-400'}`}>
-              <Menu size={16} strokeWidth={2.5} /> Students
+            <button 
+              onClick={() => setShowStudentMenu(!showStudentMenu)} 
+              className={`${navItemClass} ${showStudentMenu ? 'text-blue-400' : 'text-white hover:text-blue-400'}`}
+            >
+              Students
               <ChevronDown size={16} strokeWidth={2.5} className={`transition-transform duration-300 ${showStudentMenu ? 'rotate-180' : ''}`} />
             </button>
 
@@ -107,15 +130,15 @@ const HomeNav = () => {
                 <div className="p-2 flex flex-col gap-1">
                   <button 
                     onClick={() => { navigate('/student-register'); setShowStudentMenu(false); }} 
-                    className="flex items-center gap-3 px-3.5 py-3 text-white text-[13px] font-black tracking-[0.12em] uppercase hover:bg-white/10 hover:text-blue-400 rounded-xl transition-all text-left"
+                    className="flex items-center gap-3 px-3.5 py-3 text-white text-[13px] font-black tracking-[0.12em] uppercase hover:bg-white/10 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
                   >
-                    <UserPlus size={18} strokeWidth={2.5} /> Student Sign Up
+                    <UserPlus size={16} strokeWidth={2.5} /> Student Sign Up
                   </button>
                   <button 
                     onClick={() => { navigate('/login'); setShowStudentMenu(false); }} 
-                    className="flex items-center gap-3 px-3.5 py-3 text-white text-[13px] font-black tracking-[0.12em] uppercase hover:bg-white/10 hover:text-blue-400 rounded-xl transition-all text-left"
+                    className="flex items-center gap-3 px-3.5 py-3 text-white text-[13px] font-black tracking-[0.12em] uppercase hover:bg-white/10 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
                   >
-                    <UserCircle size={18} strokeWidth={2.5} /> Student Scholarship
+                    <UserCircle size={16} strokeWidth={2.5} /> Student Scholarship
                   </button>
                 </div>
               </div>
@@ -127,7 +150,7 @@ const HomeNav = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/login')} 
-            className="px-6 py-3 bg-[#093fb4] text-[#FFFCFB] text-[13px] font-black uppercase tracking-[0.12em] rounded-xl hover:bg-[#073496] transition-all shadow-md shadow-[#093fb4]/10 flex items-center gap-1.5 group cursor-pointer"
+            className="px-6 py-3 bg-[#093fb4] text-[#FFFCFB] text-[13px] font-black uppercase tracking-[0.12em] rounded-xl hover:bg-[#073496] transition-all shadow-md shadow-[#093fb4]/10 flex items-center gap-2 group cursor-pointer"
           >
             <LogIn size={16} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform" />
             Sign In
