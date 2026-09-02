@@ -318,7 +318,7 @@ const getSavedScholarships = async (req, res) => {
   const studentId = req.user.id;
   try {
     const result = await pool.query(`
-      SELECT ss.scholarship_id, sch.title, sch.deadline, sch.fund_type, sch.amount_range, sa.org_name, sa.org_pic
+      SELECT ss.scholarship_id, sch.title, sch.deadline, sch.fund_type, sch.total_budget, sa.org_name, sa.org_pic
       FROM saved_scholarships ss
       JOIN scholarships sch ON sch.id = ss.scholarship_id
       JOIN sub_admins sa ON sa.id = sch.sub_admin_id

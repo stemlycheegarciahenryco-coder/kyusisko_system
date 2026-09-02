@@ -397,7 +397,7 @@ exports.getMyScholarships = async (req, res) => {
          s.title,
          s.description,
          s.deadline,
-         s.amount_range,
+         a.amount_range,
          s.fund_type,
          s.criteria,
          s.slots,

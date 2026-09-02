@@ -47,7 +47,7 @@ const formatToLocalDateString = (inputDate) => {
 
 // POST /api/scholarships
 const createScholarship = async (req, res) => {
-  const { title, description, deadline, slots, gwa, fund_type, requirements, amount_range, criteria } = req.body;
+  const { title, description, deadline, slots, gwa, fund_type, requirements, budget, criteria } = req.body;
 
   const attachmentPaths = [];
   const client = await pool.connect();
@@ -92,12 +92,15 @@ const createScholarship = async (req, res) => {
     const finalGwa = (gwa === "" || gwa == null || isNaN(parsedGwa)) ? null : parsedGwa;
     const finalSlots = (slots === "" || slots == null || slots === undefined) ? null : parseInt(slots, 10);
 
+    const parsedBudget = parseFloat(budget);
+    const finalBudget = (budget === "" || budget == null || isNaN(parsedBudget)) ? null : parsedBudget;
+
     // Insert main scholarship
     const schResult = await client.query(
-      `INSERT INTO scholarships (sub_admin_id, title, description, deadline, slots, gwa_requirement, fund_type, amount_range, criteria, attachments, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'draft')
+      `INSERT INTO scholarships (sub_admin_id, title, description, deadline, slots, gwa_requirement, fund_type, criteria, attachments, status, total_budget, remaining_budget)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'draft', $10, $10)
        RETURNING id`,
-      [sub_admin_id, title, description, cleanDeadline, finalSlots, finalGwa, fund_type, amount_range, parsedCriteria, attachmentPaths]
+      [sub_admin_id, title, description, cleanDeadline, finalSlots, finalGwa, fund_type, parsedCriteria, attachmentPaths, finalBudget]
     );
 
     const scholarshipId = schResult.rows[0].id;
@@ -199,7 +202,7 @@ const getScholarshipById = async (req, res) => {
 // Edit scholarship
 const updateScholarship = async (req, res) => {
   const { id } = req.params;
-  const { title, description, deadline, slots, gwa, fund_type, amount_range, criteria, requirements } = req.body;
+  const { title, description, deadline, slots, gwa, fund_type, budget, criteria, requirements } = req.body;
 
   const client = await pool.connect();
 
@@ -212,18 +215,78 @@ const updateScholarship = async (req, res) => {
 
     await client.query('BEGIN'); 
 
+    // Lock the row so we can safely diff the old vs new budget
+    const existing = await client.query(
+      `SELECT total_budget, remaining_budget FROM scholarships WHERE id = $1 AND sub_admin_id = $2 FOR UPDATE`,
+      [id, sub_admin_id]
+    );
+
+    if (existing.rows.length === 0) {
+      await client.query('ROLLBACK');
+      client.release();
+      return res.status(404).json({ success: false, message: "Scholarship not found or unauthorized" });
+    }
+
     const cleanDeadline = formatToLocalDateString(deadline);
     const parsedGwa = parseFloat(gwa);
     const finalGwa = (gwa === "" || gwa == null || isNaN(parsedGwa)) ? null : parsedGwa;
     const finalSlots = (slots === "" || slots == null || slots === undefined) ? null : parseInt(slots, 10);
 
+    // Only touch the budget columns if `budget` was actually sent in this
+    // request — omit the field entirely from the form payload to leave the
+    // budget (and anything already disbursed against it) untouched.
+    const budgetProvided = budget !== undefined;
+    const parsedBudget = parseFloat(budget);
+    const finalBudget = (budget === "" || budget == null || isNaN(parsedBudget)) ? null : parsedBudget;
+
+    const oldTotal = existing.rows[0].total_budget !== null ? Number(existing.rows[0].total_budget) : null;
+    const oldRemaining = existing.rows[0].remaining_budget !== null ? Number(existing.rows[0].remaining_budget) : null;
+
+    let nextTotal = oldTotal;
+    let nextRemaining = oldRemaining;
+
+    if (budgetProvided) {
+      if (oldTotal === null || oldRemaining === null) {
+        // No budget existed before — seed both to the new value
+        nextTotal = finalBudget;
+        nextRemaining = finalBudget;
+      } else if (finalBudget === null) {
+        // Budget cleared — only allowed if nothing has been disbursed yet
+        if (oldRemaining !== oldTotal) {
+          await client.query('ROLLBACK');
+          client.release();
+          return res.status(400).json({
+            success: false,
+            message: "Can't clear the budget — funds have already been disbursed against this program."
+          });
+        }
+        nextTotal = null;
+        nextRemaining = null;
+      } else {
+        // Budget changed — shift remaining_budget by the same delta so
+        // funds already given out stay accounted for
+        const delta = finalBudget - oldTotal;
+        nextTotal = finalBudget;
+        nextRemaining = oldRemaining + delta;
+
+        if (nextRemaining < 0) {
+          await client.query('ROLLBACK');
+          client.release();
+          return res.status(400).json({
+            success: false,
+            message: `New budget (₱${finalBudget.toLocaleString()}) is less than what's already been disbursed (₱${(oldTotal - oldRemaining).toLocaleString()}).`
+          });
+        }
+      }
+    }
+
     await client.query(
       `UPDATE scholarships 
        SET title = $1, description = $2, deadline = $3, slots = $4, 
-           gwa_requirement = $5, fund_type = $6, amount_range = $7, 
-           criteria = $8, updated_at = NOW() 
-       WHERE id = $9 AND sub_admin_id = $10`,
-      [title, description, cleanDeadline, finalSlots, finalGwa, fund_type, amount_range, criteria || [], id, sub_admin_id]
+           gwa_requirement = $5, fund_type = $6, 
+           criteria = $7, total_budget = $8, remaining_budget = $9, updated_at = NOW() 
+       WHERE id = $10 AND sub_admin_id = $11`,
+      [title, description, cleanDeadline, finalSlots, finalGwa, fund_type, criteria || [], nextTotal, nextRemaining, id, sub_admin_id]
     );
 
     await client.query(

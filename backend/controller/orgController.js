@@ -35,22 +35,6 @@ async function logActivity({ subAdminId, actorId, actionType, details, studentId
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// amount_range is a free-text varchar (e.g. "10,000 - 20,000", "₱15000",
-// or blank). Never trust it as a clean number — pull out every numeric
-// token, and if none exist, return null so callers can show "not
-// specified" instead of silently treating a missing amount as ₱0.
-function parseAmountRange(raw) {
-    if (!raw || typeof raw !== 'string') return null;
-    const matches = raw.match(/\d[\d,]*(\.\d+)?/g);
-    if (!matches || matches.length === 0) return null;
-    const nums = matches
-        .map(m => parseFloat(m.replace(/,/g, '')))
-        .filter(n => !isNaN(n));
-    if (nums.length === 0) return null;
-    const min = Math.min(...nums);
-    const max = Math.max(...nums);
-    return { min, max, midpoint: (min + max) / 2, display: raw.trim() };
-}
 
 // Org Profile Info top
 const getOrgProfile = async (req, res) => {
@@ -394,7 +378,8 @@ const getOrgPrograms = async (req, res) => {
                 END AS status,
                 s.deadline, 
                 s.slots, 
-                s.amount_range, 
+                s.total_budget,
+                s.remaining_budget,
                 s.fund_type,
                 COUNT(a.id)::int AS total_applicants,
                 COALESCE(
@@ -505,10 +490,11 @@ const getDashboardStats = async (req, res) => {
 
 
 // ─────────────────────────────────────────────────────────────────────────
-// Reports & Analytics: real fund allocation per program + real course
-// demographics. No disbursement tracking exists in the schema, so this
-// intentionally does NOT invent a "disbursed" figure — only what the org
-// actually entered (amount_range) and actual approved-applicant counts.
+// Reports & Analytics: fund allocation per program now has real numbers to
+// work with — scholarships.total_budget / remaining_budget, and a full
+// disbursements ledger (see disbursementController.js) instead of parsing
+// the old free-text amount_range. A getFundReport here could join against
+// that ledger for real disbursed-vs-remaining figures per program.
 
 
 // ─────────────────────────────────────────────────────────────────────────

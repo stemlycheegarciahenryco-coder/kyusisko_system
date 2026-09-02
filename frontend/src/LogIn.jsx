@@ -1,7 +1,7 @@
 import api from './api';
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-
+import LoadingScreen from './component/LoadingScreen';
 import { 
   IconMail, 
   IconKey, 
@@ -10,8 +10,7 @@ import {
   IconEye,
   IconEyeOff,
   IconX,
-  IconCircleCheckFilled,
-  IconLoader2 
+  IconCircleCheckFilled
 } from '@tabler/icons-react';
 
 export default function LogIn() {
@@ -90,15 +89,8 @@ export default function LogIn() {
         style={{ backgroundImage: `url('/bg2.png')` }}
       />
 
-      {/* POPUP FULLSCREEN LOADING OVERLAY */}
-      {loading && (
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center transition-all duration-300">
-          <div className="bg-white p-8 w-40 h-40 rounded-3xl shadow-2xl flex flex-col items-center justify-center gap-4 border border-slate-100 animate-in fade-in zoom-in duration-300">
-            <IconLoader2 className="animate-spin text-[#5C5CFF]" size={46} stroke={2.5} />
-            <p className="text-slate-600 font-medium text-sm">Loading...</p>
-          </div>
-        </div>
-      )}
+      {/* REUSABLE LOADING COMPONENT */}
+      <LoadingScreen isLoading={loading} />
 
       <div className="max-w-md w-full bg-white/70 backdrop-blur-xl rounded-[2.5rem] shadow-2xl p-10 border border-white/40 relative z-10">
         <button 

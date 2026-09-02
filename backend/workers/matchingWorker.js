@@ -29,7 +29,7 @@ const engineMatchingWorker = new Worker(
 
     // 2. Fetch Scholarship Details
     const scholarshipResult = await pool.query(
-      `SELECT id, title, description, criteria, gwa_requirement, district_requirement FROM scholarships WHERE id = $1`,
+      `SELECT id, title, description, criteria, gwa_requirement FROM scholarships WHERE id = $1`,
       [scholarshipId]
     );
 

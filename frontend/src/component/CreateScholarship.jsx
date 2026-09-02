@@ -16,7 +16,7 @@ const CreateScholarship = () => {
   
   // Toggles for optional fields
   const [hasGwa, setHasGwa] = useState(false);
-  const [hasAmount, setHasAmount] = useState(false); 
+  const [hasBudget, setHasBudget] = useState(false);
 
   const [validationModal, setValidationModal] = useState({
     open: false,
@@ -47,7 +47,7 @@ const CreateScholarship = () => {
     description: '', 
     deadline: '', 
     slots: '', 
-    amount_range: '', 
+    budget: '',
     gwa: '', 
     fund_type: '' 
   });
@@ -113,7 +113,7 @@ const CreateScholarship = () => {
     data.append('deadline', formattedDeadline);
     data.append('slots', formData.slots || '');
     data.append('gwa', hasGwa ? (formData.gwa || '') : '');
-    data.append('amount_range', hasAmount ? (formData.amount_range || '') : '');
+    data.append('budget', hasBudget ? (formData.budget || '') : '');
     data.append('fund_type', formData.fund_type);
     data.append('requirements', JSON.stringify(finalRequirements));
     data.append('criteria', JSON.stringify(criteria));
@@ -259,41 +259,50 @@ const CreateScholarship = () => {
                 </div>
               </div>
 
-              {/* Toggles: Amount & GWA */}
+              {/* Toggles: Total Budget & GWA */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-4">
-                {/* Amount Toggle Component */}
+                {/* Total Program Budget Toggle Component */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className={labelStyle}>Allocated Budget</label>
+                    <label className={labelStyle}>Total Program Budget</label>
                     <button
                       type="button"
                       onClick={() => {
-                        const nextState = !hasAmount;
-                        setHasAmount(nextState);
-                        if (!nextState) setFormData(prev => ({ ...prev, amount_range: '' }));
+                        const nextState = !hasBudget;
+                        setHasBudget(nextState);
+                        if (!nextState) setFormData(prev => ({ ...prev, budget: '' }));
                       }}
-                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#093fb4] focus:ring-offset-1 ${hasAmount ? 'bg-[#093fb4]' : 'bg-slate-300'}`}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#093fb4] focus:ring-offset-1 ${hasBudget ? 'bg-[#093fb4]' : 'bg-slate-300'}`}
                     >
-                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${hasAmount ? 'translate-x-5' : 'translate-x-0'}`} />
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${hasBudget ? 'translate-x-5' : 'translate-x-0'}`} />
                     </button>
                   </div>
 
-                  {hasAmount ? (
+                  {hasBudget ? (
                     <div className="relative animate-in fade-in duration-200">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
                         <PhilippinePeso size={18} />
                       </div>
                       <input 
-                        type="text" 
-                        placeholder="e.g., 5,000 - 10,000" 
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="e.g., 500000" 
                         className={inputStyle} 
-                        value={formData.amount_range} 
-                        onChange={(e) => setFormData({...formData, amount_range: e.target.value.replace(/[^0-9\s-]/g, '')})} 
+                        value={formData.budget}
+                        onKeyDown={preventInvalidNumberKeys}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || Number(val) >= 0) {
+                            setFormData({ ...formData, budget: val });
+                          }
+                        }}
                       />
+                      <p className="text-[11px] text-slate-400 font-medium mt-1.5 ml-1">Total fund for this program — per-student amounts are set later in Disbursement Management</p>
                     </div>
                   ) : (
                     <div className="h-[52px] px-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Undisclosed</span>
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Not Set</span>
                     </div>
                   )}
                 </div>

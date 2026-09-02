@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from './api';
+import LoadingScreen from './component/LoadingScreen';
 import { 
-  ArrowLeft, UploadCloud, Send, Loader2, Mail, Globe, MapPin, 
+  ArrowLeft, UploadCloud, Send, Mail, Globe, MapPin, 
   Phone, CheckCircle2, AlertCircle, FileText, X, Eye, Download, 
   Bookmark, BookOpen, FilePlus2, ShieldCheck, Accessibility, Flag, 
   GraduationCap, Wallet, Star, Ban 
@@ -35,7 +36,6 @@ function SectionHeader({ icon: Icon, title, subtitle }) {
   );
 }
 
-// 🛠️ NEW HELPER: Safely parses attachments whether they arrive as JSON, Postgres string arrays, or standard arrays.
 const parseAttachments = (rawAttachments) => {
   if (!rawAttachments) return [];
 
@@ -46,10 +46,8 @@ const parseAttachments = (rawAttachments) => {
       parsed = JSON.parse(rawAttachments);
     } catch (e) {
       if (rawAttachments.startsWith('{') && rawAttachments.endsWith('}')) {
-        // Handle PostgreSQL native array format: "{file1.pdf,file2.pdf}"
         parsed = rawAttachments.slice(1, -1).split(',').map(s => s.replace(/"/g, '').trim());
       } else {
-        // Handle standard comma-separated string
         parsed = rawAttachments.split(',').map(s => s.trim());
       }
     }
@@ -66,7 +64,7 @@ const parseAttachments = (rawAttachments) => {
       if (typeof item === 'object') return item.url || item.path || item.name || null;
       return null;
     })
-    .filter(Boolean); // removes any null/empty items
+    .filter(Boolean);
 };
 
 export default function ApplicationForm() {
@@ -96,8 +94,7 @@ export default function ApplicationForm() {
         console.error("Error loading application data:", err);
         setErrorMessage("Failed to load scholarship details.");
         setShowError(true);
-      }
-      finally {
+      } finally {
         setLoading(false);
       }
     };
@@ -161,15 +158,6 @@ export default function ApplicationForm() {
     }
   };
 
-  if (loading) return (
-    <div className="flex justify-center items-center min-h-screen bg-[#FFFCFB] font-['Inter']">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-10 h-10 border-4 border-[#093fb4] border-t-transparent rounded-full animate-spin" />
-        <p className="text-[11px] font-black uppercase tracking-widest text-slate-500">Loading...</p>
-      </div>
-    </div>
-  );
-
   const criteria = scholarship?.criteria
     ? (typeof scholarship.criteria === 'string'
         ? scholarship.criteria.split(',').map(c => c.trim()).filter(Boolean)
@@ -181,7 +169,11 @@ export default function ApplicationForm() {
     .join(', ');
 
   return (
-    <div className="min-h-screen bg-slate-50 font-['Inter'] antialiased">
+    <div className="min-h-screen bg-slate-50 font-['Inter'] antialiased relative">
+      
+      {/* REUSABLE FULLSCREEN LOADING OVERLAY */}
+      <LoadingScreen isLoading={loading || submitting} />
+
       <nav className="bg-[#FFFCFB] border-b border-black/5 px-6 py-4 sticky top-0 z-30">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <button
@@ -310,11 +302,9 @@ export default function ApplicationForm() {
             </section>
           )}
 
-          {/* Reference Downloads (UPDATED WITH PARSER) */}
+          {/* Reference Downloads */}
           {(() => {
             const attachmentsList = parseAttachments(scholarship?.attachments);
-            
-            // If the parser finds NO valid files, don't render the section at all.
             if (attachmentsList.length === 0) return null;
 
             return (
@@ -327,8 +317,6 @@ export default function ApplicationForm() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {attachmentsList.map((file, i) => {
                     const fileName = file.split('/').pop().split('-').slice(1).join('-') || file.split('/').pop() || 'Document';
-                    
-                    // Generate a safe URL by appending API route if the DB only saved the relative path
                     const fileUrl = file.startsWith('http') 
                       ? file 
                       : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${file.startsWith('/') ? '' : '/'}${file}`;
@@ -447,7 +435,6 @@ export default function ApplicationForm() {
                 disabled={submitting}
                 className="w-full bg-[#093fb4] hover:bg-[#FF1E1E] text-white font-black py-5 rounded-2xl flex items-center justify-center gap-3 uppercase text-sm tracking-[0.15em] transition-all active:scale-[0.98] shadow-lg shadow-blue-900/10"
               >
-                {submitting ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
                 {submitting ? 'Processing Application...' : 'Submit Complete Application'}
               </button>
             </div>
