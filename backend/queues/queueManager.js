@@ -1,9 +1,12 @@
 // queues/queueManager.js
 const { Queue } = require('bullmq');
 const IORedis = require('ioredis');
-const redisConfig = { ...require('../config/queueConnection'), maxRetriesPerRequest: null };
+const { redisConfig } = require('../config/queueConnection');
 
-const queueConnection = new IORedis(redisConfig.url, redisConfig);
+const queueConnection = new IORedis(redisConfig.url, {
+    maxRetriesPerRequest: null,
+    enableReadyCheck: false
+});
 
 const queues = {
     notifications: new Queue('notificationsQueue', { connection: queueConnection }),

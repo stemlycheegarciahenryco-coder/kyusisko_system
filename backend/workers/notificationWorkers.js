@@ -2,9 +2,12 @@
 const { Worker } = require('bullmq');
 const IORedis = require('ioredis');
 const db = require('../config/db'); // Your PostgreSQL pool instance
-const redisConfig = { ...require('../config/queueConnection'), maxRetriesPerRequest: null };
+const { redisConfig } = require('../config/queueConnection');
 
-const connection = new IORedis(redisConfig.url, redisConfig);
+const connection = new IORedis(redisConfig.url, {
+    maxRetriesPerRequest: null,
+    enableReadyCheck: false
+});
 
 const notificationWorker = new Worker('notificationsQueue', async (job) => {
     console.log(`Processing Job ${job.id}: ${job.name}`);

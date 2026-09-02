@@ -2,12 +2,7 @@ const { Queue, Worker } = require('bullmq');
 const IORedis = require('ioredis'); // Make sure you have installed ioredis via npm!
 const pool = require('../config/db');
 const { trackEvent } = require('../utils/logger');
-
-// 1. Establish the Core Redis Connection
-const redisConnection = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
-  maxRetriesPerRequest: null
-});
-
+const redisConnection = require('../config/queueConnection');
 // 2. Define the Application Queue
 const applicationQueue = new Queue('applicationSubmissionQueue', { 
   connection: redisConnection 
