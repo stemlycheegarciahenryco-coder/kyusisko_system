@@ -3,7 +3,7 @@ const IORedis = require('ioredis');
 require('dotenv').config();
 
 // Explicitly use IPv4 127.0.0.1 to avoid the ::1 ECONNREFUSED error
-const redisUrl = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
+const redisUrl = process.env.REDIS_URL || 'redis://red-d9b5k6d7vvec73d71o0g:6379';
 
 const redisOptions = {
     maxRetriesPerRequest: null, 
