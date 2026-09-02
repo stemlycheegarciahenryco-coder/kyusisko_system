@@ -353,33 +353,33 @@ export default function ScholarshipManager() {
                     </p>
 
                     {/* Multi-parameter information row */}
-                    <div className="grid grid-cols-3 gap-2 py-3 border-t border-b border-slate-100 my-4 text-center">
+                    <div className="grid grid-cols-3 gap-2 py-4 border-t border-b border-slate-100 my-4 text-center">
                       <div>
-                        <div className="flex items-center justify-center gap-1 text-slate-400 mb-0.5">
-                          <Calendar size={12} />
-                          <span className="text-[9px] font-black uppercase tracking-wider">Deadline</span>
+                        <div className="flex items-center justify-center gap-1.5 text-slate-400 mb-1">
+                          <Calendar size={14} />
+                          <span className="text-[11px] font-black uppercase tracking-wider">Deadline</span>
                         </div>
-                        <p className="text-[10px] font-bold text-slate-700 truncate">
+                        <p className="text-sm font-bold text-slate-700 truncate">
                           {s.deadline ? new Date(s.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'VARY'}
                         </p>
                       </div>
 
                       <div className="border-l border-r border-slate-100">
-                        <div className="flex items-center justify-center gap-0.5 text-slate-400 mb-0.5">
-                          <DollarSign size={12} />
-                          <span className="text-[9px] font-black uppercase tracking-wider">Amount</span>
+                        <div className="flex items-center justify-center gap-1.5 text-slate-400 mb-1">
+                          <DollarSign size={14} />
+                          <span className="text-[11px] font-black uppercase tracking-wider">Budget</span>
                         </div>
-                        <p className="text-[10px] font-black text-[#093fb4] truncate">
-                          {s.amount_range || 'VARY'}
+                        <p className="text-sm font-black text-[#093fb4] truncate">
+                          {s.total_budget != null ? `₱${Number(s.total_budget).toLocaleString()}` : 'VARY'}
                         </p>
                       </div>
 
                       <div>
-                        <div className="flex items-center justify-center gap-1 text-slate-400 mb-0.5">
-                          <GraduationCap size={13} />
-                          <span className="text-[9px] font-black uppercase tracking-wider">Type</span>
+                        <div className="flex items-center justify-center gap-1.5 text-slate-400 mb-1">
+                          <GraduationCap size={14} />
+                          <span className="text-[11px] font-black uppercase tracking-wider">Type</span>
                         </div>
-                        <p className="text-[10px] font-bold text-slate-700 truncate">
+                        <p className="text-sm font-bold text-slate-700 truncate">
                           {s.fund_type || 'Financial Aid'}
                         </p>
                       </div>

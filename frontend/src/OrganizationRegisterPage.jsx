@@ -5,6 +5,7 @@ import {
 import { useOrganization } from './useOrganization';
 import { OrgSuccessModal, OtpModal, ErrorModal } from './component/RegisterModals';
 import { useNavigate } from 'react-router-dom';
+import LoadingScreen from './component/LoadingScreen';
 
 const OrganizationRegisterPage = () => {
   const navigate = useNavigate();
@@ -130,6 +131,9 @@ const OrganizationRegisterPage = () => {
       }}
     >
       <div className="absolute inset-0 bg-black/15" />
+
+      {/* REUSABLE LOADING SCREEN */}
+      <LoadingScreen isLoading={loading || verifying} />
 
       {/* Back button */}
       <button

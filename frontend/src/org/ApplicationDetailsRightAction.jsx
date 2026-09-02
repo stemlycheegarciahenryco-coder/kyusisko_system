@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { CheckCircle2, AlertCircle, Clock, XCircle, Calendar, RefreshCw } from 'lucide-react';
+import LoadingScreen from '../component/LoadingScreen';
 
 export default function ApplicationDetailsRightAction({ 
   detail, 
@@ -8,7 +9,8 @@ export default function ApplicationDetailsRightAction({
   isPending, 
   isUnderReview, 
   isFinalized, 
-  handleAction 
+  handleAction,
+  isLoading // Added prop to control the loading screen from the parent
 }) {
   
   const status = detail?.status || 'pending';
@@ -118,6 +120,10 @@ export default function ApplicationDetailsRightAction({
 
   return (
     <div className="space-y-4 lg:sticky lg:top-6 w-full">
+      
+      {/* REUSABLE LOADING COMPONENT */}
+      <LoadingScreen isLoading={isLoading} />
+
       <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-5">
         
         {/* HEADER */}

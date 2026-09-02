@@ -4,13 +4,14 @@ const { resolveOrgId } = require('./applicationController');
 
 // ─────────────────────────────────────────────────────────────────────────
 // Disbursement Management Module
-// Lets a sub_admin flag an approved/active application as funded, logging
-// an amount that gets deducted from the scholarship's remaining_budget and
-// added to that student's running total_disbursed.
+// A sub_admin flags an approved/active application as funded by entering
+// that student's amount_range here — the moment it's entered it is logged
+// to the ledger, deducted from the scholarship's remaining_budget, and
+// added to the student's running total on their application.
 // ─────────────────────────────────────────────────────────────────────────
 
 // POST /scholarship/:id/applications/:appId/disburse
-// body: { amount, remarks? }
+// body: { amount_range, remarks? }
 const recordDisbursement = async (req, res) => {
   const client = await pool.connect();
   try {
@@ -18,10 +19,10 @@ const recordDisbursement = async (req, res) => {
     const sub_admin_id = await resolveOrgId(req.user.id);
     if (!sub_admin_id) return res.status(404).json({ success: false, message: 'Org not found.' });
 
-    const amount = Number(req.body.amount);
+    const amount_range = Number(req.body.amount_range);
     const remarks = req.body.remarks || null;
 
-    if (!amount || amount <= 0) {
+    if (!amount_range || amount_range <= 0) {
       return res.status(400).json({ success: false, message: 'Enter a valid amount greater than 0.' });
     }
 
@@ -52,7 +53,7 @@ const recordDisbursement = async (req, res) => {
       });
     }
 
-    if (amount > Number(scholarship.remaining_budget)) {
+    if (amount_range > Number(scholarship.remaining_budget)) {
       await client.query('ROLLBACK');
       return res.status(400).json({
         success: false,
@@ -90,21 +91,25 @@ const recordDisbursement = async (req, res) => {
       `INSERT INTO disbursements (application_id, scholarship_id, student_id, sub_admin_id, amount, remarks)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [appId, id, application.student_id, sub_admin_id, amount, remarks]
+      [appId, id, application.student_id, sub_admin_id, amount_range, remarks]
     );
 
     // 2. Deduct from the scholarship's remaining budget
     await client.query(
       `UPDATE scholarships SET remaining_budget = remaining_budget - $1 WHERE id = $2`,
-      [amount, id]
+      [amount_range, id]
     );
 
-    // 3. Bump the application's running total and flip the flag
+    // 3. Record this student's cumulative amount_range, bump their running
+    //    total (kept in sync — both represent what this student has been
+    //    given so far), and flip the flag
     await client.query(
       `UPDATE applications
-       SET is_disbursed = true, total_disbursed = COALESCE(total_disbursed, 0) + $1
+       SET is_disbursed = true,
+           amount_range = COALESCE(amount_range, 0) + $1,
+           total_disbursed = COALESCE(total_disbursed, 0) + $1
        WHERE id = $2`,
-      [amount, appId]
+      [amount_range, appId]
     );
 
     // 4. Notify the student
@@ -114,7 +119,7 @@ const recordDisbursement = async (req, res) => {
       [
         application.student_id,
         'Funds Released 💸',
-        `₱${amount.toLocaleString()} has been disbursed to you for "${scholarship.title}".`,
+        `₱${amount_range.toLocaleString()} has been disbursed to you for "${scholarship.title}".`,
         appId,
         sub_admin_id
       ]
@@ -127,7 +132,7 @@ const recordDisbursement = async (req, res) => {
       userId: req.user.id,
       studentId: application.student_id,
       actionType: 'Disbursement Recorded',
-      details: `Disbursed ₱${amount.toLocaleString()} to ${application.sfirst_name} ${application.slast_name} for "${scholarship.title}" (application #${appId}).`
+      details: `Disbursed ₱${amount_range.toLocaleString()} to ${application.sfirst_name} ${application.slast_name} for "${scholarship.title}" (application #${appId}).`
     });
 
     res.status(201).json({ success: true, data: inserted.rows[0] });

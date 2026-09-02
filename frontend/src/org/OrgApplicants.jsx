@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api, { backendURL } from '../api';
 import { 
   ArrowLeft, Users, Clock, CheckCircle, 
-  RefreshCw, Search, XCircle, AlertTriangle, Banknote, CheckCircle2, Heart, ListOrdered
+  RefreshCw, Search, XCircle, AlertTriangle, Banknote, CheckCircle2, PhilippinePeso, ListOrdered
 } from 'lucide-react';
 import { ActionConfirmModal, ComplianceModal } from './ApplicationModals';
 import DisbursementModal from '../component/DisbursementModal';
@@ -28,7 +28,8 @@ export default function OrgApplicants() {
   const [terminateModal, setTerminateModal] = useState({ show: false, app: null });
   const [renewModal, setRenewModal] = useState({ show: false, app: null });
   const [disbursementModal, setDisbursementModal] = useState({ show: false, app: null });
-  const [remainingBudget, setRemainingBudget] = useState(null);
+  const [program, setProgram] = useState(null);
+  const remainingBudget = program?.remaining_budget ?? null;
 
   const handleTerminateConfirm = async () => {
     try {
@@ -56,24 +57,30 @@ export default function OrgApplicants() {
     setDisbursementModal({ show: true, app });
   };
 
-  const handleDisbursementSubmit = async ({ amount, remarks }) => {
+  const handleDisbursementSubmit = async ({ amount_range, remarks }) => {
     const app = disbursementModal.app;
-    const res = await api.post(`/applications/scholarship/${id}/applications/${app.id}/disburse`, { amount, remarks });
-    const updatedAmount = res.data.data.amount;
+    const res = await api.post(`/applications/scholarship/${id}/applications/${app.id}/disburse`, { amount_range, remarks });
+    const givenAmount = res.data.data.amount; // ledger row still stores the release under `amount`
 
     setApplications(prev => prev.map(item =>
       item.id === app.id
-        ? { ...item, is_disbursed: true, total_disbursed: Number(item.total_disbursed || 0) + Number(updatedAmount) }
+        ? {
+            ...item,
+            is_disbursed: true,
+            amount_range: Number(item.amount_range || 0) + Number(givenAmount),
+            total_disbursed: Number(item.total_disbursed || 0) + Number(givenAmount)
+          }
         : item
     ));
-    setRemainingBudget(prev => prev != null ? prev - Number(updatedAmount) : prev);
+    setProgram(prev => prev ? { ...prev, remaining_budget: Number(prev.remaining_budget) - Number(givenAmount) } : prev);
     setDisbursementModal({ show: false, app: null });
   };
 
   const fetchApplicants = async () => {
     try {
       const res = await api.get(`/applications/scholarship/${id}/applicants`);
-      setApplications(res.data.data || res.data);
+      setApplications(res.data.data || []);
+      setProgram(res.data.program || null);
     } catch (err) {
       console.error("Failed to fetch applicants", err);
     } finally {
@@ -81,17 +88,7 @@ export default function OrgApplicants() {
     }   
   };
 
-  const fetchBudget = async () => {
-    try {
-      const res = await api.get(`/applications/scholarship/${id}/disbursements`);
-      const data = res.data.data || res.data;
-      setRemainingBudget(data.scholarship?.remaining_budget ?? null);
-    } catch (err) {
-      console.error("Failed to fetch program budget", err);
-    }
-  };
-
-  useEffect(() => { fetchApplicants(); fetchBudget(); }, [id]);
+  useEffect(() => { fetchApplicants(); }, [id]);
 
   const activeTabConfig = TABS.find(t => t.key === activeTab);
 
@@ -142,12 +139,15 @@ export default function OrgApplicants() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-black text-black uppercase tracking-tight">
-              Scholarship <span className="text-[#093fb4]">Applicants</span>
+              {program?.title || 'Scholarship'} <span className="text-[#093fb4]">Applicants</span>
             </h1>
             <p className="text-[11px] font-bold text-black mt-1 uppercase tracking-widest">
               {applications.length} total applications found
+              {program?.total_budget != null && (
+                <span className="text-slate-400"> · ₱{Number(program.total_budget).toLocaleString()} total budget</span>
+              )}
               {remainingBudget != null && (
-                <span className="text-[#093fb4]"> · ₱{Number(remainingBudget).toLocaleString()} budget remaining</span>
+                <span className="text-[#093fb4]"> · ₱{Number(remainingBudget).toLocaleString()} remaining</span>
               )}
             </p>
           </div>
@@ -200,11 +200,11 @@ export default function OrgApplicants() {
               <thead>
                 <tr className="border-b border-slate-300 bg-white text-[10px] font-black uppercase tracking-widest text-slate-600">
                   <th className="py-4 px-6">Profile & Name</th>
-                  <th className="py-4 px-6">Gmail / Email</th>
+                  <th className="py-4 px-6"> Email</th>
                   <th className="py-4 px-6">Contact Number</th>
                   <th className="py-4 px-6 text-center">Status</th>
                   <th className="py-4 px-6 text-center">Disbursement</th>
-                  <th className="py-4 px-6 text-right">Actions</th>
+                  <th className="py-4 px-6 text-right"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
@@ -278,7 +278,7 @@ export default function OrgApplicants() {
                           <StatusBadge status={app.status} />
                         </td>
 
-                        {/* Money Disbursement Field — click the heart to log a new release */}
+                        {/* Money Disbursement Field — click the peso icon to log a new release */}
                         <td className="py-4 px-6 text-center">
                           {['approved', 'active'].includes(app.status) ? (
                             <div className="inline-flex items-center gap-2">
@@ -288,24 +288,26 @@ export default function OrgApplicants() {
                                   handleOpenDisbursement(app);
                                 }}
                                 title="Give funds"
-                                className={`w-7 h-7 flex items-center justify-center rounded-full border transition-all ${
+                                className={`w-8 h-8 flex items-center justify-center rounded-full border transition-all ${
                                   app.is_disbursed
-                                    ? 'bg-rose-50 border-rose-300 text-rose-500 hover:bg-rose-100'
-                                    : 'bg-white border-slate-300 text-slate-400 hover:border-rose-300 hover:text-rose-400'
+                                    ? 'bg-emerald-50 border-emerald-300 text-emerald-600 hover:bg-emerald-100'
+                                    : 'bg-white border-slate-300 text-slate-400 hover:border-[#093fb4] hover:text-[#093fb4]'
                                 }`}
                               >
-                                <Heart size={13} fill={app.is_disbursed ? 'currentColor' : 'none'} />
+                                <PhilippinePeso size={15} />
                               </button>
-                              <span className={`text-[9px] font-black uppercase tracking-widest ${
-                                app.is_disbursed ? 'text-emerald-700' : 'text-slate-400'
+                              <span className={`text-sm font-bold ${
+                                app.is_disbursed ? 'text-emerald-600' : 'text-slate-500'
                               }`}>
                                 {app.is_disbursed
                                   ? `₱${Number(app.total_disbursed || 0).toLocaleString()} Given`
                                   : 'Not Given'}
                               </span>
                             </div>
+                          ) : app.status === 'pending' ? (
+                            null
                           ) : (
-                            <span className="text-[10px] font-extrabold text-slate-300 uppercase tracking-widest">—</span>
+                            <span className="text-sm font-bold text-slate-400">—</span>
                           )}
                         </td>
 
@@ -322,13 +324,13 @@ export default function OrgApplicants() {
                                     }
                                   }}
                                   disabled={['renewing', 'submitted'].includes(app.status)}
-                                  className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-xl transition-colors ${
+                                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border shrink-0 ${
                                     ['approved', 'active'].includes(app.status)
-                                      ? 'bg-[#093fb4] text-white hover:bg-[#0730a0]'
-                                      : 'bg-white border border-slate-200 text-slate-300 cursor-not-allowed'
+                                      ? 'bg-white text-slate-600 border-slate-300 hover:text-[#093fb4] hover:border-[#093fb4]'
+                                      : 'bg-white border-slate-200 text-slate-300 cursor-not-allowed'
                                   }`}
                                 >
-                                  <RefreshCw size={10} className={['renewing', 'submitted'].includes(app.status) ? 'animate-spin' : ''} />
+                                  <RefreshCw size={12} className={['renewing', 'submitted'].includes(app.status) ? 'animate-spin' : ''} />
                                   Renew
                                 </button>
 
@@ -337,8 +339,9 @@ export default function OrgApplicants() {
                                     e.stopPropagation(); // Prevents row click navigation
                                     setTerminateModal({ show: true, app });
                                   }}
-                                  className="text-[10px] font-black uppercase tracking-widest bg-[#FF1E1E]/10 text-[#FF1E1E] px-3 py-2 rounded-xl hover:bg-[#FF1E1E]/20 transition-colors border border-[#FF1E1E]/30"
+                                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border shrink-0 bg-white text-slate-600 border-slate-300 hover:text-[#FF1E1E] hover:border-[#FF1E1E]"
                                 >
+                                  <XCircle size={12} />
                                   Terminate
                                 </button>
                               </>

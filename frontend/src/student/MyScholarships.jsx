@@ -191,10 +191,10 @@ function ScholarshipCard({ s, isExpanded, onToggle, onStatusUpdate }) {
           )}
 
           <div className="flex flex-wrap gap-2">
-            {s.amount_range && (
+            {s.amount_range != null && s.amount_range > 0 && (
               <div className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Amount</p>
-                <p className="text-xs font-black text-[#093fb4]">{s.amount_range}</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Amount Given</p>
+                <p className="text-xs font-black text-[#093fb4]">₱{Number(s.amount_range).toLocaleString()}</p>
               </div>
             )}
             {s.fund_type && (

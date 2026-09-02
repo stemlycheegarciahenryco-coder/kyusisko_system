@@ -193,7 +193,7 @@ const getScholarshipDetails = async (req, res) => {
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// GET /scholarship/:id/applications — sub_admin views all applicants (Summary List) side dashboard
+// GET /scholarship/:id/applications — sub_admin views all applicants (Summary List) side dashboard Tableeeeeeeeeeeeeee
 const getScholarshipApplications = async (req, res) => {
   try {
     const { id } = req.params;
@@ -201,17 +201,22 @@ const getScholarshipApplications = async (req, res) => {
     if (!sub_admin_id) return res.status(404).json({ success: false, message: 'Org not found.' });
 
     const owned = await pool.query(
-      `SELECT id FROM scholarships WHERE id = $1 AND sub_admin_id = $2`,
+      `SELECT id, title, total_budget, remaining_budget FROM scholarships WHERE id = $1 AND sub_admin_id = $2`,
       [parseInt(id), sub_admin_id]
     );
     if (owned.rows.length === 0)
       return res.status(403).json({ success: false, message: 'Unauthorized' });
+
+    const program = owned.rows[0];
 
     const result = await pool.query(
       `SELECT 
           a.id,
           a.status,
           a.created_at AS submitted_at,
+          a.is_disbursed,
+          a.total_disbursed,
+          a.amount_range,
           s.sfirst_name,
           s.slast_name,
           s.scontact_number,
@@ -226,7 +231,7 @@ const getScholarshipApplications = async (req, res) => {
       [id]
     );
 
-    res.status(200).json({ success: true, data: result.rows });
+    res.status(200).json({ success: true, data: result.rows, program });
   } catch (err) {
     console.error("Get Applicants Error:", err.message);
     res.status(500).json({ success: false, message: err.message });

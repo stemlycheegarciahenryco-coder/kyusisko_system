@@ -29,7 +29,7 @@ export default function DisbursementModal({ isOpen, app, remainingBudget, onClos
 
     setSubmitting(true);
     try {
-      await onSubmit({ amount: numericAmount, remarks });
+      await onSubmit({ amount_range: numericAmount, remarks });
       setAmount('');
       setRemarks('');
     } catch (err) {
@@ -73,7 +73,7 @@ export default function DisbursementModal({ isOpen, app, remainingBudget, onClos
 
           <div>
             <label className="block text-[10px] font-black uppercase tracking-widest text-slate-600 mb-1.5">
-              Amount To Disburse
+              Amount To Give (Per-Student)
             </label>
             <div className="relative">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">₱</span>
