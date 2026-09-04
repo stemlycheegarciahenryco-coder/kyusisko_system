@@ -5,7 +5,7 @@ const transporter = require ('../config/mailer_resend');
 const bcrypt = require('bcrypt');
 const path = require('path');
 
-
+const {verifyToken} = require('../middleware/auth');
 
 const { 
     otpSendLimiter, 
@@ -263,9 +263,10 @@ router.post('/verify-registration-otp', otpVerifyLimiter, async (req, res) => {
 });
 
 
-router.post('/student-onboarding-profile', async (req, res) => {
+router.post('/student-onboarding-profile', verifyToken, async (req, res) => {  
+    const student_id = req.user.id;  
     const {
-        student_id,
+        
         college_id,
         other_school,
         course_id,

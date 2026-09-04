@@ -570,6 +570,86 @@ const submitComplianceDocuments = async (req, res) => {
 
 
 
+// GET /:appId/my-history — student's own unified history for one application:
+// original submission files, compliance docs, renewal docs, and receipts.
+// (Notes/comments are fetched separately by ApplicationTimeline via /comments/:appId)
+const getMyApplicationHistory = async (req, res) => {
+  try {
+    const { appId } = req.params;
+    const student_id = req.user.id;
+
+    const appResult = await pool.query(
+      `SELECT 
+          a.id, a.status, a.created_at AS submitted_at, a.scholarship_id,
+          a.is_disbursed, a.total_disbursed,
+          sch.title AS program_name, sch.fund_type,
+          sa.org_name, sa.org_pic
+       FROM applications a
+       JOIN scholarships sch ON sch.id = a.scholarship_id
+       JOIN sub_admins sa ON sa.id = sch.sub_admin_id
+       WHERE a.id = $1 AND a.student_id = $2`,
+      [appId, student_id]
+    );
+
+    if (appResult.rows.length === 0)
+      return res.status(404).json({ success: false, message: 'Application not found.' });
+
+    // Original requirement submissions (the initial application files)
+    const responsesResult = await pool.query(
+      `SELECT sub.file_path, sub.text_value, req.field_label, req.field_type, sub.created_at
+       FROM application_submissions sub
+       JOIN scholarship_requirements req ON req.id = sub.requirement_id
+       WHERE sub.application_id = $1
+       ORDER BY req.id ASC`,
+      [appId]
+    );
+
+    // Compliance history (what was requested, and why) + the docs submitted for it
+    const complianceRequestsResult = await pool.query(
+      `SELECT * FROM compliance_requests WHERE application_id = $1 ORDER BY created_at ASC`,
+      [appId]
+    );
+    const complianceDocsResult = await pool.query(
+      `SELECT file_path, created_at FROM application_submissions
+       WHERE application_id = $1 AND source = 'compliance'
+       ORDER BY created_at ASC`,
+      [appId]
+    );
+
+    // Renewal docs
+    const renewalDocsResult = await pool.query(
+      `SELECT file_path, created_at FROM application_submissions
+       WHERE application_id = $1 AND source = 'renewal'
+       ORDER BY created_at DESC`,
+      [appId]
+    );
+
+    // Receipts — every disbursement released against this specific application
+    const receiptsResult = await pool.query(
+      `SELECT id, amount, remarks, disbursed_at
+       FROM disbursements
+       WHERE application_id = $1
+       ORDER BY disbursed_at DESC`,
+      [appId]
+    );
+
+    res.status(200).json({
+      success: true,
+      data: {
+        ...appResult.rows[0],
+        responses: responsesResult.rows,
+        compliance_history: complianceRequestsResult.rows,
+        compliance_docs: complianceDocsResult.rows,
+        renewal_docs: renewalDocsResult.rows,
+        receipts: receiptsResult.rows,
+      }
+    });
+  } catch (err) {
+    console.error("My Application History Error:", err.message);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   applyScholarship,
   getScholarshipDetails,
@@ -580,5 +660,6 @@ module.exports = {
   getComplianceRequest,
   submitComplianceDocuments,
   resolveOrgId,
+  getMyApplicationHistory,
 
 };

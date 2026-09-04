@@ -82,7 +82,10 @@ app.use('/api/lookup', lookupRouter);
 app.use('/api', RegStudentRoutes);
 
 
-app.get('/test', (req, res) => res.send("Server is reaching this point!"));
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'awake', timestamp: new Date() });
+});
+
 
 // --- 4. Start Server ---
 const PORT = process.env.PORT || 5000;

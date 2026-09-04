@@ -22,6 +22,10 @@ router.post('/scholarship/:id/applications/:appId/comply', verifyToken, isSubAdm
 router.get('/:appId/compliance', verifyToken, isStudent, application.getComplianceRequest);
 router.post('/:appId/comply-submit', verifyToken, isStudent, upload.array('files', 5), application.submitComplianceDocuments);
 
+// student view — full history for one of their own applications
+// (files, compliance, renewal, receipts — notes come from /comments/:appId)
+router.get('/:appId/my-history', verifyToken, isStudent, application.getMyApplicationHistory);
+
 // for disbursement management (sub_admin only)
 router.post('/scholarship/:id/applications/:appId/disburse', verifyToken, isSubAdmin, disbursement.recordDisbursement);
 router.get('/scholarship/:id/disbursements', verifyToken, isSubAdmin, disbursement.getDisbursementLedger);

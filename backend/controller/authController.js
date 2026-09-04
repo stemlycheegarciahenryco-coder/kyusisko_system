@@ -1,3 +1,4 @@
+// authController.js
 const pool = require('../config/db');
 const transporter = require('../config/mailer_resend');
 const bcrypt = require('bcryptjs');
@@ -7,6 +8,15 @@ const { trackEvent } = require('../utils/logger');
 
 const MAX_ATTEMPTS = 5;
 const WINDOW_MINUTES = 10;
+
+// ✅ Dynamic Cookie Configuration based on environment
+const isProduction = process.env.NODE_ENV === 'production';
+const cookieOptions = {
+    httpOnly: true,
+    secure: isProduction, // false on local http, true on production https
+    sameSite: isProduction ? 'None' : 'lax', // 'lax' for local cross-port stability, 'None' for production
+    maxAge: 24 * 60 * 60 * 1000 // 1 day
+};
 
 // Helper function to track authentication attempts
 async function logAttempt(identifier, ip, success) {
@@ -79,21 +89,13 @@ exports.portalLogin = async (req, res) => {
 
             const token = jwt.sign({ id: user.id, role: user.role, email: user.email, uid: user.uid }, process.env.JWT_SECRET, { expiresIn: '1d' });
             
-            res.cookie('token', token, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'None',
-                maxAge: 24 * 60 * 60 * 1000
-            });
+            // ✅ Applied dynamic cookie options
+            res.cookie('token', token, cookieOptions);
 
-            return res.json({ token, role: user.role, data: { id: user.id, uid: user.uid, email: user.email } });
+            return res.json({ role: user.role, data: { id: user.id, uid: user.uid, email: user.email } });
         }
 
         // --- EMAIL ROUTING ENTRY STRATEGIES ---
-        // Strategy A: Check if input matches an Institutional Organization Sub-Admin
-        // FIX: Now matches by provider_code (e.g. "PROVIDER-001") OR sub_email,
-        // since orgs can log in with either their formatted Provider ID or email.
-        // Provider code match is case-insensitive (mirrors the SADM- admin check above).
         const subResult = await pool.query(
             'SELECT * FROM sub_admins WHERE UPPER(provider_code) = UPPER($1) OR sub_email = $1',
             [input]
@@ -124,27 +126,17 @@ exports.portalLogin = async (req, res) => {
 
             const token = jwt.sign({ id: sub.id, role: 'sub_admin', email: sub.sub_email }, process.env.JWT_SECRET, { expiresIn: '1d' });
             
-            res.cookie('token', token, {
-                httpOnly: true,
-                secure: true,
-                sameSite: 'None',
-                maxAge: 24 * 60 * 60 * 1000
-            });
+            // ✅ Applied dynamic cookie options
+            res.cookie('token', token, cookieOptions);
 
             return res.json({
-                token,
                 role: 'sub_admin',
                 data: {
                     id: sub.id,
                     email: sub.sub_email,
-                    // FIX: Tell the frontend whether this org still needs to
-                    // complete their mandatory first password change, and whether
-                    // they are a main org account or a co-admin (co-admins cannot
-                    // add further co-admins).
                     isPasswordChanged: sub.is_password_changed === true,
                     accountType: sub.account_type || 'main',
                     parentOrgId: sub.parent_org_id || null
-                    
                 }
             });
         }
@@ -154,7 +146,6 @@ exports.portalLogin = async (req, res) => {
         
         if (studentResult.rows.length > 0) {
             const student = studentResult.rows[0];
-            // Accommodates standard student boolean flag or dynamic state values safely
             if (student.sis_active === false || student.account_status === 'blocked') {
                 return res.status(403).json({ error: 'Access denied. Account is restricted.' });
             }
@@ -173,16 +164,10 @@ exports.portalLogin = async (req, res) => {
 
             const token = jwt.sign({ id: student.id, role: 'student', email: student.student_email }, process.env.JWT_SECRET, { expiresIn: '1d' });
             
-            res.cookie('token', token, {
-                httpOnly: true,
-                secure: true,
-                sameSite: 'None',
-                maxAge: 24 * 60 * 60 * 1000
-            });
+            // ✅ Applied dynamic cookie options
+            res.cookie('token', token, cookieOptions);
 
-            //student side login
             return res.json({ 
-                token, 
                 role: 'student', 
                 data: { 
                     id: student.id, 
@@ -222,8 +207,6 @@ exports.forgotPassword = async (req, res) => {
                 actionType: 'FORGOT_PASSWORD_FAIL', ipAddress: ip, email: email,
                 message: `Password reset requested for non-existent email address.`
             });
-            // FIX: Explicitly tells the user the email isn't registered, per
-            // product decision to favor clear UX over email-enumeration protection.
             return res.status(404).json({ error: "This email is not registered in our system." });
         }
 
@@ -353,17 +336,15 @@ exports.getLogInAttempt = async (req, res) => {
         }); 
     }
 };
+
 // ==========================================
 // 5. LOGOUT — clears the httpOnly cookie server-side
 // ==========================================
 exports.logout = (req, res) => {
-    // FIX: Clearing the cookie server-side is the only way to truly invalidate
-    // the session. If we only cleared localStorage on the frontend, the httpOnly
-    // cookie would persist and still authenticate future requests.
     res.clearCookie('token', {
         httpOnly: true,
-        secure: true,
-        sameSite: 'None'
+        secure: isProduction,
+        sameSite: isProduction ? 'None' : 'lax'
     });
     res.json({ success: true, message: "Logged out successfully." });
 };

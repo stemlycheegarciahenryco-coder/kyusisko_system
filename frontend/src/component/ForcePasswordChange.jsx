@@ -9,6 +9,9 @@ export default function ForcePasswordChange({ onComplete }) {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
+    // Live mismatch check for confirmation field
+    const isMismatch = confirmPassword.length > 0 && newPassword !== confirmPassword;
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
@@ -46,7 +49,7 @@ export default function ForcePasswordChange({ onComplete }) {
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
             <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 border border-slate-200 relative max-h-[90vh] overflow-y-auto">
                 <h2 className="text-2xl font-black text-slate-800 uppercase text-center mb-2">
-                    Action Required
+                    FORCE CHANGE
                 </h2>
                 <p className="text-sm text-slate-500 text-center mb-6">
                     For your security, you must change your temporary password before accessing the dashboard.
@@ -66,7 +69,7 @@ export default function ForcePasswordChange({ onComplete }) {
                             required
                             value={currentPassword}
                             onChange={(e) => setCurrentPassword(e.target.value)}
-                            className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-black outline-none focus:border-[#093FB4] focus:bg-white transition-all text-sm"
+                            className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-black outline-none focus:border-[#093FB4] focus:bg-white transition-all text-sm font-sans"
                             placeholder="Enter current password"
                         />
                     </div>
@@ -83,19 +86,23 @@ export default function ForcePasswordChange({ onComplete }) {
 
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-slate-700 uppercase">Confirm New Password</label>
-                        <input
-                            type="password"
-                            required
+                        <RegisterPassField
+                            name="confirmPassword"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-black outline-none focus:border-[#093FB4] focus:bg-white transition-all text-sm"
-                            placeholder="Re-enter new password"
+                            showStrength={false}
                         />
+                        {/* Live mismatch validation message */}
+                        {isMismatch && (
+                            <p className="text-xs font-bold text-red-500 mt-1 ml-1">
+                                Password do not match.
+                            </p>
+                        )}
                     </div>
 
                     <button
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || isMismatch}
                         className="w-full bg-[#093fb4] hover:bg-[#073496] text-white font-black py-4 rounded-2xl transition-all uppercase tracking-wider text-sm mt-2 disabled:opacity-50 shadow-lg shadow-[#093fb4]/30"
                     >
                         {loading ? 'Updating...' : 'Update Password'}

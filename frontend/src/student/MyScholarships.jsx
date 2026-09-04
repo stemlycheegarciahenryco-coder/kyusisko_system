@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import api from '../api';
 import {
   University, Mail, Phone, Globe, CheckCircle2, Check,
-  Clock, XCircle, ChevronDown, ChevronUp, AlertCircle, Bookmark, ClipboardCheck, FileText, Receipt, PhilippinePeso
+  Clock, XCircle, ChevronDown, ChevronUp, AlertCircle, Bookmark, ClipboardCheck, FileText, Receipt, PhilippinePeso, History
 } from 'lucide-react';
 import StudentTopNav from './StudentTopNav';
 import MyCompliance from './MyCompliance';
 import RenewCompliance from './RenewCompliance';
 import ApplicationTimeline from '../component/ApplicationTimeline';
+import ProgramHistoryModal from '../component/ProgramHistoryModal';
 
 const backendURL = 'http://localhost:5000';
 
@@ -130,7 +131,7 @@ function ScholarshipProgressTrack({ s }) {
 // ==========================================
 // 2. DYNAMIC CARD DISPLAY SUB-MODULE
 // ==========================================
-function ScholarshipCard({ s, isExpanded, onToggle, onStatusUpdate }) {
+function ScholarshipCard({ s, isExpanded, onToggle, onStatusUpdate, onOpenHistory }) {
 
   // 🚀 Same auth convention used on the admin side (see ApplicantDocs.jsx)
   const currentStudentId = localStorage.getItem('studentId');
@@ -176,12 +177,23 @@ function ScholarshipCard({ s, isExpanded, onToggle, onStatusUpdate }) {
           <span className={`flex items-center gap-1 text-[11px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${sc.cls}`}>
             {sc.icon} {sc.label}
           </span>
-          <button
-            onClick={onToggle}
-            className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-[#093fb4] flex items-center gap-1 transition-colors"
-          >
-            {isExpanded ? <><ChevronUp size={14} /> Less Details</> : <><ChevronDown size={14} /> View Details</>}
-          </button>
+          <div className="flex items-center gap-3">
+            {s.application_id && (
+              <button
+                onClick={() => onOpenHistory(s.application_id)}
+                title="View full program history"
+                className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-[#093fb4] flex items-center gap-1 transition-colors"
+              >
+                <History size={14} /> History
+              </button>
+            )}
+            <button
+              onClick={onToggle}
+              className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-[#093fb4] flex items-center gap-1 transition-colors"
+            >
+              {isExpanded ? <><ChevronUp size={14} /> Less Details</> : <><ChevronDown size={14} /> View Details</>}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -322,6 +334,7 @@ export default function MyScholarships() {
   const [scholarships, setScholarships] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
+  const [historyModalAppId, setHistoryModalAppId] = useState(null);
   const [activeTab, setActiveTab] = useState('pending');
   const [savedScholarships, setSavedScholarships] = useState([]);
   const [receipts, setReceipts] = useState([]);
@@ -513,12 +526,20 @@ export default function MyScholarships() {
                   isExpanded={expanded === s.application_id}
                   onToggle={() => setExpanded(expanded === s.application_id ? null : s.application_id)}
                   onStatusUpdate={handleStatusUpdate}
+                  onOpenHistory={setHistoryModalAppId}
                 />
               ))}
             </div>
           )
         )}
       </div>
+
+      {historyModalAppId && (
+        <ProgramHistoryModal
+          applicationId={historyModalAppId}
+          onClose={() => setHistoryModalAppId(null)}
+        />
+      )}
     </div>
   );
 }

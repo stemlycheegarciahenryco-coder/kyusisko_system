@@ -9,6 +9,15 @@ const POPULAR_SPORTS = ["Basketball", "Volleyball", "Football", "Taekwondo", "Sw
 
 const StudentOnboarding = () => {
   const navigate = useNavigate();
+
+  // --- ROUTE GUARD: PREVENT RE-ENTRY IF ALREADY ONBOARDED ---
+  useEffect(() => {
+    const isComplete = localStorage.getItem('isProfileComplete') === 'true';
+    if (isComplete) {
+      navigate('/StudentProfile', { replace: true });
+    }
+  }, [navigate]);
+
   const [step, setStep] = useState(1);
   const totalSteps = 8;
 
@@ -61,32 +70,32 @@ const StudentOnboarding = () => {
     setFormData(prev => ({
       ...prev,
       [field]: value,
-      [clearField]: '' // Wipes away previous text specifications safely
+      [clearField]: ''
     }));
   };
 
   const canProgress = () => {
     switch (step) {
-      case 1: // School (Skippable)
+      case 1:
         return formData.college_id !== '';
-      case 2: // Course (Skippable)
+      case 2:
         return formData.course_id !== '';
-      case 3: // Athlete (Skippable)
+      case 3:
         if (formData.is_athlete === '') return false;
         if (formData.is_athlete === 'Yes' && formData.sports.length === 0) return false;
         if (formData.sports.includes('Others') && !formData.other_sport.trim()) return false;
         return true;
-      case 4: // Religion
+      case 4:
         return formData.religion && (formData.religion !== 'Others' || formData.other_religion.trim() !== '');
-      case 5: // Indigenous
+      case 5:
         if (formData.is_indigenous === '') return false;
         if (formData.is_indigenous === 'Yes' && !formData.indigenous_group.trim()) return false;
         return true;
-      case 6: // PWD
+      case 6:
         return formData.is_pwd !== '';
-      case 7: // Working Student
+      case 7:
         return formData.is_working_student !== '';
-      case 8: // Poverty Program
+      case 8:
         if (formData.is_poverty_program === '') return false;
         if (formData.is_poverty_program === 'Yes') {
           return formData.program_type && (formData.program_type !== 'Others' || formData.other_program.trim() !== '');
@@ -127,22 +136,14 @@ const StudentOnboarding = () => {
 
   const handleSubmit = async () => {
     try {
-      
-      if (!sID) {
-        alert("Session expired. Please log in again.");
-        return;
-      }
-
-      // Format payload keys explicitly to map to your database schema types
       const payload = {
-        student_id: parseInt(sID, 10),
         college_id: (formData.college_id === 'NOT_ENROLLED' || formData.college_id === 'OTHERS') ? null : parseInt(formData.college_id, 10),
         other_school: formData.college_id === 'OTHERS' ? formData.other_school : (formData.college_id === 'NOT_ENROLLED' ? 'Currently not enrolled' : null),
         course_id: (formData.course_id === 'NOT_ENROLLED' || formData.course_id === 'OTHERS') ? null : parseInt(formData.course_id, 10),
         other_degree_program: formData.course_id === 'OTHERS' ? formData.other_course : (formData.course_id === 'NOT_ENROLLED' ? 'Currently not enrolled' : null),
         religion: formData.religion === 'Others' ? formData.other_religion : formData.religion,
         is_athlete: formData.is_athlete === 'Yes',
-        sports_interests: formData.sports, // Direct array passing matches jsonb field configuration
+        sports_interests: formData.sports,
         other_sport: formData.sports.includes('Others') ? formData.other_sport : null,
         is_indigenous: formData.is_indigenous === 'Yes',
         indigenous_group: formData.is_indigenous === 'Yes' ? formData.indigenous_group : null,
@@ -290,7 +291,7 @@ const StudentOnboarding = () => {
                 <label className={labelStyle}>Are you a Person with Disability (PWD)?</label>
                 <div className="grid grid-cols-1 gap-3">
                   {['Yes', 'No'].map(opt => (
-                    <button key={opt} onClick={() => setFormData({...formData, is_pwd: opt})} className={`p-5 rounded-2xl font-black text-sm uppercase border-2 transition-all flex justify-between items-center ${formData.is_pwd === opt ? 'border-[#093fb4] bg-blue-50 text-[#093fb4]' : 'border-slate-100 text-black'}`}>
+                    <button key={opt} onClick={() => setFormData({...formData, is_pwd: opt})} className={`p-5 rounded-2xl font-black text-sm uppercase border-2 transition-all flex justify-between items-center ${formData.is_pwd === opt ? 'border-[#093fb4] bg-blue-[#093fb4]' : 'border-slate-100 text-black'}`}>
                       {opt} {formData.is_pwd === opt && <IconCheck size={20}/>}
                     </button>
                   ))}

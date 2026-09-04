@@ -1,5 +1,6 @@
+import {useEffect} from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-
+import api from './api';
 
 
 //PUBLIC
@@ -68,6 +69,11 @@ import ResetPassword from './ResetPassword';
 import Home from './Home';
 
 export default function App() {
+  useEffect(() => {
+    api.get('/health').catch(() => {
+      // Silently catches connection errors while the server is still booting up
+    });
+  }, []);
   return (
     <Routes>
       {/* 1. THE FRONT DOOR: Home Page is the first thing everyone sees */}

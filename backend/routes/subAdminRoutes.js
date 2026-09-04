@@ -4,7 +4,7 @@ const pool = require('../config/db');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const upload = require('../middleware/multerConfig');
-const {createClient} = require('@supabase/supabase-js');
+
 const { verifyToken } = require('../middleware/auth');
 const {supabaseAdmin} = require('../config/supabaseClient');
 const { sendApprovalEmail, sendRejectionEmail, sendOrgOTPEmail, sendRequirementsEmail, sendApprovalCredentialsEmail } = require('../config/emailServiceOrg');
