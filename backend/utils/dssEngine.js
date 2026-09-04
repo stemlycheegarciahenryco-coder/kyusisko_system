@@ -163,9 +163,11 @@ function analyzeDemographicConcentration(demographics) {
 
 /* ────────────────────────────────────────────────────────────────────────
  * 4. FINANCIAL ALLOCATION STATISTICS
- *    Adds a coefficient-of-variation check (std dev / mean of program
- *    midpoints) on top of the missing-amount count, flagging when fund
- *    sizes are wildly inconsistent across programs (an equity signal).
+ *    Coefficient-of-variation check (std dev / mean) across each program's
+ *    total_budget, flagging when fund sizes are wildly inconsistent across
+ *    programs (an equity signal). Takes a plain array of budget numbers —
+ *    caller decides what "budget" means (previously parsed midpoints from
+ *    free-text amount_range; now real total_budget values).
  * ──────────────────────────────────────────────────────────────────────── */
 function analyzeFinancialSpread(midpoints) {
   const nonZero = midpoints.filter((m) => m > 0);

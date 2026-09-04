@@ -37,6 +37,7 @@ app.set('trust proxy', 1);
 // --- 2. CORS & Express Middleware Configuration ---
 
 const allowedOrigins = [
+  'http://187.53.133.177',
   'http://localhost:5173',
   'https://kyusisko.com',
   'https://www.kyusisko.com',

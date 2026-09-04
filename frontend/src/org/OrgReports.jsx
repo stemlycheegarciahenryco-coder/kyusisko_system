@@ -5,17 +5,12 @@ import {
   Wallet,
   AlertTriangle,
   Download,
-  FileSpreadsheet,
   GraduationCap,
   MapPin,
   Building2,
-  ListChecks
+  ListChecks,
+  Coins
 } from 'lucide-react';
-
-const CRITERIA_COLORS = [
-  'bg-blue-600', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500',
-  'bg-cyan-600', 'bg-purple-500', 'bg-indigo-500', 'bg-pink-500', 'bg-slate-500'
-];
 
 const getDisplayStatus = (rawStatus) => {
   const s = rawStatus?.toLowerCase();
@@ -53,20 +48,18 @@ export default function OrgReports() {
   });
   const [demoTab, setDemoTab] = useState('byProgram');
 
-  const [criteriaDistribution, setCriteriaDistribution] = useState([]);
-
   const [financialInterpretation, setFinancialInterpretation] = useState('');
   const [demographicInterpretation, setDemographicInterpretation] = useState('');
-  const [criteriaInterpretation, setCriteriaInterpretation] = useState('');
 
   const [totals, setTotals] = useState({
     totalAllocatedFund: 0,
+    totalDisbursed: 0,
+    totalRemaining: 0,
     totalApprovedStudents: 0,
     programsMissingAmount: 0,
     totalMale: 0,
     totalFemale: 0,
     totalUnspecified: 0,
-    totalPrograms: 0,
   });
   const [reportsLoading, setReportsLoading] = useState(true);
   const [reportsError, setReportsError] = useState(null);
@@ -77,10 +70,9 @@ export default function OrgReports() {
         setReportsLoading(true);
         setReportsError(null);
 
-        const [finRes, demoRes, criteriaRes] = await Promise.allSettled([
+        const [finRes, demoRes] = await Promise.allSettled([
           api.get('/reports/financial'),
-          api.get('/reports/demographics'),
-          api.get('/reports/criteria')
+          api.get('/reports/demographics')
         ]);
 
         // Financial Data & Interpretation
@@ -90,8 +82,10 @@ export default function OrgReports() {
           setFinancialInterpretation(finData.interpretation || '');
           setTotals(prev => ({
             ...prev,
-            totalAllocatedFund: finData.totalAllocatedMidpoint || 0,
-            programsMissingAmount: finData.missingAmountCount || 0,
+            totalAllocatedFund: finData.totalBudget || 0,
+            totalDisbursed: finData.totalDisbursed || 0,
+            totalRemaining: finData.totalRemaining || 0,
+            programsMissingAmount: finData.missingBudgetCount || 0,
           }));
         }
 
@@ -114,17 +108,6 @@ export default function OrgReports() {
           }));
         }
 
-        // Program Criteria / Funding Purpose Distribution
-        if (criteriaRes.status === 'fulfilled' && criteriaRes.value.data?.success) {
-          const criteriaData = criteriaRes.value.data.data;
-          setCriteriaDistribution(criteriaData.distribution || []);
-          setCriteriaInterpretation(criteriaData.interpretation || '');
-          setTotals(prev => ({
-            ...prev,
-            totalPrograms: criteriaData.totalPrograms || 0
-          }));
-        }
-
       } catch (err) {
         console.error("Reports Fetch Error:", err);
         setReportsError("Couldn't load report analytics. Please verify report API routes.");
@@ -141,6 +124,64 @@ export default function OrgReports() {
 
   const activeDemoRows = demographics[demoTab] || [];
 
+  const handleDownloadReport = () => {
+    const generatedAt = new Date().toLocaleString('en-PH', { dateStyle: 'long', timeStyle: 'short' });
+    const line = '─'.repeat(64);
+    let text = '';
+
+    text += `SCHOLARSHIP PROGRAM REPORT\n`;
+    text += `Generated: ${generatedAt}\n`;
+    text += `${'='.repeat(64)}\n\n`;
+
+    // ── Financial & Fund Allocation ──────────────────────────────────
+    text += `FINANCIAL & FUND ALLOCATION\n${line}\n`;
+    text += `Total Program Budget:        ₱${totals.totalAllocatedFund.toLocaleString()}\n`;
+    text += `Total Disbursed:             ₱${totals.totalDisbursed.toLocaleString()}\n`;
+    text += `Total Remaining:             ₱${totals.totalRemaining.toLocaleString()}\n`;
+    text += `Programs With No Budget Set: ${totals.programsMissingAmount}\n\n`;
+    text += `Per-Program Breakdown:\n`;
+    fundData.forEach((p) => {
+      const status = getDisplayStatus(p.status);
+      text += `  • ${p.title || p.program}\n`;
+      text += `      Budget: ${p.total_budget != null ? `₱${p.total_budget.toLocaleString()}` : 'Not set'}   `
+            + `Disbursed: ₱${(p.disbursed || 0).toLocaleString()}   `
+            + `Remaining: ${p.remaining_budget != null ? `₱${p.remaining_budget.toLocaleString()}` : '—'}   `
+            + `Status: ${STATUS_LABELS[status]}\n`;
+    });
+    text += `\nInterpretation:\n${financialInterpretation}\n\n`;
+
+    // ── Applicant Demographics ───────────────────────────────────────
+    text += `APPLICANT DEMOGRAPHICS\n${line}\n`;
+    text += `Total Approved Scholars: ${totals.totalApprovedStudents} `
+          + `(${totals.totalMale} Male, ${totals.totalFemale} Female`
+          + `${totals.totalUnspecified > 0 ? `, ${totals.totalUnspecified} Unspecified` : ''})\n\n`;
+
+    DEMOGRAPHIC_TABS.forEach(({ key, label }) => {
+      const rows = demographics[key] || [];
+      text += `${label}:\n`;
+      if (rows.length === 0) {
+        text += `  (no records)\n`;
+      } else {
+        rows.forEach((row) => {
+          text += `  • ${row.name}: ${row.total} total (Male ${row.male}, Female ${row.female}`
+                + `${row.unspecified ? `, Unspecified ${row.unspecified}` : ''})\n`;
+        });
+      }
+      text += `\n`;
+    });
+    text += `Interpretation:\n${demographicInterpretation}\n`;
+
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `scholarship-report-${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="p-8 bg-slate-50/50 min-h-screen font-sans space-y-6">
 
@@ -151,14 +192,22 @@ export default function OrgReports() {
             Reports & Analytics
           </h1>
           <p className="text-slate-500 text-sm font-medium mt-0.5">
-            Fund allocation, applicant demographics, and program criteria at a glance.
+            Fund allocation and applicant demographics at a glance.
           </p>
         </div>
+
+        <button
+          onClick={handleDownloadReport}
+          disabled={reportsLoading}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+        >
+          <Download size={14} /> Download Report
+        </button>
 
       </div>
 
       {/* Key Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
         <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex items-center gap-3.5">
           <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl shrink-0">
@@ -175,8 +224,18 @@ export default function OrgReports() {
             <Wallet size={22} />
           </div>
           <div>
-            <p className="text-xs font-extrabold text-slate-400 uppercase tracking-tight">Total Fund Allocated</p>
+            <p className="text-xs font-extrabold text-slate-400 uppercase tracking-tight">Total Program Budget</p>
             <p className="text-3xl font-black text-slate-900 leading-tight mt-1">₱{totals.totalAllocatedFund.toLocaleString()}</p>
+          </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex items-center gap-3.5">
+          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl shrink-0">
+            <Coins size={22} />
+          </div>
+          <div>
+            <p className="text-xs font-extrabold text-slate-400 uppercase tracking-tight">Total Disbursed</p>
+            <p className="text-3xl font-black text-slate-900 leading-tight mt-1">₱{totals.totalDisbursed.toLocaleString()}</p>
           </div>
         </div>
 
@@ -185,7 +244,7 @@ export default function OrgReports() {
             <AlertTriangle size={22} />
           </div>
           <div>
-            <p className="text-xs font-extrabold text-slate-400 uppercase tracking-tight">Programs With No Allocated Budget</p>
+            <p className="text-xs font-extrabold text-slate-400 uppercase tracking-tight">Programs With No Budget</p>
             <p className="text-3xl font-black text-slate-900 leading-tight mt-1">{totals.programsMissingAmount}</p>
           </div>
         </div>
@@ -204,7 +263,7 @@ export default function OrgReports() {
           <div className="flex justify-between items-center mb-5">
             <div>
               <h2 className="text-base font-extrabold text-slate-900">Program Fund Allocation</h2>
-              <p className="text-sm font-medium text-slate-400 mt-0.5">Budget range and estimated midpoint per program</p>
+              <p className="text-sm font-medium text-slate-400 mt-0.5">Budget, disbursed, and remaining per program</p>
             </div>
             {fundData.length > FUND_ROWS_PER_PAGE && (
               <span className="text-xs font-bold text-slate-400 shrink-0 ml-4">
@@ -218,21 +277,22 @@ export default function OrgReports() {
               <thead>
                 <tr className="border-b border-slate-100 text-xs font-black text-slate-400 uppercase">
                   <th className="pb-3 px-2">Program Title</th>
-                  <th className="pb-3 px-2 text-right">Raw Amount Range</th>
-                  <th className="pb-3 px-2 text-right">Midpoint Estimate</th>
+                  <th className="pb-3 px-2 text-right">Budget</th>
+                  <th className="pb-3 px-2 text-right">Disbursed</th>
+                  <th className="pb-3 px-2 text-right">Remaining</th>
                   <th className="pb-3 px-2 text-center">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 text-sm font-semibold">
                 {reportsLoading ? (
                   <tr>
-                    <td colSpan="4" className="text-center py-8 text-slate-400 font-bold">
+                    <td colSpan="5" className="text-center py-8 text-slate-400 font-bold">
                       Loading...
                     </td>
                   </tr>
                 ) : fundData.length === 0 ? (
                   <tr>
-                    <td colSpan="4" className="text-center py-8 text-slate-400 font-bold">
+                    <td colSpan="5" className="text-center py-8 text-slate-400 font-bold">
                       No program record entries found.
                     </td>
                   </tr>
@@ -243,10 +303,13 @@ export default function OrgReports() {
                       <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
                         <td className="py-3.5 px-2 font-bold text-slate-900">{item.title || item.program}</td>
                         <td className="py-3.5 px-2 text-right font-extrabold text-slate-700">
-                          {item.amount_range || item.amountDisplay || 'Not specified'}
+                          {item.total_budget != null ? `₱${item.total_budget.toLocaleString()}` : 'Not set'}
+                        </td>
+                        <td className="py-3.5 px-2 text-right font-black text-emerald-600">
+                          ₱{(item.disbursed || 0).toLocaleString()}
                         </td>
                         <td className="py-3.5 px-2 text-right font-black text-blue-700">
-                          ₱{(item.estimated_midpoint || 0).toLocaleString()}
+                          {item.remaining_budget != null ? `₱${item.remaining_budget.toLocaleString()}` : '—'}
                         </td>
                         <td className="py-3.5 px-2 text-center">
                           <span className={`text-xs font-extrabold px-2.5 py-1 rounded-md ${STATUS_BADGE_STYLES[displayStatus]}`}>
@@ -378,44 +441,6 @@ export default function OrgReports() {
         )}
       </div>
 
-      {/* Program Criteria / Funding Purpose Distribution */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-4">
-        <div>
-          <h2 className="text-base font-extrabold text-slate-900">Program Criteria & Funding Purpose</h2>
-          <p className="text-sm font-medium text-slate-400 mt-0.5">
-            Most-entered program focus areas (e.g. Poverty Reduction, Academic Merit, PWD Support), classified from program titles and descriptions
-          </p>
-        </div>
-
-        {reportsLoading ? (
-          <p className="text-sm font-bold text-slate-400 text-center py-6">Loading...</p>
-        ) : criteriaDistribution.length === 0 ? (
-          <p className="text-sm font-bold text-slate-400 text-center py-6">No program records found to classify.</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-            {criteriaDistribution.map((c, index) => (
-              <div key={c.category} className="space-y-1.5">
-                <div className="flex justify-between items-center text-sm font-bold">
-                  <span className="text-slate-700 truncate max-w-[260px]">{c.category}</span>
-                  <span className="text-slate-900 font-black">{c.programCount} <span className="text-xs font-semibold text-slate-400">({c.percentage}%)</span></span>
-                </div>
-                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full ${CRITERIA_COLORS[index % CRITERIA_COLORS.length]} rounded-full transition-all duration-500`}
-                    style={{ width: `${c.percentage}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {criteriaInterpretation && (
-          <div className="p-3 bg-emerald-50/70 border border-emerald-100 rounded-xl text-xs text-emerald-900 font-medium">
-            {criteriaInterpretation}
-          </div>
-        )}
-      </div>
 
     </div>
   );

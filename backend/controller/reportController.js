@@ -27,7 +27,8 @@ exports.getFinancialReport = async (req, res) => {
       SELECT 
         s.id, 
         s.title, 
-        s.amount_range, 
+        s.total_budget,
+        s.remaining_budget,
         s.slots, 
         s.status,
         (SELECT COUNT(*) FROM applications a WHERE a.scholarship_id = s.id AND LOWER(a.status) = 'approved') AS approved_scholars
@@ -36,48 +37,53 @@ exports.getFinancialReport = async (req, res) => {
     `;
     const { rows } = await pool.query(query, [orgId]);
 
-    let totalAllocatedMidpoint = 0;
-    let missingAmountCount = 0;
-    const midpoints = [];
+    let totalBudget = 0;
+    let totalDisbursed = 0;
+    let totalRemaining = 0;
+    let missingBudgetCount = 0;
+    const budgets = [];
 
     const parsedPrograms = rows.map((program) => {
-      const matches = program.amount_range ? program.amount_range.match(/\d+/g) : null;
-      let calculatedMidpoint = 0;
+      const budget = program.total_budget !== null ? Number(program.total_budget) : null;
+      const remaining = program.remaining_budget !== null ? Number(program.remaining_budget) : null;
+      const disbursed = (budget !== null && remaining !== null) ? budget - remaining : 0;
+      const utilizationPct = budget && budget > 0 ? Math.round((disbursed / budget) * 100) : 0;
 
-      if (matches && matches.length >= 2) {
-        const min = parseFloat(matches[0]);
-        const max = parseFloat(matches[1]);
-        calculatedMidpoint = (min + max) / 2;
-      } else if (matches && matches.length === 1) {
-        calculatedMidpoint = parseFloat(matches[0]);
+      if (budget === null) {
+        missingBudgetCount++;
       } else {
-        missingAmountCount++;
+        totalBudget += budget;
+        budgets.push(budget);
       }
-
-      totalAllocatedMidpoint += calculatedMidpoint;
-      midpoints.push(calculatedMidpoint);
+      totalDisbursed += disbursed;
+      totalRemaining += remaining || 0;
 
       return {
         ...program,
-        estimated_midpoint: calculatedMidpoint
+        total_budget: budget,
+        remaining_budget: remaining,
+        disbursed,
+        utilization_pct: utilizationPct
       };
     });
 
-    const { coefficientOfVariation, highVarianceFlag } = analyzeFinancialSpread(midpoints);
+    const { coefficientOfVariation, highVarianceFlag } = analyzeFinancialSpread(budgets);
 
-    let interpretation = `Total estimated allocated budget across active programs is ₱${totalAllocatedMidpoint.toLocaleString()}. `;
-    interpretation += missingAmountCount > 0
-      ? `${missingAmountCount} program(s) contain missing or unparsed fund ranges requiring administrative review. `
-      : `All program fund allocations are fully verified and parsed. `;
+    let interpretation = `Total program budget across all scholarships is ₱${totalBudget.toLocaleString()}, of which ₱${totalDisbursed.toLocaleString()} has been disbursed to scholars (₱${totalRemaining.toLocaleString()} remaining). `;
+    interpretation += missingBudgetCount > 0
+      ? `${missingBudgetCount} program(s) have no budget set and are excluded from allocation totals. `
+      : `All programs have a budget set. `;
     interpretation += highVarianceFlag
-      ? `Grant sizes vary sharply across programs (coefficient of variation ${coefficientOfVariation}) — consider reviewing for funding equity.`
-      : `Grant sizes are reasonably consistent across programs (coefficient of variation ${coefficientOfVariation}).`;
+      ? `Budget sizes vary sharply across programs (coefficient of variation ${coefficientOfVariation}) — consider reviewing for funding equity.`
+      : `Budget sizes are reasonably consistent across programs (coefficient of variation ${coefficientOfVariation}).`;
 
     res.status(200).json({
       success: true,
       data: {
-        totalAllocatedMidpoint,
-        missingAmountCount,
+        totalBudget,
+        totalDisbursed,
+        totalRemaining,
+        missingBudgetCount,
         coefficientOfVariation,
         highVarianceFlag,
         programs: parsedPrograms,
