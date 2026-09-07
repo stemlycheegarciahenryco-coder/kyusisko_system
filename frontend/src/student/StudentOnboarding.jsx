@@ -9,15 +9,6 @@ const POPULAR_SPORTS = ["Basketball", "Volleyball", "Football", "Taekwondo", "Sw
 
 const StudentOnboarding = () => {
   const navigate = useNavigate();
-
-  // --- ROUTE GUARD: PREVENT RE-ENTRY IF ALREADY ONBOARDED ---
-  useEffect(() => {
-    const isComplete = localStorage.getItem('isProfileComplete') === 'true';
-    if (isComplete) {
-      navigate('/StudentProfile', { replace: true });
-    }
-  }, [navigate]);
-
   const [step, setStep] = useState(1);
   const totalSteps = 8;
 
@@ -70,32 +61,32 @@ const StudentOnboarding = () => {
     setFormData(prev => ({
       ...prev,
       [field]: value,
-      [clearField]: ''
+      [clearField]: '' // Wipes away previous text specifications safely
     }));
   };
 
   const canProgress = () => {
     switch (step) {
-      case 1:
+      case 1: // School (Skippable)
         return formData.college_id !== '';
-      case 2:
+      case 2: // Course (Skippable)
         return formData.course_id !== '';
-      case 3:
+      case 3: // Athlete (Skippable)
         if (formData.is_athlete === '') return false;
         if (formData.is_athlete === 'Yes' && formData.sports.length === 0) return false;
         if (formData.sports.includes('Others') && !formData.other_sport.trim()) return false;
         return true;
-      case 4:
+      case 4: // Religion
         return formData.religion && (formData.religion !== 'Others' || formData.other_religion.trim() !== '');
-      case 5:
+      case 5: // Indigenous
         if (formData.is_indigenous === '') return false;
         if (formData.is_indigenous === 'Yes' && !formData.indigenous_group.trim()) return false;
         return true;
-      case 6:
+      case 6: // PWD
         return formData.is_pwd !== '';
-      case 7:
+      case 7: // Working Student
         return formData.is_working_student !== '';
-      case 8:
+      case 8: // Poverty Program
         if (formData.is_poverty_program === '') return false;
         if (formData.is_poverty_program === 'Yes') {
           return formData.program_type && (formData.program_type !== 'Others' || formData.other_program.trim() !== '');
@@ -136,6 +127,14 @@ const StudentOnboarding = () => {
 
   const handleSubmit = async () => {
     try {
+      // NOTE: student_id is NOT sent from the client. The backend's
+      // /student-onboarding-profile route uses the verifyToken middleware
+      // and reads req.user.id from the JWT (httpOnly cookie) instead —
+      // see RegStudentRoutes.js. Sending it from here was dead code, and
+      // the undeclared `sID` variable was throwing a ReferenceError on
+      // every submit attempt.
+
+      // Format payload keys explicitly to map to your database schema types
       const payload = {
         college_id: (formData.college_id === 'NOT_ENROLLED' || formData.college_id === 'OTHERS') ? null : parseInt(formData.college_id, 10),
         other_school: formData.college_id === 'OTHERS' ? formData.other_school : (formData.college_id === 'NOT_ENROLLED' ? 'Currently not enrolled' : null),
@@ -143,7 +142,7 @@ const StudentOnboarding = () => {
         other_degree_program: formData.course_id === 'OTHERS' ? formData.other_course : (formData.course_id === 'NOT_ENROLLED' ? 'Currently not enrolled' : null),
         religion: formData.religion === 'Others' ? formData.other_religion : formData.religion,
         is_athlete: formData.is_athlete === 'Yes',
-        sports_interests: formData.sports,
+        sports_interests: formData.sports, // Direct array passing matches jsonb field configuration
         other_sport: formData.sports.includes('Others') ? formData.other_sport : null,
         is_indigenous: formData.is_indigenous === 'Yes',
         indigenous_group: formData.is_indigenous === 'Yes' ? formData.indigenous_group : null,
@@ -156,7 +155,9 @@ const StudentOnboarding = () => {
 
       const res = await api.post('/student-onboarding-profile', payload);
 
-      if (res.status === 201 || res.data.success) {
+      // Backend responds 200 with { message, profile } on success — no
+      // 201 status or `success` flag is ever returned.
+      if (res.status === 200 && res.data.profile) {
         localStorage.setItem('isProfileComplete', 'true');
         navigate('/StudentProfile', { state: { justOnboarded: true }, replace: true });
       }
@@ -291,7 +292,7 @@ const StudentOnboarding = () => {
                 <label className={labelStyle}>Are you a Person with Disability (PWD)?</label>
                 <div className="grid grid-cols-1 gap-3">
                   {['Yes', 'No'].map(opt => (
-                    <button key={opt} onClick={() => setFormData({...formData, is_pwd: opt})} className={`p-5 rounded-2xl font-black text-sm uppercase border-2 transition-all flex justify-between items-center ${formData.is_pwd === opt ? 'border-[#093fb4] bg-blue-[#093fb4]' : 'border-slate-100 text-black'}`}>
+                    <button key={opt} onClick={() => setFormData({...formData, is_pwd: opt})} className={`p-5 rounded-2xl font-black text-sm uppercase border-2 transition-all flex justify-between items-center ${formData.is_pwd === opt ? 'border-[#093fb4] bg-blue-50 text-[#093fb4]' : 'border-slate-100 text-black'}`}>
                       {opt} {formData.is_pwd === opt && <IconCheck size={20}/>}
                     </button>
                   ))}

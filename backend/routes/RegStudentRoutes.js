@@ -263,112 +263,113 @@ router.post('/verify-registration-otp', otpVerifyLimiter, async (req, res) => {
 });
 
 
-router.post('/student-onboarding-profile', verifyToken, async (req, res) => {  
-    const student_id = req.user.id;  
-    const {
-        
+router.post('/student-onboarding-profile', verifyToken, async (req, res) => {
+  const student_id = req.user.id; // Extracted from JWT token or session
+  
+  const {
+    college_id,
+    course_id,
+    other_school,
+    other_degree_program,
+    religion,
+    other_religion,
+    is_working_student,
+    is_pwd,
+    is_indigenous,
+    indigenous_group,
+    is_poverty_program,
+    program_type,
+    other_program,
+    is_athlete,
+    sports_interests,
+    other_sport
+  } = req.body;
+
+  try {
+    // Format sports array safely as stringified JSON for postgres jsonb
+    const formattedSportsJson = Array.isArray(sports_interests)
+      ? JSON.stringify(sports_interests)
+      : JSON.stringify([]);
+
+    const query = `
+      INSERT INTO public.student_onboarding_profiles (
+        student_id,
         college_id,
-        other_school,
         course_id,
+        other_school,
         other_degree_program,
         religion,
         other_religion,
+        is_working_student,
+        is_pwd,
         is_indigenous,
         indigenous_group,
-        is_pwd,
-        is_working_student,
         is_poverty_program,
         program_type,
         other_program,
         is_athlete,
         sports_interests,
-        other_sport
-    } = req.body;
+        other_sport,
+        updated_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+        $11, $12, $13, $14, $15, $16::jsonb, $17, NOW()
+      )
+      ON CONFLICT (student_id) 
+      DO UPDATE SET
+        college_id = EXCLUDED.college_id,
+        course_id = EXCLUDED.course_id,
+        other_school = EXCLUDED.other_school,
+        other_degree_program = EXCLUDED.other_degree_program,
+        religion = EXCLUDED.religion,
+        other_religion = EXCLUDED.other_religion,
+        is_working_student = EXCLUDED.is_working_student,
+        is_pwd = EXCLUDED.is_pwd,
+        is_indigenous = EXCLUDED.is_indigenous,
+        indigenous_group = EXCLUDED.indigenous_group,
+        is_poverty_program = EXCLUDED.is_poverty_program,
+        program_type = EXCLUDED.program_type,
+        other_program = EXCLUDED.other_program,
+        is_athlete = EXCLUDED.is_athlete,
+        sports_interests = EXCLUDED.sports_interests,
+        other_sport = EXCLUDED.other_sport,
+        updated_at = NOW()
+      RETURNING *;
+    `;
 
-    if (!student_id) {
-        return res.status(400).json({ error: "Missing Student ID" });
-    }
+    const values = [
+      student_id,
+      college_id || null,
+      course_id || null,
+      other_school || null,
+      other_degree_program || null,
+      religion || null,
+      other_religion || null,
+      Boolean(is_working_student),
+      Boolean(is_pwd),
+      Boolean(is_indigenous),
+      indigenous_group || null,
+      Boolean(is_poverty_program),
+      program_type || null,
+      other_program || null,
+      Boolean(is_athlete),
+      formattedSportsJson,
+      other_sport || null
+    ];
 
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
+    const result = await pool.query(query, values);
 
-        // Adjusted query referencing the updated schema columns
-        const query = `
-            INSERT INTO student_onboarding_profiles (
-                student_id, college_id, other_school, course_id, other_degree_program,
-                is_working_student, is_pwd, religion, other_religion, is_indigenous,
-                indigenous_group, is_poverty_program, program_type, other_program,
-                is_athlete, sports_interests, other_sport
-            ) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-            ON CONFLICT (student_id) 
-            DO UPDATE SET 
-                college_id = EXCLUDED.college_id,
-                other_school = EXCLUDED.other_school,
-                course_id = EXCLUDED.course_id,
-                other_degree_program = EXCLUDED.other_degree_program,
-                is_working_student = EXCLUDED.is_working_student,
-                is_pwd = EXCLUDED.is_pwd,
-                religion = EXCLUDED.religion,
-                other_religion = EXCLUDED.other_religion,
-                is_indigenous = EXCLUDED.is_indigenous,
-                indigenous_group = EXCLUDED.indigenous_group,
-                is_poverty_program = EXCLUDED.is_poverty_program,
-                program_type = EXCLUDED.program_type,
-                other_program = EXCLUDED.other_program,
-                is_athlete = EXCLUDED.is_athlete,
-                sports_interests = EXCLUDED.sports_interests,
-                other_sport = EXCLUDED.other_sport,
-                updated_at = CURRENT_TIMESTAMP
-            RETURNING *;
-        `;
-
-        const sportsData = Array.isArray(sports_interests) ? JSON.stringify(sports_interests) : '[]';
-
-        const values = [
-            student_id,
-            college_id || null,
-            other_school || null,
-            course_id || null,
-            other_degree_program || null,
-            is_working_student,
-            is_pwd,
-            religion || null,
-            other_religion || null,
-            is_indigenous,
-            indigenous_group || null,
-            is_poverty_program,
-            program_type || null,
-            other_program || null,
-            is_athlete,
-            sportsData,
-            other_sport || null
-        ];
-
-        const result = await client.query(query, values);
-
-        // Mark profile as complete in the main students table
-        await client.query(
-            'UPDATE students SET is_profile_complete = true WHERE id = $1',
-            [student_id]
-        );
-
-        await client.query('COMMIT');
-        
-        res.status(201).json({ 
-            success: true,
-            message: "Onboarding completed successfully!", 
-            data: result.rows[0] 
-        });
-
-    } catch (err) {
-        await client.query('ROLLBACK');
-        console.error("DATABASE ONBOARDING ERROR:", err.message);
-        res.status(500).json({ error: "Server error while saving profile." });
-    } finally {
-        client.release();
-    }
+    return res.status(200).json({
+      message: 'Onboarding profile updated successfully',
+      profile: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error saving onboarding profile:', error);
+    return res.status(500).json({
+      message: 'Internal server error while saving profile',
+      error: error.message
+    });
+  }
 });
 
 module.exports = router;
