@@ -359,6 +359,11 @@ router.post('/student-onboarding-profile', verifyToken, async (req, res) => {
 
     const result = await pool.query(query, values);
 
+    await pool.query(
+      'UPDATE public.students SET is_profile_complete = TRUE WHERE id = $1',
+      [student_id]
+    );
+    
     return res.status(200).json({
       message: 'Onboarding profile updated successfully',
       profile: result.rows[0]

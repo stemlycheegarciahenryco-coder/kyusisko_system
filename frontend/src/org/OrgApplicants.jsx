@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api, { backendURL } from '../api';
 import { 
   ArrowLeft, Users, Clock, CheckCircle, 
-  RefreshCw, Search, XCircle, AlertTriangle, Banknote, CheckCircle2, PhilippinePeso, ListOrdered
+  RefreshCw, Search, XCircle, AlertTriangle, Banknote, CheckCircle2,Trash2, PhilippinePeso, ListOrdered
 } from 'lucide-react';
 import { ActionConfirmModal, ComplianceModal } from './ApplicationModals';
 import DisbursementModal from '../component/DisbursementModal';
@@ -196,166 +196,189 @@ export default function OrgApplicants() {
         {/* Presentation Display Table */}
         <div className="bg-white rounded-2xl border border-slate-300 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-300 bg-white text-[10px] font-black uppercase tracking-widest text-slate-600">
-                  <th className="py-4 px-6">Profile & Name</th>
-                  <th className="py-4 px-6"> Email</th>
-                  <th className="py-4 px-6">Contact Number</th>
-                  <th className="py-4 px-6 text-center">Status</th>
-                  <th className="py-4 px-6 text-center">Disbursement</th>
-                  <th className="py-4 px-6 text-right"><span className="sr-only">Actions</span></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {filteredApps.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="py-12 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">
-                      No matching records found in this category
-                    </td>
-                  </tr>
-                ) : (
-                  filteredApps.map((app) => {
-                    const hasValidImg = app.sprofile_pic && app.sprofile_pic.trim() !== '';
-                    const fullImgUrl = hasValidImg 
-                      ? (app.sprofile_pic.startsWith('http') ? app.sprofile_pic : `${backendURL}/uploads/${app.sprofile_pic}`)
-                      : null;
+           <table className="w-full text-left border-collapse">
+  <thead>
+    <tr className="border-b border-slate-300 bg-white text-[10px] font-black uppercase tracking-widest text-slate-600">
+      <th className="py-4 px-6">Profile & Name</th>
+      <th className="py-4 px-6">School & Course</th>
+      <th className="py-4 px-6">Email</th>
+      <th className="py-4 px-6">Contact Number</th>
+      <th className="py-4 px-6 text-center">Status</th>
+      <th className="py-4 px-6 text-center">Disbursement</th>
+      <th className="py-4 px-6 text-right"><span className="sr-only">Actions</span></th>
+    </tr>
+  </thead>
+  <tbody className="divide-y divide-slate-200">
+    {filteredApps.length === 0 ? (
+      <tr>
+        <td colSpan="7" className="py-12 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">
+          No matching records found in this category
+        </td>
+      </tr>
+    ) : (
+      filteredApps.map((app) => {
+        const hasValidImg = app.sprofile_pic && app.sprofile_pic.trim() !== '';
+        const fullImgUrl = hasValidImg 
+          ? (app.sprofile_pic.startsWith('http') ? app.sprofile_pic : `${backendURL}/uploads/${app.sprofile_pic}`)
+          : null;
 
-                    const verifiedContactNumber = app.scontact_number || app.contact_number || app.student_contact || '—';
+        const verifiedContactNumber = app.scontact_number || app.contact_number || app.student_contact || '—';
 
-                    return (
-                      <tr 
-                        key={app.id} 
-                        onClick={() => navigate(`/scholarship-applications/${id}/applicants/${app.id}`)}
-                        className="hover:bg-slate-50 transition-colors text-black cursor-pointer"
-                      >
-                        
-                        {/* Avatar Profile Pic + Name */}
-                        <td className="py-4 px-6">
-                          <div className="flex items-center gap-3">
-                            {hasValidImg ? (
-                              <img 
-                                src={fullImgUrl} 
-                                alt="" 
-                                className="w-9 h-9 rounded-xl object-cover border border-slate-300 bg-white shrink-0"
-                                onError={(e) => { 
-                                  e.target.style.display = 'none';
-                                  if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
-                                }}
-                              />
-                            ) : null}
-                            
-                            <div 
-                              className="w-9 h-9 rounded-xl bg-[#093fb4] flex items-center justify-center text-white font-black text-xs uppercase shrink-0"
-                              style={{ display: hasValidImg ? 'none' : 'flex' }}
-                            >
-                              {app.sfirst_name?.[0]}{app.slast_name?.[0]}
-                            </div>
+        return (
+          <tr 
+            key={app.id} 
+            onClick={() => navigate(`/scholarship-applications/${id}/applicants/${app.id}`)}
+            className="hover:bg-slate-50 transition-colors text-black cursor-pointer"
+          >
+            {/* Avatar Profile Pic + Name */}
+            <td className="py-4 px-6">
+              <div className="flex items-center gap-3">
+                {hasValidImg ? (
+                  <img 
+                    src={fullImgUrl} 
+                    alt="" 
+                    className="w-9 h-9 rounded-xl object-cover border border-slate-300 bg-white shrink-0"
+                    onError={(e) => { 
+                      e.target.style.display = 'none';
+                      if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                
+                <div 
+                  className="w-9 h-9 rounded-xl bg-[#093fb4] flex items-center justify-center text-white font-black text-xs uppercase shrink-0"
+                  style={{ display: hasValidImg ? 'none' : 'flex' }}
+                >
+                  {app.sfirst_name?.[0]}{app.slast_name?.[0]}
+                </div>
 
-                            <div>
-                              <span className="block text-xs font-black text-black uppercase tracking-tight">
-                                {app.sfirst_name} {app.slast_name}
-                              </span>
-                              <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                                ID: #APP-{app.id}
-                              </span>
-                            </div>
-                          </div>
-                        </td>
+                <div>
+                  <span className="block text-xs font-black text-black uppercase tracking-tight">
+                    {app.sfirst_name} {app.slast_name}
+                  </span>
+                  <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                    ID: #APP-{app.id}
+                  </span>
+                </div>
+              </div>
+            </td>
 
-                        {/* Student Gmail contact field */}
-                        <td className="py-4 px-6 text-xs font-medium text-slate-700">
-                          {app.student_email || '—'}
-                        </td>
+            {/* School & Course */}
+            <td className="py-4 px-6">
+              <span className="block text-xs font-bold text-black">
+                {app.school_name}
+              </span>
+              <span className="block text-[10px] font-medium text-slate-500">
+                {app.course_name}
+              </span>
+            </td>
 
-                        {/* Student Mobile Phone Contact number */}
-                        <td className="py-4 px-6 text-xs font-mono font-medium text-slate-700">
-                          {verifiedContactNumber} 
-                        </td>
+            {/* Student Email */}
+            <td className="py-4 px-6 text-xs font-medium text-slate-700">
+              {app.student_email || '—'}
+            </td>
 
-                        {/* Current Application Tracking Status Badge */}
-                        <td className="py-4 px-6 text-center">
-                          <StatusBadge status={app.status} />
-                        </td>
+            {/* Contact Number */}
+            <td className="py-4 px-6 text-xs font-mono font-medium text-slate-700">
+              {verifiedContactNumber} 
+            </td>
 
-                        {/* Money Disbursement Field — click the peso icon to log a new release */}
-                        <td className="py-4 px-6 text-center">
-                          {['approved', 'active'].includes(app.status) ? (
-                            <div className="inline-flex items-center gap-2">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation(); // Prevents row click navigation
-                                  handleOpenDisbursement(app);
-                                }}
-                                title="Give funds"
-                                className={`w-8 h-8 flex items-center justify-center rounded-full border transition-all ${
-                                  app.is_disbursed
-                                    ? 'bg-emerald-50 border-emerald-300 text-emerald-600 hover:bg-emerald-100'
-                                    : 'bg-white border-slate-300 text-slate-400 hover:border-[#093fb4] hover:text-[#093fb4]'
-                                }`}
-                              >
-                                <PhilippinePeso size={15} />
-                              </button>
-                              <span className={`text-sm font-bold ${
-                                app.is_disbursed ? 'text-emerald-600' : 'text-slate-500'
-                              }`}>
-                                {app.is_disbursed
-                                  ? `₱${Number(app.total_disbursed || 0).toLocaleString()} Given`
-                                  : 'Not Given'}
-                              </span>
-                            </div>
-                          ) : app.status === 'pending' ? (
-                            null
-                          ) : (
-                            <span className="text-sm font-bold text-slate-400">—</span>
-                          )}
-                        </td>
+            {/* Status Badge */}
+            <td className="py-4 px-6 text-center">
+              <StatusBadge status={app.status} />
+            </td>
 
-                        {/* Actions options layout */}
-                        <td className="py-4 px-6 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {['approved', 'active', 'renewing', 'submitted'].includes(app.status) ? (
-                              <>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation(); // Prevents row click navigation
-                                    if (['approved', 'active'].includes(app.status)) {
-                                      setRenewModal({ show: true, app });
-                                    }
-                                  }}
-                                  disabled={['renewing', 'submitted'].includes(app.status)}
-                                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border shrink-0 ${
-                                    ['approved', 'active'].includes(app.status)
-                                      ? 'bg-white text-slate-600 border-slate-300 hover:text-[#093fb4] hover:border-[#093fb4]'
-                                      : 'bg-white border-slate-200 text-slate-300 cursor-not-allowed'
-                                  }`}
-                                >
-                                  <RefreshCw size={12} className={['renewing', 'submitted'].includes(app.status) ? 'animate-spin' : ''} />
-                                  Renew
-                                </button>
+            {/* Disbursement */}
+            <td className="py-4 px-6 text-center">
+              {['approved', 'active'].includes(app.status) ? (
+                <div className="inline-flex items-center gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenDisbursement(app);
+                    }}
+                    title="Give funds"
+                    className={`w-8 h-8 flex items-center justify-center rounded-full border transition-all ${
+                      app.is_disbursed
+                        ? 'bg-emerald-50 border-emerald-300 text-emerald-600 hover:bg-emerald-100'
+                        : 'bg-white border-slate-300 text-slate-400 hover:border-[#093fb4] hover:text-[#093fb4]'
+                    }`}
+                  >
+                    <PhilippinePeso size={15} />
+                  </button>
+                  <span className={`text-sm font-bold ${
+                    app.is_disbursed ? 'text-emerald-600' : 'text-slate-500'
+                  }`}>
+                    {app.is_disbursed
+                      ? `₱${Number(app.total_disbursed || 0).toLocaleString()} Given`
+                      : 'Not Given'}
+                  </span>
+                </div>
+              ) : app.status === 'pending' ? (
+                null
+              ) : (
+                <span className="text-sm font-bold text-slate-400">—</span>
+              )}
+            </td>
 
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation(); // Prevents row click navigation
-                                    setTerminateModal({ show: true, app });
-                                  }}
-                                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border shrink-0 bg-white text-slate-600 border-slate-300 hover:text-[#FF1E1E] hover:border-[#FF1E1E]"
-                                >
-                                  <XCircle size={12} />
-                                  Terminate
-                                </button>
-                              </>
-                            ) : (
-                              <span className="text-[10px] font-extrabold text-slate-300 uppercase tracking-widest">—</span>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
+            {/* Actions */}
+            <td className="py-4 px-6 text-right">
+              <div className="flex items-center justify-end gap-2">
+                {['approved', 'active', 'renewing', 'submitted'].includes(app.status) && (
+                  <>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (['approved', 'active'].includes(app.status)) {
+                          setRenewModal({ show: true, app });
+                        }
+                      }}
+                      disabled={['renewing', 'submitted'].includes(app.status)}
+                      className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border shrink-0 ${
+                        ['approved', 'active'].includes(app.status)
+                          ? 'bg-white text-slate-600 border-slate-300 hover:text-[#093fb4] hover:border-[#093fb4]'
+                          : 'bg-white border-slate-200 text-slate-300 cursor-not-allowed'
+                      }`}
+                    >
+                      <RefreshCw size={12} className={['renewing', 'submitted'].includes(app.status) ? 'animate-spin' : ''} />
+                      Renew
+                    </button>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTerminateModal({ show: true, app });
+                      }}
+                      className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border shrink-0 bg-white text-slate-600 border-slate-300 hover:text-[#FF1E1E] hover:border-[#FF1E1E]"
+                    >
+                      <XCircle size={12} />
+                      Terminate
+                    </button>
+                  </>
                 )}
-              </tbody>
-            </table>
+
+                {/* DELETE BUTTON for Pending, Rejected, Not Eligible, & Terminated */}
+                {['pending', 'rejected', 'not_eligible', 'terminated'].includes(app.status) && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(app.id);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border shrink-0 bg-white text-rose-600 border-rose-200 hover:bg-rose-50 hover:border-rose-400"
+                    title="Delete Applicant"
+                  >
+                    <Trash2 size={12} />
+                    Delete
+                  </button>
+                )}
+              </div>
+            </td>
+          </tr>
+        );
+      })
+    )}
+  </tbody>
+</table>
           </div>
         </div>
       </div>

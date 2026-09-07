@@ -211,21 +211,24 @@ const getScholarshipApplications = async (req, res) => {
 
     const result = await pool.query(
       `SELECT 
-          a.id,
-          a.status,
-          a.created_at AS submitted_at,
-          a.is_disbursed,
-          a.total_disbursed,
-          a.amount_range,
-          s.sfirst_name,
-          s.slast_name,
-          s.scontact_number,
-          s.student_email,
-          s.sprofile_pic
-          
-
+         a.id,
+         a.status,
+         a.created_at AS submitted_at,
+         a.is_disbursed,
+         a.total_disbursed,
+         a.amount_range,
+         s.sfirst_name,
+         s.slast_name,
+         s.scontact_number,
+         s.student_email,
+         s.sprofile_pic,
+         COALESCE(col.name, sop.other_school, '—') AS school_name,
+         COALESCE(crs.name, sop.other_degree_program, '—') AS course_name
        FROM applications a
        JOIN students s ON s.id = a.student_id
+       LEFT JOIN student_onboarding_profiles sop ON sop.student_id = s.id
+       LEFT JOIN colleges col ON col.id = sop.college_id
+       LEFT JOIN courses crs ON crs.id = sop.course_id
        WHERE a.scholarship_id = $1
        ORDER BY a.created_at DESC`,
       [id]
@@ -237,7 +240,6 @@ const getScholarshipApplications = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
-
 
 // GET /scholarship/:id/applications/:appId — sub_admin views one application in full (Detailed View)  file applicationStudentProifile.jsx
 const getApplicationDetail = async (req, res) => {
@@ -646,6 +648,24 @@ const getMyApplicationHistory = async (req, res) => {
     });
   } catch (err) {
     console.error("My Application History Error:", err.message);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const deleteScholarshipApplication = async (req, res) => {
+  try {
+    const { id, appId } = req.params;
+    const sub_admin_id = await resolveOrgId(req.user.id);
+    if (!sub_admin_id) return res.status(404).json({ success: false, message: 'Org not found.' });
+
+    await pool.query(
+      `DELETE FROM applications WHERE id = $1 AND scholarship_id = $2`,
+      [appId, id]
+    );
+
+    res.status(200).json({ success: true, message: 'Applicant deleted successfully.' });
+  } catch (err) {
+    console.error("Delete Applicant Error:", err.message);
     res.status(500).json({ success: false, message: err.message });
   }
 };

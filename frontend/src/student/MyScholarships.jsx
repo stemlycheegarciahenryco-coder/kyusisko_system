@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import {
   University, Mail, Phone, Globe, CheckCircle2, Check,
@@ -8,7 +9,6 @@ import StudentTopNav from './StudentTopNav';
 import MyCompliance from './MyCompliance';
 import RenewCompliance from './RenewCompliance';
 import ApplicationTimeline from '../component/ApplicationTimeline';
-import ProgramHistoryModal from '../component/ProgramHistoryModal';
 
 const backendURL = 'http://localhost:5000';
 
@@ -331,10 +331,10 @@ function ScholarshipCard({ s, isExpanded, onToggle, onStatusUpdate, onOpenHistor
 }
 // --- 2. MAIN CONTAINER CONTROLLER ---
 export default function MyScholarships() {
+  const navigate = useNavigate();
   const [scholarships, setScholarships] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
-  const [historyModalAppId, setHistoryModalAppId] = useState(null);
   const [activeTab, setActiveTab] = useState('pending');
   const [savedScholarships, setSavedScholarships] = useState([]);
   const [receipts, setReceipts] = useState([]);
@@ -526,20 +526,13 @@ export default function MyScholarships() {
                   isExpanded={expanded === s.application_id}
                   onToggle={() => setExpanded(expanded === s.application_id ? null : s.application_id)}
                   onStatusUpdate={handleStatusUpdate}
-                  onOpenHistory={setHistoryModalAppId}
+                  onOpenHistory={(appId) => navigate(`/my-scholarships/${appId}`)}
                 />
               ))}
             </div>
           )
         )}
       </div>
-
-      {historyModalAppId && (
-        <ProgramHistoryModal
-          applicationId={historyModalAppId}
-          onClose={() => setHistoryModalAppId(null)}
-        />
-      )}
     </div>
   );
 }
