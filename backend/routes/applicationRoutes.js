@@ -25,9 +25,11 @@ router.post('/:appId/comply-submit', verifyToken, isStudent, upload.array('files
 // student view — full history for one of their own applications
 // (files, compliance, renewal, receipts — notes come from /comments/:appId)
 router.get('/:appId/my-history', verifyToken, isStudent, application.getMyApplicationHistory);
+router.delete('/scholarship/:id/applications/:appId', verifyToken, isSubAdmin, application.deleteScholarshipApplication);
 
 // for disbursement management (sub_admin only)
-router.post('/scholarship/:id/applications/:appId/disburse', verifyToken, isSubAdmin, disbursement.recordDisbursement);
+// for disbursement management (sub_admin only)
+router.post('/scholarship/:id/applications/:appId/disburse', verifyToken, isSubAdmin, upload.single('receipt'), disbursement.recordDisbursement);
 router.get('/scholarship/:id/disbursements', verifyToken, isSubAdmin, disbursement.getDisbursementLedger);
 router.get('/disbursements', verifyToken, isSubAdmin, disbursement.getOrgDisbursementLedger);
 

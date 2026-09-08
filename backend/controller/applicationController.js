@@ -674,6 +674,7 @@ module.exports = {
   applyScholarship,
   getScholarshipDetails,
   getScholarshipApplications,
+  deleteScholarshipApplication,
   getApplicationDetail,
   updateApplicationStatus,
   sendComplianceRequest,

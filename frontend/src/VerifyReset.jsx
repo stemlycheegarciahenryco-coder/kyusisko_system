@@ -12,6 +12,30 @@ import {
   IconCircleCheck
 } from '@tabler/icons-react';
 
+// 1. ADDED: Success Modal Component
+function SuccessModal({ isOpen, onConfirm }) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#093fb4]/20 backdrop-blur-md font-sans">
+      <div className="w-full max-w-md bg-white rounded-[2rem] p-8 text-center shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-300">
+        <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-inner">
+          <IconCircleCheck size={36} stroke={2} />
+        </div>
+        <h2 className="text-xl font-black text-slate-900 mb-2 uppercase tracking-tight">Update Successful!</h2>
+        <p className="text-slate-600 text-sm font-semibold leading-relaxed mb-6">
+          Your password has been securely updated. You can now sign in using your new credentials.
+        </p>
+        <button
+          onClick={onConfirm}
+          className="w-full py-4 bg-[#093fb4] hover:bg-[#073496] text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-blue-900/15"
+        >
+          Proceed to Login
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function VerifyReset() {
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -24,6 +48,9 @@ export default function VerifyReset() {
   const [canResend, setCanResend] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendSuccess, setResendSuccess] = useState('');
+
+  // 2. ADDED: State to trigger the success popup
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -75,7 +102,8 @@ export default function VerifyReset() {
         newPassword 
       });
       
-      navigate('/login');
+      // 3. UPDATED: Open the success modal instead of redirecting immediately
+      setShowSuccessModal(true);
     } catch (err) {
       setError(err.response?.data?.error || "Error updating password.");
     } finally {
@@ -112,8 +140,7 @@ export default function VerifyReset() {
               Password Reset
             </h2>
             <p className="text-slate-600 text-xs md:text-sm font-semibold leading-normal mt-2 px-2">
-              Enter the 6-digit code that sent  <br />
-              
+              Enter the 6-digit code that was sent to your email.
             </p>
           </div>
 
@@ -209,6 +236,12 @@ export default function VerifyReset() {
           </button>
         </div>
       </div>
+
+      {/* 4. ADDED: Render the modal */}
+      <SuccessModal 
+        isOpen={showSuccessModal} 
+        onConfirm={() => navigate('/login')} 
+      />
     </div>
   );
 }

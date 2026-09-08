@@ -63,7 +63,7 @@ import LogIn from './LogIn';
 
 
 import ForgotPassword from './ForgotPassword';
-import ResetPassword from './ResetPassword';
+
 
 
 import Home from './Home';
@@ -89,7 +89,7 @@ export default function App() {
       <Route path="/login" element={<LogIn />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/verify-reset" element={<VerifyReset />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
+    
       <Route path="/compliance/:id" element={<CompliancePage />} />
 
           

@@ -97,54 +97,70 @@ export default function DisbursementLedger() {
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-300 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-300 bg-white text-[10px] font-black uppercase tracking-widest text-slate-600">
-                  <th className="py-4 px-6">Date</th>
-                  <th className="py-4 px-6">Amount</th>
-                  <th className="py-4 px-6">Student (Recipient)</th>
-                  <th className="py-4 px-6">Program</th>
-                  <th className="py-4 px-6">Remarks</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {filteredEntries.length === 0 ? (
-                  <tr>
-                    <td colSpan="5" className="py-12 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">
-                      No disbursements recorded yet
-                    </td>
-                  </tr>
+  <div className="overflow-x-auto">
+    <table className="w-full text-left border-collapse">
+      <thead>
+        <tr className="border-b border-slate-300 bg-white text-[10px] font-black uppercase tracking-widest text-slate-600">
+          <th className="py-4 px-6">Date</th>
+          <th className="py-4 px-6">Amount</th>
+          <th className="py-4 px-6">Mode / Proof</th>
+          <th className="py-4 px-6">Student (Recipient)</th>
+          <th className="py-4 px-6">Program</th>
+          <th className="py-4 px-6">Remarks</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-slate-200">
+        {filteredEntries.length === 0 ? (
+          <tr>
+            <td colSpan="6" className="py-12 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">
+              No disbursements recorded yet
+            </td>
+          </tr>
+        ) : (
+          filteredEntries.map((entry) => (
+            <tr key={entry.id} className="text-black">
+              <td className="py-4 px-6 text-xs font-medium text-slate-700">
+                {new Date(entry.disbursed_at).toLocaleDateString(undefined, {
+                  year: 'numeric', month: 'short', day: 'numeric'
+                })}
+              </td>
+              <td className="py-4 px-6">
+                <span className="inline-flex items-center gap-1.5 text-xs font-black text-emerald-700">
+                  <Banknote size={12} />
+                  ₱{Number(entry.amount).toLocaleString()}
+                </span>
+              </td>
+              <td className="py-4 px-6">
+                <span className="block text-xs font-bold text-black">{entry.mode || 'Cash'}</span>
+                {entry.receipt_path ? (
+                  <a 
+                    href={entry.receipt_path} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-[10px] font-bold text-[#093fb4] hover:underline uppercase tracking-widest"
+                  >
+                    View Receipt
+                  </a>
                 ) : (
-                  filteredEntries.map((entry) => (
-                    <tr key={entry.id} className="text-black">
-                      <td className="py-4 px-6 text-xs font-medium text-slate-700">
-                        {new Date(entry.disbursed_at).toLocaleDateString(undefined, {
-                          year: 'numeric', month: 'short', day: 'numeric'
-                        })}
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className="inline-flex items-center gap-1.5 text-xs font-black text-emerald-700">
-                          <Banknote size={12} />
-                          ₱{Number(entry.amount).toLocaleString()}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6 text-xs font-bold text-black uppercase tracking-tight">
-                        {entry.sfirst_name} {entry.slast_name}
-                      </td>
-                      <td className="py-4 px-6 text-xs font-medium text-slate-700">
-                        {entry.program_name}
-                      </td>
-                      <td className="py-4 px-6 text-xs font-medium text-slate-500">
-                        {entry.remarks || '—'}
-                      </td>
-                    </tr>
-                  ))
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No Receipt</span>
                 )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+              </td>
+              <td className="py-4 px-6 text-xs font-bold text-black uppercase tracking-tight">
+                {entry.sfirst_name} {entry.slast_name}
+              </td>
+              <td className="py-4 px-6 text-xs font-medium text-slate-700">
+                {entry.program_name}
+              </td>
+              <td className="py-4 px-6 text-xs font-medium text-slate-500">
+                {entry.remarks || '—'}
+              </td>
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  </div>
+</div>
       </div>
     </div>
   );

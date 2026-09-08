@@ -41,6 +41,18 @@ export default function OrgApplicants() {
     }
   };
 
+
+  const handleDelete = async (appId) => {
+  if (!window.confirm("Are you sure you want to delete this application record?")) return;
+  try {
+    await api.delete(`/applications/scholarship/${id}/applications/${appId}`);
+    setApplications(prev => prev.filter(app => app.id !== appId));
+  } catch (err) {
+    console.error("Failed to delete applicant", err);
+    alert("Failed to delete applicant record.");
+  }
+};
+
   const handleRenewConfirm = async (reason, docs) => {
     try {
       await api.patch(`/renewals/${renewModal.app.id}/renew`, { reason, docs });

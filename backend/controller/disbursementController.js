@@ -1,17 +1,16 @@
 const pool = require('../config/db');
 const { trackEvent } = require('../utils/logger');
 const { resolveOrgId } = require('./applicationController');
+const { createClient } = require('@supabase/supabase-js');
 
-// ─────────────────────────────────────────────────────────────────────────
-// Disbursement Management Module
-// A sub_admin flags an approved/active application as funded by entering
-// that student's amount_range here — the moment it's entered it is logged
-// to the ledger, deducted from the scholarship's remaining_budget, and
-// added to the student's running total on their application.
-// ─────────────────────────────────────────────────────────────────────────
+// Initialize Supabase Storage Client (Supports both SUPABASE_API_URL and SUPABASE_URL)
+const supabase = createClient(
+  process.env.SUPABASE_API_URL || process.env.SUPABASE_URL, 
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+const BUCKET_NAME = process.env.SUPABASE_BUCKET_NAME || 'org-receipt';
 
 // POST /scholarship/:id/applications/:appId/disburse
-// body: { amount_range, remarks? }
 const recordDisbursement = async (req, res) => {
   const client = await pool.connect();
   try {
@@ -21,6 +20,32 @@ const recordDisbursement = async (req, res) => {
 
     const amount_range = Number(req.body.amount_range);
     const remarks = req.body.remarks || null;
+    const mode = req.body.mode || 'Cash';
+    let receipt_url = null;
+
+    // --- SUPABASE STORAGE UPLOAD ---
+    if (req.file) {
+      const fileExt = req.file.originalname.split('.').pop();
+      const fileName = `disbursements/${appId}-${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(BUCKET_NAME)
+        .upload(fileName, req.file.buffer, {
+          contentType: req.file.mimetype,
+          upsert: false
+        });
+
+      if (uploadError) {
+        console.error("Supabase upload error:", uploadError);
+        return res.status(500).json({ success: false, message: 'Failed to upload receipt to Supabase storage.' });
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from(BUCKET_NAME)
+        .getPublicUrl(fileName);
+
+      receipt_url = publicUrlData.publicUrl;
+    }
 
     if (!amount_range || amount_range <= 0) {
       return res.status(400).json({ success: false, message: 'Enter a valid amount greater than 0.' });
@@ -28,8 +53,6 @@ const recordDisbursement = async (req, res) => {
 
     await client.query('BEGIN');
 
-    // Lock the scholarship row so two concurrent disbursements can't both
-    // pass the budget check and overdraw the fund.
     const scholarshipResult = await client.query(
       `SELECT id, title, sub_admin_id, total_budget, remaining_budget
        FROM scholarships
@@ -61,7 +84,6 @@ const recordDisbursement = async (req, res) => {
       });
     }
 
-    // Confirm the application belongs to this scholarship and grab the student
     const appResult = await client.query(
       `SELECT a.id, a.status, a.student_id, s.sfirst_name, s.slast_name
        FROM applications a
@@ -86,12 +108,12 @@ const recordDisbursement = async (req, res) => {
       });
     }
 
-    // 1. Log the disbursement
+    // 1. Log the disbursement with mode and Supabase receipt URL
     const inserted = await client.query(
-      `INSERT INTO disbursements (application_id, scholarship_id, student_id, sub_admin_id, amount, remarks)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO disbursements (application_id, scholarship_id, student_id, sub_admin_id, amount, remarks, mode, receipt_path)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [appId, id, application.student_id, sub_admin_id, amount_range, remarks]
+      [appId, id, application.student_id, sub_admin_id, amount_range, remarks, mode, receipt_url]
     );
 
     // 2. Deduct from the scholarship's remaining budget
@@ -100,9 +122,7 @@ const recordDisbursement = async (req, res) => {
       [amount_range, id]
     );
 
-    // 3. Record this student's cumulative amount_range, bump their running
-    //    total (kept in sync — both represent what this student has been
-    //    given so far), and flip the flag
+    // 3. Update application flags and amounts
     await client.query(
       `UPDATE applications
        SET is_disbursed = true,
@@ -119,7 +139,7 @@ const recordDisbursement = async (req, res) => {
       [
         application.student_id,
         'Funds Released 💸',
-        `₱${amount_range.toLocaleString()} has been disbursed to you for "${scholarship.title}".`,
+        `₱${amount_range.toLocaleString()} has been disbursed to you via ${mode} for "${scholarship.title}".`,
         appId,
         sub_admin_id
       ]
@@ -132,7 +152,7 @@ const recordDisbursement = async (req, res) => {
       userId: req.user.id,
       studentId: application.student_id,
       actionType: 'Disbursement Recorded',
-      details: `Disbursed ₱${amount_range.toLocaleString()} to ${application.sfirst_name} ${application.slast_name} for "${scholarship.title}" (application #${appId}).`
+      details: `Disbursed ₱${amount_range.toLocaleString()} via ${mode} to ${application.sfirst_name} ${application.slast_name} for "${scholarship.title}" (application #${appId}).`
     });
 
     res.status(201).json({ success: true, data: inserted.rows[0] });
@@ -145,8 +165,7 @@ const recordDisbursement = async (req, res) => {
   }
 };
 
-// GET /scholarship/:id/disbursements — ledger for one scholarship program
-// Powers the Date / Amount / Student / Program tracking table.
+// GET /scholarship/:id/disbursements
 const getDisbursementLedger = async (req, res) => {
   try {
     const { id } = req.params;
@@ -165,6 +184,8 @@ const getDisbursementLedger = async (req, res) => {
           d.id,
           d.amount,
           d.remarks,
+          d.mode,
+          d.receipt_path,
           d.disbursed_at,
           s.sfirst_name,
           s.slast_name,
@@ -193,7 +214,7 @@ const getDisbursementLedger = async (req, res) => {
   }
 };
 
-// GET /disbursements — org-wide ledger across every one of the sub_admin's programs
+// GET /disbursements (Org-wide)
 const getOrgDisbursementLedger = async (req, res) => {
   try {
     const sub_admin_id = await resolveOrgId(req.user.id);
@@ -204,6 +225,8 @@ const getOrgDisbursementLedger = async (req, res) => {
           d.id,
           d.amount,
           d.remarks,
+          d.mode,
+          d.receipt_path,
           d.disbursed_at,
           s.sfirst_name,
           s.slast_name,
@@ -226,8 +249,7 @@ const getOrgDisbursementLedger = async (req, res) => {
   }
 };
 
-// GET /my-disbursements — student views their own receipt history, across
-// every program/org that has ever released funds to them.
+// GET /my-disbursements
 const getMyDisbursements = async (req, res) => {
   try {
     const student_id = req.user.id;
@@ -237,6 +259,8 @@ const getMyDisbursements = async (req, res) => {
           d.id,
           d.amount,
           d.remarks,
+          d.mode,
+          d.receipt_path,
           d.disbursed_at,
           sch.id AS scholarship_id,
           sch.title AS program_name,
