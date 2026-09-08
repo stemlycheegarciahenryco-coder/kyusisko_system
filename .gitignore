@@ -13,6 +13,8 @@ dist-ssr
 *.local
 **/.env
 **/.env.*
+rust_functions/*
+cron_jobs/*
 
 # Editor directories and files
 .vscode/*
