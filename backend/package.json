@@ -37,9 +37,11 @@
     "pg": "^8.20.0",
     "rate-limit-redis": "^5.0.0",
     "redis": "^6.1.0",
-    "resend": "^6.16.0"
+    "resend": "^6.16.0",
+    "rust_functions": "file:../rust_functions"
   },
   "devDependencies": {
+    "@napi-rs/cli": "^3.9.0",
     "nodemon": "^3.1.14"
   }
 }
