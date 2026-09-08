@@ -23,7 +23,7 @@ import {
 import HomeNav from './HomeNav';
 
 alert(`WARNING: THIS IS A SCHOOL PROJECT! 
-\n This platform is created solely for academic and educational purposes. We do not offer real scholarship programs, financial aid, or official grants -- Not yet, at least. Do not submit sensitive personal data, financial information, or official credentials.
+\nThis platform is created solely for academic and educational purposes. We do not offer real scholarship programs, financial aid, or official grants. Do not submit sensitive personal data, financial information, or official credentials.
 `)
 
 /* ─── Scroll Reveal ─────────────────────────────────────────── */
