@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getDocumentStudentRecords } = require('../../rust_functions');
+// const { getDocumentStudentRecords } = require('../../rust_functions');
 const pool = require('../config/db');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
@@ -490,28 +490,28 @@ router.post('/verify-otp', otpVerifyLimiter, async (req, res) => {
     }
 });
 
-router.get('/doc', (req, res) => {
-    try {
-        const templatePath = path.resolve(__dirname, '../../rust_functions/StudentRecordsTemplate.docx');
-        const outputPath = path.resolve(__dirname, '../../rust_functions/Generated_StudentRecords.docx');
-
-        // Generate and save the processed document via Rust
-        getDocumentStudentRecords(templatePath, outputPath);
-
-        // Send the file as a download response
-        res.download(outputPath, 'StudentRecord.docx', (err) => {
-            if (err) {
-                if (!res.headersSent) {
-                    res.status(500).json({ success: false, error: err.message });
-                }
-            }
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
-    }
-});
+// router.get('/doc', (req, res) => {
+//     try {
+//         const templatePath = path.resolve(__dirname, '../../rust_functions/StudentRecordsTemplate.docx');
+//         const outputPath = path.resolve(__dirname, '../../rust_functions/Generated_StudentRecords.docx');
+//
+//         // Generate and save the processed document via Rust
+//         getDocumentStudentRecords(templatePath, outputPath);
+//
+//         // Send the file as a download response
+//         res.download(outputPath, 'StudentRecord.docx', (err) => {
+//             if (err) {
+//                 if (!res.headersSent) {
+//                     res.status(500).json({ success: false, error: err.message });
+//                 }
+//             }
+//         });
+//     } catch (error) {
+//         res.status(500).json({
+//             success: false,
+//             error: error.message
+//         });
+//     }
+// });
 
 module.exports = router;

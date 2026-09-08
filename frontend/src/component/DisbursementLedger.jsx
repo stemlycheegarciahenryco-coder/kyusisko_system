@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
-import { ArrowLeft, Banknote, Search } from 'lucide-react';
+import { ArrowLeft, Banknote, Download, Search } from 'lucide-react';
 
 // GET /applications/scholarship/:id/disbursements  → scoped to one program
 // GET /applications/disbursements                  → org-wide, all programs
@@ -52,17 +52,25 @@ export default function DisbursementLedger() {
         </div>
     );
 
-    // <button className="fixed bottom-6 right-6 z-50 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-3 rounded-md shadow-lg transition-all duration-200 flex items-center justify-center" onClick={() => { }}>Print Ledger</button>
+    const handleExcel = ()=> {
+        alert("Placeholder Handler!!!!")
+    }
+
     return (
         <div className="min-h-screen bg-white p-8">
             <div className="max-w-6xl mx-auto">
-
                 <button
                     onClick={() => navigate(-1)}
                     className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-black hover:text-[#093fb4] transition-colors mb-6"
                 >
                     <ArrowLeft size={16} /> Back
                 </button>
+
+                <button className="fixed bottom-6 right-6 z-50 flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl bg-teal-600 text-white text-sm font-black uppercase tracking-widest hover:bg-teal-700 transition-colors disabled:opacity-50 hover:cursor-pointer disabled:cursor-not-allowed shrink-0"
+                    onClick={()=>handleExcel()}>
+                    <Download size={16} /> Excel
+                </button>
+
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                     <div>
                         <h1 className="text-2xl font-black text-black uppercase tracking-tight">
