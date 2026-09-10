@@ -70,25 +70,31 @@ export default function OrgApplicants() {
         setDisbursementModal({ show: true, app });
     };
 
-    const handleDisbursementSubmit = async ({ amount_range, remarks }) => {
-        const app = disbursementModal.app;
-        const res = await api.post(`/applications/scholarship/${id}/applications/${app.id}/disburse`, { amount_range, remarks });
-        const givenAmount = res.data.data.amount; // ledger row still stores the release under `amount`
+    const handleDisbursementSubmit = async (formData) => {
+    try {
+      const app = disbursementModal.app;
+      
+      // Pass formData directly — Axios automatically attaches the multipart/form-data headers for receipt uploads
+      const res = await api.post(`/applications/scholarship/${id}/applications/${app.id}/disburse`, formData);
+      const givenAmount = res.data.data.amount;
 
-        setApplications(prev => prev.map(item =>
-            item.id === app.id
-                ? {
-                    ...item,
-                    is_disbursed: true,
-                    amount_range: Number(item.amount_range || 0) + Number(givenAmount),
-                    total_disbursed: Number(item.total_disbursed || 0) + Number(givenAmount)
-                }
-                : item
-        ));
-        setProgram(prev => prev ? { ...prev, remaining_budget: Number(prev.remaining_budget) - Number(givenAmount) } : prev);
-        setDisbursementModal({ show: false, app: null });
-    };
-
+      setApplications(prev => prev.map(item =>
+        item.id === app.id
+          ? {
+              ...item,
+              is_disbursed: true,
+              amount_range: Number(item.amount_range || 0) + Number(givenAmount),
+              total_disbursed: Number(item.total_disbursed || 0) + Number(givenAmount)
+            }
+          : item
+      ));
+      setProgram(prev => prev ? { ...prev, remaining_budget: Number(prev.remaining_budget) - Number(givenAmount) } : prev);
+      setDisbursementModal({ show: false, app: null });
+    } catch (error) {
+      console.error("Disbursement Error:", error);
+      alert(error.response?.data?.message || "Failed to process disbursement.");
+    }
+  };
     const fetchApplicants = async () => {
         try {
             const res = await api.get(`/applications/scholarship/${id}/applicants`);

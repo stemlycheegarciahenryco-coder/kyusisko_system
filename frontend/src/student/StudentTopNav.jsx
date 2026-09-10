@@ -9,17 +9,17 @@ import {
   ChevronDown, 
   University, 
   Settings2Icon, 
-  AlertCircle, 
   CheckCircle2, 
   XCircle, 
   Info 
 } from 'lucide-react';
 import api from '../api';
 import SearchBar from './SearchBar';
+import LogoutModal from '../component/LogoutModal';
 
 export default function StudentTopNav() {
   const navigate = useNavigate();
-  const { student, loading, refreshProfile } = useStudent();
+  const { student, refreshProfile } = useStudent();
 
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -30,7 +30,6 @@ export default function StudentTopNav() {
 
   const dropdownRef = useRef(null);
   const notifRef = useRef(null);
-  ;
 
   const handleToggleNotif = async () => {
     const willOpen = !showNotif;
@@ -49,7 +48,6 @@ export default function StudentTopNav() {
     }
   };
 
-  // ✅ FIXED: Fetch unread count immediately on mount using cookie auth
   useEffect(() => {
     const fetchUnread = async () => {
       try {
@@ -62,7 +60,6 @@ export default function StudentTopNav() {
     fetchUnread();
   }, []);
 
-  // Listen for profile picture updates
   useEffect(() => {
     window.addEventListener('profilePicUpdated', refreshProfile);
     return () => {
@@ -212,31 +209,13 @@ export default function StudentTopNav() {
         </div>
       </nav>
 
-      {/* LOGOUT MODAL */}
-      {showLogoutModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="bg-[#FFFCFB] rounded-[2.5rem] max-w-sm w-full p-10 text-center shadow-2xl border-4 border-white">
-            <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-100">
-              <AlertCircle size={32} />
-            </div>
-            <h3 className="text-xl font-black text-slate-900 mb-2 uppercase tracking-tight">Sign Out?</h3>
-            <div className="flex flex-col gap-3 mt-8">
-              <button 
-                onClick={handleLogout} 
-                className="w-full bg-[#093fb4] text-white font-black py-4 rounded-2xl hover:opacity-95 transition-opacity uppercase text-xs tracking-[0.2em] cursor-pointer"
-              >
-                Confirm
-              </button>
-              <button 
-                onClick={() => setShowLogoutModal(false)} 
-                className="w-full bg-slate-100/80 text-slate-700 font-black py-4 rounded-2xl hover:bg-slate-200/60 transition-colors uppercase text-xs tracking-[0.2em] cursor-pointer"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Reusable Logout Dialog */}
+      <LogoutModal 
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleLogout}
+        role="student"
+      />
     </>
   );
 }

@@ -23,7 +23,7 @@ import RootAudit from './rootadmin/RootAudit';
 //Student
 import StudentRegister from './student/StudentRegister';
 
-
+import ProgramDetailPage from './student/ProgramDetailPage';
 import StudentProfile from './student/StudentProfile';
 import StudentSettings from './student/StudentSettings';
 import StudentLayout from './student/StudentLayout';
@@ -141,6 +141,7 @@ export default function App() {
           <Route path="/scholarships" element={<ScholarList />} />
         <Route path="/StudentProfile" element={<StudentProfile />} />
         <Route path="/MyScholarships" element={<MyScholarships />} />
+        <Route path="/my-scholarships/:applicationId" element={<ProgramDetailPage />} />
         <Route path="/StudentSettings" element={<StudentSettings />} />
         <Route path="/apply/:id" element={<ApplicationForm />} />
         <Route path="/student-onboard" element={<StudentOnboarding />} />

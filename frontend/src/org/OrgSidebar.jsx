@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, Form, LucideScroll, 
-  LogOut, User, AlertTriangle, Menu, Logs, Flag, Settings 
+  LogOut, User, Menu, Logs, Flag, Settings 
 } from 'lucide-react';
 import api from '../api';
+import LogoutModal from '../component/LogoutModal';
 
 export default function OrgSidebar() {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -45,7 +46,7 @@ export default function OrgSidebar() {
       <div className={`p-4 flex items-center ${isExpanded ? 'justify-between' : 'justify-center'}`}>
         <button 
           onClick={() => setIsExpanded(!isExpanded)} 
-          className="p-2 text-slate-500 hover:text-[#093fb4] hover:bg-slate-100 rounded-xl transition-all"
+          className="p-2 text-slate-500 hover:text-[#093fb4] hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
           title={isExpanded ? "Collapse Sidebar" : "Expand Sidebar"}
         >
           <Menu size={22} />
@@ -59,7 +60,6 @@ export default function OrgSidebar() {
             isExpanded ? 'w-24 h-24' : 'w-12 h-12'
           }`}
         >
-          {/* Circular Image Container */}
           <div className="w-full h-full rounded-full border-4 border-[#093fb4]/15 overflow-hidden bg-white shadow-md flex items-center justify-center">
             {orgData?.org_pic ? (
               <img src={orgData.org_pic} className="w-full h-full object-cover" alt="Org Profile" />
@@ -69,7 +69,6 @@ export default function OrgSidebar() {
           </div>
         </div>
 
-        {/* Org Name */}
         {isExpanded && (
           <h3 className="text-slate-900 font-extrabold uppercase text-sm md:text-base tracking-wide truncate mt-3 w-full px-2">
             {orgData?.org_name || "Provider"}
@@ -102,7 +101,7 @@ export default function OrgSidebar() {
           onClick={() => setShowLogoutDialog(true)}
           title={!isExpanded ? "Sign Out" : undefined}
           className={`
-            w-full flex items-center rounded-xl transition-all font-bold text-xs uppercase tracking-wider
+            w-full flex items-center rounded-xl transition-all font-bold text-xs uppercase tracking-wider cursor-pointer
             ${isExpanded 
               ? 'gap-3.5 px-4 py-3 text-slate-600 hover:bg-red-50 hover:text-red-600'
               : 'justify-center py-3 text-slate-600 hover:bg-red-50 hover:text-red-600'
@@ -114,36 +113,13 @@ export default function OrgSidebar() {
         </button>
       </div>
 
-      {/* Logout Dialog */}
-      {showLogoutDialog && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[999] flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-300">
-            <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center text-red-500 mb-6 mx-auto">
-              <AlertTriangle size={32} />
-            </div>
-            
-            <h2 className="text-2xl font-black text-center text-slate-900 mb-2 tracking-tight">Logging Out?</h2>
-            <p className="text-slate-500 text-center font-medium mb-8 text-sm px-4 leading-relaxed">
-              Are you sure you want to sign out? You will need to log in again to manage scholarships.
-            </p>
-
-            <div className="flex flex-col gap-3">
-              <button 
-                onClick={handleLogout} 
-                className="w-full bg-red-500 hover:bg-red-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-red-100 transition-all active:scale-95"
-              >
-                YES, LOGOUT
-              </button>
-              <button 
-                onClick={() => setShowLogoutDialog(false)} 
-                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 py-4 rounded-2xl font-black transition-all active:scale-95"
-              >
-                STAY LOGGED IN
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Reusable Logout Dialog */}
+      <LogoutModal 
+        isOpen={showLogoutDialog}
+        onClose={() => setShowLogoutDialog(false)}
+        onConfirm={handleLogout}
+        role="provider"
+      />
     </div>
   );
 }

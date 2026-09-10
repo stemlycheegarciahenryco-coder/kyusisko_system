@@ -9,17 +9,16 @@ import {
   IconLogout,
   IconChevronRight,
   IconMenu2,
-  IconX,
-  IconAlertTriangle
+  IconX
 } from '@tabler/icons-react';
+import LogoutModal from '../component/LogoutModal';
 
 export default function RootSidebar() {
-  const [isOpen, setIsOpen] = useState(false); // Mobile Drawer Toggle
-  const [isExpanded, setIsExpanded] = useState(true); // Desktop Mini/Full Toggle
-  const [showLogoutModal, setShowLogoutModal] = useState(false); // Full Center Modal Toggle
+  const [isOpen, setIsOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [adminName, setAdminName] = useState({ firstName: 'System', lastName: 'Admin' });
 
-  // Dynamically load the authenticated user's name from localStorage on mount
   useEffect(() => {
     const storedFirstName = localStorage.getItem('firstName');
     const storedLastName = localStorage.getItem('lastName');
@@ -31,7 +30,6 @@ export default function RootSidebar() {
     }
   }, []);
 
-  // Increased icon size for better readability and alignment
   const menuItems = [
     { name: 'Dashboard', icon: <IconLayoutDashboard size={24} stroke={2} />, path: '/RootDashboard' },
     { name: 'Organization', icon: <IconBuildingCommunity size={24} stroke={2} />, path: '/RootOrganization' },
@@ -57,7 +55,6 @@ export default function RootSidebar() {
         </button>
       </div>
 
-      {/* MOBILE DRAWER BLACKOUT LAYER */}
       {isOpen && (
         <div 
           className="fixed inset-0 bg-black/20 backdrop-blur-xs z-20 md:hidden"
@@ -65,16 +62,14 @@ export default function RootSidebar() {
         />
       )}
 
-      {/* 2. THE MAIN SIDEBAR COMPONENT FRAME - Adjusted widths for larger text */}
+      {/* 2. THE MAIN SIDEBAR COMPONENT FRAME */}
       <div className={`
         fixed md:sticky top-0 left-0 h-screen bg-[#FFFCFB] flex flex-col rounded-r-[2rem] border-r border-slate-50 shadow-2xl shadow-[#093fb4]/15 font-['Inter'] z-20 transition-all duration-300 ease-in-out
         ${isOpen ? 'translate-x-0 w-72' : '-translate-x-full md:translate-x-0'}
         ${isExpanded ? 'md:w-72' : 'md:w-28'}
       `}>
         
-        {/* HEADER BAR: Desktop Collapse Switch Button & Brand Logo */}
         <div className="pt-6 px-5 flex flex-col items-center gap-2 shrink-0 relative">
-          {/* Desktop Toggle Menu Button */}
           <button 
             onClick={() => setIsExpanded(!isExpanded)} 
             className="hidden md:flex self-end p-2.5 text-slate-400 hover:text-[#093fb4] hover:bg-slate-50 rounded-xl transition-colors cursor-pointer"
@@ -82,7 +77,6 @@ export default function RootSidebar() {
             <IconMenu2 size={20} stroke={2.5} />
           </button>
 
-          {/* Scalable App Identity Frame */}
           <div className={`transition-all duration-300 flex items-center justify-center ${isExpanded ? 'h-20 w-auto mt-2' : 'h-14 w-14 mt-1'}`}>
             <img 
               src="/logo.png" 
@@ -92,18 +86,15 @@ export default function RootSidebar() {
           </div>
         </div>
 
-        {/* 👤 AUTHENTICATED ADMINISTRATOR IDENTIFICATION PROFILE BADGE */}
         <div className="px-5 mt-6 shrink-0">
           <div className={`
             flex items-center bg-slate-50 border border-slate-100 rounded-2xl transition-all duration-300
             ${isExpanded ? 'justify-start gap-4 p-4 w-full' : 'justify-center w-14 h-14 p-0 mx-auto'}
           `}>
-            {/* User Profile Avatar Icon Shield */}
             <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#093fb4] flex items-center justify-center shrink-0 border border-blue-100">
               <IconUsers size={22} stroke={2} />
             </div>
             
-            {/* Conditional Title Identity Metadata Stack */}
             <div className={`transition-all duration-200 min-w-0 flex flex-col
               ${isExpanded ? 'opacity-100 max-w-[150px]' : 'opacity-0 max-w-0 hidden pointer-events-none'}
             `}>
@@ -117,7 +108,6 @@ export default function RootSidebar() {
           </div>
         </div>
 
-        {/* COMPACT NAVIGATION INTERFACES LIST */}
         <nav className="flex-1 px-4 space-y-2 mt-8 overflow-y-auto overflow-x-hidden">
           {menuItems.map((item) => (
             <NavLink
@@ -150,7 +140,6 @@ export default function RootSidebar() {
                     <IconChevronRight size={18} className="opacity-60 shrink-0" stroke={2.5} />
                   )}
 
-                  {/* MINI HOVER TOOLTIP FOR COLLAPSED STATE */}
                   {!isExpanded && (
                     <div className="absolute left-full ml-4 px-3 py-2 bg-slate-900 text-white text-[12px] font-bold uppercase tracking-wider rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl z-50">
                       {item.name}
@@ -162,7 +151,6 @@ export default function RootSidebar() {
           ))}
         </nav>
 
-        {/* SIGN OUT FOOTER ANCHOR BLOCK */}
         <div className="p-4 mt-auto border-t border-slate-100/80 bg-[#FFFCFB] rounded-br-[2rem] shrink-0">
           <button 
             onClick={() => setShowLogoutModal(true)}
@@ -180,7 +168,6 @@ export default function RootSidebar() {
               Sign out
             </span>
 
-            {/* MINI LOGOUT HOVER TOOLTIP */}
             {!isExpanded && (
               <div className="absolute left-full ml-4 px-3 py-2 bg-red-600 text-white text-[12px] font-bold uppercase tracking-wider rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl z-50">
                 Sign Out
@@ -190,43 +177,13 @@ export default function RootSidebar() {
         </div>
       </div>
 
-      {/* 3. CENTERED APPLICATION LOGOUT MODAL OVERLAY */}
-      {showLogoutModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div 
-            className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
-            onClick={() => setShowLogoutModal(false)}
-          />
-          
-          <div className="bg-white border border-black/5 rounded-3xl p-8 w-full max-w-md shadow-2xl transform scale-100 transition-all relative z-10 text-center font-['Inter']">
-            <div className="w-16 h-16 bg-red-50 text-[#FF1E1E] rounded-full flex items-center justify-center mx-auto mb-5 border border-red-100">
-              <IconAlertTriangle size={30} stroke={1.5} />
-            </div>
-            
-            <h3 className="text-xl font-black text-slate-900 tracking-wide uppercase">
-              Confirm Logout
-            </h3>
-            <p className="text-[14px] text-slate-500 font-medium mt-3 leading-relaxed max-w-xs mx-auto">
-              Are you sure you want to exit KyusISKO? You will need to re-authenticate to view system audit logs.
-            </p>
-            
-            <div className="grid grid-cols-2 gap-3 mt-8">
-              <button
-                onClick={handleLogout}
-                className="bg-[#FF1E1E] text-white py-3.5 px-4 rounded-xl text-[13px] font-black uppercase tracking-wider hover:bg-red-700 active:scale-95 transition-all cursor-pointer shadow-md shadow-red-900/10"
-              >
-                Yes, Sign out
-              </button>
-              <button
-                onClick={() => setShowLogoutModal(false)}
-                className="bg-slate-50 border border-slate-200/60 text-slate-600 py-3.5 px-4 rounded-xl text-[13px] font-black uppercase tracking-wider hover:bg-slate-100 active:scale-95 transition-all cursor-pointer"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Reusable Logout Dialog */}
+      <LogoutModal 
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleLogout}
+        role="admin"
+      />
     </>
   );
 }

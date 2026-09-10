@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import {
   University, Mail, Phone, Globe, CheckCircle2, Check,
-  Clock, XCircle, ChevronDown, ChevronUp, AlertCircle, Bookmark, ClipboardCheck, FileText, Receipt, PhilippinePeso, History
+  Clock, XCircle, ChevronDown, ChevronUp, AlertCircle, Bookmark, ClipboardCheck, FileText, Receipt, PhilippinePeso
 } from 'lucide-react';
 import StudentTopNav from './StudentTopNav';
 import MyCompliance from './MyCompliance';
@@ -157,7 +157,10 @@ function ScholarshipCard({ s, isExpanded, onToggle, onStatusUpdate, onOpenHistor
   const sc = statusConfig[cleanStatus] || statusConfig.pending;
 
   return (
-    <div className="bg-[#FFFCFB] rounded-2xl border border-black/8 shadow-sm overflow-hidden">
+    <div
+      onClick={() => onOpenHistory(s.application_id)}
+      className="bg-[#FFFCFB] rounded-2xl border border-black/8 shadow-sm overflow-hidden cursor-pointer hover:border-[#093fb4]/30 hover:shadow-md transition-all"
+    >
       <div className="p-5 flex items-center gap-4">
         <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 flex items-center justify-center">
           {s.org_pic ? (
@@ -177,28 +180,20 @@ function ScholarshipCard({ s, isExpanded, onToggle, onStatusUpdate, onOpenHistor
           <span className={`flex items-center gap-1 text-[11px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${sc.cls}`}>
             {sc.icon} {sc.label}
           </span>
-          <div className="flex items-center gap-3">
-            {s.application_id && (
-              <button
-                onClick={() => onOpenHistory(s.application_id)}
-                title="View full program history"
-                className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-[#093fb4] flex items-center gap-1 transition-colors"
-              >
-                <History size={14} /> History
-              </button>
-            )}
-            <button
-              onClick={onToggle}
-              className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-[#093fb4] flex items-center gap-1 transition-colors"
-            >
-              {isExpanded ? <><ChevronUp size={14} /> Less Details</> : <><ChevronDown size={14} /> View Details</>}
-            </button>
-          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation(); // keep inline expand separate from the card-wide navigation
+              onToggle();
+            }}
+            className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-[#093fb4] flex items-center gap-1 transition-colors"
+          >
+            {isExpanded ? <><ChevronUp size={14} /> Less Details</> : <><ChevronDown size={14} /> View Details</>}
+          </button>
         </div>
       </div>
 
       {isExpanded && (
-        <div className="border-t border-black/5 px-5 pb-5 pt-4 space-y-5">
+        <div onClick={(e) => e.stopPropagation()} className="border-t border-black/5 px-5 pb-5 pt-4 space-y-5">
           {s.description && (
             <p className="text-[13px] text-slate-500 leading-relaxed break-words">{s.description}</p>
           )}
