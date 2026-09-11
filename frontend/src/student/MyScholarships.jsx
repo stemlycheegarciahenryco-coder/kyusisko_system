@@ -2,13 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import {
-  University, Mail, Phone, Globe, CheckCircle2, Check,
-  Clock, XCircle, ChevronDown, ChevronUp, AlertCircle, Bookmark, ClipboardCheck, FileText, Receipt, PhilippinePeso
+  University, CheckCircle2,
+  Clock, XCircle, AlertCircle, Bookmark, ClipboardCheck, FileText, Receipt, PhilippinePeso
 } from 'lucide-react';
 import StudentTopNav from './StudentTopNav';
-import MyCompliance from './MyCompliance';
-import RenewCompliance from './RenewCompliance';
-import ApplicationTimeline from '../component/ApplicationTimeline';
 
 const backendURL = 'http://localhost:5000';
 
@@ -30,113 +27,10 @@ const TABS = [
   { key: 'receipts', label: 'Receipts', icon: <Receipt size={14} />, desc: 'Funds released to you, with dates and amounts' },
 ];
 
-// --- 1. PROGRESS TRACKING SUB-COMPONENT ---
-// --- 1. PROGRESS TRACKING SUB-COMPONENT ---
-// ==========================================
-// 1. PROGRESS TRACKING SUB-COMPONENT (FOOLPROOF VERSION)
-// ==========================================
-function ScholarshipProgressTrack({ s }) {
-  if (!s) return null;
-
-  // Extract raw fields straight from the object to prevent cross-wiring
-  const rawStatus = s.status || '';
-  const displayStatus = s.display_status || '';
-  const appliedAt = s.applied_at;
-
-  // The ultimate truth: If backend status is approved or active, the pipeline is complete!
-  const isFullyApproved = ['approved', 'active', 'renewal_approved'].includes(rawStatus);
-
-  // Fallback chain for evaluation state
-  const checkStatus = isFullyApproved ? rawStatus : (displayStatus || rawStatus);
-
-  // Check if this record is running through a renewal timeline
-  const isRenewalPipeline = ['renewing', 'renewal_pending', 'renewal_approved'].includes(displayStatus) || 
-                            ['renewing', 'renewal_pending', 'renewal_approved'].includes(rawStatus);
-  
-  const formattedDate = appliedAt 
-    ? new Date(appliedAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
-    : '—';
-
-  // Renewal progress path steps
-  const renewalSteps = [
-    { label: "Renewal Started",      subtext: formattedDate,   isDone: (st) => isFullyApproved || ['renewing', 'renewal_pending', 'approved', 'active', 'renewal_approved'].includes(st) },
-    { label: "Requirements Submitted", subtext: formattedDate, isDone: (st) => isFullyApproved || ['renewal_pending', 'approved', 'active', 'renewal_approved'].includes(st) },
-    { label: "Under Review",         subtext: "Completed",     isActive: (st) => !isFullyApproved && st === 'renewal_pending', isDone: (st) => isFullyApproved || ['approved', 'active', 'renewal_approved'].includes(st) },
-    { label: "Decision",             subtext: "Approved",      isActive: (st) => false, isDone: (st) => isFullyApproved || ['approved', 'active', 'renewal_approved'].includes(st) },
-    { label: "Renewal Completed",    subtext: "Completed",     isActive: (st) => false, isDone: (st) => isFullyApproved || ['approved', 'active', 'renewal_approved'].includes(st) },
-  ];
-
-  // Initial application progress path steps
-  const applicationSteps = [
-    { label: "Application Started",  subtext: formattedDate,   isDone: (st) => true },
-    { label: "Documents Submitted",  subtext: "Completed",     isDone: (st) => isFullyApproved || ['under_review', 'submitted', 'approved', 'active'].includes(st) },
-    { label: "Under Review",         subtext: "In Progress",   isActive: (st) => !isFullyApproved && st === 'under_review', isDone: (st) => isFullyApproved || ['submitted', 'approved', 'active'].includes(st) },
-    { label: "Decision",             subtext: "Pending",       isActive: (st) => !isFullyApproved && (st === 'submitted' || st === 'pending'), isDone: (st) => isFullyApproved || ['approved', 'active'].includes(st) },
-    { label: "Scholar Activated",    subtext: "Completed",     isActive: (st) => false, isDone: (st) => isFullyApproved || ['approved', 'active'].includes(st) },
-  ];
-
-  const steps = isRenewalPipeline ? renewalSteps : applicationSteps;
-
-  return (
-    <div className="pt-2 pb-4 space-y-6">
-      <p className="text-[12px] font-black uppercase tracking-widest text-[#093fb4]">
-        {isRenewalPipeline ? "Renewal Progress" : "Application Progress"}
-      </p>
-
-      <div className="relative flex justify-between items-start w-full">
-        {/* Background Connecting Bar */}
-        <div className="absolute top-4 left-0 right-0 h-[2px] bg-slate-100 -z-10" />
-        
-        {steps.map((step, index) => {
-          const done = step.isDone(checkStatus);
-          const active = step.isActive ? step.isActive(checkStatus) : false;
-
-          return (
-            <div key={index} className="flex flex-col items-center flex-1 text-center relative px-1">
-              
-              {/* Step Node Circle */}
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${
-                done 
-                  ? 'bg-[#093fb4] text-white shadow-sm shadow-[#093fb4]/20' 
-                  : active 
-                    ? 'bg-white border-2 border-[#093fb4] text-[#093fb4]' 
-                    : 'bg-white border border-slate-200 text-slate-400'
-              }`}>
-                {done ? <Check size={14} strokeWidth={3} /> : <span>{index + 1}</span>}
-              </div>
-
-              {/* Step Text Labels */}
-              <div className="mt-3 space-y-0.5">
-                <p className={`text-[12px] font-black leading-tight max-w-[110px] mx-auto ${
-                  done || active ? 'text-slate-800' : 'text-slate-400'
-                }`}>
-                  {step.label}
-                </p>
-                <p className={`text-[11px] font-medium tracking-wide ${
-                  active ? 'text-[#093fb4] font-bold animate-pulse' : 'text-slate-400'
-                }`}>
-                  {done && !active ? "Completed" : step.subtext}
-                </p>
-              </div>
-
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-
 // ==========================================
 // 2. DYNAMIC CARD DISPLAY SUB-MODULE
 // ==========================================
-function ScholarshipCard({ s, isExpanded, onToggle, onStatusUpdate, onOpenHistory }) {
-
-  // 🚀 Same auth convention used on the admin side (see ApplicantDocs.jsx)
-  const currentStudentId = localStorage.getItem('studentId');
-
-  // Guard check if cleanStatus hits active/approved
+function ScholarshipCard({ s, onOpenHistory }) {
   const cleanStatus = ['approved', 'active', 'renewal_approved'].includes(s.status)
     ? s.status
     : (s.display_status || s.status);
@@ -145,8 +39,8 @@ function ScholarshipCard({ s, isExpanded, onToggle, onStatusUpdate, onOpenHistor
     approved:        { label: 'Approved',          cls: 'bg-emerald-50 text-emerald-600 border-emerald-200',   icon: <CheckCircle2 size={13} /> },
     active:          { label: 'Active Scholar',    cls: 'bg-emerald-50 text-emerald-600 border-emerald-200',   icon: <CheckCircle2 size={13} /> },
     renewal_approved:{ label: 'Active Scholar',    cls: 'bg-emerald-50 text-emerald-600 border-emerald-200',   icon: <CheckCircle2 size={13} /> },
-    not_eligible:    { label: 'Not Eligible',      cls: 'bg-[#FF1E1E]/10 text-[#FF1E1E] border-[#FF1E1E]/20', icon: <XCircle size={13} /> },
-    terminated:      { label: 'Terminated',        cls: 'bg-[#FF1E1E]/10 text-[#FF1E1E] border-[#FF1E1E]/20', icon: <XCircle size={13} /> },
+    not_eligible:    { label: 'Not Eligible',      cls: 'bg-red-50 text-red-500 border-red-200',                icon: <XCircle size={13} /> },
+    terminated:      { label: 'Terminated',        cls: 'bg-red-50 text-red-500 border-red-200',                icon: <XCircle size={13} /> },
     pending:         { label: 'Pending',           cls: 'bg-amber-50 text-amber-600 border-amber-200',         icon: <Clock size={13} /> },
     under_review:    { label: 'For Compliance',    cls: 'bg-[#093fb4]/10 text-[#093fb4] border-[#093fb4]/20',  icon: <Clock size={13} /> },
     submitted:       { label: 'Submitted',         cls: 'bg-emerald-50 text-emerald-600 border-emerald-200',   icon: <CheckCircle2 size={13} /> },
@@ -166,161 +60,20 @@ function ScholarshipCard({ s, isExpanded, onToggle, onStatusUpdate, onOpenHistor
           {s.org_pic ? (
             <img src={s.org_pic} className="w-full h-full object-cover" alt={s.org_name} />
           ) : (
-            <span className="text-lg font-black text-slate-400">{s.org_name?.substring(0, 2).toUpperCase()}</span>
+            <span className="text-lg font-bold text-slate-400">{s.org_name?.substring(0, 2).toUpperCase()}</span>
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="text-sm font-black text-black uppercase leading-tight truncate">{s.title}</h2>
-          <p className="text-[12px] font-black text-[#093fb4] uppercase tracking-widest mt-0.5">{s.org_name}</p>
-          <p className="text-[11px] font-bold text-slate-400 mt-0.5">
-            Applied: {new Date(s.applied_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+          <h2 className="text-sm font-bold text-slate-900 leading-tight truncate">{s.title}</h2>
+          <p className="text-[13px] font-semibold text-[#093fb4] mt-0.5">{s.org_name}</p>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Applied {new Date(s.applied_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
           </p>
         </div>
-        <div className="flex flex-col items-end gap-2 shrink-0">
-          <span className={`flex items-center gap-1 text-[11px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${sc.cls}`}>
-            {sc.icon} {sc.label}
-          </span>
-          <button
-            onClick={(e) => {
-              e.stopPropagation(); // keep inline expand separate from the card-wide navigation
-              onToggle();
-            }}
-            className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-[#093fb4] flex items-center gap-1 transition-colors"
-          >
-            {isExpanded ? <><ChevronUp size={14} /> Less Details</> : <><ChevronDown size={14} /> View Details</>}
-          </button>
-        </div>
+        <span className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border shrink-0 ${sc.cls}`}>
+          {sc.icon} {sc.label}
+        </span>
       </div>
-
-      {isExpanded && (
-        <div onClick={(e) => e.stopPropagation()} className="border-t border-black/5 px-5 pb-5 pt-4 space-y-5">
-          {s.description && (
-            <p className="text-[13px] text-slate-500 leading-relaxed break-words">{s.description}</p>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            {s.amount_range != null && s.amount_range > 0 && (
-              <div className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Amount Given</p>
-                <p className="text-xs font-black text-[#093fb4]">₱{Number(s.amount_range).toLocaleString()}</p>
-              </div>
-            )}
-            {s.fund_type && (
-              <div className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Fund Type</p>
-                <p className="text-xs font-black text-black capitalize">{s.fund_type}</p>
-              </div>
-            )}
-            {s.gwa_requirement && (
-              <div className="bg-[#093fb4]/5 border border-[#093fb4]/10 rounded-xl px-3 py-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-[#093fb4]/60">Min. GWA</p>
-                <p className="text-xs font-black text-[#093fb4]">{s.gwa_requirement}</p>
-              </div>
-            )}
-            {s.deadline && (
-              <div className="bg-[#FF1E1E]/5 border border-[#FF1E1E]/10 rounded-xl px-3 py-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-[#FF1E1E]/60">Deadline</p>
-                <p className="text-xs font-black text-[#FF1E1E]">
-                  {new Date(s.deadline).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {cleanStatus === 'submitted' && (
-            <div className="bg-gradient-to-r from-emerald-50/70 to-emerald-50/20 border border-emerald-100 rounded-xl px-4 py-4 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-emerald-100/80 flex items-center justify-center text-emerald-600 shrink-0">
-                  <Clock size={16} />
-                </div>
-                <div>
-                  <p className="text-[13px] font-black uppercase tracking-wider text-emerald-600">
-                    Compliance Documents Submitted
-                  </p>
-                  <p className="text-[12px] text-slate-500 font-medium mt-0.5">
-                    Waiting for the organization to verify your submitted requirements.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {cleanStatus === 'renewal_pending' && (
-            <div className="bg-gradient-to-r from-blue-50/70 to-blue-50/20 border border-blue-100 rounded-xl px-4 py-4 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-blue-100/80 flex items-center justify-center text-[#093fb4] shrink-0">
-                  <Clock size={16} />
-                </div>
-                <div>
-                  <p className="text-[13px] font-black uppercase tracking-wider text-[#093fb4]">
-                    Renewal Documents Submitted
-                  </p>
-                  <p className="text-[12px] text-slate-500 font-medium mt-0.5">
-                    Waiting for the organization to review your submitted documents.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 🚀 FOOLPROOF CORRECTION: We pass the whole object directly to avoid any state desync */}
-          <ScholarshipProgressTrack s={s} />
-
-          {cleanStatus === 'under_review' && (
-            <MyCompliance 
-              applicationId={s.application_id} 
-              onSuccess={() => onStatusUpdate(s.application_id, 'submitted')}
-            />
-          )}
-
-          {cleanStatus === 'renewing' && (
-            <RenewCompliance 
-              applicationId={s.application_id} 
-              onSuccess={() => onStatusUpdate(s.application_id, 'renewal_pending')}
-            />
-          )}
-
-          {['approved', 'active', 'renewal_approved'].includes(cleanStatus) && (
-            <div className="bg-[#093fb4]/5 border border-[#093fb4]/10 rounded-xl px-4 py-4">
-              <p className="text-[11px] font-black uppercase tracking-widest text-[#093fb4] mb-3">Contact Organization</p>
-              <div className="space-y-2">
-                {/* This section is contact information */}
-                {s.sub_email && (
-                  <a href={`mailto:${s.sub_email}`} className="flex items-center gap-2.5 text-[13px] font-bold text-slate-600 hover:text-[#093fb4]">
-                    <Mail size={14} className="text-[#093fb4]" /> {s.sub_email}
-                  </a>
-                )}
-                {s.contact_number && (
-                  <div className="flex items-center gap-2.5 text-[13px] font-bold text-slate-600">
-                    <Phone size={14} className="text-[#093fb4]" /> {s.contact_number}
-                  </div>
-                )}
-                {s.website && (
-                  <a href={s.website} target="_blank" rel="noreferrer"
-                    className="flex items-center gap-2.5 text-[13px] font-bold text-[#093fb4] hover:underline">
-                    <Globe size={14} /> {s.website}
-                  </a>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* 🚀 Messages & Updates: same live timeline the organization sees on their end */}
-          {s.application_id && (
-            <div className="pt-1">
-              <p className="text-[12px] font-black uppercase tracking-widest text-[#093fb4] mb-3">
-                Messages &amp; Updates
-              </p>
-              <ApplicationTimeline
-                applicationId={s.application_id}
-                currentUserRole="student"
-                currentUserId={currentStudentId}
-                height={420}
-              />
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
@@ -329,7 +82,6 @@ export default function MyScholarships() {
   const navigate = useNavigate();
   const [scholarships, setScholarships] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState(null);
   const [activeTab, setActiveTab] = useState('pending');
   const [savedScholarships, setSavedScholarships] = useState([]);
   const [receipts, setReceipts] = useState([]);
@@ -355,21 +107,6 @@ export default function MyScholarships() {
     };
     fetchData();
   }, []);
-
-  const handleStatusUpdate = (applicationId, nextStatus) => {
-    setScholarships(prev => 
-      prev.map(item => {
-        if (item.application_id === applicationId) {
-          return {
-            ...item,
-            status: nextStatus,
-            display_status: nextStatus
-          };
-        }
-        return item;
-      })
-    );
-  };
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-screen bg-slate-50">
@@ -518,9 +255,6 @@ export default function MyScholarships() {
                 <ScholarshipCard
                   key={`${activeTab}-${s.application_id}`}
                   s={s}
-                  isExpanded={expanded === s.application_id}
-                  onToggle={() => setExpanded(expanded === s.application_id ? null : s.application_id)}
-                  onStatusUpdate={handleStatusUpdate}
                   onOpenHistory={(appId) => navigate(`/my-scholarships/${appId}`)}
                 />
               ))}

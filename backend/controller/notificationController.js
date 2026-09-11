@@ -50,6 +50,34 @@ exports.markAllAsRead = async (req, res) => {
   }
 };
 
+exports.markSingleAsRead = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const student_id = req.user.id;
+    await pool.query(
+      `UPDATE notifications SET is_read = TRUE WHERE id = $1 AND student_id = $2`,
+      [id, student_id]
+    );
+    res.status(200).json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.deleteNotification = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const student_id = req.user.id;
+    await pool.query(
+      `DELETE FROM notifications WHERE id = $1 AND student_id = $2`,
+      [id, student_id]
+    );
+    res.status(200).json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // =================================================================
 // SUB-ADMIN / ORGANIZATION CONTROLLERS
 // =================================================================

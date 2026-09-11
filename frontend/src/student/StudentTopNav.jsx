@@ -8,14 +8,12 @@ import {
   LogOut, 
   ChevronDown, 
   University, 
-  Settings2Icon, 
-  CheckCircle2, 
-  XCircle, 
-  Info 
+  Settings2Icon 
 } from 'lucide-react';
 import api from '../api';
 import SearchBar from './SearchBar';
 import LogoutModal from '../component/LogoutModal';
+import NotifCard from '../component/NotifCard'; // <-- Newly imported component!
 
 export default function StudentTopNav() {
   const navigate = useNavigate();
@@ -38,8 +36,6 @@ export default function StudentTopNav() {
 
     if (willOpen) {
       try {
-        await api.post('/notif/notifications/mark-read');
-        setUnreadCount(0);
         const notifRes = await api.get('/notif/notifications');
         setNotifications(notifRes.data.notifications || []);
       } catch (err) {
@@ -81,6 +77,51 @@ export default function StudentTopNav() {
     } finally {
       localStorage.clear();
       window.location.href = '/';
+    }
+  };
+
+  // ── NOTIFICATION HANDLERS ──
+
+  const handleMarkAllRead = async () => {
+    try {
+      await api.post('/notif/notifications/mark-read');
+      setUnreadCount(0);
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    } catch (err) {
+      console.error("Error marking all as read:", err);
+    }
+  };
+
+  const handleReadSingle = async (id) => {
+    try {
+      await api.patch(`/notif/notifications/${id}/read`);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error("Error marking single notif as read:", err);
+    }
+  };
+
+  const handleDeleteSingle = async (id) => {
+    try {
+      await api.delete(`/notif/notifications/${id}`);
+      const deletedNotif = notifications.find(n => n.id === id);
+      if (deletedNotif && !deletedNotif.is_read) {
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    } catch (err) {
+      console.error("Error deleting notification:", err);
+    }
+  };
+
+  const handleNotifClick = (notif) => {
+    if (!notif.is_read) {
+      handleReadSingle(notif.id);
+    }
+    if (notif.application_id) {
+      setShowNotif(false);
+      navigate(`/my-scholarships/${notif.application_id}`);
     }
   };
 
@@ -140,10 +181,29 @@ export default function StudentTopNav() {
 
               {showNotif && (
                 <div className="absolute right-0 mt-3 w-80 md:w-96 bg-white rounded-2xl shadow-xl p-4 z-50 border border-slate-200">
-                  <h3 className="text-sm font-black mb-3 uppercase text-slate-900 tracking-wider">Notifications</h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-black uppercase text-slate-900 tracking-wider">Notifications</h3>
+                    {unreadCount > 0 && (
+                      <button 
+                        onClick={handleMarkAllRead} 
+                        className="text-[10px] font-black uppercase tracking-widest text-[#093fb4] hover:underline cursor-pointer"
+                      >
+                        Mark all as read
+                      </button>
+                    )}
+                  </div>
+                  
                   <div className="max-h-80 overflow-y-auto space-y-2 pr-1 scrollbar-thin">
                     {notifications.length > 0 ? (
-                      notifications.map((notif) => <NotifCard key={notif.id} notif={notif} />)
+                      notifications.map((notif) => (
+                        <NotifCard 
+                          key={notif.id} 
+                          notif={notif} 
+                          onRead={handleReadSingle} 
+                          onDelete={handleDeleteSingle}
+                          onClick={handleNotifClick}
+                        />
+                      ))
                     ) : (
                       <p className="text-xs text-slate-500 text-center py-6 font-bold uppercase">No notifications</p>
                     )}
@@ -217,27 +277,5 @@ export default function StudentTopNav() {
         role="student"
       />
     </>
-  );
-}
-
-function NotifCard({ notif }) {
-  const title = notif.title?.toLowerCase() || '';
-  const config =
-    title.includes('approved')
-      ? { icon: <CheckCircle2 size={18} />, bg: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-200' }
-      : title.includes('rejected') || title.includes('not eligible') || title.includes('taken down')
-      ? { icon: <XCircle size={18} />, bg: 'bg-red-50 text-[#FF1E1E]', border: 'border-red-200' }
-      : { icon: <Info size={18} />, bg: 'bg-blue-50 text-[#093fb4]', border: 'border-blue-200' };
-
-  return (
-    <div className={`p-3.5 rounded-xl flex gap-3.5 border border-transparent transition-all hover:bg-slate-100/70 ${!notif.is_read ? 'bg-slate-50 font-semibold' : ''}`}>
-      <div className={`w-10 h-10 rounded-xl ${config.bg} border ${config.border} flex items-center justify-center shrink-0`}>
-        {config.icon}
-      </div>
-      <div className="min-w-0 flex-1">
-        <h4 className="text-sm font-black text-slate-900 leading-tight mb-1">{notif.title}</h4>
-        <p className="text-xs text-slate-700 font-semibold leading-relaxed break-words whitespace-normal">{notif.message}</p>
-      </div>
-    </div>
   );
 }

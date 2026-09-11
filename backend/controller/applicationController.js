@@ -584,8 +584,8 @@ const getMyApplicationHistory = async (req, res) => {
       `SELECT 
           a.id, a.status, a.created_at AS submitted_at, a.scholarship_id,
           a.is_disbursed, a.total_disbursed,
-          sch.title AS program_name, sch.fund_type,
-          sa.org_name, sa.org_pic
+          sch.title AS program_name, sch.fund_type, sch.description, sch.deadline, sch.gwa_requirement,
+          sa.org_name, sa.org_pic, sa.sub_email, sa.contact_number, sa.website
        FROM applications a
        JOIN scholarships sch ON sch.id = a.scholarship_id
        JOIN sub_admins sa ON sa.id = sch.sub_admin_id
