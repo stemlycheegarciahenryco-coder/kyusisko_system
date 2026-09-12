@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 
 export default function StudentAddress({ regform, setRegForm, handleChange }) {
-    const [allBarangays, setAllBarangays] = useState([]); // Store everything
-    const [filteredBarangays, setFilteredBarangays] = useState([]); // Store filtered list
+    const [allBarangays, setAllBarangays] = useState([]); 
+    const [filteredBarangays, setFilteredBarangays] = useState([]); 
     const QC_CITY_CODE = '137404000';
 
     // 1. Fetch ALL QC Barangays once when component loads
@@ -19,33 +19,31 @@ export default function StudentAddress({ regform, setRegForm, handleChange }) {
     // 2. Filter barangays whenever the selected District changes
     useEffect(() => {
         if (regform.district) {
-            // Note: PSGC API doesn't provide a 'district number' field directly in the barangay object.
-            // If your backend needs specific mapping, you'd filter by 'districtCode' here.
-            // For now, we show all QC barangays, but you can add custom filtering logic here.
             setFilteredBarangays(allBarangays);
         } else {
             setFilteredBarangays([]);
         }
     }, [regform.district, allBarangays]);
 
+    // UI HELPER - Aligned with StudentRegister.jsx and LogIn.jsx
     const Label = ({ text, required }) => (
-        <label className="text-[11px] font-bold text-black uppercase tracking-widest ml-1">
+        <label className="text-xs font-black text-slate-800 uppercase tracking-wider ml-1 block mb-2">
             {text} {required && <span className="text-[#FF1E1E]">*</span>}
         </label>
     );
 
-    const inputClass = "w-full p-4 bg-white border border-slate-200 rounded-2xl text-black outline-none focus:border-[#093FB4] transition-all";
+    // INPUT CLASS - Glassmorphism aligned
+    const inputClass = "w-full px-4 py-3.5 bg-white/60 border-2 border-white/80 rounded-2xl focus:bg-white focus:border-[#093fb4] outline-none transition-all placeholder:text-black/30 font-bold text-slate-900 text-base shadow-sm";
 
     return (
         <div className="pt-4 border-t border-slate-100">
-            <p className="text-[13px] font-bold text-blue-900 uppercase tracking-widest mb-4">
+            <p className="text-xs font-black text-[#093FB4] uppercase tracking-widest mb-5 border-b border-black/5 pb-2 mt-2">
                 Permanent Address (Quezon City)
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
                 {/* DISTRICT FIELD */}
-                <div className="space-y-1">
+                <div>
                     <Label text="District" required />
                     <select 
                         name="district" 
@@ -54,19 +52,15 @@ export default function StudentAddress({ regform, setRegForm, handleChange }) {
                         required 
                         className={inputClass}
                     >
-                        <option value="">Select District</option>
+                        <option value="" disabled>Select District</option>
                         {[1, 2, 3, 4, 5, 6].map(d => (
                             <option key={d} value={`District ${d}`}>District {d}</option>
                         ))}
                     </select>
                 </div>
 
-                
-                
-                
-
                 {/* BARANGAY FIELD */}
-                <div className="space-y-1">
+                <div>
                     <Label text="Barangay" required />
                     <select 
                         name="barangay" 
@@ -76,16 +70,15 @@ export default function StudentAddress({ regform, setRegForm, handleChange }) {
                         disabled={!regform.district}
                         className={inputClass}
                     >
-                        <option value="">Select Barangay</option>
+                        <option value="" disabled>Select Barangay</option>
                         {filteredBarangays.map(b => (
                             <option key={b.code} value={b.name}>{b.name}</option>
                         ))}
                     </select>
                 </div>
 
-
-                                 {/* STREET / BLK / LOT */}
-                <div className="space-y-1">
+                {/* STREET / BLK / LOT */}
+                <div>
                     <Label text="Street / Blk / Lot" required />
                     <input 
                         type="text" 
@@ -97,12 +90,9 @@ export default function StudentAddress({ regform, setRegForm, handleChange }) {
                         className={inputClass} 
                     />
                 </div>
-                
-
-               
 
                 {/* ZIP CODE */}
-                <div className="space-y-1">
+                <div>
                     <Label text="Postal Code" required />
                     <input 
                         type="text" 

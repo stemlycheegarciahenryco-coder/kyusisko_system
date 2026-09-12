@@ -194,162 +194,170 @@ export default function StudentRegister() {
         }
     };
 
+    // UI HELPER COMPONENTS - ALIGNED WITH LOGIN.JSX
     const Label = ({ text, required }) => (
-        <label className="text-[11px] font-bold text-black uppercase tracking-widest ml-1">
+        <label className="text-xs font-black text-slate-800 uppercase tracking-wider ml-1 block mb-2">
             {text} {required && <span className="text-[#FF1E1E]">*</span>}
         </label>
     );
 
-    const inputClass = "w-full p-4 bg-white border border-slate-200 rounded-2xl text-black outline-none focus:border-[#093FB4] transition-all";
+    const inputClass = "w-full pl-4 pr-4 py-3.5 bg-white/60 border-2 border-white/80 rounded-2xl focus:bg-white focus:border-[#093fb4] outline-none transition-all placeholder:text-black/30 font-bold text-slate-900 text-base shadow-sm";
 
     return (
-        <div 
-            className="min-h-screen w-full flex items-center justify-center p-4 bg-[#FFFCFB] bg-no-repeat bg-contain bg-bottom relative"
-            style={{ backgroundImage: `url('/bg2.png')` }}
-        >
+        <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 relative overflow-hidden bg-[#FFFCFB] font-sans">
+            
+            {/* Background Image (Identical to LogIn.jsx) */}
+            <div 
+              className="absolute inset-0 bg-no-repeat bg-cover bg-center pointer-events-none"
+              style={{ backgroundImage: `url('/bg2.png')` }}
+            />
+
             {/* POPUP FULLSCREEN LOADING OVERLAY */}
             {(loading || verifying) && (
                 <div className="absolute inset-0 bg-black/40 backdrop-blur-xs z-50 flex flex-col items-center justify-center">
-                    <div className="bg-white px-8 py-6 rounded-3xl shadow-2xl flex items-center gap-4 border border-slate-100">
+                    <div className="bg-white px-8 py-6 rounded-[2rem] shadow-2xl flex items-center gap-4 border border-white">
                         <Loader2 className="animate-spin text-[#093FB4]" size={36} />
                         <div>
-                            <p className="text-black font-bold text-sm">Processing Request...</p>
-                            <p className="text-slate-500 text-xs">Please wait a moment.</p>
+                            <p className="text-slate-900 font-black text-sm uppercase tracking-wide">Processing Request...</p>
+                            <p className="text-slate-500 font-bold text-xs mt-0.5">Please wait a moment.</p>
                         </div>
                     </div>
                 </div>
             )}
 
-            <div className="w-full max-w-4xl bg-white/80 backdrop-blur-sm border border-slate-200 rounded-[2.5rem] shadow-2xl p-8 max-h-[95vh] overflow-y-auto relative">
-                <button 
-                    onClick={() => navigate("/")} 
-                    className="absolute top-6 right-8 text-slate-400 hover:text-red-500 transition-colors p-2 hover:bg-slate-100 rounded-full"
-                >
-                    <X size={24} />
-                </button>
-
-                <div className="text-center mb-8">
-                    <img src="/logo.png" alt="KyusISKO Logo" className="w-24 mx-auto mb-4" />
-                    <h1 className="text-black text-[12px] font-bold uppercase tracking-widest">Student Account Registration</h1>
-                </div>
-
-                <p className="text-[13px] font-bold text-blue-900 uppercase tracking-widest mb-4">Personal Information</p>
+            <div className="w-full max-w-4xl bg-white/70 backdrop-blur-xl border border-white/40 rounded-[2.5rem] shadow-2xl p-8 sm:p-10 max-h-[95vh] overflow-y-auto relative z-10 custom-scrollbar">
                 
-                <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
-                    
-                    {/* Names Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-1">
-                            <Label text="First Name" required />
-                            <input type="text" name="firstName" value={regform.firstName} onChange={handleChange} required className={inputClass} />
-                        </div>
-                        <div className="space-y-1">
-                            <Label text="Middle Name" />
-                            <input type="text" name="middleName" value={regform.middleName} onChange={handleChange} placeholder="Optional" className={inputClass} />
-                        </div>
-                        <div className="space-y-1">
-                            <Label text="Last Name" required />
-                            <input type="text" name="lastName" value={regform.lastName} onChange={handleChange} required className={inputClass} />
-                        </div>
-                    </div>
+                <button 
+    type="button" 
+    onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        window.location.href = '/';
+    }} 
+    className="absolute top-7 right-7 text-black/30 hover:text-[#FF1E1E] transition-colors p-1 cursor-pointer z-50"
+>
+    <X size={24} strokeWidth={2.5} />
+</button>
 
-                    {/* Personal Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-1">
-                            <Label text="Suffix" />
-                            <input type="text" name="suffix" value={regform.suffix} onChange={handleChange} placeholder="Jr" className={`${inputClass} uppercase`} />
+                <div className="text-center mb-8 mt-2">
+                    <div className="inline-flex items-center justify-center mb-4">
+                        <img src="/logo.png" alt="KyusISKO Logo" className="h-16 w-auto object-contain" />
+                    </div>
+                    <h1 className="mt-2 text-sm font-black text-slate-700 uppercase tracking-[0.3em]">
+                        Student Account Registration
+                    </h1>
+                </div>
+                
+                <form onSubmit={handleSubmit} className="space-y-8" autoComplete="off">
+                    
+                    {/* PERSONAL INFORMATION SECTION */}
+                    <div>
+                        <p className="text-xs font-black text-[#093FB4] uppercase tracking-widest mb-4 border-b border-black/5 pb-2">
+                            Personal Information
+                        </p>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                            <div>
+                                <Label text="First Name" required />
+                                <input type="text" name="firstName" placeholder="Juan" value={regform.firstName} onChange={handleChange} required className={inputClass} />
+                            </div>
+                            <div>
+                                <Label text="Middle Name" />
+                                <input type="text" name="middleName" placeholder="Optional" value={regform.middleName} onChange={handleChange} className={inputClass} />
+                            </div>
+                            <div>
+                                <Label text="Last Name" required />
+                                <input type="text" name="lastName" placeholder="Dela Cruz" value={regform.lastName} onChange={handleChange} required className={inputClass} />
+                            </div>
                         </div>
-                        {/* Birthdate Dropdowns */}
-                        <div className="space-y-1">
-                            <Label text="Birth Date" required />
-                            <div className="grid grid-cols-3 gap-2">
-                                <select
-                                    name="birthMonth"
-                                    value={birthMonth}
-                                    onChange={(e) => setBirthMonth(e.target.value)}
-                                    required
-                                    className={inputClass}
-                                >
-                                    <option value="" disabled>Month</option>
-                                    {monthNames.map((m, i) => (
-                                        <option key={m} value={i + 1}>{m}</option>
-                                    ))}
-                                </select>
-                                <select
-                                    name="birthDay"
-                                    value={birthDay}
-                                    onChange={(e) => setBirthDay(e.target.value)}
-                                    required
-                                    className={inputClass}
-                                >
-                                    <option value="" disabled>Day</option>
-                                    {Array.from({ length: daysInMonth(birthMonth, birthYear) }, (_, i) => i + 1).map(d => (
-                                        <option key={d} value={d}>{d}</option>
-                                    ))}
-                                </select>
-                                <select
-                                    name="birthYear"
-                                    value={birthYear}
-                                    onChange={(e) => setBirthYear(e.target.value)}
-                                    required
-                                    className={inputClass}
-                                >
-                                    <option value="" disabled>Year</option>
-                                    {yearOptions.map(y => (
-                                        <option key={y} value={y}>{y}</option>
-                                    ))}
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-5">
+                            <div>
+                                <Label text="Suffix" />
+                                <input type="text" name="suffix" placeholder="Jr, Sr (Optional)" value={regform.suffix} onChange={handleChange} className={`${inputClass} uppercase`} />
+                            </div>
+                            
+                            {/* Birthdate Dropdowns */}
+                            <div>
+                                <Label text="Birth Date" required />
+                                <div className="grid grid-cols-3 gap-2">
+                                    <select name="birthMonth" value={birthMonth} onChange={(e) => setBirthMonth(e.target.value)} required className={`${inputClass} px-2`}>
+                                        <option value="" disabled>MM</option>
+                                        {monthNames.map((m, i) => <option key={m} value={i + 1}>{m.substring(0,3)}</option>)}
+                                    </select>
+                                    <select name="birthDay" value={birthDay} onChange={(e) => setBirthDay(e.target.value)} required className={`${inputClass} px-2`}>
+                                        <option value="" disabled>DD</option>
+                                        {Array.from({ length: daysInMonth(birthMonth, birthYear) }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
+                                    </select>
+                                    <select name="birthYear" value={birthYear} onChange={(e) => setBirthYear(e.target.value)} required className={`${inputClass} px-2`}>
+                                        <option value="" disabled>YYYY</option>
+                                        {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <Label text="Gender" />
+                                <select name="gender" value={regform.gender} onChange={handleChange} className={inputClass}>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Transgender">Transgender</option>
+                                    <option value="Others">Others</option>
                                 </select>
                             </div>
                         </div>
-                        <div className="space-y-1">
-                            <Label text="Gender" />
-                            <select name="gender" value={regform.gender} onChange={handleChange} className={inputClass}>
-                                <option value="Male">Male</option>
-                                <option value="Female">Female</option>
-                                <option value="Transgender">Transgender</option>
-                                <option value="Others">Others</option>
-                            </select>
-                        </div>
                     </div>
 
-                    <StudentAddress 
-                        regform={regform} 
-                        setRegForm={setRegForm} 
-                        handleChange={handleChange} 
-                    />
+                    {/* ADDRESS COMPONENT */}
+                    <div>
+                        <p className="text-xs font-black text-[#093FB4] uppercase tracking-widest mb-4 border-b border-black/5 pb-2">
+                            Home Address
+                        </p>
+                        {/* StudentAddress handles its own grid, but we pass the updated regform */}
+                        <StudentAddress 
+                            regform={regform} 
+                            setRegForm={setRegForm} 
+                            handleChange={handleChange} 
+                        />
+                    </div>
 
-                    <div className="space-y-6 pt-4 border-t border-slate-100">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Email with Inline Validation Error UI */}
-                            <div className="space-y-1">
+                    {/* CREDENTIALS SECTION */}
+                    <div>
+                        <p className="text-xs font-black text-[#093FB4] uppercase tracking-widest mb-4 border-b border-black/5 pb-2">
+                            Account Credentials
+                        </p>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            
+                            {/* Email Field - Styled exactly like LogIn.jsx */}
+                            <div>
                                 <Label text="Email Address" required />
-                                <div className="relative flex items-center">
-                                    <div className="absolute left-4 text-slate-400 pointer-events-none">
-                                        <Mail size={18} />
-                                    </div>
+                                <div className="relative group">
+                                    <Mail size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-black/30 group-focus-within:text-[#093fb4] transition-colors" />
                                     <input 
                                         type="email" 
                                         name="email" 
+                                        placeholder="email@example.com"
                                         value={regform.email} 
                                         onChange={handleChange} 
                                         required 
-                                        className={`${inputClass} pl-12 ${showEmailError ? 'border-red-500 focus:border-red-500' : ''}`} 
+                                        className={`${inputClass} pl-12 ${showEmailError ? 'border-[#FF1E1E] focus:border-[#FF1E1E]' : ''}`} 
                                     />
                                 </div>
                                 {showEmailError && (
-                                    <span className="text-[9px] font-black text-red-500 uppercase tracking-tighter ml-2">
-                                        Please enter a valid email format (e.g., name@domain.com)
+                                    <span className="text-[10px] font-black text-[#FF1E1E] uppercase tracking-wider ml-2 mt-2 block">
+                                        Invalid email format
                                     </span>
                                 )}
                             </div>
 
-                            {/* Contact */}
-                            <div className="space-y-1">
+                            {/* Contact Field */}
+                            <div>
                                 <Label text="Contact Number" required />
-                                <div className="relative flex items-center">
-                                    <div className="absolute left-4 flex items-center gap-2 pointer-events-none border-r border-slate-200 pr-3">
-                                        <img src="/ph.svg" alt="PH" className="w-6 h-4 object-contain" />
-                                        <span className="text-xs font-bold text-slate-500">+63</span>
+                                <div className="relative group">
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none border-r border-slate-300 pr-3 z-10">
+                                        <img src="/ph.svg" alt="PH" className="w-5 h-3.5 object-cover rounded-sm shadow-sm" />
+                                        <span className="text-sm font-black text-slate-700">+63</span>
                                     </div>
                                     <input 
                                         type="text" 
@@ -365,8 +373,8 @@ export default function StudentRegister() {
                         </div>
 
                         {/* Passwords */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-1">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                            <div>
                                 <Label text="Password" required />
                                 <RegisterPassField 
                                     name="password" 
@@ -375,7 +383,7 @@ export default function StudentRegister() {
                                     showStrength={true} 
                                 />
                             </div>
-                            <div className="space-y-1">
+                            <div>
                                 <Label text="Confirm Password" required />
                                 <RegisterPassField 
                                     name="confirmPassword" 
@@ -384,7 +392,7 @@ export default function StudentRegister() {
                                     error={showMismatch} 
                                 />
                                 {showMismatch && (
-                                    <span className="text-[9px] font-black text-red-500 uppercase tracking-tighter ml-2">
+                                    <span className="text-[10px] font-black text-[#FF1E1E] uppercase tracking-wider ml-2 mt-2 block">
                                         Passwords do not match
                                     </span>
                                 )}
@@ -393,7 +401,7 @@ export default function StudentRegister() {
                     </div>
 
                     <RegisterActions 
-                        loading={false} // Handled by custom loader overlay popup above
+                        loading={false} 
                         acceptedTerms={acceptedTerms} 
                         onShowTerms={() => setShowTerms(true)} 
                         disabled={isFormInvalid || !acceptedTerms} 
@@ -409,7 +417,7 @@ export default function StudentRegister() {
 
             <SuccessModal 
                 isOpen={showSuccess} 
-                onConfirm={() => {setShowSuccess(false); navigate("/student-login");}} 
+                onConfirm={() => {setShowSuccess(false); navigate("/login");}} 
             />
 
             <ErrorModal 

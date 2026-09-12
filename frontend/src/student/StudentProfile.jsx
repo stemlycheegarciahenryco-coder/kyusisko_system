@@ -1,20 +1,29 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useStudent } from './StudentContext';
-import { Camera, User, MapPin, Plus, Award, FileText, GraduationCap, School, Edit2, ExternalLink } from 'lucide-react';
+import { Camera, User, MapPin, Plus, Award, FileText, GraduationCap, School, Edit2, ExternalLink, Users } from 'lucide-react';
 import api from '../api';
 import AddPortfolioModal from './AddPortfolioModal'; 
 import StudentEditProfile from './StudentEditProfile';
-import StudentParent from './StudentParent';
 
 const backendURL = "http://localhost:5000";
 
-// --- Inline Utility Sub-components for Structural Uniformity ---
 function ProfileInfoRow({ label, value }) {
   return (
-    <div className="flex justify-between items-center py-3 border-b border-slate-200 last:border-0 text-base">
-      <span className="text-black font-semibold">{label}</span>
-      <span className="text-slate-600 font-semibold truncate max-w-[250px]">{value || '—'}</span>
+    <div className="flex justify-between items-center py-4 border-b border-black/5 last:border-0 text-sm">
+      <span className="text-slate-500 font-black uppercase tracking-wider text-[10px]">{label}</span>
+      <span className="text-slate-900 font-bold truncate max-w-[300px] text-right">{value || '—'}</span>
+    </div>
+  );
+}
+
+function SectionHeader({ icon: Icon, title }) {
+  return (
+    <div className="flex items-center gap-3 pt-6 pb-2 border-b border-black/5">
+      <div className="w-8 h-8 rounded-xl bg-[#093fb4]/10 flex items-center justify-center text-[#093fb4]">
+        <Icon size={18} stroke={2.5} />
+      </div>
+      <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-800">{title}</h3>
     </div>
   );
 }
@@ -23,49 +32,38 @@ export default function StudentProfile() {
   const location = useLocation();
   const { student, loading, refreshProfile } = useStudent();
  
-  // Modal Triggers
-  const [editTab, setEditTab] = useState(null); // null | 'academic' | 'personal' | 'family'
+  const [editTab, setEditTab] = useState(null); 
   const [isPortfolioModalOpen, setIsPortfolioModalOpen] = useState(false);
-  
-  // State for onboarding overlay
   const [showWelcomeModal, setShowWelcomeModal] = useState(location.state?.justOnboarded || false);
   
   const fileInputRef = useRef(null);
 
-  // Avatar Upload Handler
-  const handleAvatarClick = () => {
-    fileInputRef.current?.click();
-  };
+  const handleAvatarClick = () => fileInputRef.current?.click();
 
   const handleAvatarChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const formData = new FormData();
     formData.append('profile_image', file);
-
     try {
       await api.put(`/upload-profile/me`, formData);
       refreshProfile(); 
       window.dispatchEvent(new Event('profilePicUpdated'));
-    } catch (err) {
-      console.error("Avatar upload failed:", err);
-    }
+    } catch (err) {}
   };
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-[60vh]">
-      <div className="w-10 h-10 border-4 border-[#093fb4] border-t-transparent rounded-full animate-spin" />
+      <div className="w-12 h-12 border-4 border-[#093fb4] border-t-transparent rounded-full animate-spin" />
     </div>
   );
 
   if (!student) return (
-    <div className="text-center py-12 text-slate-400 font-bold text-base uppercase tracking-wider">
+    <div className="text-center py-12 text-slate-400 font-black text-sm uppercase tracking-widest">
       Student record unverified or missing.
     </div>
   );
 
-  // Safe parsing for custom portfolio/achievements array data
   let processedPortfolio = [];
   try {
     if (student.portfolio_data) {
@@ -73,216 +71,243 @@ export default function StudentProfile() {
         ? JSON.parse(student.portfolio_data) 
         : student.portfolio_data;
     }
-  } catch (e) {
-    console.error("Failed parsing achievements data", e);
-  }
+  } catch (e) {}
 
-  // Primary Caretaker display selectors
   const schoolName = student?.other_school ? student.other_school : (student?.college_name || "School not set");
   const degreeName = student?.other_degree_program ? student.other_degree_program : (student?.course_name || "Course not set");
-  const fullAddress = [student?.sbarangay, student?.sdistrict, student?.sstreet,  student?.szip_code].filter(Boolean).join(', ') || "Not provided";
+  const fullAddress = [student?.sbarangay, student?.sdistrict, student?.sstreet, student?.szip_code].filter(Boolean).join(', ') || "Not provided";
+
+  const hasMother = !!student?.mother_name;
+  const hasFather = !!student?.father_name;
+  const hasGuardian = !!student?.guardian_name;
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6 text-slate-800 antialiased relative">
+    <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 text-slate-800 font-['Inter'] antialiased">
       
       {showWelcomeModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-300">
-          <div className="bg-white max-w-md w-full rounded-3xl p-8 shadow-2xl border border-black/5 transform scale-100 transition-all duration-300 animate-in fade-in zoom-in-95">
+          <div className="bg-white/90 backdrop-blur-xl max-w-md w-full rounded-[2.5rem] border border-white/60 p-10 shadow-2xl transform scale-100 transition-all duration-300 animate-in fade-in zoom-in-95">
             <div className="flex justify-center mb-6">
-              <div className="w-20 h-20 bg-[#093fb4]/10 rounded-2xl flex items-center justify-center text-[#093fb4]">
-                <GraduationCap size={40} />
+              <div className="w-24 h-24 bg-blue-50/50 rounded-[2rem] border border-blue-100 flex items-center justify-center text-[#093fb4]">
+                <GraduationCap size={48} stroke={2} />
               </div>
             </div>
-            <h3 className="text-center text-sm font-black uppercase tracking-[0.2em] text-[#093fb4] mb-4">
+            <h3 className="text-center text-sm font-black uppercase tracking-[0.2em] text-slate-900 mb-4">
               Account Setup
             </h3>
             <p className="text-slate-600 text-sm font-medium text-center leading-relaxed px-2 mb-8">
-              Setting up your account for academic, professional, and scholarship criteria right now will significantly <span className="text-black font-bold">increase your chances</span> of matching and receiving the perfect scholarship grant!
+              Setting up your account for academic, professional, and scholarship criteria right now will significantly <span className="text-black font-black uppercase tracking-wider text-xs ml-1">increase your chances</span> of matching and receiving the perfect scholarship grant!
             </p>
             <button
               onClick={() => setShowWelcomeModal(false)}
-              className="w-full bg-[#093fb4] text-white py-4 rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-[#093fb4]/90 transition-all shadow-lg shadow-[#093fb4]/20 active:scale-95 flex items-center justify-center gap-2"
+              className="w-full bg-[#093fb4] text-white py-4 rounded-2xl font-black text-sm uppercase tracking-[0.2em] hover:bg-[#073496] transition-all shadow-xl shadow-[#093fb4]/25 active:scale-[0.98]"
             >
-              Let's Complete your Profile
+              Let's Complete Profile
             </button>
           </div>
         </div>
       )}
 
-      {/* 1. TOP HEADER BIO OVERVIEW CARD */}
-      <div className="bg-white rounded-xl border border-slate-300 shadow-sm p-6 relative overflow-hidden">
-        <div className="flex flex-col sm:flex-row gap-8 items-start sm:items-center">
-          
+      {/* ================= UNIFIED PROFILE CONTAINER ================= */}
+      <div className="bg-white/70 backdrop-blur-xl border border-white/40 rounded-[2.5rem] shadow-2xl p-8 md:p-12 space-y-8 relative overflow-hidden">
+        
+        {/* TOP BIO OVERVIEW */}
+        <div className="flex flex-col sm:flex-row gap-8 items-start sm:items-center pb-6 border-b border-black/5">
           <div className="relative group cursor-pointer shrink-0" onClick={handleAvatarClick}>
-            <div className="w-32 h-32 rounded-xl bg-slate-50 border border-slate-300 overflow-hidden flex items-center justify-center shadow-sm">
+            <div className="w-36 h-36 rounded-[2rem] bg-white/60 border-4 border-white/80 overflow-hidden flex items-center justify-center shadow-lg transition-transform group-hover:scale-[1.02]">
               {student.sprofile_pic ? (
                 <img src={student.sprofile_pic} className="w-full h-full object-cover" alt="Profile" />
               ) : (
-                <User size={64} className="text-slate-300" />
+                <User size={64} className="text-slate-300" stroke={1.5} />
               )}
             </div>
-            <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <Camera size={24} className="text-white" />
+            <div className="absolute inset-0 bg-black/40 rounded-[2rem] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+              <Camera size={28} className="text-white" stroke={2.5}/>
             </div>
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              onChange={handleAvatarChange} 
-              accept="image/*" 
-              className="hidden" 
-            />
+            <input type="file" ref={fileInputRef} onChange={handleAvatarChange} accept="image/*" className="hidden" />
           </div>
 
-          <div className="space-y-2 flex-1 w-full min-w-0">
-            <div className="flex items-start justify-between w-full">
+          <div className="space-y-4 flex-1 w-full min-w-0">
+            <div className="flex flex-col md:flex-row md:items-start justify-between w-full gap-4">
               <div>
-                <h1 className="text-3xl font-black tracking-tight text-slate-900">
+                <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900 uppercase">
                   {student.sfirst_name} {student.slast_name}
                 </h1>
-                <p className="text-[#093fb4] text-base font-bold mt-1">
+                <p className="text-[#093fb4] text-sm font-black uppercase tracking-[0.2em] mt-2">
                   {degreeName}
                 </p>
               </div>
               <button 
                 onClick={() => setEditTab('academic')}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-slate-600 hover:text-[#093fb4] bg-white border border-slate-300 rounded-lg hover:border-[#093fb4]/40 transition-all shadow-sm"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-xs font-black uppercase tracking-[0.1em] text-slate-700 bg-white/60 border-2 border-white/80 rounded-2xl hover:bg-white hover:text-[#093fb4] hover:border-[#093fb4]/40 transition-all shadow-sm active:scale-95"
               >
-                <Edit2 size={16} /> Edit Profile
+                <Edit2 size={16} stroke={2.5}/> Edit Profile
               </button>
             </div>
 
             {student.bio && (
-              <p className="text-sm text-slate-600 font-medium leading-relaxed max-w-2xl bg-slate-50 p-3 rounded-lg border border-slate-200 italic">
+              <p className="text-sm text-slate-700 font-semibold leading-relaxed max-w-2xl bg-white/50 p-4 rounded-2xl border-2 border-white/80 italic shadow-sm">
                 "{student.bio}"
               </p>
             )}
 
             <div className="flex flex-wrap gap-3 pt-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold text-slate-700">
-                <GraduationCap size={16} className="text-slate-400" />
-                <span>Student ID: <strong className="text-slate-900">{student.student_id || '—'}</strong></span>
+              <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/60 border-2 border-white/80 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 shadow-sm">
+                <GraduationCap size={16} className="text-[#093fb4]" stroke={2.5}/>
+                <span>ID: <strong className="text-slate-900 ml-1">{student.student_id || '—'}</strong></span>
               </div>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold text-slate-700">
-                <School size={16} className="text-slate-400" />
-                <span>Academic Level: <strong className="text-slate-900">{student.year_level || '—'}</strong></span>
+              <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/60 border-2 border-white/80 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 shadow-sm">
+                <School size={16} className="text-[#093fb4]" stroke={2.5}/>
+                <span>Level: <strong className="text-slate-900 ml-1">{student.year_level || '—'}</strong></span>
               </div>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold text-slate-700">
-                <Award size={16} className="text-[#093fb4]" />
-                <span>GWA: <strong className="text-[#093fb4]">{student.gwa ? Number(student.gwa).toFixed(2) : '—'}</strong></span>
+              <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/60 border-2 border-white/80 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 shadow-sm">
+                <Award size={16} className="text-[#093fb4]" stroke={2.5}/>
+                <span>GWA: <strong className="text-slate-900 ml-1">{student.gwa ? Number(student.gwa).toFixed(2) : '—'}</strong></span>
               </div>
             </div>
           </div>
-
         </div>
-      </div>
 
-      {/* 2. SUB-SECTIONS GRID TRACK (Academic & Personal Info) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        
-        {/* ACADEMIC PROFILE BLOCK */}
-        <div className="bg-white rounded-xl border border-slate-300 shadow-sm p-6 space-y-4">
-          <div className="flex items-center gap-2 pb-3 border-b border-slate-200 text-slate-600 font-bold text-sm uppercase tracking-wider">
-            <School size={18} className="text-[#093fb4]" />
-            <span>Academic Information</span>
-          </div>
-          <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-1">
+        {/* SECTION 1: ACADEMIC INFO */}
+        <div className="space-y-4">
+          <SectionHeader icon={School} title="Academic Information" />
+          <div className="bg-white/60 border-2 border-white/80 rounded-2xl p-6 shadow-sm">
             <ProfileInfoRow label="Campus / Institution" value={schoolName} />
             <ProfileInfoRow label="Degree Track" value={degreeName} />
           </div>
         </div>
 
-        {/* PERSONAL INFORMATION BLOCK */}
-        <div className="bg-white rounded-xl border border-slate-300 shadow-sm p-6 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200 text-slate-600 font-bold text-sm uppercase tracking-wider">
-            <div className="flex items-center gap-2">
-              <User size={18} className="text-[#093fb4]" />
-              <span>Personal Details</span>
-            </div>
-          </div>
-          <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-1">
+        {/* SECTION 2: PERSONAL DETAILS */}
+        <div className="space-y-4">
+          <SectionHeader icon={User} title="Personal Details" />
+          <div className="bg-white/60 border-2 border-white/80 rounded-2xl p-6 shadow-sm">
             <ProfileInfoRow label="Email Address" value={student.student_email} />
             <ProfileInfoRow label="Contact Number" value={student.scontact_number ? `+63 ${student.scontact_number}` : '—'} />
             <ProfileInfoRow label="Gender Profile" value={student.sgender} />
-            <ProfileInfoRow label="Religious Affiliation" value={student.religion === 'Others' ? student.other_religion : student.religion} />
+            <ProfileInfoRow label="Religion" value={student.religion === 'Others' ? student.other_religion : student.religion} />
           </div>
+        </div>
+
+        {/* SECTION 3: PERMANENT RESIDENCE */}
+        <div className="space-y-4">
+          <SectionHeader icon={MapPin} title="Permanent Residence" />
+          <div className="p-6 bg-white/60 border-2 border-white/80 rounded-2xl shadow-sm">
+            <p className="text-sm font-bold text-slate-900 leading-relaxed">
+              {fullAddress || "No complete family address listed. Kindly update via family settings."}
+            </p>
+          </div>
+        </div>
+
+        {/* SECTION 4: FAMILY INFORMATION */}
+        <div className="space-y-4">
+          <SectionHeader icon={Users} title="Family Information" />
+          <div className="bg-white/60 border-2 border-white/80 rounded-2xl p-6 shadow-sm space-y-6">
+            {hasMother && (
+              <div>
+                <p className="text-[10px] font-black text-[#093fb4] uppercase tracking-[0.2em] mb-3">Mother's Details</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <ProfileInfoRow label="Full Name" value={student.mother_name} />
+                  <ProfileInfoRow label="Contact Number" value={student.mother_contact} />
+                  <ProfileInfoRow label="Occupation" value={student.mother_occupation} />
+                </div>
+              </div>
+            )}
+
+            {hasFather && (
+              <div className={hasMother ? "pt-4 border-t border-black/5" : ""}>
+                <p className="text-[10px] font-black text-[#093fb4] uppercase tracking-[0.2em] mb-3">Father's Details</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <ProfileInfoRow label="Full Name" value={student.father_name} />
+                  <ProfileInfoRow label="Contact Number" value={student.father_contact} />
+                  <ProfileInfoRow label="Occupation" value={student.father_occupation} />
+                </div>
+              </div>
+            )}
+
+            {hasGuardian && (
+              <div className={(hasMother || hasFather) ? "pt-4 border-t border-black/5" : ""}>
+                <p className="text-[10px] font-black text-[#093fb4] uppercase tracking-[0.2em] mb-3">Guardian Details</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <ProfileInfoRow label="Guardian Name" value={student.guardian_name} />
+                  <ProfileInfoRow label="Contact Number" value={student.guardian_contact} />
+                  <ProfileInfoRow label="Occupation" value={student.guardian_occupation} />
+                </div>
+              </div>
+            )}
+
+            {!hasMother && !hasFather && !hasGuardian && (
+              <p className="text-xs font-black text-slate-400 uppercase tracking-widest text-center py-4">No family information provided yet.</p>
+            )}
+
+            {student?.house_address && (
+              <div className="pt-4 border-t border-black/5">
+                <ProfileInfoRow label="Family House Address" value={student.house_address} />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* SECTION 5: PORTFOLIO & ACHIEVEMENTS */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between pt-6 pb-2 border-b border-black/5">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-[#093fb4]/10 flex items-center justify-center text-[#093fb4]">
+                <Award size={18} stroke={2.5} />
+              </div>
+              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-800">Portfolio & Documents</h3>
+            </div>
+            <button 
+              onClick={() => setIsPortfolioModalOpen(true)}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] text-white bg-[#093fb4] rounded-xl hover:bg-[#073496] transition-all shadow-md active:scale-95"
+            >
+              <Plus size={16} stroke={3} /> Add Document
+            </button>
+          </div>
+
+          {Array.isArray(processedPortfolio) && processedPortfolio.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-2">
+              {processedPortfolio.map((item, idx) => {
+                if (!item) return null;
+                const itemTitle = typeof item === 'object' ? item.title : item;
+                let rawLink = typeof item === 'object' ? (item.link || item.url || item.href) : null;
+                
+                if (rawLink && typeof rawLink === 'string') {
+                  rawLink = rawLink.trim().replace(/\\/g, '/');
+                  if (rawLink.startsWith('uploads/')) rawLink = `${backendURL}/${rawLink}`;
+                }
+
+                return (
+                  <a
+                    key={idx}
+                    href={rawLink || '#'}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-4 px-5 py-4 bg-white/60 border-2 border-white/80 hover:border-[#093fb4]/50 hover:bg-white rounded-2xl shadow-sm transition-all group"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-blue-50/50 border border-blue-100 flex items-center justify-center shrink-0">
+                      <FileText size={20} className="text-[#093fb4]" stroke={2.5}/>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-black text-slate-900 uppercase tracking-wider truncate group-hover:text-[#093fb4] transition-colors">
+                        {itemTitle}
+                      </p>
+                      <p className="text-[10px] text-slate-500 mt-1 font-bold tracking-widest uppercase">Digital Copy</p>
+                    </div>
+                    <ExternalLink size={18} className="text-slate-300 group-hover:text-[#093fb4] shrink-0 ml-1 transition-colors" stroke={2.5} />
+                  </a>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-10 bg-white/40 border-2 border-dashed border-white/80 rounded-[2rem] text-center">
+              <FileText size={32} className="text-slate-300 mb-3" stroke={1.5}/>
+              <p className="text-xs font-black text-slate-500 uppercase tracking-widest">No verified extra portfolio files uploaded yet.</p>
+            </div>
+          )}
         </div>
 
       </div>
 
-      {/* 3. HOME ADDRESS BLOCK */}
-      <div className="bg-white rounded-xl border border-slate-300 shadow-sm p-6 space-y-4">
-        <div className="flex items-center gap-2 pb-3 border-b border-slate-200 text-slate-600 font-bold text-sm uppercase tracking-wider">
-          <MapPin size={18} className="text-[#093fb4]" />
-          <span>Permanent Residence</span>
-        </div>
-        <div className="p-5 bg-white border border-slate-200 rounded-xl">
-          <p className="text-base font-semibold text-slate-800 leading-relaxed">
-            {fullAddress || "No complete family address listed. Kindly update via family settings below."}
-          </p>
-        </div>
-      </div>
-
-      {/* 4. FAMILY / PARENT SECTION */}
-      <StudentParent student={student} onRefresh={refreshProfile} />
-
-      {/* 5. ACHIEVEMENTS & PORTFOLIO COMPONENT ROW */}
-      <div className="bg-white rounded-xl border border-slate-300 shadow-sm p-6 space-y-5">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200 text-slate-600 font-bold text-sm uppercase tracking-wider">
-          <div className="flex items-center gap-2">
-            <Award size={18} className="text-[#093fb4]" />
-            <span>Achievements & Personal Portfolio</span>
-          </div>
-          <button 
-            onClick={() => setIsPortfolioModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-[#093fb4] rounded-lg hover:bg-[#093fb4]/90 transition-colors shadow-sm"
-          >
-            <Plus size={16} /> Add Document
-          </button>
-        </div>
-
-        {Array.isArray(processedPortfolio) && processedPortfolio.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {processedPortfolio.map((item, idx) => {
-              if (!item) return null;
-              const itemTitle = typeof item === 'object' ? item.title : item;
-              let rawLink = typeof item === 'object' ? (item.link || item.url || item.href) : null;
-              
-              if (rawLink && typeof rawLink === 'string') {
-                rawLink = rawLink.trim().replace(/\\/g, '/');
-                if (rawLink.startsWith('uploads/')) rawLink = `${backendURL}/${rawLink}`;
-              }
-
-              return (
-                <a
-                  key={idx}
-                  href={rawLink || '#'}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-4 px-4 py-3 bg-white border border-slate-300 hover:border-[#093fb4] rounded-xl shadow-sm transition-all group"
-                >
-                  <div className="w-10 h-10 rounded bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
-                    <FileText size={18} className="text-[#093fb4]" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold text-slate-800 truncate group-hover:text-[#093fb4] transition-colors">
-                      {itemTitle}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1 font-medium">Digital Copy • Attached</p>
-                  </div>
-                  <ExternalLink size={16} className="text-slate-400 group-hover:text-slate-600 shrink-0 ml-1" />
-                </a>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-10 bg-white border-2 border-dashed border-slate-300 rounded-xl text-center">
-            <FileText size={28} className="text-slate-400 mb-3" />
-            <p className="text-sm text-slate-500 italic font-medium">No verified extra portfolio files uploaded yet.</p>
-          </div>
-        )}
-      </div>
-
-      {/* --- WORKFLOW PROFILE MANAGEMENT MODALS --- */}
       {editTab && (
         <StudentEditProfile
           initialTab={editTab}
@@ -294,7 +319,6 @@ export default function StudentProfile() {
       {isPortfolioModalOpen && (
         <AddPortfolioModal onClose={() => { setIsPortfolioModalOpen(false); refreshProfile(); }} studentData={student} />
       )}
-
     </div>
   );
 }

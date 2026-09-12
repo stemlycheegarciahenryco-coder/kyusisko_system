@@ -60,14 +60,14 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div 
-      className="min-h-screen w-full flex items-center justify-center p-6 bg-[#FFFCFB] bg-no-repeat relative overflow-hidden font-sans"
-      style={{ 
-        backgroundImage: `url('/bg2.png')`,
-        backgroundSize: '100% 100%',
-        backgroundPosition: 'center'
-      }}
-    >
+    <div className="min-h-screen w-full flex items-center justify-center p-6 relative overflow-hidden bg-[#FFFCFB] font-sans">
+      
+      {/* Background Image (Identical to LogIn.jsx) */}
+      <div 
+        className="absolute inset-0 bg-no-repeat bg-cover bg-center pointer-events-none"
+        style={{ backgroundImage: `url('/bg2.png')` }}
+      />
+
       <div className="bg-white/90 backdrop-blur-xl w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden border border-white/60 relative z-10">
         
         <button 

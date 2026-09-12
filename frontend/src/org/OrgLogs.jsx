@@ -3,11 +3,13 @@ import api from '../api';
 import {
   Search,
   History,
-  ShieldCheck,
   LogOut,
   LogIn,
   Filter,
+  Download
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const getActionBadgeStyle = (type) => {
   const t = (type || '').toLowerCase();
@@ -79,17 +81,108 @@ export default function OrgLogs() {
     setActivityPage(0);
   }, [searchQuery, logFilter]);
 
+  // ─── PDF EXPORT GENERATOR ───
+  const handleExportPDF = async () => {
+    // 1. Tell the backend a report was generated
+    try {
+      await api.post('/organizations/log-report', { reportName: 'Audit Logs', format: 'PDF' });
+    } catch (err) {
+      console.error("Failed to log report generation", err);
+    }
+
+    // 2. Generate the PDF
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text("Organization Audit Trail & System Logs", 14, 15);
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Generated on: ${new Date().toLocaleString('en-PH')}`, 14, 22);
+
+    const tableColumn = ["User & Role", "Action Type", "Activity Description", "Timestamp"];
+    const tableRows = filteredLogs.map(log => [
+      `${log.user} (${log.role})`,
+      log.type,
+      log.detail || '—',
+      formatAbsoluteTime(log.createdAt)
+    ]);
+
+    doc.autoTable({
+      head: [tableColumn],
+      body: tableRows,
+      startY: 28,
+      styles: { fontSize: 8, cellPadding: 3 },
+      headStyles: { fillColor: [9, 63, 180] }
+    });
+
+    doc.save("audit_logs_report.pdf");
+  };
+
+  // ─── DOCX EXPORT GENERATOR (HTML to MS Word) ───
+  const handleExportDOCX = async () => {
+    // 1. Tell the backend a report was generated
+    try {
+      await api.post('/organizations/log-report', { reportName: 'Audit Logs', format: 'DOCX' });
+    } catch (err) {
+      console.error("Failed to log report generation", err);
+    }
+
+    // 2. Generate the DOCX
+    const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Audit Logs</title><style>table { border-collapse: collapse; width: 100%; } th, td { border: 1px solid #dddddd; text-align: left; padding: 8px; } th { background-color: #093fb4; color: white; }</style></head><body>";
+    const footer = "</body></html>";
+    
+    let html = `<h2>Organization Audit Trail & System Logs</h2>`;
+    html += `<p>Generated on: ${new Date().toLocaleString('en-PH')}</p>`;
+    html += "<table><tr><th>User & Role</th><th>Action Type</th><th>Activity Description</th><th>Timestamp</th></tr>";
+
+    filteredLogs.forEach(log => {
+      html += `<tr>
+        <td>${log.user} (${log.role})</td>
+        <td>${log.type}</td>
+        <td>${log.detail || '—'}</td>
+        <td>${formatAbsoluteTime(log.createdAt)}</td>
+      </tr>`;
+    });
+    html += "</table>";
+
+    const sourceHTML = header + html + footer;
+    const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
+    const fileDownload = document.createElement("a");
+    document.body.appendChild(fileDownload);
+    fileDownload.href = source;
+    fileDownload.download = 'audit_logs_report.doc';
+    fileDownload.click();
+    document.body.removeChild(fileDownload);
+  };
+
   return (
     <div className="p-8 bg-slate-50/50 min-h-screen font-sans space-y-6">
 
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-          Audit Trail & System Logs <History className="text-blue-600" size={22} />
-        </h1>
-        <p className="text-slate-500 text-sm font-medium mt-0.5">
-          Track every co-admin and system action across your organization account.
-        </p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+            Audit Trail & System Logs <History className="text-[#093fb4]" size={22} />
+          </h1>
+          <p className="text-slate-500 text-sm font-medium mt-0.5">
+            Track every co-admin and system action across your organization account.
+          </p>
+        </div>
+
+        {/* ── REPORT DOWNLOAD BUTTONS ── */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button 
+            onClick={handleExportPDF} 
+            className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 border border-red-100 rounded-xl font-bold text-xs hover:bg-red-100 transition-colors shadow-sm"
+          >
+            <Download size={14} /> PDF Report
+          </button>
+          <button 
+            onClick={handleExportDOCX} 
+            className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-[#093fb4] border border-blue-100 rounded-xl font-bold text-xs hover:bg-blue-100 transition-colors shadow-sm"
+          >
+            <Download size={14} /> Word Report
+          </button>
+        </div>
       </div>
 
       <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-5">
@@ -102,7 +195,7 @@ export default function OrgLogs() {
               placeholder="Search user or action..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-slate-50 rounded-xl border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-9 pr-4 py-2 bg-slate-50 rounded-xl border border-slate-200 text-sm font-semibold focus:outline-none focus:border-[#093fb4] transition-colors"
             />
           </div>
 
@@ -112,7 +205,7 @@ export default function OrgLogs() {
             <select
               value={logFilter}
               onChange={(e) => setLogFilter(e.target.value)}
-              className="bg-slate-50 border border-slate-200 text-sm font-bold rounded-xl px-3 py-2 text-slate-700 focus:outline-none"
+              className="bg-slate-50 border border-slate-200 text-sm font-bold rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:border-[#093fb4]"
             >
               {logTypeOptions.map(opt => (
                 <option key={opt} value={opt}>{opt === 'ALL' ? 'All Actions' : opt}</option>

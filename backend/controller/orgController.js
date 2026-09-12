@@ -331,7 +331,7 @@ const getOrgProfilePrograms = async (req, res) => {
 
 const toggleProfileProgramVisibility = async (req, res) => {
     const { programId } = req.params;
-    const { show_on_profile } = req.body; // true or false
+    const { show_on_profile } = req.body; 
 
     try {
         const orgId = await resolveOrgId(req.user.id);
@@ -341,13 +341,21 @@ const toggleProfileProgramVisibility = async (req, res) => {
             `UPDATE scholarships
              SET show_on_profile = $1
              WHERE id = $2 AND sub_admin_id = $3
-             RETURNING id, show_on_profile`,
+             RETURNING id, title, show_on_profile`,
             [show_on_profile, programId, orgId]
         );
 
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, message: "Program not found or unauthorized." });
         }
+
+        // ADDED LOGGING HERE
+        await logActivity({
+            subAdminId: orgId,
+            actorId: req.user.id,
+            actionType: 'Program Updated',
+            details: `Changed profile visibility to ${show_on_profile ? 'Visible' : 'Hidden'} for program ID: ${programId}.`
+        });
 
         res.status(200).json({ 
             success: true, 
@@ -359,6 +367,26 @@ const toggleProfileProgramVisibility = async (req, res) => {
     }
 };
 
+const logReportDownload = async (req, res) => {
+    try {
+        const orgId = await resolveOrgId(req.user.id);
+        const { reportName, format } = req.body; // e.g., "Audit Logs", "PDF"
+        
+        if (!orgId) return res.status(404).json({ success: false });
+
+        await logActivity({
+            subAdminId: orgId,
+            actorId: req.user.id,
+            actionType: 'Report Generated',
+            details: `Generated and downloaded ${reportName} in ${format} format.`
+        });
+
+        res.status(200).json({ success: true });
+    } catch (err) {
+        console.error("Log Report Error:", err.message);
+        res.status(500).json({ success: false });
+    }
+};
 
 //applicants sidebar conencted wirj org applicantsProg and Dashboard
 // applicants sidebar connected with org applicantsProg and Dashboard
@@ -422,6 +450,15 @@ const addProgram = async (req, res) => {
              RETURNING id, title, description, deadline, slots, status`,
             [orgId, title, description || '', deadline || null, slots || 0, status || 'Active']
         );
+        
+        // ADDED LOGGING HERE
+        await logActivity({
+            subAdminId: orgId,
+            actorId: req.user.id,
+            actionType: 'Program Created',
+            details: `Posted new scholarship program: "${title}".`
+        });
+
         res.status(201).json({ success: true, data: result.rows[0] });
     } catch (err) {
         console.error("Add Program Error:", err.message);
@@ -863,7 +900,8 @@ const blockCoAdmin = async (req, res) => {
 };
 
 // Add to exports:
-module.exports = { 
+module.exports = {
+    logReportDownload, 
     getDashboardStats,
     getActivityLogs,
     getOrgProfilePrograms,

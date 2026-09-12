@@ -41,6 +41,7 @@ exports.getFinancialReport = async (req, res) => {
     let totalDisbursed = 0;
     let totalRemaining = 0;
     let missingBudgetCount = 0;
+    let draftProgramCount = 0;
     const budgets = [];
 
     const parsedPrograms = rows.map((program) => {
@@ -48,31 +49,42 @@ exports.getFinancialReport = async (req, res) => {
       const remaining = program.remaining_budget !== null ? Number(program.remaining_budget) : null;
       const disbursed = (budget !== null && remaining !== null) ? budget - remaining : 0;
       const utilizationPct = budget && budget > 0 ? Math.round((disbursed / budget) * 100) : 0;
+      const isDraft = (program.status || '').toLowerCase() === 'draft';
 
-      if (budget === null) {
+      if (isDraft) {
+        // Draft programs aren't published yet — no one can apply to them,
+        // so their budget shouldn't count toward org-wide allocation
+        // totals until the org sets status to something public.
+        draftProgramCount++;
+      } else if (budget === null) {
         missingBudgetCount++;
       } else {
         totalBudget += budget;
+        totalDisbursed += disbursed;
+        totalRemaining += remaining || 0;
         budgets.push(budget);
       }
-      totalDisbursed += disbursed;
-      totalRemaining += remaining || 0;
 
       return {
         ...program,
         total_budget: budget,
         remaining_budget: remaining,
         disbursed,
-        utilization_pct: utilizationPct
+        utilization_pct: utilizationPct,
+        is_draft: isDraft,
+        included_in_totals: !isDraft && budget !== null
       };
     });
 
     const { coefficientOfVariation, highVarianceFlag } = analyzeFinancialSpread(budgets);
 
-    let interpretation = `Total program budget across all scholarships is ₱${totalBudget.toLocaleString()}, of which ₱${totalDisbursed.toLocaleString()} has been disbursed to scholars (₱${totalRemaining.toLocaleString()} remaining). `;
+    let interpretation = `Total program budget across all published scholarships is ₱${totalBudget.toLocaleString()}, of which ₱${totalDisbursed.toLocaleString()} has been disbursed to scholars (₱${totalRemaining.toLocaleString()} remaining). `;
     interpretation += missingBudgetCount > 0
-      ? `${missingBudgetCount} program(s) have no budget set and are excluded from allocation totals. `
-      : `All programs have a budget set. `;
+      ? `${missingBudgetCount} published program(s) have no budget set and are excluded from allocation totals. `
+      : `All published programs have a budget set. `;
+    interpretation += draftProgramCount > 0
+      ? `${draftProgramCount} program(s) are still in draft and excluded from totals until published. `
+      : '';
     interpretation += highVarianceFlag
       ? `Budget sizes vary sharply across programs (coefficient of variation ${coefficientOfVariation}) — consider reviewing for funding equity.`
       : `Budget sizes are reasonably consistent across programs (coefficient of variation ${coefficientOfVariation}).`;
@@ -84,6 +96,7 @@ exports.getFinancialReport = async (req, res) => {
         totalDisbursed,
         totalRemaining,
         missingBudgetCount,
+        draftProgramCount,
         coefficientOfVariation,
         highVarianceFlag,
         programs: parsedPrograms,

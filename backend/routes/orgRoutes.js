@@ -25,7 +25,7 @@ router.get('/dashboard-stats', verifyToken, orgController.getDashboardStats);
 
 
 router.get('/activity-logs', verifyToken, orgController.getActivityLogs);
-
+router.post('/log-report', verifyToken,  orgController.logReportDownload);
 router.get('/conflicts', verifyToken, orgController.monitorApplications);
 
 // Password change now lives at POST /user-management/change-password

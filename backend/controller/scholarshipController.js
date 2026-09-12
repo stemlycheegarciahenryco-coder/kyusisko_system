@@ -3,7 +3,6 @@ const pool = require('../config/db');
 const { addJob } = require('../queues/queueManager');
 const { supabaseAdmin } = require('../config/supabaseClient');
 
-
 async function resolveOrgId(requesterId) {
     const r = await pool.query(
         'SELECT account_type, parent_org_id FROM sub_admins WHERE id = $1',
@@ -12,6 +11,21 @@ async function resolveOrgId(requesterId) {
     if (r.rows.length === 0) return null;
     const { account_type, parent_org_id } = r.rows[0];
     return account_type === 'co_admin' ? parent_org_id : requesterId;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Audit Log Helper
+// ─────────────────────────────────────────────────────────────────────────
+async function logActivity({ subAdminId, actorId, actionType, details, studentId = null }) {
+    try {
+        await pool.query(
+            `INSERT INTO provider_audit_trails (sub_admin_id, actor_id, action_type, details, student_id)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [subAdminId, actorId, actionType, details, studentId]
+        );
+    } catch (err) {
+        console.error("Audit Log Write Failed:", err.message);
+    }
 }
 
 const formatToLocalDateString = (inputDate) => {
@@ -120,9 +134,14 @@ const createScholarship = async (req, res) => {
 
     await client.query('COMMIT');
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // 🚀 SCENARIO A: Dispatch Background AI Matching Jobs for All Active Students
-    // ─────────────────────────────────────────────────────────────────────────
+    // ─── ADDED: LOG ACTIVITY ───
+    await logActivity({
+      subAdminId: sub_admin_id,
+      actorId: req.user.id,
+      actionType: 'Program Created',
+      details: `Created new program draft: "${title}".`
+    });
+
     try {
       const activeStudents = await pool.query(`SELECT id FROM students WHERE sis_active = true`);
       await Promise.all(
@@ -215,7 +234,6 @@ const updateScholarship = async (req, res) => {
 
     await client.query('BEGIN'); 
 
-    // Lock the row so we can safely diff the old vs new budget
     const existing = await client.query(
       `SELECT total_budget, remaining_budget FROM scholarships WHERE id = $1 AND sub_admin_id = $2 FOR UPDATE`,
       [id, sub_admin_id]
@@ -232,9 +250,6 @@ const updateScholarship = async (req, res) => {
     const finalGwa = (gwa === "" || gwa == null || isNaN(parsedGwa)) ? null : parsedGwa;
     const finalSlots = (slots === "" || slots == null || slots === undefined) ? null : parseInt(slots, 10);
 
-    // Only touch the budget columns if `budget` was actually sent in this
-    // request — omit the field entirely from the form payload to leave the
-    // budget (and anything already disbursed against it) untouched.
     const budgetProvided = budget !== undefined;
     const parsedBudget = parseFloat(budget);
     const finalBudget = (budget === "" || budget == null || isNaN(parsedBudget)) ? null : parsedBudget;
@@ -247,11 +262,9 @@ const updateScholarship = async (req, res) => {
 
     if (budgetProvided) {
       if (oldTotal === null || oldRemaining === null) {
-        // No budget existed before — seed both to the new value
         nextTotal = finalBudget;
         nextRemaining = finalBudget;
       } else if (finalBudget === null) {
-        // Budget cleared — only allowed if nothing has been disbursed yet
         if (oldRemaining !== oldTotal) {
           await client.query('ROLLBACK');
           client.release();
@@ -263,8 +276,6 @@ const updateScholarship = async (req, res) => {
         nextTotal = null;
         nextRemaining = null;
       } else {
-        // Budget changed — shift remaining_budget by the same delta so
-        // funds already given out stay accounted for
         const delta = finalBudget - oldTotal;
         nextTotal = finalBudget;
         nextRemaining = oldRemaining + delta;
@@ -310,6 +321,15 @@ const updateScholarship = async (req, res) => {
     }
 
     await client.query('COMMIT'); 
+
+    // ─── ADDED: LOG ACTIVITY ───
+    await logActivity({
+      subAdminId: sub_admin_id,
+      actorId: req.user.id,
+      actionType: 'Program Updated',
+      details: `Updated details for program: "${title}".`
+    });
+
     res.status(200).json({ success: true, message: "Scholarship updated successfully" });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -333,13 +353,21 @@ const updateScholarshipStatus = async (req, res) => {
       `UPDATE scholarships 
        SET status = $1, updated_at = NOW() 
        WHERE id = $2 AND sub_admin_id = $3 
-       RETURNING *`,
+       RETURNING title, status`,
       [normalizedStatus, req.params.id, orgId]
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: "Scholarship not found or unauthorized" });
     }
+
+    // ─── ADDED: LOG ACTIVITY ───
+    await logActivity({
+      subAdminId: orgId,
+      actorId: req.user.id,
+      actionType: 'Program Status Changed',
+      details: `Changed program "${result.rows[0].title}" status to: ${result.rows[0].status}.`
+    });
 
     res.status(200).json({ success: true, data: result.rows[0] });
   } catch (err) {
@@ -354,8 +382,59 @@ const deleteScholarship = async (req, res) => {
     const orgId = await resolveOrgId(req.user.id);
     if (!orgId) return res.status(404).json({ success: false, message: "Org not found." });
 
-    await pool.query(`DELETE FROM scholarships WHERE id = $1 AND sub_admin_id = $2`, [req.params.id, orgId]);
-    res.status(200).json({ success: true, message: 'Deleted' });
+    const result = await pool.query(
+      `UPDATE scholarships 
+       SET is_archived = true, archived_at = NOW(), status = 'archived', updated_at = NOW()
+       WHERE id = $1 AND sub_admin_id = $2
+       RETURNING id, title`,
+      [req.params.id, orgId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Scholarship not found or unauthorized" });
+    }
+
+    // ─── ADDED: LOG ACTIVITY ───
+    await logActivity({
+      subAdminId: orgId,
+      actorId: req.user.id,
+      actionType: 'Program Archived',
+      details: `Archived program: "${result.rows[0].title}".`
+    });
+
+    res.status(200).json({ success: true, message: 'Archived' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// PATCH /api/scholarships/:id/restore
+const restoreScholarship = async (req, res) => {
+  try {
+    const orgId = await resolveOrgId(req.user.id);
+    if (!orgId) return res.status(404).json({ success: false, message: "Org not found." });
+
+    const result = await pool.query(
+      `UPDATE scholarships 
+       SET is_archived = false, archived_at = NULL, status = 'active', updated_at = NOW()
+       WHERE id = $1 AND sub_admin_id = $2
+       RETURNING id, title`,
+      [req.params.id, orgId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Scholarship not found or unauthorized" });
+    }
+
+    // ─── ADDED: LOG ACTIVITY ───
+    await logActivity({
+      subAdminId: orgId,
+      actorId: req.user.id,
+      actionType: 'Program Restored',
+      details: `Restored archived program: "${result.rows[0].title}" back to active status.`
+    });
+
+    res.status(200).json({ success: true, message: 'Restored' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -380,6 +459,7 @@ module.exports = {
   getScholarshipById,
   updateScholarshipStatus,
   deleteScholarship,
+  restoreScholarship,
   updateScholarship,
   getRequirements
 };

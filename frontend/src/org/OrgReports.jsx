@@ -43,7 +43,14 @@ const DEMOGRAPHIC_TABS = [
     { key: 'byBarangay', label: 'By Barangay', icon: Building2 },
 ];
 
+const REPORT_TABS = [
+    { key: 'budget', label: 'Budget', icon: Wallet },
+    { key: 'demographics', label: 'Student / Applicant Demographics', icon: Users },
+];
+
 export default function OrgReports() {
+    const [reportTab, setReportTab] = useState('budget');
+
     const [fundData, setFundData] = useState([]);
     const [fundPage, setFundPage] = useState(0);
     const FUND_ROWS_PER_PAGE = 6;
@@ -62,6 +69,7 @@ export default function OrgReports() {
         totalRemaining: 0,
         totalApprovedStudents: 0,
         programsMissingAmount: 0,
+        draftProgramCount: 0,
         totalMale: 0,
         totalFemale: 0,
         totalUnspecified: 0,
@@ -91,6 +99,7 @@ export default function OrgReports() {
                         totalDisbursed: finData.totalDisbursed || 0,
                         totalRemaining: finData.totalRemaining || 0,
                         programsMissingAmount: finData.missingBudgetCount || 0,
+                        draftProgramCount: finData.draftProgramCount || 0,
                     }));
                 }
 
@@ -482,50 +491,114 @@ export default function OrgReports() {
                 </div>
             </div>
 
-            {/* Key Metric Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-
-                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex items-center gap-3.5">
-                    <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl shrink-0">
-                        <Users size={22} />
-                    </div>
-                    <div>
-                        <p className="text-xs font-extrabold text-slate-400 uppercase tracking-tight">Total Active Scholars</p>
-                        <p className="text-3xl font-black text-slate-900 leading-tight mt-1">{totals.totalApprovedStudents}</p>
-                    </div>
-                </div>
-
-                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex items-center gap-3.5">
-                    <div className="p-3 bg-blue-50 text-blue-600 rounded-xl shrink-0">
-                        <Wallet size={22} />
-                    </div>
-                    <div>
-                        <p className="text-xs font-extrabold text-slate-400 uppercase tracking-tight">Total Program Budget</p>
-                        <p className="text-3xl font-black text-slate-900 leading-tight mt-1">₱{totals.totalAllocatedFund.toLocaleString()}</p>
-                    </div>
-                </div>
-
-                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex items-center gap-3.5">
-                    <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl shrink-0">
-                        <Coins size={22} />
-                    </div>
-                    <div>
-                        <p className="text-xs font-extrabold text-slate-400 uppercase tracking-tight">Total Disbursed</p>
-                        <p className="text-3xl font-black text-slate-900 leading-tight mt-1">₱{totals.totalDisbursed.toLocaleString()}</p>
-                    </div>
-                </div>
-
-                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex items-center gap-3.5">
-                    <div className="p-3 bg-amber-50 text-amber-600 rounded-xl shrink-0">
-                        <AlertTriangle size={22} />
-                    </div>
-                    <div>
-                        <p className="text-xs font-extrabold text-slate-400 uppercase tracking-tight">Programs With No Budget</p>
-                        <p className="text-3xl font-black text-slate-900 leading-tight mt-1">{totals.programsMissingAmount}</p>
-                    </div>
-                </div>
-
+            {/* Report Tab Selector */}
+            <div className="flex flex-wrap items-center gap-2 bg-white p-2 rounded-2xl border border-slate-100 shadow-xs w-fit">
+                {REPORT_TABS.map(({ key, label, icon: Icon }) => (
+                    <button
+                        key={key}
+                        onClick={() => setReportTab(key)}
+                        className={`flex items-center gap-2 text-xs font-extrabold px-4 py-2.5 rounded-xl transition-all ${reportTab === key
+                            ? 'bg-blue-600 text-white'
+                            : 'text-slate-500 hover:bg-slate-50'
+                            }`}
+                    >
+                        <Icon size={15} /> {label}
+                    </button>
+                ))}
             </div>
+
+            {/* Key Metric Cards */}
+            {reportTab === 'budget' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex items-center gap-3.5">
+                        <div className="p-3 bg-blue-50 text-blue-600 rounded-xl shrink-0">
+                            <Wallet size={22} />
+                        </div>
+                        <div>
+                            <p className="text-xs font-extrabold text-slate-400 uppercase tracking-tight">Total Program Budget</p>
+                            <p className="text-3xl font-black text-slate-900 leading-tight mt-1">₱{totals.totalAllocatedFund.toLocaleString()}</p>
+                            <p className="text-[11px] font-semibold text-slate-400 mt-0.5">Published programs only</p>
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex items-center gap-3.5">
+                        <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl shrink-0">
+                            <Coins size={22} />
+                        </div>
+                        <div>
+                            <p className="text-xs font-extrabold text-slate-400 uppercase tracking-tight">Total Disbursed</p>
+                            <p className="text-3xl font-black text-slate-900 leading-tight mt-1">₱{totals.totalDisbursed.toLocaleString()}</p>
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex items-center gap-3.5">
+                        <div className="p-3 bg-amber-50 text-amber-600 rounded-xl shrink-0">
+                            <AlertTriangle size={22} />
+                        </div>
+                        <div>
+                            <p className="text-xs font-extrabold text-slate-400 uppercase tracking-tight">Programs With No Budget</p>
+                            <p className="text-3xl font-black text-slate-900 leading-tight mt-1">{totals.programsMissingAmount}</p>
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex items-center gap-3.5">
+                        <div className="p-3 bg-slate-100 text-slate-500 rounded-xl shrink-0">
+                            <ListChecks size={22} />
+                        </div>
+                        <div>
+                            <p className="text-xs font-extrabold text-slate-400 uppercase tracking-tight">Draft Programs</p>
+                            <p className="text-3xl font-black text-slate-900 leading-tight mt-1">{totals.draftProgramCount}</p>
+                            <p className="text-[11px] font-semibold text-slate-400 mt-0.5">Excluded from totals</p>
+                        </div>
+                    </div>
+
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex items-center gap-3.5">
+                        <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl shrink-0">
+                            <Users size={22} />
+                        </div>
+                        <div>
+                            <p className="text-xs font-extrabold text-slate-400 uppercase tracking-tight">Total Approved Scholars</p>
+                            <p className="text-3xl font-black text-slate-900 leading-tight mt-1">{totals.totalApprovedStudents}</p>
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex items-center gap-3.5">
+                        <div className="p-3 bg-blue-50 text-blue-700 rounded-xl shrink-0">
+                            <Users size={22} />
+                        </div>
+                        <div>
+                            <p className="text-xs font-extrabold text-slate-400 uppercase tracking-tight">Male</p>
+                            <p className="text-3xl font-black text-slate-900 leading-tight mt-1">{totals.totalMale}</p>
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex items-center gap-3.5">
+                        <div className="p-3 bg-rose-50 text-rose-500 rounded-xl shrink-0">
+                            <Users size={22} />
+                        </div>
+                        <div>
+                            <p className="text-xs font-extrabold text-slate-400 uppercase tracking-tight">Female</p>
+                            <p className="text-3xl font-black text-slate-900 leading-tight mt-1">{totals.totalFemale}</p>
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex items-center gap-3.5">
+                        <div className="p-3 bg-slate-100 text-slate-500 rounded-xl shrink-0">
+                            <Users size={22} />
+                        </div>
+                        <div>
+                            <p className="text-xs font-extrabold text-slate-400 uppercase tracking-tight">Unspecified</p>
+                            <p className="text-3xl font-black text-slate-900 leading-tight mt-1">{totals.totalUnspecified}</p>
+                        </div>
+                    </div>
+
+                </div>
+            )}
 
             {reportsError && (
                 <div className="bg-red-50 border border-red-100 text-red-600 text-xs font-bold px-4 py-3 rounded-xl">
@@ -534,6 +607,7 @@ export default function OrgReports() {
             )}
 
             {/* Fund Allocation Per Program Report */}
+            {reportTab === 'budget' && (
             <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs flex flex-col justify-between">
                 <div>
                     <div className="flex justify-between items-center mb-5">
@@ -575,17 +649,20 @@ export default function OrgReports() {
                                 ) : (
                                     paginatedFundData.map((item) => {
                                         const displayStatus = getDisplayStatus(item.status);
+                                        const isDraft = item.is_draft ?? (displayStatus === 'draft');
                                         return (
                                             <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
                                                 <td className="py-3.5 px-2 font-bold text-slate-900">{item.title || item.program}</td>
                                                 <td className="py-3.5 px-2 text-right font-extrabold text-slate-700">
-                                                    {item.total_budget != null ? `₱${item.total_budget.toLocaleString()}` : 'Not set'}
+                                                    {isDraft
+                                                        ? <span className="text-slate-400 italic font-semibold">Not counted (draft)</span>
+                                                        : (item.total_budget != null ? `₱${item.total_budget.toLocaleString()}` : 'Not set')}
                                                 </td>
                                                 <td className="py-3.5 px-2 text-right font-black text-emerald-600">
-                                                    ₱{(item.disbursed || 0).toLocaleString()}
+                                                    {isDraft ? <span className="text-slate-300">—</span> : `₱${(item.disbursed || 0).toLocaleString()}`}
                                                 </td>
                                                 <td className="py-3.5 px-2 text-right font-black text-blue-700">
-                                                    {item.remaining_budget != null ? `₱${item.remaining_budget.toLocaleString()}` : '—'}
+                                                    {isDraft ? <span className="text-slate-300">—</span> : (item.remaining_budget != null ? `₱${item.remaining_budget.toLocaleString()}` : '—')}
                                                 </td>
                                                 <td className="py-3.5 px-2 text-center">
                                                     <span className={`text-xs font-extrabold px-2.5 py-1 rounded-md ${STATUS_BADGE_STYLES[displayStatus]}`}>
@@ -629,8 +706,10 @@ export default function OrgReports() {
                     </div>
                 )}
             </div>
+            )}
 
             {/* Demographics: Male/Female breakdown per Program, Course, District, Barangay */}
+            {reportTab === 'demographics' && (
             <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-4">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                     <div>
@@ -715,7 +794,7 @@ export default function OrgReports() {
                     </div>
                 )}
             </div>
-
+            )}
 
         </div>
     );

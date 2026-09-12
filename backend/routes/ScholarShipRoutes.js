@@ -22,6 +22,9 @@ router.patch('/:id/status', scholarship.updateScholarshipStatus);
 //org his
 router.delete('/:id', scholarship.deleteScholarship);
 
+// Undo an archive/delete
+router.patch('/:id/restore', scholarship.restoreScholarship);
+
 router.get('/:id/requirements', scholarship.getRequirements);
 
 module.exports = router;

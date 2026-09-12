@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { X, CheckCircle2, School, User, Users, ChevronRight } from 'lucide-react';
 import api from '../api';
 
-// Shared helper: enforces 11 digits max, must start with 9, strips non-numeric chars
+const inputCls = "w-full px-4 py-3.5 bg-white/60 border-2 border-white/80 rounded-2xl focus:bg-white focus:border-[#093fb4] outline-none transition-all placeholder:text-black/30 font-bold text-slate-900 text-sm shadow-sm";
+const labelCls = "text-xs font-black text-slate-800 uppercase ml-1 tracking-wider block mb-2";
+
 function sanitizeContact(rawValue, currentValue) {
   let cleaned = rawValue.replace(/\D/g, '');
   if (cleaned.length > 0 && cleaned[0] !== '9') return currentValue;
@@ -11,37 +13,36 @@ function sanitizeContact(rawValue, currentValue) {
 }
 
 const TABS = [
-  { key: 'academic', label: 'Academic Profile', icon: School },
-  { key: 'personal', label: 'Personal Info', icon: User },
-  { key: 'family', label: 'Family & Guardian', icon: Users },
+  { key: 'academic', label: 'Academic', icon: School },
+  { key: 'personal', label: 'Personal', icon: User },
+  { key: 'family', label: 'Family', icon: Users },
 ];
 
 export default function StudentEditProfile({ initialTab = 'academic', studentData, onClose, onRefresh }) {
   const [activeTab, setActiveTab] = useState(initialTab);
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-5 overflow-y-auto">
-      <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden my-auto transition-all">
-        <div className="h-1.5 bg-[#093fb4]" />
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-5 overflow-y-auto font-['Inter']">
+      <div className="bg-white/90 backdrop-blur-xl w-full max-w-3xl rounded-[2.5rem] border border-white/60 shadow-2xl overflow-hidden my-auto transition-all">
 
-        {/* Shell Header */}
-        <div className="flex justify-between items-center px-8 pt-8 pb-6">
+        {/* Header */}
+        <div className="flex justify-between items-center px-8 pt-10 pb-6">
           <div>
-            <h2 className="text-2xl font-bold text-black uppercase tracking-tight">Edit My Profile</h2>
-            <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mt-1">
-              Keep your academic, personal, and family records up to date
+            <h2 className="text-2xl md:text-3xl font-black text-slate-900 uppercase tracking-tight">Edit Profile</h2>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mt-2">
+              Keep your records up to date
             </p>
           </div>
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-xl border border-slate-300 flex items-center justify-center text-slate-500 hover:text-[#093fb4] hover:border-[#093fb4] transition-all"
+            className="w-12 h-12 rounded-2xl bg-white/60 border-2 border-white/80 flex items-center justify-center text-slate-500 hover:text-[#FF1E1E] transition-all shadow-sm"
           >
-            <X size={20} />
+            <X size={24} stroke={2.5} />
           </button>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex gap-4 px-8 border-b border-slate-200">
+        <div className="flex gap-2 px-8 border-b border-black/5">
           {TABS.map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.key;
@@ -49,20 +50,20 @@ export default function StudentEditProfile({ initialTab = 'academic', studentDat
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-2 px-4 py-4 text-sm font-black uppercase tracking-wider border-b-2 transition-all ${
+                className={`flex items-center gap-2 px-5 py-4 text-xs font-black uppercase tracking-[0.1em] border-b-4 transition-all ${
                   isActive
                     ? 'border-[#093fb4] text-[#093fb4]'
-                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
                 }`}
               >
-                <Icon size={18} /> {tab.label}
+                <Icon size={18} stroke={2.5} /> {tab.label}
               </button>
             );
           })}
         </div>
 
-        {/* Tab Content (Using "hidden" to persist form state across tab changes) */}
-        <div className="p-8 max-h-[70vh] overflow-y-auto scrollbar-thin text-left">
+        {/* Tab Content */}
+        <div className="p-8 md:p-10 max-h-[65vh] overflow-y-auto scrollbar-thin text-left">
           <div className={activeTab === 'academic' ? 'block' : 'hidden'}>
             <AcademicSection studentData={studentData} onRefresh={onRefresh} />
           </div>
@@ -80,14 +81,23 @@ export default function StudentEditProfile({ initialTab = 'academic', studentDat
 
 function SuccessBanner({ message }) {
   return (
-    <div className="mb-6 p-4 bg-blue-50 border border-blue-200 text-[#093fb4] text-sm font-bold rounded-xl flex items-center gap-3">
-      <CheckCircle2 size={20} className="shrink-0" /> {message}
+    <div className="mb-6 p-4 bg-emerald-50 border-2 border-emerald-100 text-emerald-700 text-xs font-black uppercase tracking-wider rounded-2xl flex items-center gap-3">
+      <CheckCircle2 size={20} className="shrink-0 text-emerald-500" stroke={2.5} /> {message}
+    </div>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <div className="space-y-2">
+      <label className={labelCls}>{label}</label>
+      {children}
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────
-// 1. ACADEMIC PROFILE SECTION
+// 1. ACADEMIC SECTION
 // ─────────────────────────────────────────────────────────
 function AcademicSection({ studentData, onRefresh }) {
   const [form, setForm] = useState({
@@ -119,9 +129,7 @@ function AcademicSection({ studentData, onRefresh }) {
         ]);
         setColleges(collegeRes.data);
         setCourses(courseRes.data);
-      } catch (err) {
-        console.error("Error loading dropdown data:", err);
-      }
+      } catch (err) { }
     };
     fetchLookups();
   }, []);
@@ -130,7 +138,6 @@ function AcademicSection({ studentData, onRefresh }) {
     e.preventDefault();
     setSaving(true);
     setErrorMsg('');
-
     const formData = new FormData();
     formData.append('bio', form.bio);
     formData.append('college_id', form.college_id);
@@ -150,8 +157,7 @@ function AcademicSection({ studentData, onRefresh }) {
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (err) {
-      console.error("Upload error:", err);
-      setErrorMsg("Failed to update academic profile. Please try again.");
+      setErrorMsg("Failed to update academic profile.");
     } finally {
       setSaving(false);
     }
@@ -159,37 +165,31 @@ function AcademicSection({ studentData, onRefresh }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {showSuccess && <SuccessBanner message="Academic profile updated successfully." />}
+      {showSuccess && <SuccessBanner message="Academic profile updated" />}
       {errorMsg && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-600 text-sm font-semibold rounded-xl">
+        <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 text-red-600 text-xs font-black uppercase tracking-wider rounded-2xl">
           {errorMsg}
         </div>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">Student ID</label>
+        <Field label="Student ID">
           <input
             type="text"
             placeholder="e.g. 2026-00123-MN-0"
             maxLength={20}
-            className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-black transition-all"
+            className={inputCls}
             value={form.student_id}
-            onChange={e => {
-              const sanitized = e.target.value.replace(/[^a-zA-Z0-9-]/g, '').slice(0, 20);
-              setForm({ ...form, student_id: sanitized });
-            }}
+            onChange={e => setForm({ ...form, student_id: e.target.value.replace(/[^a-zA-Z0-9-]/g, '').slice(0, 20) })}
           />
-        </div>
-
-        <div>
-          <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">Academic Level</label>
+        </Field>
+        <Field label="Academic Level">
           <select
-            className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-slate-800 cursor-pointer transition-all"
+            className={inputCls}
             value={form.year_level}
             onChange={e => setForm({ ...form, year_level: e.target.value })}
           >
-            <option value="">Select Education Level</option>
+            <option value="">Select Level</option>
             <option value="Freshman">Freshman</option>
             <option value="Sophomore">Sophomore</option>
             <option value="Junior">Junior</option>
@@ -198,112 +198,86 @@ function AcademicSection({ studentData, onRefresh }) {
             <option value="Masters">Masters</option>
             <option value="Doctorate">Doctorate</option>
           </select>
-        </div>
+        </Field>
       </div>
       
-      <div>
-        <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">GWA</label>
+      <Field label="GWA">
         <input
           type="number"
           step="0.01"
           min="1.00"
           max="5.00"
           placeholder="e.g. 1.50"
-          className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-black transition-all"
+          className={inputCls}
           value={form.gwa}
           onChange={e => setForm({ ...form, gwa: e.target.value })}
         />
-      </div>
+      </Field>
 
-      <div>
-        <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">About Yourself (Bio)</label>
+      <Field label="About Yourself (Bio)">
         <textarea
-          placeholder="Write a short summary about yourself..."
-          className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base text-black font-medium transition-all resize-none min-h-[100px]"
+          placeholder="Write a short summary..."
+          className={`${inputCls} resize-none min-h-[100px]`}
           value={form.bio}
           onChange={e => setForm({ ...form, bio: e.target.value })}
         />
-      </div>
+      </Field>
 
-      <div>
-        <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">Current College / University</label>
+      <Field label="Current College / University">
         <select
-          className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-slate-800 cursor-pointer transition-all"
+          className={inputCls}
           value={form.college_id}
           onChange={e => setForm({ ...form, college_id: e.target.value, other_school: e.target.value === 'Others' ? form.other_school : '' })}
         >
           <option value="">Select your school</option>
-          {colleges.map((col) => (
-            <option key={col.id} value={col.id}>{col.name}</option>
-          ))}
+          {colleges.map((col) => <option key={col.id} value={col.id}>{col.name}</option>)}
           <option value="Others">Others (Specify below)</option>
         </select>
         {form.college_id === 'Others' && (
           <input
             type="text"
             placeholder="Enter school name..."
-            className="w-full mt-3 p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-black transition-all"
+            className={`${inputCls} mt-3`}
             value={form.other_school}
             onChange={e => setForm({ ...form, other_school: e.target.value })}
           />
         )}
-      </div>
+      </Field>
 
-      <div>
-        <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">Degree Program / Course</label>
+      <Field label="Degree Program / Course">
         <select
-          className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-slate-800 cursor-pointer transition-all"
+          className={inputCls}
           value={form.course_id}
           onChange={e => setForm({ ...form, course_id: e.target.value, other_degree_program: e.target.value === 'Others' ? form.other_degree_program : '' })}
         >
           <option value="">Select your course</option>
-          {courses.map((course) => (
-            <option key={course.id} value={course.id}>{course.name}</option>
-          ))}
+          {courses.map((course) => <option key={course.id} value={course.id}>{course.name}</option>)}
           <option value="Others">Others (Specify below)</option>
         </select>
         {form.course_id === 'Others' && (
           <input
             type="text"
             placeholder="Enter course name..."
-            className="w-full mt-3 p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-black transition-all"
+            className={`${inputCls} mt-3`}
             value={form.other_degree_program}
             onChange={e => setForm({ ...form, other_degree_program: e.target.value })}
           />
         )}
-      </div>
-
-      <div>
-        <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">Sports Interests</label>
-        <input
-          type="text"
-          placeholder="Basketball, Volleyball, Chess (Comma separated)"
-          className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-black transition-all"
-          value={form.sports_interests}
-          onChange={e => setForm({ ...form, sports_interests: e.target.value })}
-        />
-      </div>
+      </Field>
 
       <button
         type="submit"
         disabled={saving}
-        className="w-full bg-[#093fb4] text-white py-4 mt-2 rounded-xl font-bold text-base uppercase tracking-widest hover:bg-[#093fb4]/90 transition-all shadow-lg active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2"
+        className="w-full bg-[#093fb4] hover:bg-[#073496] disabled:bg-[#093fb4]/70 text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-[#093fb4]/25 active:scale-[0.98] uppercase text-sm tracking-[0.2em] flex items-center justify-center gap-2 mt-8"
       >
-        {saving ? (
-          <>
-            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            Saving Profile...
-          </>
-        ) : (
-          <>Save Academic Info <ChevronRight size={18} /></>
-        )}
+        {saving ? "Saving..." : <>Save Academic Info <ChevronRight size={20} stroke={2.5}/></>}
       </button>
     </form>
   );
 }
 
 // ─────────────────────────────────────────────────────────
-// 2. PERSONAL INFO SECTION
+// 2. PERSONAL SECTION
 // ─────────────────────────────────────────────────────────
 function PersonalSection({ studentData, onRefresh }) {
   const [form, setForm] = useState({
@@ -326,8 +300,7 @@ function PersonalSection({ studentData, onRefresh }) {
 
     if (form.scontact_number && form.scontact_number.length !== 11) {
       setErrorMsg("Contact number must be exactly 11 digits long and start with 9.");
-      setSaving(false);
-      return;
+      setSaving(false); return;
     }
 
     try {
@@ -336,8 +309,7 @@ function PersonalSection({ studentData, onRefresh }) {
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (err) {
-      console.error("Error updating personal info:", err);
-      setErrorMsg("Failed to update records. Please check your inputs.");
+      setErrorMsg("Failed to update records.");
     } finally {
       setSaving(false);
     }
@@ -345,112 +317,81 @@ function PersonalSection({ studentData, onRefresh }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {showSuccess && <SuccessBanner message="Personal info updated successfully." />}
+      {showSuccess && <SuccessBanner message="Personal info updated" />}
       {errorMsg && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-600 text-sm font-semibold rounded-xl">
-          {errorMsg}
-        </div>
+        <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 text-red-600 text-xs font-black uppercase tracking-wider rounded-2xl">{errorMsg}</div>
       )}
 
-      <div>
-        <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">Contact Number</label>
+      <Field label="Contact Number">
         <input
           type="text"
           placeholder="e.g. 9123456789"
-          className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-black transition-all"
+          className={inputCls}
           value={form.scontact_number}
           onChange={e => setForm(prev => ({ ...prev, scontact_number: sanitizeContact(e.target.value, prev.scontact_number) }))}
         />
-      </div>
+      </Field>
 
-      <div className="grid grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">Street Address</label>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <Field label="Street Address">
           <input
             type="text"
             placeholder="House No. & Street"
-            className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-black transition-all"
+            className={inputCls}
             value={form.sstreet}
             onChange={e => setForm({ ...form, sstreet: e.target.value })}
           />
-        </div>
-        <div>
-          <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">Barangay</label>
+        </Field>
+        <Field label="Barangay">
           <input
             type="text"
             placeholder="Barangay"
-            className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-black transition-all"
+            className={inputCls}
             value={form.sbarangay}
             onChange={e => setForm({ ...form, sbarangay: e.target.value })}
           />
-        </div>
+        </Field>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">Gender</label>
-          <select
-            className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-slate-800 cursor-pointer transition-all"
-            value={form.sgender}
-            onChange={e => setForm({ ...form, sgender: e.target.value })}
-          >
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <Field label="Gender">
+          <select className={inputCls} value={form.sgender} onChange={e => setForm({ ...form, sgender: e.target.value })}>
             <option value="">Select Gender</option>
             <option value="Male">Male</option>
             <option value="Female">Female</option>
             <option value="Non-Binary">Non-Binary</option>
             <option value="Prefer not to say">Prefer not to say</option>
           </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">Religion</label>
-          <select
-            className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-slate-800 cursor-pointer transition-all"
-            value={form.religion}
-            onChange={e => setForm({ ...form, religion: e.target.value, other_religion: e.target.value === 'Others' ? form.other_religion : '' })}
-          >
+        </Field>
+        <Field label="Religion">
+          <select className={inputCls} value={form.religion} onChange={e => setForm({ ...form, religion: e.target.value, other_religion: e.target.value === 'Others' ? form.other_religion : '' })}>
             <option value="">Select Religion</option>
             <option value="Roman Catholic">Roman Catholic</option>
             <option value="Iglesia ni Cristo">Iglesia ni Cristo</option>
             <option value="Islam">Islam</option>
             <option value="Others">Others</option>
           </select>
-        </div>
+        </Field>
       </div>
 
       {form.religion === 'Others' && (
-        <div>
-          <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-2">Specify Religion</label>
-          <input
-            type="text"
-            placeholder="Enter religion..."
-            className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-black transition-all"
-            value={form.other_religion}
-            onChange={e => setForm({ ...form, other_religion: e.target.value })}
-          />
-        </div>
+        <Field label="Specify Religion">
+          <input type="text" placeholder="Enter religion..." className={inputCls} value={form.other_religion} onChange={e => setForm({ ...form, other_religion: e.target.value })} />
+        </Field>
       )}
 
       <button
-        type="submit"
-        disabled={saving}
-        className="w-full bg-[#093fb4] text-white py-4 mt-2 rounded-xl font-bold text-base uppercase tracking-widest hover:bg-[#093fb4]/90 transition-all shadow-lg active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2"
+        type="submit" disabled={saving}
+        className="w-full bg-[#093fb4] hover:bg-[#073496] disabled:bg-[#093fb4]/70 text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-[#093fb4]/25 active:scale-[0.98] uppercase text-sm tracking-[0.2em] flex items-center justify-center gap-2 mt-8"
       >
-        {saving ? (
-          <>
-            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            Saving Info...
-          </>
-        ) : (
-          <>Save Personal Info <ChevronRight size={18} /></>
-        )}
+        {saving ? "Saving..." : <>Save Personal Info <ChevronRight size={20} stroke={2.5}/></>}
       </button>
     </form>
   );
 }
 
 // ─────────────────────────────────────────────────────────
-// 3. FAMILY & CARETAKER SECTION
+// 3. FAMILY SECTION
 // ─────────────────────────────────────────────────────────
 function FamilySection({ studentData, onRefresh }) {
   const [form, setForm] = useState({
@@ -484,8 +425,7 @@ function FamilySection({ studentData, onRefresh }) {
       const val = form[key];
       if (val && val.length !== 11) {
         setErrorMsg("Contact numbers must be exactly 11 digits long and start with 9.");
-        setSaving(false);
-        return;
+        setSaving(false); return;
       }
     }
 
@@ -495,141 +435,62 @@ function FamilySection({ studentData, onRefresh }) {
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (err) {
-      console.error("Error saving family profile info:", err);
-      if (err.response?.data?.error) {
-        setErrorMsg(err.response.data.error);
-      } else {
-        setErrorMsg("Failed to update family records. Please check inputs.");
-      }
+      setErrorMsg("Failed to update family records.");
     } finally {
       setSaving(false);
     }
   };
 
-  const uniformInputStyle = "p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base font-medium text-black transition-all";
-
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      {showSuccess && <SuccessBanner message="Family records updated successfully." />}
+      {showSuccess && <SuccessBanner message="Family records updated" />}
       {errorMsg && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-600 text-sm font-semibold rounded-xl">
-          {errorMsg}
-        </div>
+        <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 text-red-600 text-xs font-black uppercase tracking-wider rounded-2xl">{errorMsg}</div>
       )}
 
-      {/* MOTHER SECTION */}
       <div>
-        <p className="text-sm font-black text-[#093fb4] uppercase tracking-widest mb-3">Mother's Information (Optional)</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <input
-            type="text"
-            placeholder="Mother's Full Name"
-            className={`${uniformInputStyle} sm:col-span-2`}
-            value={form.mother_name}
-            onChange={e => setForm({ ...form, mother_name: e.target.value })}
-          />
-          <input
-            type="text"
-            maxLength={11}
-            placeholder="Contact Number (e.g. 9123456789)"
-            className={uniformInputStyle}
-            value={form.mother_contact}
-            onChange={e => handleContactChange('mother_contact', e.target.value)}
-          />
-          <input
-            type="text"
-            placeholder="Occupation"
-            className={uniformInputStyle}
-            value={form.mother_occupation}
-            onChange={e => setForm({ ...form, mother_occupation: e.target.value })}
-          />
+        <p className="text-xs font-black text-[#093fb4] uppercase tracking-[0.2em] mb-4">Mother's Information</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <input type="text" placeholder="Full Name" className={`${inputCls} sm:col-span-2`} value={form.mother_name} onChange={e => setForm({ ...form, mother_name: e.target.value })} />
+          <input type="text" maxLength={11} placeholder="Contact Number" className={inputCls} value={form.mother_contact} onChange={e => handleContactChange('mother_contact', e.target.value)} />
+          <input type="text" placeholder="Occupation" className={inputCls} value={form.mother_occupation} onChange={e => setForm({ ...form, mother_occupation: e.target.value })} />
         </div>
       </div>
 
-      {/* FATHER SECTION */}
-      <div className="pt-6 border-t border-slate-200">
-        <p className="text-sm font-black text-[#093fb4] uppercase tracking-widest mb-3">Father's Information (Optional)</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <input
-            type="text"
-            placeholder="Father's Full Name"
-            className={`${uniformInputStyle} sm:col-span-2`}
-            value={form.father_name}
-            onChange={e => setForm({ ...form, father_name: e.target.value })}
-          />
-          <input
-            type="text"
-            maxLength={11}
-            placeholder="Contact Number (e.g. 9123456789)"
-            className={uniformInputStyle}
-            value={form.father_contact}
-            onChange={e => handleContactChange('father_contact', e.target.value)}
-          />
-          <input
-            type="text"
-            placeholder="Occupation"
-            className={uniformInputStyle}
-            value={form.father_occupation}
-            onChange={e => setForm({ ...form, father_occupation: e.target.value })}
-          />
+      <div className="pt-6 border-t border-black/5">
+        <p className="text-xs font-black text-[#093fb4] uppercase tracking-[0.2em] mb-4">Father's Information</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <input type="text" placeholder="Full Name" className={`${inputCls} sm:col-span-2`} value={form.father_name} onChange={e => setForm({ ...form, father_name: e.target.value })} />
+          <input type="text" maxLength={11} placeholder="Contact Number" className={inputCls} value={form.father_contact} onChange={e => handleContactChange('father_contact', e.target.value)} />
+          <input type="text" placeholder="Occupation" className={inputCls} value={form.father_occupation} onChange={e => setForm({ ...form, father_occupation: e.target.value })} />
         </div>
       </div>
 
-      {/* GUARDIAN SECTION */}
-      <div className="pt-6 border-t border-slate-200">
-        <p className="text-sm font-black text-[#093fb4] uppercase tracking-widest mb-3 flex items-center gap-2">
-          Guardian Backup Details <span className="text-slate-500 font-normal normal-case">(Optional)</span>
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <input
-            type="text"
-            placeholder="Guardian Full Name"
-            className={`${uniformInputStyle} sm:col-span-2`}
-            value={form.guardian_name}
-            onChange={e => setForm({ ...form, guardian_name: e.target.value })}
-          />
-          <input
-            type="text"
-            maxLength={11}
-            placeholder="Guardian Contact Number"
-            className={uniformInputStyle}
-            value={form.guardian_contact}
-            onChange={e => handleContactChange('guardian_contact', e.target.value)}
-          />
-          <input
-            type="text"
-            placeholder="Relationship / Occupation"
-            className={uniformInputStyle}
-            value={form.guardian_occupation}
-            onChange={e => setForm({ ...form, guardian_occupation: e.target.value })}
-          />
+      <div className="pt-6 border-t border-black/5">
+        <p className="text-xs font-black text-[#093fb4] uppercase tracking-[0.2em] mb-4">Guardian Details</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <input type="text" placeholder="Full Name" className={`${inputCls} sm:col-span-2`} value={form.guardian_name} onChange={e => setForm({ ...form, guardian_name: e.target.value })} />
+          <input type="text" maxLength={11} placeholder="Contact Number" className={inputCls} value={form.guardian_contact} onChange={e => handleContactChange('guardian_contact', e.target.value)} />
+          <input type="text" placeholder="Relationship / Occupation" className={inputCls} value={form.guardian_occupation} onChange={e => setForm({ ...form, guardian_occupation: e.target.value })} />
         </div>
       </div>
 
-      {/* HOUSING ADDRESS FIELD */}
-      <div className="pt-6 border-t border-slate-200">
-        <label className="block text-sm font-bold uppercase text-[#093fb4] tracking-widest mb-3">Family Household Address</label>
-        <textarea
-          placeholder="Enter complete family residential home address..."
-          className="w-full p-4 bg-white rounded-xl border border-slate-300 focus:border-[#093fb4] outline-none text-base text-black font-medium transition-all resize-none min-h-[100px]"
-          value={form.house_address}
-          onChange={e => setForm({ ...form, house_address: e.target.value })}
-        />
+      <div className="pt-6 border-t border-black/5">
+        <Field label="Family Household Address">
+          <textarea
+            placeholder="Enter complete family residential home address..."
+            className={`${inputCls} resize-none min-h-[100px]`}
+            value={form.house_address}
+            onChange={e => setForm({ ...form, house_address: e.target.value })}
+          />
+        </Field>
       </div>
 
       <button
-        type="submit"
-        disabled={saving}
-        className="w-full bg-[#093fb4] text-white py-4 mt-2 rounded-xl font-bold text-base uppercase tracking-widest hover:bg-[#093fb4]/90 transition-all shadow-lg active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2"
+        type="submit" disabled={saving}
+        className="w-full bg-[#093fb4] hover:bg-[#073496] disabled:bg-[#093fb4]/70 text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-[#093fb4]/25 active:scale-[0.98] uppercase text-sm tracking-[0.2em] flex items-center justify-center gap-2 mt-8"
       >
-        {saving ? (
-          <>
-            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            Saving Records...
-          </>
-        ) : (
-          <>Save Family Info <ChevronRight size={18} /></>
-        )}
+        {saving ? "Saving..." : <>Save Family Info <ChevronRight size={20} stroke={2.5}/></>}
       </button>
     </form>
   );
