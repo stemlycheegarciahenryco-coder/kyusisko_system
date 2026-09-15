@@ -7,5 +7,7 @@ const { verifyToken } = require('../middleware/auth'); // <-- Your auth middlewa
 router.get('/financial', verifyToken, reportController.getFinancialReport);
 router.get('/demographics', verifyToken, reportController.getDemographicReport);
 router.get('/criteria', verifyToken, reportController.getCriteriaReport);
+router.get('/applications-overview', verifyToken, reportController.getApplicationsOverviewReport);
+router.get('/successful-programs', verifyToken, reportController.getSuccessfulProgramsReport);
 
 module.exports = router;

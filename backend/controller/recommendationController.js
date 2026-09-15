@@ -221,31 +221,7 @@ async function scoreScholarshipsForStudent(studentId, scholarships) {
 // ─────────────────────────────────────────────────────────────────────────────
 // CONTROLLER HANDLERS
 // ─────────────────────────────────────────────────────────────────────────────
-const getRecommendedScholarships = async (req, res) => {
-  const studentId = req.user.id;
 
-  try {
-    const scholarshipResult = await pool.query(
-      `SELECT sch.*, sa.org_name, sa.org_pic AS donor_photo
-       FROM scholarships sch
-       LEFT JOIN sub_admins sa ON sch.sub_admin_id = sa.id
-       WHERE sch.status IN ('open')
-       AND sch.deadline::date > CURRENT_DATE
-       AND sch.taken_down = FALSE
-       AND NOT EXISTS (
-         SELECT 1 FROM applications a WHERE a.scholarship_id = sch.id AND a.student_id = $1
-       )
-       LIMIT 20`,
-      [studentId]
-    );
-
-    const evaluated = await scoreScholarshipsForStudent(studentId, scholarshipResult.rows);
-    res.status(200).json({ success: true, recommendations: evaluated });
-  } catch (err) {
-    console.error("Evaluation Engine Error:", err.message);
-    res.status(500).json({ error: "Recommendation system unavailable." });
-  }
-};
 
 const getAllScholarships = async (req, res) => {
   try {
@@ -262,8 +238,10 @@ const getAllScholarships = async (req, res) => {
       LEFT JOIN sub_admins sa ON sch.sub_admin_id = sa.id
       WHERE sch.status IN ('open', 'published')
       AND sch.status != 'closed'
-      AND sch.deadline::date > CURRENT_DATE
       AND sch.taken_down = FALSE
+      -- 1. Use strict greater than (>) to hide it ON the exact date
+      -- 2. Force PostgreSQL to evaluate "today" based on Philippine Time
+      AND sch.deadline::date > (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Manila')::date
       AND NOT EXISTS (SELECT 1 FROM applications a WHERE a.scholarship_id = sch.id AND a.student_id = $1)
       LIMIT 20
     `;
@@ -331,7 +309,6 @@ const getSavedScholarships = async (req, res) => {
 };
 
 module.exports = {
-  getRecommendedScholarships,
   getAllScholarships,
   getRecommendedProviders,
   reportScholarship,

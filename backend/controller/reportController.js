@@ -229,3 +229,197 @@ exports.getCriteriaReport = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// 4. Applications Overview Report (pending/needs-review counts + applicant demographics)
+//
+// ASSUMPTION ON STATUS STRINGS: this groups by whatever is actually stored
+// in applications.status. It treats 'pending' and 'under_review'/'reviewing'
+// as "needs review", and 'approved'/'active' as approved. If your app uses
+// different literal status strings, adjust the three arrays below
+// (PENDING_STATUSES, REVIEW_STATUSES, APPROVED_STATUSES, REJECTED_STATUSES)
+// to match exactly what you write into applications.status elsewhere.
+exports.getApplicationsOverviewReport = async (req, res) => {
+  const PENDING_STATUSES = ['pending'];
+  const REVIEW_STATUSES = ['under_review', 'reviewing', 'for_review'];
+  const APPROVED_STATUSES = ['approved', 'active'];
+  const REJECTED_STATUSES = ['rejected', 'declined'];
+
+  try {
+    const orgId = await resolveOrgId(req.user.id);
+    if (!orgId) return res.status(404).json({ success: false, message: "Org not found." });
+
+    const statusCountsQuery = `
+      SELECT LOWER(a.status) AS status, COUNT(*) AS count
+      FROM applications a
+      JOIN scholarships s ON a.scholarship_id = s.id
+      WHERE s.sub_admin_id = $1
+      GROUP BY LOWER(a.status);
+    `;
+    const { rows: statusRows } = await pool.query(statusCountsQuery, [orgId]);
+
+    let totalApplicants = 0;
+    let pendingCount = 0;
+    let underReviewCount = 0;
+    let approvedCount = 0;
+    let rejectedCount = 0;
+    let otherCount = 0;
+
+    statusRows.forEach((r) => {
+      const c = Number(r.count);
+      totalApplicants += c;
+      if (PENDING_STATUSES.includes(r.status)) pendingCount += c;
+      else if (REVIEW_STATUSES.includes(r.status)) underReviewCount += c;
+      else if (APPROVED_STATUSES.includes(r.status)) approvedCount += c;
+      else if (REJECTED_STATUSES.includes(r.status)) rejectedCount += c;
+      else otherCount += c;
+    });
+
+    const needsReviewCount = pendingCount + underReviewCount;
+
+    // Demographics across ALL applicants (not just approved ones, unlike
+    // the /demographics endpoint which is scoped to approved scholars only)
+    const genderExpr = `COALESCE(INITCAP(TRIM(s.sgender)), 'Unspecified')`;
+    const demoQuery = `
+      SELECT ${genderExpr} AS gender, COUNT(DISTINCT a.student_id) AS count
+      FROM applications a
+      JOIN scholarships prog ON a.scholarship_id = prog.id
+      JOIN students s ON a.student_id = s.id
+      WHERE prog.sub_admin_id = $1
+      GROUP BY ${genderExpr};
+    `;
+    const { rows: demoRows } = await pool.query(demoQuery, [orgId]);
+
+    let totalMale = 0, totalFemale = 0, totalUnspecified = 0;
+    demoRows.forEach((r) => {
+      const c = Number(r.count);
+      if (r.gender === 'Male') totalMale += c;
+      else if (r.gender === 'Female') totalFemale += c;
+      else totalUnspecified += c;
+    });
+
+    const interpretation = `${totalApplicants} total application(s) received. ${needsReviewCount} still need review` +
+      `${pendingCount || underReviewCount ? ` (${pendingCount} pending, ${underReviewCount} under review)` : ''}. ` +
+      `${approvedCount} approved, ${rejectedCount} rejected` +
+      `${otherCount > 0 ? `, ${otherCount} in another status` : ''}. ` +
+      `Applicant pool: ${totalMale} male, ${totalFemale} female${totalUnspecified > 0 ? `, ${totalUnspecified} unspecified` : ''}.`;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalApplicants,
+        pendingCount,
+        underReviewCount,
+        needsReviewCount,
+        approvedCount,
+        rejectedCount,
+        otherCount,
+        totalMale,
+        totalFemale,
+        totalUnspecified,
+        interpretation
+      }
+    });
+  } catch (error) {
+    console.error("Applications Overview Report Error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 5. Successful / Closed Programs Report
+// Programs that are marked closed OR whose deadline has already passed.
+// For each, shows how many scholars are active, how much budget landed
+// per scholar, and the gender breakdown of those scholars.
+exports.getSuccessfulProgramsReport = async (req, res) => {
+  try {
+    const orgId = await resolveOrgId(req.user.id);
+    if (!orgId) return res.status(404).json({ success: false, message: "Org not found." });
+
+    const query = `
+      SELECT
+        s.id,
+        s.title,
+        s.status,
+        s.deadline,
+        s.slots,
+        s.total_budget,
+        s.remaining_budget,
+        (SELECT COUNT(*) FROM applications a WHERE a.scholarship_id = s.id AND LOWER(a.status) IN ('approved','active')) AS active_scholars
+      FROM scholarships s
+      WHERE s.sub_admin_id = $1
+        AND s.is_archived = false
+        AND (LOWER(s.status) = 'closed' OR (s.deadline IS NOT NULL AND s.deadline < CURRENT_DATE))
+      ORDER BY s.deadline DESC NULLS LAST;
+    `;
+    const { rows } = await pool.query(query, [orgId]);
+    const scholarshipIds = rows.map((r) => r.id);
+
+    let genderRows = [];
+    if (scholarshipIds.length > 0) {
+      const genderExpr = `COALESCE(INITCAP(TRIM(st.sgender)), 'Unspecified')`;
+      const genderQuery = `
+        SELECT a.scholarship_id, ${genderExpr} AS gender, COUNT(DISTINCT a.student_id) AS count
+        FROM applications a
+        JOIN students st ON a.student_id = st.id
+        WHERE a.scholarship_id = ANY($1::int[]) AND LOWER(a.status) IN ('approved','active')
+        GROUP BY a.scholarship_id, ${genderExpr};
+      `;
+      genderRows = (await pool.query(genderQuery, [scholarshipIds])).rows;
+    }
+
+    const genderByProgram = {};
+    genderRows.forEach((r) => {
+      if (!genderByProgram[r.scholarship_id]) {
+        genderByProgram[r.scholarship_id] = { male: 0, female: 0, unspecified: 0 };
+      }
+      const c = Number(r.count);
+      if (r.gender === 'Male') genderByProgram[r.scholarship_id].male += c;
+      else if (r.gender === 'Female') genderByProgram[r.scholarship_id].female += c;
+      else genderByProgram[r.scholarship_id].unspecified += c;
+    });
+
+    const programs = rows.map((p) => {
+      const budget = p.total_budget !== null ? Number(p.total_budget) : null;
+      const remaining = p.remaining_budget !== null ? Number(p.remaining_budget) : null;
+      const disbursed = (budget !== null && remaining !== null) ? budget - remaining : 0;
+      const activeScholars = Number(p.active_scholars) || 0;
+      const budgetPerStudent = activeScholars > 0 ? Math.round(disbursed / activeScholars) : 0;
+      const isPastDeadline = p.deadline && new Date(p.deadline) < new Date();
+
+      return {
+        id: p.id,
+        title: p.title,
+        status: p.status,
+        closed_reason: (p.status || '').toLowerCase() === 'closed' ? 'closed' : (isPastDeadline ? 'deadline_passed' : 'closed'),
+        deadline: p.deadline,
+        slots: p.slots,
+        total_budget: budget,
+        remaining_budget: remaining,
+        disbursed,
+        active_scholars: activeScholars,
+        budget_per_student: budgetPerStudent,
+        gender: genderByProgram[p.id] || { male: 0, female: 0, unspecified: 0 }
+      };
+    });
+
+    const totalActiveScholars = programs.reduce((sum, p) => sum + p.active_scholars, 0);
+    const totalDisbursed = programs.reduce((sum, p) => sum + p.disbursed, 0);
+
+    const interpretation = programs.length > 0
+      ? `${programs.length} program(s) have closed or passed their deadline, with ${totalActiveScholars} active scholar(s) sharing ₱${totalDisbursed.toLocaleString()} disbursed so far.`
+      : `No programs have closed or passed their deadline yet.`;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalPrograms: programs.length,
+        totalActiveScholars,
+        totalDisbursed,
+        programs,
+        interpretation
+      }
+    });
+  } catch (error) {
+    console.error("Successful Programs Report Error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

@@ -10,20 +10,20 @@ const backendURL = "http://localhost:5000";
 
 function ProfileInfoRow({ label, value }) {
   return (
-    <div className="flex justify-between items-center py-4 border-b border-black/5 last:border-0 text-sm">
-      <span className="text-slate-500 font-black uppercase tracking-wider text-[10px]">{label}</span>
-      <span className="text-slate-900 font-bold truncate max-w-[300px] text-right">{value || '—'}</span>
+    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-4 border-b border-black/5 last:border-0 gap-1 sm:gap-4">
+      <span className="text-slate-500 font-black uppercase tracking-wider text-xs">{label}</span>
+      <span className="text-slate-900 font-extrabold text-base truncate max-w-full sm:max-w-[350px] text-left sm:text-right">{value || '—'}</span>
     </div>
   );
 }
 
 function SectionHeader({ icon: Icon, title }) {
   return (
-    <div className="flex items-center gap-3 pt-6 pb-2 border-b border-black/5">
-      <div className="w-8 h-8 rounded-xl bg-[#093fb4]/10 flex items-center justify-center text-[#093fb4]">
-        <Icon size={18} stroke={2.5} />
+    <div className="flex items-center gap-3.5 pt-8 pb-3 border-b-2 border-black/5">
+      <div className="w-10 h-10 rounded-2xl bg-[#093fb4]/10 flex items-center justify-center text-[#093fb4] shrink-0">
+        <Icon size={22} stroke={2.5} />
       </div>
-      <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-800">{title}</h3>
+      <h3 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-slate-900">{title}</h3>
     </div>
   );
 }
@@ -112,7 +112,7 @@ export default function StudentProfile() {
       <div className="bg-white/70 backdrop-blur-xl border border-white/40 rounded-[2.5rem] shadow-2xl p-8 md:p-12 space-y-8 relative overflow-hidden">
         
         {/* TOP BIO OVERVIEW */}
-        <div className="flex flex-col sm:flex-row gap-8 items-start sm:items-center pb-6 border-b border-black/5">
+        <div className="flex flex-col sm:flex-row gap-8 items-start sm:items-center pb-8 border-b-2 border-black/5">
           <div className="relative group cursor-pointer shrink-0" onClick={handleAvatarClick}>
             <div className="w-36 h-36 rounded-[2rem] bg-white/60 border-4 border-white/80 overflow-hidden flex items-center justify-center shadow-lg transition-transform group-hover:scale-[1.02]">
               {student.sprofile_pic ? (
@@ -133,35 +133,35 @@ export default function StudentProfile() {
                 <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900 uppercase">
                   {student.sfirst_name} {student.slast_name}
                 </h1>
-                <p className="text-[#093fb4] text-sm font-black uppercase tracking-[0.2em] mt-2">
+                <p className="text-[#093fb4] text-sm md:text-base font-black uppercase tracking-[0.15em] mt-2">
                   {degreeName}
                 </p>
               </div>
               <button 
                 onClick={() => setEditTab('academic')}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-xs font-black uppercase tracking-[0.1em] text-slate-700 bg-white/60 border-2 border-white/80 rounded-2xl hover:bg-white hover:text-[#093fb4] hover:border-[#093fb4]/40 transition-all shadow-sm active:scale-95"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-xs font-black uppercase tracking-[0.1em] text-slate-700 bg-white/60 border-2 border-white/80 rounded-2xl hover:bg-white hover:text-[#093fb4] hover:border-[#093fb4]/40 transition-all shadow-sm active:scale-95 shrink-0"
               >
                 <Edit2 size={16} stroke={2.5}/> Edit Profile
               </button>
             </div>
 
             {student.bio && (
-              <p className="text-sm text-slate-700 font-semibold leading-relaxed max-w-2xl bg-white/50 p-4 rounded-2xl border-2 border-white/80 italic shadow-sm">
+              <p className="text-sm md:text-base text-slate-700 font-bold leading-relaxed max-w-2xl bg-white/50 p-4 rounded-2xl border-2 border-white/80 italic shadow-sm">
                 "{student.bio}"
               </p>
             )}
 
             <div className="flex flex-wrap gap-3 pt-2">
-              <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/60 border-2 border-white/80 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 shadow-sm">
-                <GraduationCap size={16} className="text-[#093fb4]" stroke={2.5}/>
+              <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/60 border-2 border-white/80 rounded-xl text-xs font-black uppercase tracking-widest text-slate-700 shadow-sm">
+                <GraduationCap size={18} className="text-[#093fb4]" stroke={2.5}/>
                 <span>ID: <strong className="text-slate-900 ml-1">{student.student_id || '—'}</strong></span>
               </div>
-              <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/60 border-2 border-white/80 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 shadow-sm">
-                <School size={16} className="text-[#093fb4]" stroke={2.5}/>
+              <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/60 border-2 border-white/80 rounded-xl text-xs font-black uppercase tracking-widest text-slate-700 shadow-sm">
+                <School size={18} className="text-[#093fb4]" stroke={2.5}/>
                 <span>Level: <strong className="text-slate-900 ml-1">{student.year_level || '—'}</strong></span>
               </div>
-              <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/60 border-2 border-white/80 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 shadow-sm">
-                <Award size={16} className="text-[#093fb4]" stroke={2.5}/>
+              <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/60 border-2 border-white/80 rounded-xl text-xs font-black uppercase tracking-widest text-slate-700 shadow-sm">
+                <Award size={18} className="text-[#093fb4]" stroke={2.5}/>
                 <span>GWA: <strong className="text-slate-900 ml-1">{student.gwa ? Number(student.gwa).toFixed(2) : '—'}</strong></span>
               </div>
             </div>
@@ -192,7 +192,7 @@ export default function StudentProfile() {
         <div className="space-y-4">
           <SectionHeader icon={MapPin} title="Permanent Residence" />
           <div className="p-6 bg-white/60 border-2 border-white/80 rounded-2xl shadow-sm">
-            <p className="text-sm font-bold text-slate-900 leading-relaxed">
+            <p className="text-base font-extrabold text-slate-900 leading-relaxed">
               {fullAddress || "No complete family address listed. Kindly update via family settings."}
             </p>
           </div>
@@ -204,7 +204,7 @@ export default function StudentProfile() {
           <div className="bg-white/60 border-2 border-white/80 rounded-2xl p-6 shadow-sm space-y-6">
             {hasMother && (
               <div>
-                <p className="text-[10px] font-black text-[#093fb4] uppercase tracking-[0.2em] mb-3">Mother's Details</p>
+                <p className="text-xs font-black text-[#093fb4] uppercase tracking-[0.2em] mb-3">Mother's Details</p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <ProfileInfoRow label="Full Name" value={student.mother_name} />
                   <ProfileInfoRow label="Contact Number" value={student.mother_contact} />
@@ -214,8 +214,8 @@ export default function StudentProfile() {
             )}
 
             {hasFather && (
-              <div className={hasMother ? "pt-4 border-t border-black/5" : ""}>
-                <p className="text-[10px] font-black text-[#093fb4] uppercase tracking-[0.2em] mb-3">Father's Details</p>
+              <div className={hasMother ? "pt-5 border-t border-black/5" : ""}>
+                <p className="text-xs font-black text-[#093fb4] uppercase tracking-[0.2em] mb-3">Father's Details</p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <ProfileInfoRow label="Full Name" value={student.father_name} />
                   <ProfileInfoRow label="Contact Number" value={student.father_contact} />
@@ -225,8 +225,8 @@ export default function StudentProfile() {
             )}
 
             {hasGuardian && (
-              <div className={(hasMother || hasFather) ? "pt-4 border-t border-black/5" : ""}>
-                <p className="text-[10px] font-black text-[#093fb4] uppercase tracking-[0.2em] mb-3">Guardian Details</p>
+              <div className={(hasMother || hasFather) ? "pt-5 border-t border-black/5" : ""}>
+                <p className="text-xs font-black text-[#093fb4] uppercase tracking-[0.2em] mb-3">Guardian Details</p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <ProfileInfoRow label="Guardian Name" value={student.guardian_name} />
                   <ProfileInfoRow label="Contact Number" value={student.guardian_contact} />
@@ -240,7 +240,7 @@ export default function StudentProfile() {
             )}
 
             {student?.house_address && (
-              <div className="pt-4 border-t border-black/5">
+              <div className="pt-5 border-t border-black/5">
                 <ProfileInfoRow label="Family House Address" value={student.house_address} />
               </div>
             )}
@@ -249,23 +249,23 @@ export default function StudentProfile() {
 
         {/* SECTION 5: PORTFOLIO & ACHIEVEMENTS */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between pt-6 pb-2 border-b border-black/5">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-[#093fb4]/10 flex items-center justify-center text-[#093fb4]">
-                <Award size={18} stroke={2.5} />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-8 pb-3 border-b-2 border-black/5 gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-2xl bg-[#093fb4]/10 flex items-center justify-center text-[#093fb4] shrink-0">
+                <Award size={22} stroke={2.5} />
               </div>
-              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-800">Portfolio & Documents</h3>
+              <h3 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-slate-900">Portfolio & Documents</h3>
             </div>
             <button 
               onClick={() => setIsPortfolioModalOpen(true)}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] text-white bg-[#093fb4] rounded-xl hover:bg-[#073496] transition-all shadow-md active:scale-95"
+              className="inline-flex items-center justify-center gap-2 px-5 py-3 text-xs font-black uppercase tracking-[0.15em] text-white bg-[#093fb4] rounded-2xl hover:bg-[#073496] transition-all shadow-lg shadow-[#093fb4]/20 active:scale-95"
             >
-              <Plus size={16} stroke={3} /> Add Document
+              <Plus size={18} stroke={3} /> Add Document
             </button>
           </div>
 
           {Array.isArray(processedPortfolio) && processedPortfolio.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 pt-3">
               {processedPortfolio.map((item, idx) => {
                 if (!item) return null;
                 const itemTitle = typeof item === 'object' ? item.title : item;
@@ -285,13 +285,13 @@ export default function StudentProfile() {
                     className="flex items-center gap-4 px-5 py-4 bg-white/60 border-2 border-white/80 hover:border-[#093fb4]/50 hover:bg-white rounded-2xl shadow-sm transition-all group"
                   >
                     <div className="w-12 h-12 rounded-xl bg-blue-50/50 border border-blue-100 flex items-center justify-center shrink-0">
-                      <FileText size={20} className="text-[#093fb4]" stroke={2.5}/>
+                      <FileText size={22} className="text-[#093fb4]" stroke={2.5}/>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-black text-slate-900 uppercase tracking-wider truncate group-hover:text-[#093fb4] transition-colors">
+                      <p className="text-sm font-black text-slate-900 uppercase tracking-wider truncate group-hover:text-[#093fb4] transition-colors">
                         {itemTitle}
                       </p>
-                      <p className="text-[10px] text-slate-500 mt-1 font-bold tracking-widest uppercase">Digital Copy</p>
+                      <p className="text-xs text-slate-500 mt-1 font-bold tracking-widest uppercase">Digital Copy</p>
                     </div>
                     <ExternalLink size={18} className="text-slate-300 group-hover:text-[#093fb4] shrink-0 ml-1 transition-colors" stroke={2.5} />
                   </a>
@@ -299,8 +299,8 @@ export default function StudentProfile() {
               })}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-10 bg-white/40 border-2 border-dashed border-white/80 rounded-[2rem] text-center">
-              <FileText size={32} className="text-slate-300 mb-3" stroke={1.5}/>
+            <div className="flex flex-col items-center justify-center py-12 bg-white/40 border-2 border-dashed border-white/80 rounded-[2rem] text-center">
+              <FileText size={36} className="text-slate-300 mb-4" stroke={1.5}/>
               <p className="text-xs font-black text-slate-500 uppercase tracking-widest">No verified extra portfolio files uploaded yet.</p>
             </div>
           )}

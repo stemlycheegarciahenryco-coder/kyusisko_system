@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'; 
 import api from './api';
 import { ArrowRight, Bookmark, AlertTriangle, Building2Icon, CheckCircle2, Calendar, X, MoreVertical } from 'lucide-react';
-import StudentRecommendations from './student/StudentRecommendations';
+import StudentSideNotif from './student/StudentSideNotif';
 
 // 📋 Pre-defined lists of report reasons
 const PREDEFINED_REPORTS = [
@@ -370,7 +370,7 @@ export default function ScholarshipList() {
           {renderContent()}
         </main>
         <div className="hidden xl:block w-full self-start xl:sticky xl:top-24">
-          <StudentRecommendations />
+          <StudentSideNotif />
         </div>
       </div>
     </>

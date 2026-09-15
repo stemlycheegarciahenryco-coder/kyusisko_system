@@ -21,7 +21,6 @@ router.post('/:id/save', verifyToken, saveScholarship);
 router.delete('/:id/unsave', verifyToken, unsaveScholarship);
 router.post('/:id/report', verifyToken, reportScholarship);
 
-// Wildcard last error recomendation
-router.get('/program', verifyToken, getRecommendedScholarships);
+
 
 module.exports = router;
