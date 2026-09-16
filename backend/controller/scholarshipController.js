@@ -362,10 +362,20 @@ const updateScholarshipStatus = async (req, res) => {
     }
 
     // ─── ADDED: LOG ACTIVITY ───
+    // Give "publishing" (going live) and "closing" their own clear action
+    // types instead of a generic "Program Status Changed", so it's obvious
+    // at a glance in Org Logs what actually happened.
+    const statusActionMap = {
+      open: 'Program Published',
+      active: 'Program Published',
+      closed: 'Program Closed',
+      archived: 'Program Archived',
+    };
+
     await logActivity({
       subAdminId: orgId,
       actorId: req.user.id,
-      actionType: 'Program Status Changed',
+      actionType: statusActionMap[normalizedStatus] || 'Program Status Changed',
       details: `Changed program "${result.rows[0].title}" status to: ${result.rows[0].status}.`
     });
 

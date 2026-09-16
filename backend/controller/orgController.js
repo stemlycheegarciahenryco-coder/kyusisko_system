@@ -548,6 +548,15 @@ const getActivityLogs = async (req, res) => {
         const result = await pool.query(
             `SELECT * FROM (
                 -- 1. Admin/Org Logs (from provider_audit_trails)
+                -- 'trail' source = org/admin AUDIT actions (program create/
+                -- update/publish/archive, student accept/reject, disbursements,
+                -- report generation, co-admin management, etc.) — shown in the
+                -- "Trails" tab.
+                -- Login/Logout are the one exception: even though they're
+                -- written into this same provider_audit_trails table (via
+                -- trackEvent, since subAdminId is set for org accounts), they
+                -- read as lighter session activity, not an audit action — so
+                -- they're tagged 'log' here and surface in the "Logs" tab instead.
                 SELECT 
                     pat.id::text,
                     pat.action_type AS type,
@@ -556,7 +565,11 @@ const getActivityLogs = async (req, res) => {
                     COALESCE(NULLIF(TRIM(CONCAT(actor.first_name, ' ', actor.last_name)), ''), actor.org_name, 'System') AS user_name,
                     actor.account_type AS role,
                     st.sfirst_name AS student_first_name,
-                    st.slast_name AS student_last_name
+                    st.slast_name AS student_last_name,
+                    CASE
+                        WHEN pat.action_type ILIKE 'login%' OR pat.action_type ILIKE 'logout%' THEN 'log'
+                        ELSE 'trail'
+                    END AS source
                 FROM provider_audit_trails pat
                 LEFT JOIN sub_admins actor ON pat.actor_id = actor.id
                 LEFT JOIN students st ON pat.student_id = st.id
@@ -564,7 +577,9 @@ const getActivityLogs = async (req, res) => {
 
                 UNION ALL
 
-                -- 2. Student Application Logs (from applications table)
+                -- 'log' source = lighter activity: student application
+                -- submissions/renewals here, plus Login/Logout above —
+                -- both shown in the "Logs" tab.
                 SELECT 
                     a.id::text,
                     CASE 
@@ -577,7 +592,8 @@ const getActivityLogs = async (req, res) => {
                     CONCAT(st.sfirst_name, ' ', st.slast_name) AS user_name,
                     'Student' AS role,
                     st.sfirst_name AS student_first_name,
-                    st.slast_name AS student_last_name
+                    st.slast_name AS student_last_name,
+                    'log' AS source
                 FROM applications a
                 JOIN scholarships prog ON a.scholarship_id = prog.id
                 JOIN students st ON a.student_id = st.id
@@ -598,6 +614,7 @@ const getActivityLogs = async (req, res) => {
                 ? `${r.detail || ''} (Student: ${r.student_first_name} ${r.student_last_name})`.trim()
                 : (r.detail || ''),
             createdAt: r.created_at,
+            source: r.source, // 'trail' | 'log' — lets the frontend split into tabs
         }));
 
         res.status(200).json({ success: true, data });

@@ -146,7 +146,7 @@ export default function StudentSettings() {
           }`}
         >
           <ShieldCheck size={18} />
-          Two-Factor Auth
+          MFA Security
         </button>
       </div>
 

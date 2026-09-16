@@ -2,6 +2,11 @@ const pool = require('../config/db');
 const {supabaseAdmin} = require('../config/supabaseClient');
 const {applicationQueue} = require ('../queues/applicationQueue');
 const { trackEvent } = require('../utils/logger');
+// NOTE: trackEvent already writes into provider_audit_trails whenever
+// subAdminId is passed (see utils/logger.js's routing rule) — every call
+// below always resolves and passes sub_admin_id, so this file does NOT
+// need its own separate logActivity()/direct-insert helper. Adding one
+// on top of trackEvent would double-insert the same event.
 
 // ─────────────────────────────────────────────────────────────────────────
 // Resolves the ACTUAL org id for a requester, regardless of whether they're
@@ -402,11 +407,22 @@ const updateApplicationStatus = async (req, res) => {
       [applicationData.student_id, notif.title, notif.message, appId, sub_admin_id]
     );
 
+    // Friendlier, tab-consistent action-type labels (matches the badge
+    // styling and wording used for "Program Published" etc. elsewhere) —
+    // this is the ONLY write for this event; trackEvent already routes it
+    // into provider_audit_trails since sub_admin_id is set above.
+    const auditActionMap = {
+      approved: 'Student Accepted',
+      not_eligible: 'Student Rejected',
+      under_review: 'Application Sent for Review',
+      pending: 'Application Set to Pending',
+    };
+
     await trackEvent({
       subAdminId: sub_admin_id,
       userId: req.user.id,
       studentId: applicationData.student_id,
-      actionType: `Application ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+      actionType: auditActionMap[status] || `Application Status Changed`,
       details: `Set application #${appId} for "${scholarshipName}" to ${status}.`
     });
 

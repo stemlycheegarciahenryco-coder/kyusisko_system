@@ -48,7 +48,7 @@ exports.portalLogin = async (req, res) => {
             await trackEvent({
                 userId: null, subAdminId: null, studentId: null,
                 actionType: 'SECURITY_LOCKOUT', ipAddress: ip, email: input,
-                message: `Portal security lockout triggered: 5 consecutive authentication failures for identity: ${input}.`
+                details: `Portal security lockout triggered: 5 consecutive authentication failures for identity: ${input}.`
             });
             return res.status(429).json({ error: "Too many attempts. Blocked for 10 minutes.", blocked: true });
         }
@@ -69,7 +69,7 @@ exports.portalLogin = async (req, res) => {
                 await trackEvent({
                     userId: user.id, subAdminId: null, studentId: null,
                     actionType: 'LOGIN_BLOCKED_ACCOUNT', ipAddress: ip, email: user.email,
-                    message: `Admin login rejected: Account state locked under '${user.account_status}' status flags.`
+                    details: `Admin login rejected: Account state locked under '${user.account_status}' status flags.`
                 });
                 return res.status(403).json({ error: `Access denied. Your administrative account is ${user.account_status}.` });
             }
@@ -84,7 +84,7 @@ exports.portalLogin = async (req, res) => {
                 userId: user.id, subAdminId: null, studentId: null,
                 actionType: user.role === 'root_admin' ? 'ROOT_ADMIN_LOGIN' : 'CO_ADMIN_LOGIN',
                 ipAddress: ip, email: user.email,
-                message: `System session verified and initialized successfully for administrative ID: ${user.uid}.`
+                details: `System session verified and initialized successfully for administrative ID: ${user.uid}.`
             });
 
             const token = jwt.sign({ id: user.id, role: user.role, email: user.email, uid: user.uid }, process.env.JWT_SECRET, { expiresIn: '1d' });
@@ -103,11 +103,20 @@ exports.portalLogin = async (req, res) => {
         
         if (subResult.rows.length > 0) {
             const sub = subResult.rows[0];
+
+            // Co-admin rows have their own id, not the org's — every audit
+            // row for this org (programs, disbursements, approvals, etc.)
+            // is filed under the PARENT org's id via resolveOrgId() in the
+            // other controllers. Login has to match that, or a co-admin's
+            // login silently won't show up under the org's own audit trail
+            // (it'd sit under a sub_admin_id nothing ever queries for).
+            const resolvedOrgId = sub.account_type === 'co_admin' ? sub.parent_org_id : sub.id;
+
             if (!sub.is_active) {
                 await trackEvent({
-                    userId: null, subAdminId: sub.id, studentId: null,
+                    userId: sub.id, subAdminId: resolvedOrgId, studentId: null,
                     actionType: 'LOGIN_DEACTIVATED_ACCOUNT', ipAddress: ip, email: input,
-                    message: `Organization Admin login rejected: Access deactivated for sub-admin of: "${sub.org_name}".`
+                    details: `Organization Admin login rejected: Access deactivated for sub-admin of: "${sub.org_name}".`
                 });
                 return res.status(403).json({ error: "Account deactivated. Contact root admin." });
             }
@@ -119,9 +128,13 @@ exports.portalLogin = async (req, res) => {
 
             await logAttempt(input, ip, true);
             await trackEvent({
-                userId: null, subAdminId: sub.id, studentId: null,
+                // userId is the actual actor (the org admin or co-admin who
+                // logged in) — this is what provider_audit_trails.actor_id
+                // gets set to, and what getActivityLogs joins against to
+                // show a real name instead of falling back to "System".
+                userId: sub.id, subAdminId: resolvedOrgId, studentId: null,
                 actionType: 'ORG_LOGIN', ipAddress: ip, email: input,
-                message: `Organization session initialized successfully for institution: "${sub.org_name}".`
+                details: `Organization session initialized successfully for institution: "${sub.org_name}".`
             });
 
             const token = jwt.sign({ id: sub.id, role: 'sub_admin', email: sub.sub_email }, process.env.JWT_SECRET, { expiresIn: '1d' });
@@ -159,7 +172,7 @@ exports.portalLogin = async (req, res) => {
             await trackEvent({
                 userId: null, subAdminId: null, studentId: student.id,
                 actionType: 'STUDENT_LOGIN', ipAddress: ip, email: input,
-                message: `Student session verified and initialized successfully for user matching: ${student.student_email}.`
+                details: `Student session verified and initialized successfully for user matching: ${student.student_email}.`
             });
 
             const token = jwt.sign({ id: student.id, role: 'student', email: student.student_email }, process.env.JWT_SECRET, { expiresIn: '1d' });
@@ -205,7 +218,7 @@ exports.forgotPassword = async (req, res) => {
             await trackEvent({
                 userId: null, subAdminId: null, studentId: null,
                 actionType: 'FORGOT_PASSWORD_FAIL', ipAddress: ip, email: email,
-                message: `Password reset requested for non-existent email address.`
+                details: `Password reset requested for non-existent email address.`
             });
             return res.status(404).json({ error: "This email is not registered in our system." });
         }
@@ -244,7 +257,7 @@ exports.forgotPassword = async (req, res) => {
         await trackEvent({
             userId, subAdminId, studentId,
             actionType: 'FORGOT_PASSWORD_REQUEST', ipAddress: ip, email: email,
-            message: `Verification code successfully generated and emailed to the account.`
+            details: `Verification code successfully generated and emailed to the account.`
         });
 
         res.json({ message: "A verification code has been sent to your email." });
@@ -271,7 +284,7 @@ exports.resetPassword = async (req, res) => {
             await trackEvent({
                 userId: null, subAdminId: null, studentId: null,
                 actionType: 'PASSWORD_RESET_BAD_TOKEN', ipAddress: ip, email: email,
-                message: `Failed password reset attempt: Invalid, expired, or used verification token submitted.`
+                details: `Failed password reset attempt: Invalid, expired, or used verification token submitted.`
             });
             return res.status(400).json({ error: "Invalid or expired verification code." });
         }
@@ -302,7 +315,7 @@ exports.resetPassword = async (req, res) => {
         await trackEvent({
             userId, subAdminId, studentId,
             actionType: 'PASSWORD_RESET_SUCCESS', ipAddress: ip, email: email,
-            message: `Password update transaction completed successfully. Previous tokens revoked.`
+            details: `Password update transaction completed successfully. Previous tokens revoked.`
         });
 
         res.json({ message: "Password updated successfully." });

@@ -43,9 +43,6 @@ export default function ScholarshipManager() {
     }
   };
 
-  // Status parser logic — only 3 real states now: draft, open, closed.
-  // A program past its deadline is treated as closed even if the DB
-  // status still says 'open' (org just hasn't clicked Close yet).
   const getBadgeType = (s) => {
     const st = s.status?.toLowerCase();
     if (st === 'draft') return 'draft';
@@ -54,7 +51,6 @@ export default function ScholarshipManager() {
     return 'open';
   };
 
-  // Dynamic filter pipeline: Tab counters, query match strings, status drop-downs
   const filtered = scholarships
     .filter(s => {
       const badgeType = getBadgeType(s);
@@ -83,7 +79,6 @@ export default function ScholarshipManager() {
     setCurrentPage(0);
   };
 
-  // Operations handlers
   const handleDeleteAction = async () => {
     try {
       await api.delete(`/scholarships/${deleteConfirm.id}`);
@@ -121,116 +116,108 @@ export default function ScholarshipManager() {
   };
 
   return (
-    <div className="p-8 bg-slate-50/40 min-h-screen text-slate-800 font-sans">
+    <div className="p-4 md:p-8 bg-[#FFFCFB] min-h-screen text-slate-800 font-['Inter']">
       <div className="max-w-7xl mx-auto space-y-8">
         
         {/* ── HEADER TITLE BLOCK ── */}
-        <div className="flex justify-between items-start flex-wrap gap-4">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
           <div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">
-              Manage Your <span className="text-[#093fb4]">Scholarships</span>
+            <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight uppercase leading-none">
+              Manage <span className="text-[#093fb4]">Programs</span>
             </h1>
-            <p className="text-xs text-slate-400 font-bold mt-2 uppercase tracking-wider">
-              Organize, monitor and manage all your scholarship programs in one place.
+            <p className="text-sm text-slate-600 font-bold mt-3 uppercase tracking-[0.15em]">
+              Organize and monitor all scholarship distributions
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-4">
             <button
               onClick={() => navigate('/create-scholarship')}
-              className="flex items-center gap-2 bg-[#093fb4] hover:bg-[#073290] text-white px-5 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-sm shadow-[#093fb4]/10"
+              className="flex items-center justify-center gap-2 bg-[#093fb4] hover:bg-[#073496] text-white px-8 py-4 rounded-2xl font-black text-xs md:text-sm uppercase tracking-[0.2em] transition-all shadow-xl shadow-[#093fb4]/25 active:scale-95"
             >
-              <Plus size={16} strokeWidth={3} /> Create New Program
-            </button>
-            <button className="p-3 bg-white border border-slate-200/80 rounded-xl hover:bg-slate-50 text-slate-400 shadow-2xl shadow-black/5">
-              <SlidersHorizontal size={16} />
+              <Plus size={20} strokeWidth={3} /> Create Program
             </button>
           </div>
         </div>
 
         {/* ── KPI METRIC CARDS ROW ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Card 1: All Programs */}
           <div 
             onClick={() => switchTab('all')}
-            className={`bg-white border rounded-2xl p-5 shadow-2xl shadow-black/5 flex items-center gap-4 cursor-pointer transition-all ${activeTab === 'all' ? 'border-[#093fb4] ring-2 ring-[#093fb4]/5 bg-blue-50/5' : 'border-slate-200/60 hover:border-slate-300'}`}
+            className={`bg-white/70 backdrop-blur-md border-2 rounded-[2rem] p-6 shadow-lg flex items-center gap-5 cursor-pointer transition-all ${activeTab === 'all' ? 'border-[#093fb4] bg-blue-50/20' : 'border-slate-200 hover:border-slate-300'}`}
           >
-            <div className="w-12 h-12 rounded-xl bg-blue-50 text-[#093fb4] flex items-center justify-center shrink-0">
-              <Folder size={20} strokeWidth={2.5} />
+            <div className="w-16 h-16 rounded-2xl bg-blue-50 text-[#093fb4] flex items-center justify-center shrink-0 border border-blue-100">
+              <Folder size={28} strokeWidth={2.5} />
             </div>
             <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">All Programs</p>
-              <p className="text-2xl font-black text-slate-900 leading-tight mt-0.5">{getCount('all')}</p>
-              <p className="text-[10px] font-bold text-slate-400 mt-0.5">Total</p>
+              <p className="text-xs font-black text-slate-500 uppercase tracking-widest">All Programs</p>
+              <p className="text-4xl font-black text-slate-900 leading-none mt-1">{getCount('all')}</p>
             </div>
           </div>
 
           {/* Card 2: Open */}
           <div 
             onClick={() => switchTab('open')}
-            className={`bg-white border rounded-2xl p-5 shadow-2xl shadow-black/5 flex items-center gap-4 cursor-pointer transition-all ${activeTab === 'open' ? 'border-emerald-500 ring-2 ring-emerald-500/5 bg-emerald-50/5' : 'border-slate-200/60 hover:border-slate-300'}`}
+            className={`bg-white/70 backdrop-blur-md border-2 rounded-[2rem] p-6 shadow-lg flex items-center gap-5 cursor-pointer transition-all ${activeTab === 'open' ? 'border-emerald-500 bg-emerald-50/20' : 'border-slate-200 hover:border-slate-300'}`}
           >
-            <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-              <CheckCircle2 size={20} strokeWidth={2.5} />
+            <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
+              <CheckCircle2 size={28} strokeWidth={2.5} />
             </div>
             <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Open</p>
-              <p className="text-2xl font-black text-slate-900 leading-tight mt-0.5">{getCount('open')}</p>
-              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Active</p>
+              <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Active</p>
+              <p className="text-4xl font-black text-slate-900 leading-none mt-1">{getCount('open')}</p>
             </div>
           </div>
 
           {/* Card 3: Draft */}
           <div 
             onClick={() => switchTab('draft')}
-            className={`bg-white border rounded-2xl p-5 shadow-2xl shadow-black/5 flex items-center gap-4 cursor-pointer transition-all ${activeTab === 'draft' ? 'border-amber-500 ring-2 ring-amber-500/5 bg-amber-50/5' : 'border-slate-200/60 hover:border-slate-300'}`}
+            className={`bg-white/70 backdrop-blur-md border-2 rounded-[2rem] p-6 shadow-lg flex items-center gap-5 cursor-pointer transition-all ${activeTab === 'draft' ? 'border-amber-500 bg-amber-50/20' : 'border-slate-200 hover:border-slate-300'}`}
           >
-            <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-              <FileText size={20} strokeWidth={2.5} />
+            <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-100">
+              <FileText size={28} strokeWidth={2.5} />
             </div>
             <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Draft</p>
-              <p className="text-2xl font-black text-slate-900 leading-tight mt-0.5">{getCount('draft')}</p>
-              <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Draft</p>
+              <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Drafts</p>
+              <p className="text-4xl font-black text-slate-900 leading-none mt-1">{getCount('draft')}</p>
             </div>
           </div>
 
           {/* Card 4: Closed */}
           <div 
             onClick={() => switchTab('closed')}
-            className={`bg-white border rounded-2xl p-5 shadow-2xl shadow-black/5 flex items-center gap-4 cursor-pointer transition-all ${activeTab === 'closed' ? 'border-red-500 ring-2 ring-red-500/5 bg-red-50/5' : 'border-slate-200/60 hover:border-slate-300'}`}
+            className={`bg-white/70 backdrop-blur-md border-2 rounded-[2rem] p-6 shadow-lg flex items-center gap-5 cursor-pointer transition-all ${activeTab === 'closed' ? 'border-red-500 bg-red-50/20' : 'border-slate-200 hover:border-slate-300'}`}
           >
-            <div className="w-12 h-12 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0">
-              <XCircle size={20} strokeWidth={2.5} />
+            <div className="w-16 h-16 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center shrink-0 border border-red-100">
+              <XCircle size={28} strokeWidth={2.5} />
             </div>
             <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Closed</p>
-              <p className="text-2xl font-black text-slate-900 leading-tight mt-0.5">{getCount('closed')}</p>
-              <p className="text-[10px] font-bold text-red-600 uppercase tracking-wider">Closed</p>
+              <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Closed</p>
+              <p className="text-4xl font-black text-slate-900 leading-none mt-1">{getCount('closed')}</p>
             </div>
           </div>
-
         </div>
 
         {/* ── SEARCH FILTERS ROW CONTROL ── */}
-        <div className="bg-white p-4 border border-slate-200/60 rounded-2xl flex flex-col md:flex-row gap-4 items-center justify-between shadow-2xl shadow-black/5">
-          <div className="relative w-full md:flex-1">
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+        <div className="bg-white/60 backdrop-blur-md p-6 border-2 border-slate-200 rounded-[2rem] flex flex-col md:flex-row gap-6 items-center justify-between shadow-sm">
+          <div className="relative w-full md:flex-1 group">
+            <Search size={22} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#093fb4] transition-colors" />
             <input
               type="text"
-              placeholder="Search programs by title or description..."
+              placeholder="Search by title or description..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-slate-200/80 bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-[#093fb4]/20 focus:border-[#093fb4] text-xs font-semibold placeholder-slate-400 transition-all"
+              className="w-full pl-14 pr-6 py-4 rounded-2xl border-2 border-slate-200 bg-white focus:outline-none focus:border-[#093fb4] text-base font-bold text-slate-900 placeholder-slate-400 transition-all shadow-sm"
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-            <div className="flex flex-col flex-1 sm:flex-initial min-w-[120px]">
-              <label className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Status</label>
+          <div className="flex flex-wrap items-center gap-5 w-full md:w-auto">
+            <div className="flex flex-col flex-1 sm:flex-initial min-w-[150px]">
+              <label className="text-xs font-black uppercase text-slate-700 tracking-widest mb-2 ml-1">Status</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 bg-white focus:outline-none"
+                className="px-4 py-4 border-2 border-slate-200 rounded-2xl text-sm font-black uppercase tracking-wider text-slate-900 bg-white focus:outline-none focus:border-[#093fb4] shadow-sm cursor-pointer"
               >
                 <option value="all">All Status</option>
                 <option value="open">Open</option>
@@ -239,46 +226,37 @@ export default function ScholarshipManager() {
               </select>
             </div>
 
-            <div className="flex flex-col flex-1 sm:flex-initial min-w-[140px]">
-              <label className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Sort by</label>
+            <div className="flex flex-col flex-1 sm:flex-initial min-w-[160px]">
+              <label className="text-xs font-black uppercase text-slate-700 tracking-widest mb-2 ml-1">Sort by</label>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 bg-white focus:outline-none"
+                className="px-4 py-4 border-2 border-slate-200 rounded-2xl text-sm font-black uppercase tracking-wider text-slate-900 bg-white focus:outline-none focus:border-[#093fb4] shadow-sm cursor-pointer"
               >
                 <option value="newest">Newest First</option>
                 <option value="oldest">Oldest First</option>
               </select>
             </div>
-
-            <button className="flex items-center gap-2 border border-slate-200 px-4 py-2 mt-4 sm:mt-0 rounded-xl text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 h-[38px] self-end">
-              <SlidersHorizontal size={14} /> Filters
-            </button>
           </div>
         </div>
 
         {/* ── PROGRAMS GRID SYSTEM ── */}
         {paginated.length === 0 ? (
-          <div className="bg-white border border-slate-200/60 rounded-2xl py-20 text-center shadow-2xl shadow-black/5">
-            <Folder size={40} className="mx-auto text-slate-300 mb-3" />
-            <p className="text-xs font-black text-slate-400 text-uppercase tracking-widest uppercase">No programs found matching this selection</p>
+          <div className="bg-white/50 border-2 border-dashed border-slate-300 rounded-[2.5rem] py-24 text-center shadow-sm">
+            <Folder size={48} className="mx-auto text-slate-300 mb-4" stroke={1.5} />
+            <p className="text-sm font-black text-slate-500 uppercase tracking-widest">No programs found matching this selection</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {paginated.map((s) => {
-              const status = s.status?.toLowerCase();
               const badgeType = getBadgeType(s);
 
-              // Setup local colors per dynamic tag type
               const badgeStyles = {
-                open: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-                draft: 'bg-blue-50 text-[#093fb4] border-blue-100',
-                closed: 'bg-red-50 text-red-600 border-red-100',
+                open: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+                draft: 'bg-blue-100 text-[#093fb4] border-blue-200',
+                closed: 'bg-red-100 text-red-700 border-red-200',
               };
 
-              // Closed is one unified status now — covers both a program
-              // manually closed by the org AND one whose deadline simply
-              // passed. No separate "Deadline Passed" label anymore.
               const badgeLabels = {
                 open: 'Open',
                 draft: 'Draft',
@@ -288,37 +266,37 @@ export default function ScholarshipManager() {
               return (
                 <div 
                   key={s.id}
-                  className="bg-white border border-slate-200/60 rounded-2xl p-6 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between group relative border-b-4 hover:border-b-[#093fb4]"
+                  className="bg-white/80 backdrop-blur-md border-2 border-slate-200 rounded-[2rem] p-8 shadow-lg hover:shadow-2xl hover:border-[#093fb4]/50 transition-all duration-300 flex flex-col justify-between group relative"
                 >
                   <div>
                     {/* Header: Tag + Options Menu icon */}
-                    <div className="flex justify-between items-center mb-4">
-                      <span className={`px-2.5 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-wider ${badgeStyles[badgeType] || badgeStyles.draft}`}>
+                    <div className="flex justify-between items-center mb-6">
+                      <span className={`px-4 py-1.5 rounded-xl border-2 text-xs font-black uppercase tracking-[0.2em] ${badgeStyles[badgeType] || badgeStyles.draft}`}>
                         {badgeLabels[badgeType]}
                       </span>
                       <div className="relative">
                         <button
                           onClick={() => setMenuOpenId(menuOpenId === s.id ? null : s.id)}
-                          className="p-1 rounded-lg hover:bg-slate-50 text-slate-400"
+                          className="p-2 rounded-xl hover:bg-slate-100 text-slate-600 transition-colors"
                         >
-                          <MoreHorizontal size={16} />
+                          <MoreHorizontal size={24} stroke={2.5}/>
                         </button>
 
                         {menuOpenId === s.id && (
-                          <div className="absolute right-0 top-full mt-1 w-36 bg-white border border-slate-200/80 rounded-xl shadow-2xl shadow-black/10 py-1.5 z-20">
+                          <div className="absolute right-0 top-full mt-2 w-40 bg-white border-2 border-slate-200 rounded-2xl shadow-xl py-2 z-20">
                             {(badgeType === 'draft' || badgeType === 'closed') ? (
                               <button
                                 onClick={() => {
                                   setDeleteConfirm({ show: true, id: s.id });
                                   setMenuOpenId(null);
                                 }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-red-600 hover:bg-red-50 transition-colors"
+                                className="w-full flex items-center gap-3 px-4 py-3 text-xs font-black uppercase tracking-widest text-red-600 hover:bg-red-50 transition-colors"
                               >
-                                <Trash2 size={13} /> Delete
+                                <Trash2 size={16} stroke={2.5} /> Delete
                               </button>
                             ) : (
-                              <p className="px-3 py-2 text-[10px] font-bold text-slate-300 uppercase tracking-wider">
-                                No actions
+                              <p className="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-widest text-center">
+                                No Actions
                               </p>
                             )}
                           </div>
@@ -327,47 +305,47 @@ export default function ScholarshipManager() {
                     </div>
 
                     {/* Meta header row: Profile avatar image + text titles */}
-                    <div className="flex items-start gap-4 mb-4">
-                      <div className="w-14 h-14 rounded-full border border-slate-100 shadow-sm overflow-hidden bg-slate-50 flex items-center justify-center shrink-0">
+                    <div className="flex items-center gap-5 mb-5">
+                      <div className="w-16 h-16 rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden bg-slate-50 flex items-center justify-center shrink-0">
                         {s.org_pic ? (
                           <img src={s.org_pic} alt="" className="w-full h-full object-cover" />
                         ) : (
-                          <span className="text-base font-black text-slate-400">
+                          <span className="text-xl font-black text-slate-400">
                             {s.org_name?.substring(0, 2).toUpperCase()}
                           </span>
                         )}
                       </div>
                       <div className="min-w-0">
-                        <h3 className="text-sm font-black text-slate-900 leading-snug group-hover:text-[#093fb4] transition-colors truncate">
+                        <h3 className="text-lg md:text-xl font-black text-slate-900 leading-snug group-hover:text-[#093fb4] transition-colors truncate uppercase tracking-tight">
                           {s.title}
                         </h3>
-                        <p className="text-[10px] font-black text-[#093fb4] uppercase tracking-wider mt-0.5">
+                        <p className="text-xs font-black text-[#093fb4] uppercase tracking-[0.15em] mt-1 truncate">
                           {s.org_name || 'OSDS-CHED'}
                         </p>
                       </div>
                     </div>
 
                     {/* Program description snippet */}
-                    <p className="text-xs text-slate-400 font-semibold leading-relaxed line-clamp-3 mb-6">
+                    <p className="text-sm text-slate-600 font-semibold leading-relaxed line-clamp-3 mb-8">
                       {s.description || 'No summary description provided for this tracking program.'}
                     </p>
 
                     {/* Multi-parameter information row */}
-                    <div className="grid grid-cols-3 gap-2 py-4 border-t border-b border-slate-100 my-4 text-center">
+                    <div className="grid grid-cols-3 gap-3 py-5 border-t-2 border-b-2 border-slate-100 my-6 text-center">
                       <div>
-                        <div className="flex items-center justify-center gap-1.5 text-slate-400 mb-1">
-                          <Calendar size={14} />
-                          <span className="text-[11px] font-black uppercase tracking-wider">Deadline</span>
+                        <div className="flex items-center justify-center gap-2 text-slate-600 mb-2">
+                          <Calendar size={16} stroke={2.5}/>
+                          <span className="text-[10px] font-black uppercase tracking-widest">Deadline</span>
                         </div>
-                        <p className="text-sm font-bold text-slate-700 truncate">
+                        <p className="text-sm font-extrabold text-slate-900 truncate">
                           {s.deadline ? new Date(s.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'VARY'}
                         </p>
                       </div>
 
-                      <div className="border-l border-r border-slate-100">
-                        <div className="flex items-center justify-center gap-1.5 text-slate-400 mb-1">
-                          <DollarSign size={14} />
-                          <span className="text-[11px] font-black uppercase tracking-wider">Budget</span>
+                      <div className="border-l-2 border-r-2 border-slate-100">
+                        <div className="flex items-center justify-center gap-2 text-slate-600 mb-2">
+                          <DollarSign size={16} stroke={2.5}/>
+                          <span className="text-[10px] font-black uppercase tracking-widest">Budget</span>
                         </div>
                         <p className="text-sm font-black text-[#093fb4] truncate">
                           {s.total_budget != null ? `₱${Number(s.total_budget).toLocaleString()}` : 'VARY'}
@@ -375,71 +353,71 @@ export default function ScholarshipManager() {
                       </div>
 
                       <div>
-                        <div className="flex items-center justify-center gap-1.5 text-slate-400 mb-1">
-                          <GraduationCap size={14} />
-                          <span className="text-[11px] font-black uppercase tracking-wider">Type</span>
+                        <div className="flex items-center justify-center gap-2 text-slate-600 mb-2">
+                          <GraduationCap size={16} stroke={2.5}/>
+                          <span className="text-[10px] font-black uppercase tracking-widest">Type</span>
                         </div>
-                        <p className="text-sm font-bold text-slate-700 truncate">
+                        <p className="text-sm font-extrabold text-slate-900 truncate">
                           {s.fund_type || 'Financial Aid'}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  {/* ── CARD BUTTON ROW ACTION PACK ── */}
-                  <div className="flex flex-wrap items-center gap-2 pt-2 mt-2">
-                    {/* View Action — always available */}
-                    <button 
-                      onClick={() => setViewModal(s)}
-                      className="flex-1 min-w-[45%] border border-slate-200 hover:bg-slate-50 text-slate-600 font-black text-[10px] uppercase tracking-wider py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors"
-                    >
-                      <Eye size={13} /> View
-                    </button>
+                  {/* ── CARD BUTTON ROW ACTION PACK (Matches Screenshot) ── */}
+<div className="flex items-center gap-3 mt-4">
+  {/* View Action — always available */}
+  <button 
+    onClick={() => setViewModal(s)}
+    className="flex-1 bg-white border-2 border-slate-200 hover:border-[#093fb4] hover:text-[#093fb4] text-slate-800 font-black text-xs uppercase tracking-widest py-3.5 rounded-2xl transition-colors"
+  >
+    View
+  </button>
 
-                    {/* DRAFT: Edit, Publish, Delete */}
-                    {badgeType === 'draft' && (
-                      <>
-                        <button 
-                          onClick={() => setEditModal(s)}
-                          className="flex-1 min-w-[45%] border border-slate-200 hover:bg-slate-50 text-slate-600 font-black text-[10px] uppercase tracking-wider py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors"
-                        >
-                          <Edit3 size={13} /> Edit
-                        </button>
-                        <button 
-                          onClick={() => setPublishConfirm({ show: true, id: s.id })}
-                          className="flex-1 min-w-[45%] bg-emerald-50 text-emerald-600 border border-emerald-200/60 hover:bg-emerald-100 font-black text-[10px] uppercase tracking-wider py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors"
-                        >
-                          <CheckCircle2 size={13} /> Publish
-                        </button>
-                        <button 
-                          onClick={() => setDeleteConfirm({ show: true, id: s.id })}
-                          className="flex-1 min-w-[45%] bg-red-50 text-red-600 border border-red-200/60 hover:bg-red-100 font-black text-[10px] uppercase tracking-wider py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors"
-                        >
-                          <Trash2 size={13} /> Delete
-                        </button>
-                      </>
-                    )}
+  {/* DRAFT: Edit, Publish, Delete */}
+  {badgeType === 'draft' && (
+    <>
+      <button 
+        onClick={() => setEditModal(s)}
+        className="flex-1 bg-white border-2 border-slate-200 hover:border-slate-400 text-slate-800 font-black text-xs uppercase tracking-widest py-3.5 rounded-2xl transition-colors"
+      >
+        Edit
+      </button>
+      <button 
+        onClick={() => setPublishConfirm({ show: true, id: s.id })}
+        className="flex-1 bg-emerald-50 text-emerald-700 border-2 border-emerald-200 hover:bg-emerald-100 font-black text-xs uppercase tracking-widest py-3.5 rounded-2xl transition-colors"
+      >
+        Publish
+      </button>
+      <button 
+        onClick={() => setDeleteConfirm({ show: true, id: s.id })}
+        className="flex-1 bg-red-50 text-red-700 border-2 border-red-200 hover:bg-red-100 font-black text-xs uppercase tracking-widest py-3.5 rounded-2xl transition-colors"
+      >
+        Delete
+      </button>
+    </>
+  )}
 
-                    {/* OPEN: Close */}
-                    {badgeType === 'open' && (
-                      <button 
-                        onClick={() => setCloseConfirm({ show: true, id: s.id })}
-                        className="flex-1 min-w-[45%] bg-red-50 text-red-600 border border-red-200/60 hover:bg-red-100 font-black text-[10px] uppercase tracking-wider py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors"
-                      >
-                        <PowerOff size={13} /> Close
-                      </button>
-                    )}
+  {/* OPEN: Close */}
+  {badgeType === 'open' && (
+    <button 
+      onClick={() => setCloseConfirm({ show: true, id: s.id })}
+      className="flex-1 bg-red-50 text-red-700 border-2 border-red-200 hover:bg-red-100 font-black text-xs uppercase tracking-widest py-3.5 rounded-2xl transition-colors"
+    >
+      Close
+    </button>
+  )}
 
-                    {/* CLOSED (manually closed or deadline passed): Delete */}
-                    {badgeType === 'closed' && (
-                      <button 
-                        onClick={() => setDeleteConfirm({ show: true, id: s.id })}
-                        className="flex-1 min-w-[45%] bg-red-50 text-red-600 border border-red-200/60 hover:bg-red-100 font-black text-[10px] uppercase tracking-wider py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors"
-                      >
-                        <Trash2 size={13} /> Delete
-                      </button>
-                    )}
-                  </div>
+  {/* CLOSED: Delete */}
+  {badgeType === 'closed' && (
+    <button 
+      onClick={() => setDeleteConfirm({ show: true, id: s.id })}
+      className="flex-1 bg-red-50 text-red-700 border-2 border-red-200 hover:bg-red-100 font-black text-xs uppercase tracking-widest py-3.5 rounded-2xl transition-colors"
+    >
+      Delete
+    </button>
+  )}
+</div>
                 </div>
               );
             })}
@@ -448,21 +426,21 @@ export default function ScholarshipManager() {
 
         {/* ── FOOTER PAGINATION CONTAINER ── */}
         {totalPages > 1 && (
-          <div className="flex justify-between items-center pt-4 border-t border-slate-200/60 flex-wrap gap-4">
-            <div className="flex items-center gap-1.5">
+          <div className="flex justify-between items-center pt-8 border-t-2 border-slate-200 flex-wrap gap-4">
+            <div className="flex items-center gap-2">
               <button 
                 onClick={() => setCurrentPage(p => Math.max(p - 1, 0))} 
                 disabled={currentPage === 0}
-                className="w-9 h-9 border border-slate-200 bg-white rounded-xl flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors text-slate-600"
+                className="w-12 h-12 border-2 border-slate-200 bg-white rounded-2xl flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors text-slate-700"
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={20} strokeWidth={2.5}/>
               </button>
               
               {Array.from({ length: totalPages }).map((_, i) => (
                 <button
                   key={i}
                   onClick={() => setCurrentPage(i)}
-                  className={`w-9 h-9 font-black text-xs rounded-xl transition-all ${i === currentPage ? 'bg-[#093fb4] text-white shadow-md' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                  className={`w-12 h-12 font-black text-sm uppercase rounded-2xl transition-all border-2 ${i === currentPage ? 'bg-[#093fb4] border-[#093fb4] text-white shadow-lg' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}
                 >
                   {i + 1}
                 </button>
@@ -471,13 +449,13 @@ export default function ScholarshipManager() {
               <button 
                 onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages - 1))} 
                 disabled={currentPage === totalPages - 1}
-                className="w-9 h-9 border border-slate-200 bg-white rounded-xl flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors text-slate-600"
+                className="w-12 h-12 border-2 border-slate-200 bg-white rounded-2xl flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors text-slate-700"
               >
-                <ChevronRight size={16} />
+                <ChevronRight size={20} strokeWidth={2.5}/>
               </button>
             </div>
 
-            <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+            <div className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">
               Page {currentPage + 1} of {totalPages}
             </div>
           </div>
@@ -503,10 +481,10 @@ export default function ScholarshipManager() {
       {(publishConfirm.show || closeConfirm.show || deleteConfirm.show) && (() => {
         const isPublish = publishConfirm.show;
         const isDelete = deleteConfirm.show;
-        const iconBg = isPublish ? 'bg-emerald-500' : 'bg-red-500';
+        const iconBg = isPublish ? 'bg-emerald-100 text-emerald-600 border-emerald-200' : 'bg-red-100 text-red-600 border-red-200';
         const icon = isPublish
-          ? <CheckCircle2 size={24} className="text-white" />
-          : isDelete ? <Trash2 size={24} className="text-white" /> : <PowerOff size={24} className="text-white" />;
+          ? <CheckCircle2 size={32} strokeWidth={2.5} />
+          : isDelete ? <Trash2 size={32} strokeWidth={2.5} /> : <PowerOff size={32} strokeWidth={2.5} />;
         const title = isPublish ? 'Publish this program?' : isDelete ? 'Delete this program?' : 'Close this program?';
         const desc = isPublish ? 'It will become visible to all eligible students.'
           : isDelete ? 'This action is permanent and cannot be undone.' : 'Students will no longer be able to apply.';
@@ -514,27 +492,27 @@ export default function ScholarshipManager() {
         const onConfirm = isPublish ? handlePublishAction : isDelete ? handleDeleteAction : handleCloseAction;
 
         return (
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-3xl p-8 max-w-sm w-full border border-slate-100 shadow-2xl animate-in zoom-in-95 duration-200 text-center">
-              <div className={`w-14 h-14 rounded-full ${iconBg} mx-auto flex items-center justify-center mb-4 shadow-lg`}>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
+            <div className="bg-white/90 backdrop-blur-xl rounded-[2.5rem] p-10 max-w-sm w-full border border-white/60 shadow-2xl animate-in zoom-in-95 duration-200 text-center">
+              <div className={`w-20 h-20 rounded-2xl border-2 ${iconBg} mx-auto flex items-center justify-center mb-6 shadow-inner`}>
                 {icon}
               </div>
-              <h2 className="text-base font-black text-slate-900 uppercase tracking-tight mb-2">
+              <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-3">
                 {title}
               </h2>
-              <p className="text-xs text-slate-400 font-medium leading-relaxed mb-6">
+              <p className="text-sm text-slate-600 font-bold leading-relaxed mb-8">
                 {desc}
               </p>
-              <div className="flex gap-3">
+              <div className="flex gap-4">
                 <button 
                   onClick={cancelAll}
-                  className="flex-1 py-3 border border-slate-200 hover:bg-slate-50 text-slate-600 font-black text-xs uppercase tracking-widest rounded-xl transition-colors"
+                  className="flex-1 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-xs uppercase tracking-[0.2em] rounded-2xl transition-colors"
                 >
                   Cancel
                 </button>
                 <button 
                   onClick={onConfirm}
-                  className={`flex-1 py-3 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-sm ${confirmBg}`}
+                  className={`flex-1 py-4 text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl transition-all shadow-lg active:scale-95 ${confirmBg}`}
                 >
                   {isDelete ? 'Delete' : 'Confirm'}
                 </button>

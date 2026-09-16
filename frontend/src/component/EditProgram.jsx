@@ -1,32 +1,22 @@
 import React, { useState } from 'react';
 import DatePicker from 'react-datepicker';
-import "react-datepicker/dist/react-datepicker.css"; // Ensure Datepicker CSS styling loads here too
-import { Loader2 } from 'lucide-react';
+import "react-datepicker/dist/react-datepicker.css"; 
+import { Loader2, X } from 'lucide-react'; // FIXED: Imported X icon
 import api from '../api'; 
 import ScholarshipRequirements from '../component/ScholarshipRequirements';
 import OrgCriteria from '../org/OrgCriteria';
 
 const EditProgram = ({ scholarship, onUpdateSuccess, onCancel }) => {
   
-  // 💡 FIX: Parses date text directly without allowing native JS engine to apply a UTC drop
   const parseInboundDate = (dateInput) => {
-  if (!dateInput) return new Date();
-
-  // 1. Convert to a native JS Date object safely
-  const parsedDate = new Date(dateInput);
-
-  // If it's an invalid date format, fall back to today
-  if (isNaN(parsedDate.getTime())) return new Date();
-
-  // 2. Extract the LOCAL browser values directly. 
-  // This extracts the real calendar date based on your local system time (GMT+0800),
-  // which shifts 2026-05-27T16:00:00.000Z back to May 28, 2026!
-  const year = parsedDate.getFullYear();
-  const month = parsedDate.getMonth(); // Keeps 0-11 index format for constructor
-  const day = parsedDate.getDate();
-
-  return new Date(year, month, day);
-};
+    if (!dateInput) return new Date();
+    const parsedDate = new Date(dateInput);
+    if (isNaN(parsedDate.getTime())) return new Date();
+    const year = parsedDate.getFullYear();
+    const month = parsedDate.getMonth(); 
+    const day = parsedDate.getDate();
+    return new Date(year, month, day);
+  };
 
   const [formData, setFormData] = useState({
     title: scholarship.title || '',
@@ -54,13 +44,12 @@ const EditProgram = ({ scholarship, onUpdateSuccess, onCancel }) => {
         type: req.type || req.field_type || 'file'
       }));
 
-      // 💡 FIXED: Declared cleanly outside the local block scope so payload can capture it correctly
       let formattedDeadline = formData.deadline;
       if (formData.deadline instanceof Date) {
         const year = formData.deadline.getFullYear();
         const month = String(formData.deadline.getMonth() + 1).padStart(2, '0');
         const day = String(formData.deadline.getDate()).padStart(2, '0');
-        formattedDeadline = `${year}-${month}-${day}`; // Hard locks format "YYYY-MM-DD"
+        formattedDeadline = `${year}-${month}-${day}`; 
       } else if (typeof formData.deadline === 'string') {
         formattedDeadline = formData.deadline.split('T')[0];
       }
@@ -68,7 +57,7 @@ const EditProgram = ({ scholarship, onUpdateSuccess, onCancel }) => {
       const payload = {
         title: formData.title,
         description: formData.description,
-        deadline: formattedDeadline, // 💡 Sends clean, non-shifted "YYYY-MM-DD" text string
+        deadline: formattedDeadline, 
         slots: formData.slots,
         fund_type: formData.fund_type,
         amount_range: formData.amount_range,
@@ -87,91 +76,104 @@ const EditProgram = ({ scholarship, onUpdateSuccess, onCancel }) => {
     }
   };
 
+  const inputCls = "w-full p-4 bg-white/60 border-2 border-slate-200 rounded-2xl text-sm font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#093fb4] transition-all shadow-sm";
+  const labelCls = "block text-xs font-black text-slate-700 uppercase tracking-widest mb-2 ml-1";
+
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-[#FFFCFB] p-8 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border-4 border-[#093fb4]">
-        <h2 className="text-2xl font-black mb-6 uppercase text-[#093fb4]">Edit Program</h2>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 overflow-y-auto font-['Inter']">
+      <div className="bg-white/90 backdrop-blur-xl p-8 md:p-10 rounded-[2.5rem] max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-white/60 custom-scrollbar">
         
-        <div className="space-y-4">
+        {/* FIXED: Added a flex container for the header to align the Title and X button */}
+        <div className="flex justify-between items-start mb-8">
+          <h2 className="text-3xl font-black uppercase text-slate-900 tracking-tight">Edit Program</h2>
+          <button 
+            type="button"
+            onClick={onCancel} 
+            className="w-12 h-12 flex items-center justify-center bg-white/60 border-2 border-slate-200 text-slate-500 rounded-2xl hover:border-red-200 hover:bg-red-50 hover:text-red-500 transition-all flex-shrink-0 shadow-sm"
+          >
+            <X size={24} strokeWidth={2.5} />
+          </button>
+        </div>
+        
+        <div className="space-y-6">
           <div>
-            <label className="block text-xs font-black text-black uppercase mb-1 tracking-tight">Program Title</label>
+            <label className={labelCls}>Program Title</label>
             <input 
-              className="w-full p-4 bg-black/5 rounded-xl text-sm border-2 border-transparent focus:border-[#093fb4] outline-none" 
+              className={inputCls} 
               value={formData.title} 
               onChange={e => setFormData({...formData, title: e.target.value})} 
-              placeholder="Title" 
+              placeholder="Enter scholarship title" 
             />
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-xs font-black text-black uppercase mb-1 tracking-tight">Deadline Date</label>
-              {/* 💡 DatePicker Integrated and Controlled Here */}
+              <label className={labelCls}>Deadline Date</label>
               <DatePicker 
                 selected={formData.deadline} 
                 onChange={(date) => setFormData({...formData, deadline: date})} 
-                className="w-full p-4 bg-black/5 rounded-xl text-sm border-2 border-transparent focus:border-[#093fb4] outline-none" 
+                className={inputCls} 
                 dateFormat="yyyy-MM-dd" 
                 minDate={new Date()}
                 wrapperClassName="w-full"
               />
             </div>
             <div>
-              <label className="block text-xs font-black text-black uppercase mb-1 tracking-tight">Available Slots</label>
+              <label className={labelCls}>Available Slots</label>
               <input 
                 type="number" 
-                className="w-full p-4 bg-black/5 rounded-xl text-sm border-2 border-transparent focus:border-[#093fb4] outline-none" 
+                className={inputCls} 
                 value={formData.slots} 
                 onChange={e => setFormData({...formData, slots: e.target.value})} 
-                placeholder="Slots" 
+                placeholder="e.g. 50" 
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div>
-              <label className="block text-xs font-black text-black uppercase mb-1 tracking-tight">Coverage Type</label>
+              <label className={labelCls}>Coverage Type</label>
               <input 
-                className="w-full p-4 bg-black/5 rounded-xl text-sm border-2 border-transparent focus:border-[#093fb4] outline-none" 
+                className={inputCls} 
                 value={formData.fund_type} 
                 onChange={e => setFormData({...formData, fund_type: e.target.value})} 
-                placeholder="Fund Type" 
+                placeholder="e.g. Full tuition" 
               />
             </div>
             <div>
-              <label className="block text-xs font-black text-black uppercase mb-1 tracking-tight">Amount Range</label>
+              <label className={labelCls}>Amount Range</label>
               <input 
-                className="w-full p-4 bg-black/5 rounded-xl text-sm border-2 border-transparent focus:border-[#093fb4] outline-none" 
+                className={inputCls} 
                 value={formData.amount_range} 
                 onChange={e => setFormData({...formData, amount_range: e.target.value})} 
-                placeholder="Amount Range" 
+                placeholder="e.g. 5000-10000" 
               />
             </div>
             <div>
-              <label className="block text-xs font-black text-black uppercase mb-1 tracking-tight">Min GWA</label>
+              <label className={labelCls}>Min GWA</label>
               <input 
                 type="number" 
                 step="0.01"
-                className="w-full p-4 bg-black/5 rounded-xl text-sm border-2 border-transparent focus:border-[#093fb4] outline-none" 
+                className={inputCls} 
                 value={formData.gwa_requirement} 
                 onChange={e => setFormData({...formData, gwa_requirement: e.target.value})} 
-                placeholder="GWA Req." 
+                placeholder="e.g. 1.75" 
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-black text-black uppercase mb-1 tracking-tight">Program Description</label>
+            <label className={labelCls}>Program Description</label>
             <textarea 
-              className="w-full p-4 bg-black/5 rounded-xl text-sm h-32 border-2 border-transparent focus:border-[#093fb4] outline-none" 
+              className={`${inputCls} h-36 resize-none`} 
               value={formData.description} 
               onChange={e => setFormData({...formData, description: e.target.value})} 
-              placeholder="Description" 
+              placeholder="Write a clear description of the scholarship..." 
             />
           </div>
           
-          <div className="pt-4 border-t border-black/10">
-            <h3 className="font-bold mb-2 text-sm text-[#093fb4]">Requirements</h3>
+          <div className="pt-6 border-t-2 border-black/5">
+            <h3 className="font-black mb-4 text-xs uppercase tracking-[0.2em] text-[#093fb4] ml-1">Requirements</h3>
             <ScholarshipRequirements 
               reqs={formData.requirements || []} 
               setReqs={(updatedReqs) => setFormData(prev => ({ ...prev, requirements: updatedReqs }))} 
@@ -182,8 +184,8 @@ const EditProgram = ({ scholarship, onUpdateSuccess, onCancel }) => {
             />
           </div>
 
-          <div className="pt-4 border-t border-black/10">
-            <h3 className="font-bold mb-2 text-sm text-[#093fb4]">Criteria</h3>
+          <div className="pt-6 border-t-2 border-black/5">
+            <h3 className="font-black mb-4 text-xs uppercase tracking-[0.2em] text-[#093fb4] ml-1">Target Criteria</h3>
             <OrgCriteria 
               criteria={formData.criteria} 
               setCriteria={(c) => setFormData({...formData, criteria: c})} 
@@ -191,10 +193,21 @@ const EditProgram = ({ scholarship, onUpdateSuccess, onCancel }) => {
           </div>
         </div>
 
-        <div className="flex gap-3 mt-8">
-          <button type="button" onClick={onCancel} className="flex-1 py-4 rounded-xl font-black text-sm bg-black/5 text-black hover:bg-black/10">Cancel</button>
-          <button type="button" onClick={handleUpdate} disabled={loading} className="flex-1 py-4 rounded-xl font-black text-sm bg-[#093fb4] text-[#FFFCFB] hover:bg-[#07369a] flex justify-center">
-            {loading ? <Loader2 className="animate-spin" /> : "Update Program"}
+        <div className="flex flex-col sm:flex-row gap-4 mt-10">
+          <button 
+            type="button" 
+            onClick={onCancel} 
+            className="flex-1 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+          >
+            Cancel
+          </button>
+          <button 
+            type="button" 
+            onClick={handleUpdate} 
+            disabled={loading} 
+            className="flex-1 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] bg-[#093fb4] text-white hover:bg-[#073496] flex justify-center items-center shadow-xl shadow-[#093fb4]/25 transition-all active:scale-95 disabled:opacity-70"
+          >
+            {loading ? <Loader2 className="animate-spin" size={20} strokeWidth={2.5} /> : "Update Program"}
           </button>
         </div>
       </div>

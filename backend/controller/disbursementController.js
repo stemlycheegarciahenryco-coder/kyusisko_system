@@ -2,6 +2,10 @@ const pool = require('../config/db');
 const { trackEvent } = require('../utils/logger');
 const { resolveOrgId } = require('./applicationController');
 const { createClient } = require('@supabase/supabase-js');
+// NOTE: trackEvent already writes into provider_audit_trails whenever
+// subAdminId is passed (see utils/logger.js's routing rule), and
+// sub_admin_id is always resolved below — so this file does NOT need a
+// separate logActivity()/direct-insert helper on top of it.
 
 // Initialize Supabase Storage Client (Supports both SUPABASE_API_URL and SUPABASE_URL)
 const supabase = createClient(
@@ -147,12 +151,16 @@ const recordDisbursement = async (req, res) => {
 
     await client.query('COMMIT');
 
+    // This is the ONLY write for this event — trackEvent already routes it
+    // into provider_audit_trails since sub_admin_id is set above, complete
+    // with the exact peso amount and mode. Adding a second insert on top of
+    // this would double-log every disbursement.
     await trackEvent({
       subAdminId: sub_admin_id,
       userId: req.user.id,
       studentId: application.student_id,
       actionType: 'Disbursement Recorded',
-      details: `Disbursed ₱${amount_range.toLocaleString()} via ${mode} to ${application.sfirst_name} ${application.slast_name} for "${scholarship.title}" (application #${appId}).`
+      details: `Disbursed ₱${Number(amount_range).toLocaleString()} via ${mode} to ${application.sfirst_name} ${application.slast_name} for "${scholarship.title}" (application #${appId}).${remarks ? ` Remarks: ${remarks}.` : ''}`
     });
 
     res.status(201).json({ success: true, data: inserted.rows[0] });

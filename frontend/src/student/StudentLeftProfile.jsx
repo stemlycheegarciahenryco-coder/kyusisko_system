@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import {useStudent} from './StudentContext';
+import { useStudent } from './StudentContext';
 import { User2Icon, MapPin, Mail, Phone, GraduationCap } from 'lucide-react';
 import api from '../api';
 
 export default function StudentLeftProfile() {
-const {student, loading} = useStudent();
-
-  
+  const { student, loading } = useStudent();
 
   if (loading) {
-    return <div className="w-full h-[420px] bg-white rounded-2xl animate-pulse shadow-sm border border-slate-200" />;
+    return <div className="w-full h-[450px] bg-white/60 backdrop-blur-xl rounded-[2.5rem] animate-pulse shadow-xl border-2 border-white/80" />;
   }
 
   if (!student) return null;
@@ -24,15 +22,19 @@ const {student, loading} = useStudent();
     : student.college_name;
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+    <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] border-2 border-white/80 overflow-hidden shadow-xl font-['Inter']">
+      
       {/* Header Banner Background */}
-      <div className="h-24 bg-[#093fb4]" />
+      <div className="h-28 bg-[#093fb4] relative">
+        <div className="absolute inset-0 bg-black/10" />
+      </div>
 
-      <div className="px-5 pb-6">
+      <div className="px-6 pb-8">
+        
         {/* Avatar Area */}
         <div
-          className="rounded-2xl bg-white border-4 border-white shadow-md mx-auto -mt-11 overflow-hidden mb-3 flex items-center justify-center bg-slate-50"
-          style={{ width: 92, height: 92 }}
+          className="rounded-[2rem] bg-white border-4 border-white shadow-lg mx-auto -mt-14 overflow-hidden mb-4 flex items-center justify-center relative z-10"
+          style={{ width: 104, height: 104 }}
         >
           {student.sprofile_pic ? (
             <img
@@ -41,77 +43,81 @@ const {student, loading} = useStudent();
               alt="Profile"
             />
           ) : (
-            <User2Icon size={44} className="text-[#093fb4]" />
+            <User2Icon size={48} className="text-[#093fb4]" strokeWidth={2} />
           )}
         </div>
 
         {/* Name, Course, and School */}
-        <div className="text-center mb-5 space-y-1.5">
-          <h2 className="text-lg font-black text-black uppercase leading-tight">
+        <div className="text-center mb-6 space-y-2">
+          <h2 className="text-2xl font-black text-black uppercase leading-tight tracking-tight">
             {student.sfirst_name} {student.slast_name}
           </h2>
           
-          {/* Degree/Course matching 'course_name' or 'other_degree_program' */}
-          <p className="text-[#093fb4] text-xs font-black uppercase tracking-widest leading-normal">
+          <p className="text-[#093fb4] text-xs font-black uppercase tracking-[0.2em] leading-normal">
             {displayCourse}
           </p>
 
-          {/* School/University matching 'college_name' or 'other_school' */}
-          <p className="text-slate-400 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1 leading-normal max-w-[220px] mx-auto break-words">
-            <GraduationCap size={14} className="shrink-0" /> {displaySchool}
+          <p className="text-black/50 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 leading-normal max-w-[240px] mx-auto break-words mt-1">
+            <GraduationCap size={16} className="shrink-0" strokeWidth={2.5} /> {displaySchool}
           </p>
         </div>
 
         {/* Profile Details List Stack */}
-        <div className="space-y-4 pt-4 border-t border-slate-100">
+        <div className="space-y-5 pt-6 border-t-2 border-black/5">
 
-          {/* Address Data Row */}
-          <div className="flex items-start gap-3">
-            <MapPin size={17} className="text-black/30 shrink-0 mt-0.5" />
-            <div className="min-w-0">
-              <p className="text-xs font-black text-black/50 uppercase mb-1">Address</p>
-              <p className="text-sm font-bold text-black uppercase leading-snug break-words">
-                {student.sstreet}, {student.sbarangay}, {student.sdistrict}
+          {/* 1. Email Data Row */}
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-xl bg-black/5 flex items-center justify-center text-black/40 shrink-0">
+              <Mail size={18} strokeWidth={2.5} />
+            </div>
+            <div className="min-w-0 flex-1 pt-0.5">
+              <p className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em] mb-0.5">Email Address</p>
+              <p className="text-sm font-extrabold text-black truncate lowercase">{student.student_email}</p>
+            </div>
+          </div>
+
+          {/* 2. Phone Data Row */}
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-xl bg-black/5 flex items-center justify-center text-black/40 shrink-0">
+              <Phone size={18} strokeWidth={2.5} />
+            </div>
+            <div className="min-w-0 flex-1 pt-0.5">
+              <p className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em] mb-0.5">Contact Number</p>
+              <p className="text-sm font-extrabold text-black uppercase tracking-wider">{student.scontact_number ? ` ${student.scontact_number}` : 'N/A'}</p>
+            </div>
+          </div>
+
+          {/* 3. Address Data Row */}
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-xl bg-black/5 flex items-center justify-center text-black/40 shrink-0">
+              <MapPin size={18} strokeWidth={2.5} />
+            </div>
+            <div className="min-w-0 flex-1 pt-0.5">
+              <p className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em] mb-0.5">Address</p>
+              <p className="text-sm font-extrabold text-black uppercase leading-snug break-words">
+                {[student.sstreet, student.sbarangay, student.sdistrict].filter(Boolean).join(', ') || 'Not Provided'}
               </p>
-            </div>
-          </div>
-
-          {/* Phone Data Row */}
-          <div className="flex items-start gap-3">
-            <Phone size={17} className="text-black/30 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-xs font-black text-black/50 uppercase mb-1">Contact Number</p>
-              <p className="text-sm font-bold text-black uppercase">{student.scontact_number || 'N/A'}</p>
-            </div>
-          </div>
-
-          {/* Email Data Row */}
-          <div className="flex items-start gap-3">
-            <Mail size={17} className="text-black/30 shrink-0 mt-0.5" />
-            <div className="min-w-0">
-              <p className="text-xs font-black text-black/50 uppercase mb-1">Email</p>
-              <p className="text-sm font-bold text-black truncate lowercase">{student.student_email}</p>
             </div>
           </div>
 
           {/* Bio Section Row */}
           {student.bio && (
-            <div className="pt-3 border-t border-slate-100">
-              <p className="text-xs font-black text-black/50 uppercase mb-1.5">Bio</p>
-              <p className="text-sm font-medium text-black/70 leading-relaxed break-words">
-                {student.bio}
+            <div className="pt-5 border-t-2 border-black/5">
+              <p className="text-[10px] font-black text-[#093fb4] uppercase tracking-[0.2em] mb-2">About You</p>
+              <p className="text-sm font-bold text-black/70 leading-relaxed break-words bg-black/5 p-4 rounded-2xl italic">
+                "{student.bio}"
               </p>
             </div>
           )}
 
           {/* Portfolio Rendering Section */}
           {student.portfolio_data && (
-            <div className="pt-3 border-t border-slate-100">
-              <p className="text-xs font-black text-black/50 uppercase mb-2 tracking-tight">Portfolio</p>
+            <div className="pt-5 border-t-2 border-black/5">
+              <p className="text-[10px] font-black text-[#093fb4] uppercase tracking-[0.2em] mb-3">Portfolio Documents</p>
               <div className="flex flex-wrap gap-2">
 
                 {typeof student.portfolio_data === 'object' && !Array.isArray(student.portfolio_data) && (student.portfolio_data.title || student.portfolio_data.url) && (
-                  <span className="inline-flex items-center text-[11px] font-black uppercase tracking-wider bg-blue-50 text-[#093fb4] border border-blue-100 px-3 py-1.5 rounded-md">
+                  <span className="inline-flex items-center text-[10px] font-black uppercase tracking-[0.15em] bg-[#093fb4]/10 text-[#093fb4] border-2 border-[#093fb4]/20 px-3 py-2 rounded-xl">
                     {student.portfolio_data.title || student.portfolio_data.type || 'Portfolio'}
                   </span>
                 )}
@@ -119,15 +125,15 @@ const {student, loading} = useStudent();
                 {Array.isArray(student.portfolio_data) &&
                   student.portfolio_data.map((item, idx) => (
                     (item.title || item.url || item.type) && (
-                      <span key={idx} className="inline-flex items-center text-[11px] font-black uppercase tracking-wider bg-blue-50 text-[#093fb4] border border-blue-100 px-3 py-1.5 rounded-md">
+                      <span key={idx} className="inline-flex items-center text-[10px] font-black uppercase tracking-[0.15em] bg-[#093fb4]/10 text-[#093fb4] border-2 border-[#093fb4]/20 px-3 py-2 rounded-xl">
                          {item.title || item.type || 'Link'}
                       </span>
                     )
                   ))}
 
                 {typeof student.portfolio_data === 'string' && student.portfolio_data.trim() !== '' && (
-                  <span className="inline-flex items-center text-[11px] font-black uppercase tracking-wider bg-blue-50 text-[#093fb4] border border-blue-100 px-3 py-1.5 rounded-md">
-                    Link
+                  <span className="inline-flex items-center text-[10px] font-black uppercase tracking-[0.15em] bg-[#093fb4]/10 text-[#093fb4] border-2 border-[#093fb4]/20 px-3 py-2 rounded-xl">
+                    Portfolio Link
                   </span>
                 )}
 
