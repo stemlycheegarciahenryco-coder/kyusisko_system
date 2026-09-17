@@ -32,7 +32,7 @@ router.post('/auth/logout', authCtrl.logout);
 // 2. STUDENT ACCOUNT MANAGEMENT
 // ==========================================
 
-router.put('/students/update-2fa', stdCtrl.update2FA);
+router.put('/students/update-2fa', verifyToken, isStudent,stdCtrl.update2FA);
 router.get('/students', stdCtrl.getAllStudents);
 router.put('/students/change-password', verifyToken, isStudent, stdCtrl.changePassword);
 router.patch('/students/:id/status', stdCtrl.updateStudentStatus);
@@ -42,7 +42,7 @@ router.get('/students/profile-full/me', verifyToken, isStudent, stdCtrl.getFullP
 router.get('/students/my-scholarships', verifyToken, isStudent, stdCtrl.getMyScholarships);
 router.get('/students/:id', stdCtrl.getStudentById);
 router.patch('/students/update-portfolio', verifyToken, isStudent, upload.array('files', 10), stdCtrl.updatePortfolio);
-router.put('/upload-profile/me', upload.single('profile_image'), stdCtrl.updateProfilePic);
+router.put('/upload-profile/me',verifyToken, isStudent, upload.single('profile_image'), stdCtrl.updateProfilePic);
 router.put('/students/parent-profile/me', verifyToken, isStudent, stdCtrl.saveOrUpdateParentProfile);
 router.put('/students/personal-info/me', verifyToken, isStudent, stdCtrl.updatePersonalInfo);
 

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, CheckCircle, Bell, User, ChevronLeft, ChevronRight } from 'lucide-react';
-// Make sure this path correctly points to your api setup
+import { Shield, CheckCircle, Bell, ChevronLeft, ChevronRight, CheckCheck } from 'lucide-react';
 import api from '../api'; 
 
 // ─── Helper Function: Time Ago ───────────────────────────────────────────────
@@ -43,7 +42,6 @@ function MiniCalendar({ programs = [] }) {
 
   return (
     <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col">
-      {/* Calendar Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-base font-black text-slate-900">
           {currentDate.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
@@ -58,14 +56,12 @@ function MiniCalendar({ programs = [] }) {
         </div>
       </div>
 
-      {/* Weekday Labels */}
       <div className="grid grid-cols-7 text-center text-xs font-black text-slate-400 uppercase mb-3">
         {['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'].map(day => (
           <div key={day}>{day}</div>
         ))}
       </div>
 
-      {/* Days Grid */}
       <div className="grid grid-cols-7 gap-1 text-center font-bold text-sm">
         {Array.from({ length: firstDay }).map((_, i) => (
           <div key={`empty-${i}`} className="p-2" />
@@ -101,29 +97,39 @@ export default function OrgRightBar({ programs = [] }) {
   const [conflicts, setConflicts] = useState([]);
   const [loadingConflicts, setLoadingConflicts] = useState(true);
 
-  const [activityLogs, setActivityLogs] = useState([]);
-  const [loadingLogs, setLoadingLogs] = useState(true);
+  const [notifications, setNotifications] = useState([]);
+  const [loadingNotifs, setLoadingNotifs] = useState(true);
 
   useEffect(() => {
     const fetchRightBarData = async () => {
       try {
-        // Fetch Conflicts
         const conflictsRes = await api.get('/organizations/conflicts');
         setConflicts(conflictsRes.data?.data || []);
         
-        // Fetch Dynamic Activity Logs
-        const logsRes = await api.get('/organizations/activity-logs');
-        setActivityLogs(logsRes.data?.data || []);
+        // Fetch Notifications instead of Activity Logs
+        const notifRes = await api.get('/notif/org');
+        setNotifications(notifRes.data?.data || []);
       } catch (err) {
         console.error("Error fetching right bar data:", err);
       } finally {
         setLoadingConflicts(false);
-        setLoadingLogs(false);
+        setLoadingNotifs(false);
       }
     };
     
     fetchRightBarData();
   }, []);
+
+  const handleMarkAllRead = async () => {
+    try {
+      await api.post('/notif/org/mark-read');
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    } catch (err) {
+      console.error("Error marking org notifications as read:", err);
+    }
+  };
+
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   return (
     <div className="space-y-6 flex flex-col h-full">
@@ -144,12 +150,11 @@ export default function OrgRightBar({ programs = [] }) {
           <div className="w-full space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
             {conflicts.map(c => (
               <div 
-                key={c.student_id} // Switched to student_id since we group by student now
+                key={c.student_id} 
                 className="p-3 bg-red-50/70 rounded-xl border border-red-200/80 text-left transition-colors"
               >
                 <p className="font-extrabold text-sm text-red-950">{c.sfirst_name} {c.slast_name}</p>
                 <p className="text-xs text-red-700 font-medium mt-0.5">
-                  {/* Using the pre-formatted display string from our backend update */}
                   {c.conflict_display} 
                 </p>
               </div>
@@ -166,63 +171,68 @@ export default function OrgRightBar({ programs = [] }) {
         )}
       </section>
 
-      {/* 3. Activity Log Section */}
+      {/* 3. Notifications Section */}
       <section className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex-1 flex flex-col">
         <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-          <h3 className="text-sm font-extrabold text-slate-900">Activity Log</h3>
-          <div className="flex items-center gap-2">
-            {activityLogs.length > 0 && (
-              <span className="bg-red-500 text-white text-xs font-black px-2 py-0.5 rounded-full">
-                {activityLogs.length > 99 ? '99+' : activityLogs.length}
+          <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+            Notifications
+            {unreadCount > 0 && (
+              <span className="bg-[#FF1E1E] text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+                {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
-            <button className="text-xs font-bold text-blue-600 hover:underline">View All</button>
-          </div>
+          </h3>
+          {unreadCount > 0 && (
+            <button 
+              onClick={handleMarkAllRead}
+              className="flex items-center gap-1 text-[10px] font-black uppercase text-blue-600 hover:text-blue-800 transition-colors tracking-wider"
+            >
+              <CheckCheck size={14} /> Mark Read
+            </button>
+          )}
         </div>
 
-        <div className="space-y-4 flex-1 max-h-[360px] overflow-y-auto pr-1">
-          {loadingLogs ? (
-            <div className="text-center text-xs font-bold text-slate-400 animate-pulse py-4">Loading logs...</div>
-          ) : activityLogs.length === 0 ? (
-             <div className="text-center text-xs font-medium text-slate-400 py-4">No recent activities</div>
+        <div className="space-y-3 flex-1 max-h-[360px] overflow-y-auto pr-1">
+          {loadingNotifs ? (
+            <div className="text-center text-xs font-bold text-slate-400 animate-pulse py-4">Loading notifications...</div>
+          ) : notifications.length === 0 ? (
+             <div className="text-center text-xs font-medium text-slate-400 py-4 flex flex-col items-center gap-2">
+               <Bell size={24} className="text-slate-300" />
+               No new notifications
+             </div>
           ) : (
-            activityLogs.slice(0, 15).map((log) => (
-              <ActivityItem 
-                key={log.id}
-                user={log.user} 
-                detail={log.detail} 
-                time={timeAgo(log.createdAt)} 
-                role={log.role} 
+            notifications.slice(0, 15).map((notif) => (
+              <NotifItem 
+                key={notif.id}
+                title={notif.title} 
+                message={notif.message} 
+                time={timeAgo(notif.created_at)} 
+                isRead={notif.is_read} 
               />
             ))
           )}
         </div>
-
-        <p className="text-xs font-bold text-slate-400 text-center mt-4">Showing latest activities</p>
       </section>
 
     </div>
   );
 }
 
-// ─── Dynamic Activity Item Component ───────────────────────────────────────────
-function ActivityItem({ user, detail, time, role }) {
-  // Identify if this log was triggered by a student application/renewal
-  const isStudent = role === 'Student';
-
+// ─── Dynamic Notification Item Component ───────────────────────────────────────
+function NotifItem({ title, message, time, isRead }) {
   return (
-    <div className="flex items-start gap-3 text-xs md:text-sm">
-      <div className={`p-2 rounded-lg shrink-0 mt-0.5 ${
-        isStudent ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'
-      }`}>
-        {/* Different icons for student actions vs admin actions */}
-        {isStudent ? <Bell size={15} /> : <User size={15} />}
+    <div className={`flex items-start gap-3 p-3 rounded-xl transition-all border ${!isRead ? 'bg-blue-50/50 border-blue-100 shadow-sm' : 'bg-transparent border-transparent hover:bg-slate-50'}`}>
+      <div className={`p-2 rounded-lg shrink-0 mt-0.5 ${!isRead ? 'bg-blue-100 text-[#093fb4]' : 'bg-slate-100 text-slate-400'}`}>
+        <Bell size={16} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-slate-700 leading-snug">
-          <span className="font-extrabold text-slate-900">{user}</span> {detail}
+        <p className={`text-xs leading-tight tracking-tight ${!isRead ? 'font-black text-slate-900' : 'font-bold text-slate-700'}`}>
+          {title}
         </p>
-        <span className="text-xs font-semibold text-slate-400 mt-1 block">{time}</span>
+        <p className={`text-[11px] leading-relaxed mt-1 ${!isRead ? 'text-slate-800 font-semibold' : 'text-slate-500 font-medium'}`}>
+          {message}
+        </p>
+        <span className="text-[10px] font-bold text-slate-400 mt-1.5 block uppercase tracking-widest">{time}</span>
       </div>
     </div>
   );

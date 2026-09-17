@@ -24,6 +24,7 @@ router.post('/:appId/comply-submit', verifyToken, isStudent, upload.array('files
 
 // student view — full history for one of their own applications
 // (files, compliance, renewal, receipts — notes come from /comments/:appId)
+router.post('/comments/:appId', verifyToken, application.postApplicationComment);
 router.get('/:appId/my-history', verifyToken, isStudent, application.getMyApplicationHistory);
 router.delete('/scholarship/:id/applications/:appId', verifyToken, isSubAdmin, application.deleteScholarshipApplication);
 

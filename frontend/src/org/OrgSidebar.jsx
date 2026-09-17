@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, Form, LucideScroll, 
-  LogOut, User, Menu, Logs, Flag, Settings 
+  LogOut, User, Menu, Logs, Flag, Settings, Archive 
 } from 'lucide-react';
 import api from '../api';
 import LogoutModal from '../component/LogoutModal';
@@ -32,11 +32,13 @@ export default function OrgSidebar() {
   const menuItems = [
     { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/OrgDashboard' },
     { name: 'Manage Programs', icon: <LucideScroll size={20} />, path: '/ProgramView' },
+    
     { name: 'Manage Students', icon: <Form size={20} />, path: '/OrgApplicantPrograms' }, 
     { name: 'Profile', icon: <User size={20} />, path: '/OrgProfile' }, 
     { name: 'Reports', icon: <Flag size={20} />, path: '/OrgReports' },
     { name: 'Settings', icon: <Settings size={20} />, path: '/OrgSettings' },
     { name: 'Logs', icon: <Logs size={20} />, path: '/OrgLogs' },
+    { name: 'Archive', icon: <Archive size={20} />, path: '/OrgArchive' },
   ];
 
   return ( 

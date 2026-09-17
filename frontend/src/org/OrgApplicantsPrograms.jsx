@@ -29,12 +29,13 @@ const C = {
   closedBorder:'#fee2e2', // red-100
 };
 
-// Programs on this page are only ever Active or Closed — drafts are
-// hidden entirely, and a past-deadline program counts as Closed, same
-// as ScholarshipManager's unified status logic.
+// Programs on this page are only ever Active or Closed — drafts and
+// archived programs are hidden entirely, and a past-deadline program
+// counts as Closed, same as ScholarshipManager's unified status logic.
 const getDisplayStatus = (rawStatus) => {
   const s = rawStatus?.toLowerCase();
   if (s === 'draft') return 'draft';
+  if (s === 'archived') return 'archived';
   if (s === 'closed' || s === 'deadline_passed') return 'closed';
   return 'active';
 };
@@ -53,7 +54,11 @@ export default function OrgApplicantPrograms() {
         // ✅ Updated to secure /me endpoint
         const res = await api.get('/organizations/dashboard-programs/me');
         const allPrograms = res.data.data || res.data || [];
-        setPrograms(allPrograms.filter(p => getDisplayStatus(p.status) !== 'draft'));
+        setPrograms(
+          allPrograms.filter(p =>
+            !p.is_archived && getDisplayStatus(p.status) !== 'draft' && getDisplayStatus(p.status) !== 'archived'
+          )
+        );
       } catch (err) {
         console.error("Failed to fetch programs", err);
       } finally {

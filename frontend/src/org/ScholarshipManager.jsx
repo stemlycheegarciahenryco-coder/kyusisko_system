@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Plus, Eye, Trash2, Edit3, PowerOff, CheckCircle2, 
+  Plus, Eye, Edit3, PowerOff, CheckCircle2, 
   ChevronLeft, ChevronRight, Calendar, DollarSign, GraduationCap, 
   Search, SlidersHorizontal, MoreHorizontal, Folder, CheckCircle, 
-  FileText, XCircle 
+  FileText, XCircle, Archive 
 } from 'lucide-react';
 import api from '../api';
 import ViewProgram from '../component/ViewProgram';
@@ -24,7 +24,7 @@ export default function ScholarshipManager() {
   const [editModal, setEditModal] = useState(null);
   const [publishConfirm, setPublishConfirm] = useState({ show: false, id: null });
   const [closeConfirm, setCloseConfirm] = useState({ show: false, id: null });
-  const [deleteConfirm, setDeleteConfirm] = useState({ show: false, id: null });
+  const [archiveConfirm, setArchiveConfirm] = useState({ show: false, id: null });
   const [menuOpenId, setMenuOpenId] = useState(null);
 
   const CARDS_PER_PAGE = 6;
@@ -79,13 +79,13 @@ export default function ScholarshipManager() {
     setCurrentPage(0);
   };
 
-  const handleDeleteAction = async () => {
+  const handleArchiveAction = async () => {
     try {
-      await api.delete(`/scholarships/${deleteConfirm.id}`);
+      await api.delete(`/scholarships/${archiveConfirm.id}`);
       fetchScholarships();
-      setDeleteConfirm({ show: false, id: null });
+      setArchiveConfirm({ show: false, id: null });
     } catch (err) {
-      console.error('Delete error', err);
+      console.error('Archive error', err);
     }
   };
 
@@ -112,7 +112,7 @@ export default function ScholarshipManager() {
   const cancelAll = () => {
     setPublishConfirm({ show: false, id: null });
     setCloseConfirm({ show: false, id: null });
-    setDeleteConfirm({ show: false, id: null });
+    setArchiveConfirm({ show: false, id: null });
   };
 
   return (
@@ -287,12 +287,12 @@ export default function ScholarshipManager() {
                             {(badgeType === 'draft' || badgeType === 'closed') ? (
                               <button
                                 onClick={() => {
-                                  setDeleteConfirm({ show: true, id: s.id });
+                                  setArchiveConfirm({ show: true, id: s.id });
                                   setMenuOpenId(null);
                                 }}
-                                className="w-full flex items-center gap-3 px-4 py-3 text-xs font-black uppercase tracking-widest text-red-600 hover:bg-red-50 transition-colors"
+                                className="w-full flex items-center gap-3 px-4 py-3 text-xs font-black uppercase tracking-widest text-amber-700 hover:bg-amber-50 transition-colors"
                               >
-                                <Trash2 size={16} stroke={2.5} /> Delete
+                                <Archive size={16} stroke={2.5} /> Archive
                               </button>
                             ) : (
                               <p className="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-widest text-center">
@@ -374,7 +374,7 @@ export default function ScholarshipManager() {
     View
   </button>
 
-  {/* DRAFT: Edit, Publish, Delete */}
+  {/* DRAFT: Edit, Publish, Archive */}
   {badgeType === 'draft' && (
     <>
       <button 
@@ -390,10 +390,10 @@ export default function ScholarshipManager() {
         Publish
       </button>
       <button 
-        onClick={() => setDeleteConfirm({ show: true, id: s.id })}
-        className="flex-1 bg-red-50 text-red-700 border-2 border-red-200 hover:bg-red-100 font-black text-xs uppercase tracking-widest py-3.5 rounded-2xl transition-colors"
+        onClick={() => setArchiveConfirm({ show: true, id: s.id })}
+        className="flex-1 bg-amber-50 text-amber-700 border-2 border-amber-200 hover:bg-amber-100 font-black text-xs uppercase tracking-widest py-3.5 rounded-2xl transition-colors"
       >
-        Delete
+        Archive
       </button>
     </>
   )}
@@ -408,13 +408,13 @@ export default function ScholarshipManager() {
     </button>
   )}
 
-  {/* CLOSED: Delete */}
+  {/* CLOSED: Archive */}
   {badgeType === 'closed' && (
     <button 
-      onClick={() => setDeleteConfirm({ show: true, id: s.id })}
-      className="flex-1 bg-red-50 text-red-700 border-2 border-red-200 hover:bg-red-100 font-black text-xs uppercase tracking-widest py-3.5 rounded-2xl transition-colors"
+      onClick={() => setArchiveConfirm({ show: true, id: s.id })}
+      className="flex-1 bg-amber-50 text-amber-700 border-2 border-amber-200 hover:bg-amber-100 font-black text-xs uppercase tracking-widest py-3.5 rounded-2xl transition-colors"
     >
-      Delete
+      Archive
     </button>
   )}
 </div>
@@ -478,18 +478,21 @@ export default function ScholarshipManager() {
       )}
 
       {/* ── UNIFIED CONFIRM DIALOG SYSTEM ── */}
-      {(publishConfirm.show || closeConfirm.show || deleteConfirm.show) && (() => {
+      {(publishConfirm.show || closeConfirm.show || archiveConfirm.show) && (() => {
         const isPublish = publishConfirm.show;
-        const isDelete = deleteConfirm.show;
-        const iconBg = isPublish ? 'bg-emerald-100 text-emerald-600 border-emerald-200' : 'bg-red-100 text-red-600 border-red-200';
+        const isArchive = archiveConfirm.show;
+        const iconBg = isPublish
+          ? 'bg-emerald-100 text-emerald-600 border-emerald-200'
+          : isArchive ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-red-100 text-red-600 border-red-200';
         const icon = isPublish
           ? <CheckCircle2 size={32} strokeWidth={2.5} />
-          : isDelete ? <Trash2 size={32} strokeWidth={2.5} /> : <PowerOff size={32} strokeWidth={2.5} />;
-        const title = isPublish ? 'Publish this program?' : isDelete ? 'Delete this program?' : 'Close this program?';
+          : isArchive ? <Archive size={32} strokeWidth={2.5} /> : <PowerOff size={32} strokeWidth={2.5} />;
+        const title = isPublish ? 'Publish this program?' : isArchive ? 'Archive this program?' : 'Close this program?';
         const desc = isPublish ? 'It will become visible to all eligible students.'
-          : isDelete ? 'This action is permanent and cannot be undone.' : 'Students will no longer be able to apply.';
-        const confirmBg = isPublish ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700';
-        const onConfirm = isPublish ? handlePublishAction : isDelete ? handleDeleteAction : handleCloseAction;
+          : isArchive ? "It'll move to the Archive along with its students. You can restore it anytime, or delete it permanently from there."
+          : 'Students will no longer be able to apply.';
+        const confirmBg = isPublish ? 'bg-emerald-600 hover:bg-emerald-700' : isArchive ? 'bg-amber-600 hover:bg-amber-700' : 'bg-red-600 hover:bg-red-700';
+        const onConfirm = isPublish ? handlePublishAction : isArchive ? handleArchiveAction : handleCloseAction;
 
         return (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
@@ -514,7 +517,7 @@ export default function ScholarshipManager() {
                   onClick={onConfirm}
                   className={`flex-1 py-4 text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl transition-all shadow-lg active:scale-95 ${confirmBg}`}
                 >
-                  {isDelete ? 'Delete' : 'Confirm'}
+                  {isArchive ? 'Archive' : 'Confirm'}
                 </button>
               </div>
             </div>

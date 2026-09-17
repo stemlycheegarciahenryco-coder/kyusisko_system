@@ -18,7 +18,6 @@ export default function ScholarshipList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // ⚙️ State structure to handle multiple checkboxes and other reasons
   const [reportModal, setReportModal] = useState({ 
     open: false, 
     id: null, 
@@ -61,7 +60,6 @@ export default function ScholarshipList() {
     }
   };
 
-  // 🔄 Handles toggling individual reason checkboxes
   const handleCheckboxChange = (reason) => {
     setReportModal(prev => {
       const exists = prev.selectedReasons.includes(reason);
@@ -72,7 +70,6 @@ export default function ScholarshipList() {
     });
   };
 
-  // 🟦 Handles the embedded Select All checkbox toggle
   const handleSelectAll = () => {
     if (reportModal.selectedReasons.length === PREDEFINED_REPORTS.length) {
       setReportModal(prev => ({ ...prev, selectedReasons: [] }));
@@ -81,7 +78,6 @@ export default function ScholarshipList() {
     }
   };
 
-  // 🚀 Combines checkboxes + text area details and submits report
   const submitReport = async () => {
     const finalReasons = [...reportModal.selectedReasons];
     if (reportModal.otherReason.trim()) {
@@ -108,21 +104,21 @@ export default function ScholarshipList() {
   const renderContent = () => {
     if (loading) {
       return (
-        <div className="text-center font-black text-slate-400 animate-pulse py-20 uppercase tracking-widest text-xs">
-          Scholarship Programs for you...
+        <div className="text-center font-black text-black/40 animate-pulse py-20 uppercase tracking-[0.2em] text-xs">
+          Searching Programs for you...
         </div>
       );
     }
 
     if (error) {
       return (
-        <div className="flex flex-col items-center gap-3 py-20 text-center">
-          <AlertTriangle size={32} className="text-red-400" />
-          <p className="font-black text-slate-700 uppercase tracking-widest text-xs">Failed to Load</p>
-          <p className="text-slate-400 text-xs max-w-xs">{error}</p>
+        <div className="flex flex-col items-center gap-4 py-20 text-center">
+          <AlertTriangle size={40} className="text-red-500" strokeWidth={2.5} />
+          <p className="font-black text-black uppercase tracking-[0.2em] text-sm">Failed to Load</p>
+          <p className="text-black/50 text-xs font-bold max-w-xs leading-relaxed">{error}</p>
           <button
             onClick={fetchScholarships}
-            className="mt-2 px-6 py-2.5 bg-[#093fb4] text-white font-black rounded-xl uppercase text-[12px] tracking-widest hover:bg-[#FF1E1E] transition-all"
+            className="mt-4 px-8 py-3 bg-[#093fb4] text-white font-black rounded-xl uppercase text-xs tracking-[0.2em] hover:bg-[#073496] active:scale-95 transition-all shadow-lg"
           >
             Retry
           </button>
@@ -132,10 +128,10 @@ export default function ScholarshipList() {
 
     if (scholarships.length === 0) {
       return (
-        <div className="flex flex-col items-center gap-3 py-20 text-center">
-          <CheckCircle2 size={32} className="text-slate-300" />
-          <p className="font-black text-slate-400 uppercase tracking-widest text-xs">No Scholarships Available</p>
-          <p className="text-slate-400 text-xs max-w-xs">
+        <div className="flex flex-col items-center gap-4 py-24 text-center bg-white/40 border-2 border-dashed border-white/80 rounded-[2.5rem]">
+          <CheckCircle2 size={48} className="text-black/20" strokeWidth={2} />
+          <p className="font-black text-black/50 uppercase tracking-[0.2em] text-sm">No Scholarships Available</p>
+          <p className="text-black/40 text-xs font-bold max-w-xs leading-relaxed">
             Check back later — new programs are added regularly.
           </p>
         </div>
@@ -143,105 +139,103 @@ export default function ScholarshipList() {
     }
 
     return (
-      <div className="space-y-5">
+      <div className="space-y-6 font-['Inter']">
         {scholarships.map((s) => {
           return (
             <div
               key={s.id}
-              className={`bg-white rounded-3xl border shadow-sm p-6 transition-all hover:shadow-md relative overflow-hidden ${
-                s.is_best_match ? 'border-[#093fb4]/40 shadow-blue-900/5 ring-1 ring-[#093fb4]/10' : 'border-black/5'
+              className={`bg-white/80 backdrop-blur-xl rounded-[2.5rem] border-2 shadow-xl p-8 md:p-10 transition-all hover:shadow-2xl relative overflow-hidden ${
+                s.is_best_match ? 'border-[#093fb4] shadow-blue-900/10' : 'border-white/80'
               }`}
             >
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-6">
                 
                 {/* Org header & Top Right Corner (Provider Type + 3-Dot Report Icon) */}
-                <div className="flex items-start justify-between gap-4 mb-4">
+                <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-5">
-                    {/* Increased image circle size to w-24 h-24 */}
-                    <div className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center bg-white border-2 border-slate-100 shadow-sm shrink-0">
+                    <div className="w-20 h-20 rounded-2xl overflow-hidden flex items-center justify-center bg-black/5 border-2 border-black/5 shadow-inner shrink-0">
                       {s.org_pic ? (
                         <img src={s.org_pic} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <span className="text-3xl font-black text-slate-300">
+                        <span className="text-3xl font-black text-black/30">
                           {s.org_name?.substring(0, 2).toUpperCase()}
                         </span>
                       )}
                     </div>
                     
                     <div className="flex flex-col justify-center gap-2">
-                      <h1 className="text-[#093fb4] text-xl md:text-2xl font-black uppercase tracking-tight leading-tight">
+                      <h1 className="text-[#093fb4] text-2xl font-black uppercase tracking-tight leading-none">
                         {s.org_name}
                       </h1>
-                      {/* UPDATED: Provider Type Badge aligned with Provider Name */}
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50/60 border border-blue-100 rounded-xl text-[#093fb4] font-extrabold text-xs uppercase tracking-wider w-fit">
-                        <Building2Icon size={14} /> {s.provider_type || 'N/A'}
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#093fb4]/10 border-2 border-[#093fb4]/20 rounded-xl text-[#093fb4] font-black text-[10px] uppercase tracking-[0.2em] w-fit">
+                        <Building2Icon size={14} strokeWidth={2.5} /> {s.provider_type || 'N/A'}
                       </div>
                     </div>
                   </div>
 
-                  {/* Top Right Corner: 3-Dot Report Button only */}
                   <div className="flex items-center">
                     <button 
                       onClick={() => setReportModal({ open: true, id: s.id, selectedReasons: [], otherReason: '' })} 
-                      className="p-2 rounded-xl bg-slate-50 text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all border border-slate-100"
+                      className="p-3 rounded-2xl bg-black/5 text-black/40 hover:text-red-600 hover:bg-red-50 transition-all border-2 border-transparent"
                       title="Report this scholarship"
                     >
-                      <MoreVertical size={18} />
+                      <MoreVertical size={20} strokeWidth={2.5} />
                     </button>
                   </div>
                 </div>
 
-                {/* UPDATED: Matched criteria centered */}
+                {/* Matched criteria centered */}
                 {s.matched_criteria?.length > 0 && (
                   <div className="flex flex-wrap justify-center gap-2 pt-2">
                     {s.matched_criteria.map((c, idx) => (
                       <span
                         key={`matched-${idx}`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold bg-green-50 text-green-700 border border-green-200"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-green-500/10 text-green-700 border-2 border-green-500/20"
                       >
-                        <CheckCircle2 size={13} />
+                        <CheckCircle2 size={14} strokeWidth={3} />
                         {c}
                       </span>
                     ))}
                   </div>
                 )}
 
-                {/* UPDATED: Title (Program Name) directly below criteria - CENTERED */}
-                <div className="flex flex-col items-center justify-center pb-1 text-center">
-                  <h3 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight tracking-tight max-w-2xl">
+                {/* Title (Program Name) directly below criteria - CENTERED */}
+                <div className="flex flex-col items-center justify-center text-center">
+                  <h3 className="text-3xl md:text-4xl font-black text-black leading-tight tracking-tight max-w-2xl uppercase">
                     {s.title}
                   </h3>
                 </div>
 
-                {/* UPDATED: Deadline (Black text, non-horizontal layout) - CENTERED */}
-                <div className="flex items-center justify-center gap-2 text-slate-900 font-bold text-xs uppercase tracking-wider">
-                  <Calendar size={15} className="text-slate-500" />
+                {/* PROMINENT RED DEADLINE */}
+                <div className="flex items-center justify-center gap-2 text-red-600 font-black text-xs uppercase tracking-[0.2em] bg-red-50 py-3 px-6 rounded-2xl border-2 border-red-200 w-fit mx-auto mt-2 mb-2 shadow-sm">
+                  <Calendar size={18} strokeWidth={2.5} />
                   <span>
                     Deadline: {new Date(s.deadline).toLocaleDateString('en-US', {
-                      month: 'long', day: 'numeric', year: 'numeric'
+                      month: 'short', day: '2-digit', year: 'numeric'
                     })}
                   </span>
                 </div>
 
                 {/* Description */}
-                <div className="p-5 bg-slate-50/50 rounded-2xl border border-slate-100 w-full mt-2">
-                  <p className="text-sm text-slate-800 leading-relaxed text-justify line-clamp-3 font-medium">
-                    {s.description || "No description provided for this scholarship."}
+                <div className="p-6 bg-black/5 rounded-2xl border-2 border-transparent w-full">
+                  <p className="text-sm text-black/70 leading-relaxed text-justify line-clamp-3 font-bold italic">
+                    "{s.description || "No description provided for this scholarship."}"
                   </p>
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-3 pt-2">
+                <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t-2 border-black/5">
                   <button 
                     onClick={() => handleSaveToggle(s.id, s.is_saved)}
-                    className={`flex-none px-8 py-4 font-black rounded-2xl flex items-center justify-center gap-2 uppercase text-[12px] tracking-widest transition-all ${
+                    className={`flex-none px-8 py-4 font-black rounded-2xl flex items-center justify-center gap-2 uppercase text-xs tracking-[0.2em] transition-all border-2 ${
                       s.is_saved 
-                        ? 'bg-[#093fb4] text-white shadow-lg shadow-blue-900/20' 
-                        : 'bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-[#093fb4]'
+                        ? 'bg-[#093fb4] border-[#093fb4] text-white shadow-xl shadow-[#093fb4]/25' 
+                        : 'bg-white/60 border-black/10 text-black/60 hover:border-[#093fb4]/50 hover:text-[#093fb4] hover:bg-white'
                     }`}
                   >
                     <Bookmark 
-                      size={16} 
+                      size={18} 
+                      strokeWidth={2.5}
                       fill={s.is_saved ? "white" : "none"} 
                       className={s.is_saved ? "animate-in zoom-in duration-300" : ""}
                     /> 
@@ -250,9 +244,9 @@ export default function ScholarshipList() {
                   
                   <button 
                     onClick={() => navigate(`/apply/${s.id}`)}
-                    className="flex-1 bg-[#093fb4] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 uppercase text-[12px] tracking-widest hover:bg-[#FF1E1E] transition-all shadow-lg shadow-blue-900/10"
+                    className="flex-1 bg-[#093fb4] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 uppercase text-xs tracking-[0.2em] hover:bg-[#073496] transition-all shadow-xl shadow-[#093fb4]/25 active:scale-95"
                   >
-                    View and Apply <ArrowRight size={14} />
+                    View and Apply <ArrowRight size={18} strokeWidth={2.5} />
                   </button>
                 </div>
               </div>
@@ -270,66 +264,69 @@ export default function ScholarshipList() {
       {/* 🛡️ MULTI-CHECKBOX REPORT MODAL */}
       {reportModal.open && (
         <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 font-['Inter']"
           onClick={() => setReportModal({ open: false, id: null, selectedReasons: [], otherReason: '' })}
         >
+          {/* 
+              FIXED: Reduced max-w-xl to max-w-lg (narrower). 
+              Added max-h-[90vh] overflow-y-auto to guarantee it never stretches off-screen.
+              Reduced padding to p-6 md:p-8 
+          */}
           <div 
-            className="bg-white w-full max-w-lg rounded-3xl p-8 shadow-2xl animate-in fade-in zoom-in duration-200"
+            className="bg-white w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-[2rem] p-6 md:p-8 shadow-2xl border-4 border-black/5 animate-in fade-in zoom-in-95 duration-200 custom-scrollbar"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center mb-5">
-              <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Report Program</h2>
+            <div className="flex justify-between items-start mb-4">
+              <h2 className="text-2xl font-black text-black uppercase tracking-tight leading-none">Report Program</h2>
               <button 
                 onClick={() => setReportModal({ open: false, id: null, selectedReasons: [], otherReason: '' })} 
-                className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
+                className="w-10 h-10 rounded-2xl bg-black/5 flex items-center justify-center text-black/40 hover:text-red-600 hover:bg-red-50 transition-all border-2 border-transparent shrink-0"
               >
-                <X size={20} className="text-slate-700" />
+                <X size={20} strokeWidth={2.5} />
               </button>
             </div>
 
-            {/* Checklist Label Header */}
-            <div className="mb-3 pb-2 border-b border-slate-100">
-              <p className="text-slate-700 text-[11px] font-black uppercase tracking-wider">Select reasons for reporting</p>
+            <div className="mb-4 pb-2 border-b-2 border-black/5">
+              <p className="text-black/50 text-[10px] font-black uppercase tracking-[0.2em]">Select reasons for reporting</p>
             </div>
 
-            {/* Interactive Checkbox Layout List */}
-            <div className="space-y-2 mb-5 max-h-[250px] overflow-y-auto pr-1">
+            {/* FIXED: Reduced list max-height to max-h-[200px] */}
+            <div className="space-y-3 mb-6 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
               
-              {/* 🔄 Embedded Select All Checkbox Row */}
               <label 
-                className={`flex items-start gap-3 p-3 rounded-xl border text-xs font-black cursor-pointer transition-all ${
+                className={`flex items-start gap-4 p-4 rounded-2xl border-2 text-xs font-black cursor-pointer transition-all ${
                   isAllSelected 
-                    ? 'bg-[#093fb4]/5 border-[#093fb4] text-[#093fb4]' 
-                    : 'bg-slate-50 border-slate-200 text-slate-800 hover:border-slate-300'
+                    ? 'bg-[#093fb4]/10 border-[#093fb4] text-[#093fb4]' 
+                    : 'bg-black/5 border-transparent text-black/70 hover:border-black/10'
                 }`}
               >
                 <input 
                   type="checkbox" 
                   checked={isAllSelected}
                   onChange={handleSelectAll}
-                  className="mt-0.5 rounded border-slate-300 text-[#093fb4] focus:ring-[#093fb4] h-4 w-4 shrink-0 cursor-pointer"
+                  className="mt-0.5 rounded border-black/20 text-[#093fb4] focus:ring-[#093fb4] h-5 w-5 shrink-0 cursor-pointer"
                 />
-                <span className="leading-tight select-none uppercase tracking-wider text-[11px]">Select All Reasons</span>
+                <span className="leading-tight select-none uppercase tracking-wider">Select All Reasons</span>
               </label>
 
-              <div className="border-t border-slate-100 my-1" />
+              <div className="border-t-2 border-black/5 my-2" />
 
               {PREDEFINED_REPORTS.map((reason, index) => {
                 const isChecked = reportModal.selectedReasons.includes(reason);
                 return (
                   <label 
                     key={index} 
-                    className={`flex items-start gap-3 p-3 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+                    className={`flex items-start gap-4 p-4 rounded-2xl border-2 text-xs font-bold cursor-pointer transition-all ${
                       isChecked 
-                        ? 'bg-blue-50/40 border-[#093fb4] text-[#093fb4]' 
-                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300'
+                        ? 'bg-[#093fb4]/10 border-[#093fb4] text-[#093fb4]' 
+                        : 'bg-black/5 border-transparent text-black/70 hover:border-black/10'
                     }`}
                   >
                     <input 
                       type="checkbox" 
                       checked={isChecked}
                       onChange={() => handleCheckboxChange(reason)}
-                      className="mt-0.5 rounded border-slate-300 text-[#093fb4] focus:ring-[#093fb4] h-4 w-4 shrink-0 cursor-pointer"
+                      className="mt-0.5 rounded border-black/20 text-[#093fb4] focus:ring-[#093fb4] h-5 w-5 shrink-0 cursor-pointer"
                     />
                     <span className="leading-tight select-none">{reason}</span>
                   </label>
@@ -337,26 +334,25 @@ export default function ScholarshipList() {
               })}
             </div>
 
-            {/* Optional Additional Textarea description */}
-            <p className="text-slate-700 text-[11px] font-black uppercase tracking-wider mb-2">Other Details / Specific Reasons</p>
+            <p className="text-black/50 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Other Details / Specific Reasons</p>
+            {/* FIXED: Reduced textarea height slightly to save space */}
             <textarea 
-              className="w-full h-24 p-4 rounded-2xl bg-slate-50 border border-slate-200 focus:ring-2 focus:ring-[#093fb4] focus:outline-none text-sm font-semibold mb-6 resize-none"
+              className="w-full h-24 p-5 rounded-2xl bg-black/5 border-2 border-transparent focus:border-[#093fb4] focus:bg-white text-sm font-bold text-black placeholder-black/30 transition-all outline-none resize-none mb-6 shadow-sm"
               placeholder="Provide additional details or specify other reasons here..."
               value={reportModal.otherReason}
               onChange={(e) => setReportModal({ ...reportModal, otherReason: e.target.value })}
             />
 
-            {/* Form actions */}
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button 
                 onClick={() => setReportModal({ open: false, id: null, selectedReasons: [], otherReason: '' })}
-                className="flex-1 py-4 bg-slate-100 text-slate-600 font-black rounded-2xl uppercase text-[12px] tracking-widest hover:bg-slate-200 transition-all"
+                className="flex-1 py-3.5 bg-black/5 text-black/60 hover:bg-black/10 font-black rounded-2xl uppercase text-xs tracking-[0.2em] transition-colors"
               >
                 Cancel
               </button>
               <button 
                 onClick={submitReport}
-                className="flex-[2] py-4 bg-red-600 text-white font-black rounded-2xl uppercase text-[12px] tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-900/20"
+                className="flex-[2] py-3.5 bg-red-600 text-white font-black rounded-2xl uppercase text-xs tracking-[0.2em] hover:bg-red-700 transition-all shadow-xl shadow-red-900/20 active:scale-95"
               >
                 Submit Report
               </button>
@@ -365,7 +361,7 @@ export default function ScholarshipList() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_260px] gap-6 items-start w-full">
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_260px] gap-8 items-start w-full">
         <main className="w-full min-w-0">
           {renderContent()}
         </main>

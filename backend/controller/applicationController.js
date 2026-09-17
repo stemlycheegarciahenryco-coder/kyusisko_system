@@ -529,24 +529,18 @@ const submitComplianceDocuments = async (req, res) => {
 
     await client.query('BEGIN');
 
-    // Save uploaded files as new application_submissions
     if (req.files && req.files.length > 0) {
       for (let index = 0; index < req.files.length; index++) {
         const file = req.files[index];
         const fileExtension = file.originalname.split('.').pop();
         const bucketPath = `compliance_app_${appId}/${Date.now()}_${index}.${fileExtension}`;
 
-        // ☁️ 1. Upload to Supabase
         const { error: uploadError } = await supabaseAdmin.storage
           .from('application-scholarship-document')
-          .upload(bucketPath, file.buffer, {
-            contentType: file.mimetype,
-            upsert: true
-          });
+          .upload(bucketPath, file.buffer, { contentType: file.mimetype, upsert: true });
 
         if (uploadError) throw uploadError;
 
-        // 🔒 2. Generate signed URL
         const { data: signedUrlData, error: urlError } = await supabaseAdmin.storage
           .from('application-scholarship-document')
           .createSignedUrl(bucketPath, 31536000);
@@ -561,7 +555,6 @@ const submitComplianceDocuments = async (req, res) => {
       }
     }
 
-    // Mark compliance as submitted
     if (compliance_id) {
       await client.query(
         `UPDATE compliance_requests SET status = 'submitted' WHERE id = $1`,
@@ -569,10 +562,31 @@ const submitComplianceDocuments = async (req, res) => {
       );
     }
 
-    // Update application back to pending for org review
-    await client.query(
-      `UPDATE applications SET status = 'pending' WHERE id = $1`, [appId]
+    await client.query(`UPDATE applications SET status = 'pending' WHERE id = $1`, [appId]);
+
+    // ─── ADDED: FETCH INFO AND NOTIFY ORG ───
+    const appInfo = await client.query(
+      `SELECT s.sub_admin_id, s.title, st.sfirst_name, st.slast_name
+       FROM applications a
+       JOIN scholarships s ON a.scholarship_id = s.id
+       JOIN students st ON a.student_id = st.id
+       WHERE a.id = $1`, 
+      [appId]
     );
+
+    if (appInfo.rows.length > 0) {
+      const { sub_admin_id, title, sfirst_name, slast_name } = appInfo.rows[0];
+      await client.query(
+        `INSERT INTO notifications (org_id, student_id, title, message, application_id, is_read, created_at)
+         VALUES ($1, NULL, $2, $3, $4, FALSE, CURRENT_TIMESTAMP)`,
+        [
+          sub_admin_id, 
+          'Compliance Submitted', 
+          `${sfirst_name} ${slast_name} submitted compliance documents for "${title}".`, 
+          appId
+        ]
+      );
+    }
 
     await client.query('COMMIT');
     res.status(200).json({ success: true, message: 'Compliance documents submitted.' });
@@ -582,6 +596,57 @@ const submitComplianceDocuments = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   } finally {
     client.release();
+  }
+};
+// POST /comments/:appId — Add a note/comment to the application timeline
+const postApplicationComment = async (req, res) => {
+  try {
+    const { appId } = req.params;
+    const { sender_role, sender_id, comment_text } = req.body;
+
+    // 1. Insert the comment into your database
+    const result = await pool.query(
+      `INSERT INTO application_comments (application_id, sender_role, sender_id, comment_text, created_at)
+       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP) 
+       RETURNING *`,
+      [appId, sender_role, sender_id, comment_text]
+    );
+
+    const newComment = result.rows[0];
+
+    // 2. ─── FIRE NOTIFICATION TO ORG IF A STUDENT REPLIES ───
+    if (sender_role === 'student') {
+      const appInfo = await pool.query(
+        `SELECT s.sub_admin_id, s.title, st.sfirst_name, st.slast_name
+         FROM applications a
+         JOIN scholarships s ON a.scholarship_id = s.id
+         JOIN students st ON a.student_id = st.id
+         WHERE a.id = $1`, 
+        [appId]
+      );
+
+      if (appInfo.rows.length > 0) {
+        const { sub_admin_id, title, sfirst_name, slast_name } = appInfo.rows[0];
+        
+        // Notice student_id is NULL so it correctly routes to the Org's Right Bar
+        await pool.query(
+          `INSERT INTO notifications (org_id, student_id, title, message, application_id, is_read, created_at)
+           VALUES ($1, NULL, $2, $3, $4, FALSE, CURRENT_TIMESTAMP)`,
+          [
+            sub_admin_id, 
+            'New Application Note', 
+            `${sfirst_name} ${slast_name} sent a new message regarding "${title}".`, 
+            appId
+          ]
+        );
+      }
+    }
+
+    // 3. Return the saved comment to the frontend timeline
+    res.status(200).json({ success: true, comment: newComment });
+  } catch (err) {
+    console.error("Post Comment Error:", err.message);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
@@ -691,6 +756,7 @@ module.exports = {
   getScholarshipDetails,
   getScholarshipApplications,
   deleteScholarshipApplication,
+  postApplicationComment,
   getApplicationDetail,
   updateApplicationStatus,
   sendComplianceRequest,

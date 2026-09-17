@@ -12,6 +12,10 @@ router.post('/', upload.array('attachments'), scholarship.createScholarship);
 
 //might delete this org historr
 router.get('/get-all', scholarship.getScholarships);
+
+// Archive module — archived programs + the students inside them
+router.get('/archived/get-all', scholarship.getArchivedScholarships);
+
 router.get('/view-details/:id', scholarship.getScholarshipById);
 
 // If you want to allow file updates later, add it here too:
@@ -24,6 +28,10 @@ router.delete('/:id', scholarship.deleteScholarship);
 
 // Undo an archive/delete
 router.patch('/:id/restore', scholarship.restoreScholarship);
+
+// Permanently delete an archived program — irreversible, only allowed
+// once the program is already archived (enforced in the controller).
+router.delete('/:id/permanent', scholarship.permanentlyDeleteScholarship);
 
 router.get('/:id/requirements', scholarship.getRequirements);
 

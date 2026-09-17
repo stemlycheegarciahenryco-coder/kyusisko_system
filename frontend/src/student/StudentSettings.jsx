@@ -32,8 +32,8 @@ export default function StudentSettings() {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-       
-        const res = await api.get(`/students/${sID}`); 
+        // ✅ Changed to use the '/me' endpoint, no sID needed
+        const res = await api.get('/students/profile-full/me'); 
         
         setIs2FAEnabled(res.data.two_factor_enabled);
         setMethod(res.data.preferred_2fa_method || 'email');
@@ -49,15 +49,13 @@ export default function StudentSettings() {
   // 2. Save MFA changes to the DB
   const saveSecuritySettings = async (enabled, selectedMethod) => {
     try {
-      
-      
+      // ✅ Cleaned up syntax error and payload
       await api.put('/students/update-2fa', { 
-        studentId: sID, 
-        two_factor_enabled: enabled, 
-        preferred_2fa_method: selectedMethod 
+        two_factor_enabled: enabled,
+        preferred_2fa_method: selectedMethod
       });
       
-      console.log("Security settings updated in DB for student:", sID);
+      console.log("Security settings updated in DB successfully.");
     } catch (err) {
       console.error("Save Error:", err);
       alert("Failed to save security settings");
@@ -92,10 +90,8 @@ export default function StudentSettings() {
 
     setIsChangingPassword(true);
     try {
-     
-      
-      await api.put(`/students/change-password`, {
-        studentId: sID,
+      // ✅ Removed studentId from payload, backend reads it from the secure token
+      await api.put('/students/change-password', {
         currentPassword,
         newPassword
       });
@@ -123,7 +119,6 @@ export default function StudentSettings() {
   return (
     <div className="max-w-3xl mx-auto py-8 px-4">
       
-
       {/* --- TAB NAVIGATION --- */}
       <div className="flex space-x-2 mb-8 bg-slate-100 p-1.5 rounded-2xl w-fit">
         <button

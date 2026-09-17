@@ -567,7 +567,10 @@ const getActivityLogs = async (req, res) => {
                     st.sfirst_name AS student_first_name,
                     st.slast_name AS student_last_name,
                     CASE
-                        WHEN pat.action_type ILIKE 'login%' OR pat.action_type ILIKE 'logout%' THEN 'log'
+                        -- Substring match (not prefix) so action types like
+                        -- 'ORG_LOGIN' / 'Co-Admin Login' still route to Logs,
+                        -- not just a bare 'Login'/'Logout'.
+                        WHEN pat.action_type ILIKE '%login%' OR pat.action_type ILIKE '%logout%' THEN 'log'
                         ELSE 'trail'
                     END AS source
                 FROM provider_audit_trails pat

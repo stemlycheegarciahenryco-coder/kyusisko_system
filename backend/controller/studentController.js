@@ -287,6 +287,8 @@ exports.getFullProfile = async (req, res) => {
         s.academic_student_id,
         s.academic_student_id AS student_id,
         s.year_level,s.gwa,
+        s.two_factor_enabled, 
+        s.preferred_2fa_method,
         c.name AS college_name, p.other_school, 
         cr.name AS course_name, p.other_degree_program,
         p.religion, p.other_religion,

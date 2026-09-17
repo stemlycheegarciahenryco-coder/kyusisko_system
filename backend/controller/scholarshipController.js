@@ -180,6 +180,7 @@ const getScholarships = async (req, res) => {
        FROM scholarships s
        LEFT JOIN sub_admins sa ON s.sub_admin_id = sa.id
        WHERE s.sub_admin_id = $1 
+         AND s.is_archived IS NOT TRUE
        ORDER BY s.created_at DESC`,
       [orgId]
     );
@@ -187,6 +188,79 @@ const getScholarships = async (req, res) => {
     res.status(200).json({ success: true, data: result.rows });
   } catch (err) {
     console.error("Database Error:", err.message);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// GET /api/scholarships/archived/get-all
+// Returns only archived programs for the org, along with the students
+// who had applied to each one (so the Archive view can show who's inside).
+const getArchivedScholarships = async (req, res) => {
+  try {
+    const orgId = await resolveOrgId(req.user.id);
+    if (!orgId) return res.status(404).json({ success: false, message: "Org not found." });
+
+    const result = await pool.query(
+      `SELECT 
+        s.*, 
+        sa.org_pic, 
+        sa.org_name
+       FROM scholarships s
+       LEFT JOIN sub_admins sa ON s.sub_admin_id = sa.id
+       WHERE s.sub_admin_id = $1 
+         AND s.is_archived IS TRUE
+       ORDER BY s.archived_at DESC`,
+      [orgId]
+    );
+
+    const scholarships = result.rows;
+    if (scholarships.length === 0) {
+      return res.status(200).json({ success: true, data: [] });
+    }
+
+    const ids = scholarships.map(s => s.id);
+    // School lives on student_onboarding_profiles.college_id -> colleges,
+    // not on students directly. NOTE: `c.name` is a guess at the colleges
+    // table's display-name column — swap it for the real column if this
+    // errors (e.g. it might be `college_name` instead).
+    const applicantsResult = await pool.query(
+      `SELECT 
+        a.scholarship_id,
+        st.id,
+        st.sfirst_name,
+        st.slast_name,
+        st.sprofile_pic,
+        COALESCE(c.name, sop.other_school) AS school_name
+       FROM applications a
+       JOIN students st ON st.id = a.student_id
+       LEFT JOIN student_onboarding_profiles sop ON sop.student_id = st.id
+       LEFT JOIN colleges c ON c.id = sop.college_id
+       WHERE a.scholarship_id = ANY($1::int[])`,
+      [ids]
+    );
+
+    const applicantsByScholarship = {};
+    for (const row of applicantsResult.rows) {
+      if (!applicantsByScholarship[row.scholarship_id]) {
+        applicantsByScholarship[row.scholarship_id] = [];
+      }
+      applicantsByScholarship[row.scholarship_id].push({
+        id: row.id,
+        sfirst_name: row.sfirst_name,
+        slast_name: row.slast_name,
+        sprofile_pic: row.sprofile_pic,
+        school_name: row.school_name
+      });
+    }
+
+    const data = scholarships.map(s => ({
+      ...s,
+      applicants: applicantsByScholarship[s.id] || []
+    }));
+
+    res.status(200).json({ success: true, data });
+  } catch (err) {
+    console.error("Archived Fetch Error:", err.message);
     res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -450,6 +524,77 @@ const restoreScholarship = async (req, res) => {
   }
 };
 
+// DELETE /api/scholarships/:id/permanent
+// Hard-deletes a program and its related rows. Only allowed once a program
+// is already archived, so this is always a second, deliberate step after
+// "Archive" — never a direct replacement for it.
+const permanentlyDeleteScholarship = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const orgId = await resolveOrgId(req.user.id);
+    if (!orgId) {
+      client.release();
+      return res.status(404).json({ success: false, message: "Org not found." });
+    }
+
+    await client.query('BEGIN');
+
+    const existing = await client.query(
+      `SELECT id, title, is_archived FROM scholarships WHERE id = $1 AND sub_admin_id = $2 FOR UPDATE`,
+      [req.params.id, orgId]
+    );
+
+    if (existing.rows.length === 0) {
+      await client.query('ROLLBACK');
+      client.release();
+      return res.status(404).json({ success: false, message: "Scholarship not found or unauthorized" });
+    }
+
+    if (!existing.rows[0].is_archived) {
+      await client.query('ROLLBACK');
+      client.release();
+      return res.status(400).json({
+        success: false,
+        message: "Only archived programs can be permanently deleted. Archive it first."
+      });
+    }
+
+    const title = existing.rows[0].title;
+
+    // Deliberately NOT deleting from `applications` here. Its FK to
+    // scholarships is ON DELETE SET NULL (not CASCADE) specifically so that
+    // application history survives a scholarship's deletion — each row keeps
+    // its own student_name_snapshot / scholarship_title_snapshot / etc, which
+    // is what Reports reads from. Deleting the scholarship just nulls out
+    // applications.scholarship_id on those rows; the snapshot data, and any
+    // disbursement history, stays intact.
+    //
+    // scholarship_requirements IS safe to hard-delete: it cascades to
+    // application_submissions (the answers/files submitted against those
+    // requirement questions), which isn't something Reports depends on.
+    await client.query(`DELETE FROM scholarship_requirements WHERE scholarship_id = $1`, [req.params.id]);
+    await client.query(`DELETE FROM scholarships WHERE id = $1 AND sub_admin_id = $2`, [req.params.id, orgId]);
+
+    await client.query('COMMIT');
+
+    // ─── ADDED: LOG ACTIVITY ───
+    await logActivity({
+      subAdminId: orgId,
+      actorId: req.user.id,
+      actionType: 'Program Permanently Deleted',
+      details: `Permanently deleted archived program: "${title}". This cannot be undone.`
+    });
+
+    res.status(200).json({ success: true, message: 'Permanently deleted' });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error("Permanent Delete Error:", err.message);
+    res.status(500).json({ success: false, message: err.message });
+  } finally {
+    client.release();
+  }
+};
+
 // GET /api/scholarships/:id/requirements
 const getRequirements = async (req, res) => {
   try {
@@ -466,10 +611,12 @@ const getRequirements = async (req, res) => {
 module.exports = {
   createScholarship,
   getScholarships,
+  getArchivedScholarships,
   getScholarshipById,
   updateScholarshipStatus,
   deleteScholarship,
   restoreScholarship,
+  permanentlyDeleteScholarship,
   updateScholarship,
   getRequirements
 };
