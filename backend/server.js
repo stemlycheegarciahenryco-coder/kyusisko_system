@@ -15,7 +15,7 @@ const subAdminRoutes = require('./routes/subAdminRoutes');
 const authRoutes = require('./routes/authRoutes');
 const RegStudentRoutes = require('./routes/RegStudentRoutes');
 const scholarshipRoutes = require('./routes/ScholarShipRoutes');
-const scholarshipFieldRoutes = require('./routes/createFieldScholarship');
+
 const applicationRoutes = require('./routes/applicationRoutes');
 const recommendationRoutes = require('./routes/recommendationRoutes');
 const securityRoutes = require('./routes/securityRoutes');
