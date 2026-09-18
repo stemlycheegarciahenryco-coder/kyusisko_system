@@ -20,6 +20,13 @@ function StatCard({ icon: Icon, iconBg, iconColor, label, value, sublabel }) {
 const CLOSED_REASON_LABEL = {
     closed: 'Closed',
     deadline_passed: 'Deadline Passed',
+    archived: 'Archived',
+};
+
+const CLOSED_REASON_BADGE = {
+    closed: 'bg-red-50 text-red-600 border-red-100',
+    deadline_passed: 'bg-red-50 text-red-600 border-red-100',
+    archived: 'bg-amber-50 text-amber-700 border-amber-100',
 };
 
 function ProgramCard({ program }) {
@@ -32,7 +39,7 @@ function ProgramCard({ program }) {
             <div className="flex items-start justify-between gap-3">
                 <div>
                     <h3 className="text-sm font-extrabold text-slate-900">{program.title}</h3>
-                    <span className="inline-block mt-1 text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-red-50 text-red-600 border border-red-100 uppercase tracking-wide">
+                    <span className={`inline-block mt-1 text-[10px] font-extrabold px-2 py-0.5 rounded-md border uppercase tracking-wide ${CLOSED_REASON_BADGE[program.closed_reason] || CLOSED_REASON_BADGE.closed}`}>
                         {CLOSED_REASON_LABEL[program.closed_reason] || 'Closed'}
                     </span>
                 </div>

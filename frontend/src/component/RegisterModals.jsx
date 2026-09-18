@@ -237,6 +237,7 @@ export function OrgSuccessModal({ isOpen, onConfirm }) {
           Your account is now under review by our team. Check your email regularly for updates.
         </p>
         <button 
+          type="button"
           onClick={onConfirm} 
           className="w-full py-3.5 bg-[#093fb4] text-white rounded-2xl font-bold text-sm uppercase tracking-wider hover:bg-blue-800 transition-all active:scale-98 shadow-md shadow-blue-200"
         >
@@ -267,6 +268,7 @@ export function SuccessModal({ isOpen, onConfirm }) {
           </div>
         </div>
         <button 
+          type="button"
           onClick={onConfirm} 
           className="w-full py-3.5 bg-[#093fb4] text-white rounded-2xl font-bold text-sm uppercase tracking-wider hover:bg-blue-800 transition-all active:scale-98 shadow-md shadow-blue-200"
         >

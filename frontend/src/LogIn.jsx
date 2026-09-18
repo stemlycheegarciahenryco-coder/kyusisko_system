@@ -10,12 +10,15 @@ import {
   IconEye,
   IconEyeOff,
   IconX,
-  IconCircleCheckFilled
+  IconCircleCheckFilled,
+  IconShieldLock // 🚀 Added new icon for MFA
 } from '@tabler/icons-react';
 
 export default function LogIn() {
   const [identifier, setIdentifier] = useState(''); 
   const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState(''); // 🚀 New state for the 6-digit code
+  const [showMfa, setShowMfa] = useState(false); // 🚀 New state to toggle UI
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState(''); 
@@ -38,10 +41,23 @@ export default function LogIn() {
     setErrorMessage('');
 
     try {
-      const response = await api.post('/auth/portal-login', { 
+      // 🚀 Pass OTP only if we are in the MFA step
+      const payload = { 
         identifier: identifier.trim(), 
         password 
-      });
+      };
+      if (showMfa) {
+        payload.otp = otp.trim();
+      }
+
+      const response = await api.post('/auth/portal-login', payload);
+      
+      // 🚀 Check if backend is demanding the Authenticator code
+      if (response.data.mfaRequired) {
+        setShowMfa(true);
+        setLoading(false);
+        return; 
+      }
       
       const { role, data } = response.data; 
 
@@ -83,24 +99,30 @@ export default function LogIn() {
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-6 relative overflow-hidden bg-[#FFFCFB]">
       
-      {/* Background Image */}
       <div 
         className="absolute inset-0 bg-no-repeat bg-cover bg-center pointer-events-none"
         style={{ backgroundImage: `url('/bg2.png')` }}
       />
 
-      {/* REUSABLE LOADING COMPONENT */}
       <LoadingScreen isLoading={loading} />
 
       <div className="max-w-md w-full bg-white/70 backdrop-blur-xl rounded-[2.5rem] shadow-2xl p-10 border border-white/40 relative z-10">
         <button 
-          onClick={() => navigate('/')} 
+          onClick={() => {
+            if (showMfa) {
+               setShowMfa(false); // Let them go back to email/pass
+               setOtp('');
+               setErrorMessage('');
+            } else {
+               navigate('/');
+            }
+          }} 
           className="absolute top-7 right-7 text-black/30 hover:text-[#FF1E1E] transition-colors p-1"
         >
           <IconX size={24} stroke={2.5} />
         </button>
 
-        {verifiedStatus && (
+        {verifiedStatus && !showMfa && (
           <div className="mb-6 p-4 rounded-2xl bg-emerald-50/80 backdrop-blur-sm border border-emerald-200/60 flex items-center gap-3">
             <IconCircleCheckFilled className="text-emerald-600 shrink-0" size={24} />
             <p className="text-xs font-black text-emerald-950 uppercase tracking-wide">Verified! Please log in.</p>
@@ -112,51 +134,79 @@ export default function LogIn() {
             <img src="/logo.png" alt="Logo" className="h-24 w-auto object-contain" />
           </div>
           <p className="mt-2 text-sm font-black text-slate-700 uppercase tracking-[0.3em]">
-            Portal Login 
+            {showMfa ? "Two-Factor Auth" : "Portal Login"}
           </p>
+          {showMfa && (
+            <p className="text-xs text-slate-500 mt-2 font-semibold">
+              Enter the 6-digit code from your Authenticator app.
+            </p>
+          )}
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-xs font-black text-slate-800 uppercase ml-1 tracking-wider block">
-              Email Address / Username
-            </label>
-            <div className="relative group">
-              <IconMail size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-black/30 group-focus-within:text-[#093fb4] transition-colors" />
-              <input 
-                type="text" 
-                required
-                placeholder="Enter your credentials"
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                className="w-full pl-12 pr-4 py-3.5 bg-white/60 border-2 border-white/80 rounded-2xl focus:bg-white focus:border-[#093fb4] outline-none transition-all placeholder:text-black/30 font-bold text-slate-900 text-base shadow-sm"
-              />
-            </div>
-          </div>
+          {/* 🚀 CONDITIONAL RENDERING: Show standard inputs OR the OTP input */}
+          {!showMfa ? (
+            <>
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-800 uppercase ml-1 tracking-wider block">
+                  Email Address / Username
+                </label>
+                <div className="relative group">
+                  <IconMail size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-black/30 group-focus-within:text-[#093fb4] transition-colors" />
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="Enter your credentials"
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3.5 bg-white/60 border-2 border-white/80 rounded-2xl focus:bg-white focus:border-[#093fb4] outline-none transition-all placeholder:text-black/30 font-bold text-slate-900 text-base shadow-sm"
+                  />
+                </div>
+              </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-black text-slate-800 uppercase ml-1 tracking-wider block">
-              Password
-            </label>
-            <div className="relative group">
-              <IconKey size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-black/30 group-focus-within:text-[#093fb4] transition-colors" />
-              <input 
-                type={showPassword ? "text" : "password"} 
-                required
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-12 pr-12 py-3.5 bg-white/60 border-2 border-white/80 rounded-2xl focus:bg-white focus:border-[#093fb4] outline-none transition-all placeholder:text-black/30 font-bold text-slate-900 text-base shadow-sm"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-black/30 hover:text-[#093fb4] transition-colors"
-              >
-                {showPassword ? <IconEyeOff size={20} /> : <IconEye size={20} />}
-              </button>
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-800 uppercase ml-1 tracking-wider block">
+                  Password
+                </label>
+                <div className="relative group">
+                  <IconKey size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-black/30 group-focus-within:text-[#093fb4] transition-colors" />
+                  <input 
+                    type={showPassword ? "text" : "password"} 
+                    required
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-12 pr-12 py-3.5 bg-white/60 border-2 border-white/80 rounded-2xl focus:bg-white focus:border-[#093fb4] outline-none transition-all placeholder:text-black/30 font-bold text-slate-900 text-base shadow-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-black/30 hover:text-[#093fb4] transition-colors"
+                  >
+                    {showPassword ? <IconEyeOff size={20} /> : <IconEye size={20} />}
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-2">
+              <label className="text-xs font-black text-slate-800 uppercase ml-1 tracking-wider block">
+                Authenticator Code
+              </label>
+              <div className="relative group">
+                <IconShieldLock size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-black/30 group-focus-within:text-[#093fb4] transition-colors" />
+                <input 
+                  type="text" 
+                  required
+                  maxLength="6"
+                  placeholder="123456"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} // only allow numbers
+                  className="w-full pl-12 pr-4 py-3.5 bg-white/60 border-2 border-white/80 rounded-2xl focus:bg-white focus:border-[#093fb4] outline-none transition-all placeholder:text-black/30 font-bold text-slate-900 text-base tracking-[0.5em] text-center shadow-sm"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {errorMessage && (
             <div className="flex items-center gap-2.5 p-4 rounded-2xl bg-[#FF1E1E]/10 border border-[#FF1E1E]/20 text-[#FF1E1E] backdrop-blur-sm">
@@ -169,29 +219,31 @@ export default function LogIn() {
 
           <button 
             type="submit" 
-            disabled={loading}
+            disabled={loading || (showMfa && otp.length !== 6)}
             className="w-full bg-[#093fb4] hover:bg-[#073496] text-white font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-2.5 group shadow-xl shadow-[#093fb4]/25 active:scale-[0.98] disabled:bg-[#093fb4]/70 disabled:active:scale-100 text-sm tracking-wider uppercase"
           >
             {loading ? (
-              <span>Loading...</span>
+              <span>Verifying...</span>
             ) : (
               <>
-                LOG IN
+                {showMfa ? "VERIFY CODE" : "LOG IN"}
                 <IconLogin size={20} stroke={2.5} className="group-hover:translate-x-1 transition-transform" />
               </>
             )}
           </button>
         </form>
 
-        <div className="mt-8 flex justify-center border-t border-black/10 pt-6">
-            <button
-              type="button"
-              onClick={() => navigate('/forgot-password')}
-              className="text-xs font-black text-slate-600 hover:text-[#FF1E1E] transition-colors tracking-widest uppercase"
-            >
-              Forgot Password?
-            </button>
-        </div>
+        {!showMfa && (
+          <div className="mt-8 flex justify-center border-t border-black/10 pt-6">
+              <button
+                type="button"
+                onClick={() => navigate('/forgot-password')}
+                className="text-xs font-black text-slate-600 hover:text-[#FF1E1E] transition-colors tracking-widest uppercase"
+              >
+                Forgot Password?
+              </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -187,6 +187,14 @@ const getDisbursementLedger = async (req, res) => {
     if (owned.rows.length === 0)
       return res.status(403).json({ success: false, message: 'Unauthorized' });
 
+    // NOTE: student_name_snapshot is stored as "first middle last" (see
+    // migration 2's concat_ws), so splitting it back into first/last by
+    // position below is imprecise when a middle name is present. Kept
+    // this way only to match the existing response shape
+    // (sfirst_name/slast_name) your frontend already expects — consider
+    // exposing a single `student_display_name` field instead if this
+    // ledger UI needs to be exact for students who no longer have a live
+    // record.
     const ledger = await pool.query(
       `SELECT
           d.id,
@@ -195,11 +203,11 @@ const getDisbursementLedger = async (req, res) => {
           d.mode,
           d.receipt_path,
           d.disbursed_at,
-          s.sfirst_name,
-          s.slast_name,
+          COALESCE(s.sfirst_name, split_part(d.student_name_snapshot, ' ', 1), '') AS sfirst_name,
+          COALESCE(s.slast_name, split_part(d.student_name_snapshot, ' ', 2), '') AS slast_name,
           sch.title AS program_name
        FROM disbursements d
-       JOIN students s ON s.id = d.student_id
+       LEFT JOIN students s ON s.id = d.student_id
        JOIN scholarships sch ON sch.id = d.scholarship_id
        WHERE d.scholarship_id = $1
        ORDER BY d.disbursed_at DESC`,
@@ -238,12 +246,12 @@ const getOrgDisbursementLedger = async (req, res) => {
           d.disbursed_at,
           s.sfirst_name,
           s.slast_name,
-          sch.title AS program_name,
+          COALESCE(sch.title, d.scholarship_title_snapshot, 'Deleted Program') AS program_name,
           sch.id AS scholarship_id
        FROM disbursements d
        JOIN students s ON s.id = d.student_id
-       JOIN scholarships sch ON sch.id = d.scholarship_id
-       WHERE sch.sub_admin_id = $1
+       LEFT JOIN scholarships sch ON sch.id = d.scholarship_id
+       WHERE d.sub_admin_id = $1
        ORDER BY d.disbursed_at DESC`,
       [sub_admin_id]
     );
@@ -271,12 +279,12 @@ const getMyDisbursements = async (req, res) => {
           d.receipt_path,
           d.disbursed_at,
           sch.id AS scholarship_id,
-          sch.title AS program_name,
+          COALESCE(sch.title, d.scholarship_title_snapshot, 'Deleted Program') AS program_name,
           sa.org_name,
           sa.org_pic
        FROM disbursements d
-       JOIN scholarships sch ON sch.id = d.scholarship_id
-       JOIN sub_admins sa ON sa.id = sch.sub_admin_id
+       LEFT JOIN scholarships sch ON sch.id = d.scholarship_id
+       JOIN sub_admins sa ON sa.id = d.sub_admin_id
        WHERE d.student_id = $1
        ORDER BY d.disbursed_at DESC`,
       [student_id]

@@ -273,7 +273,7 @@ const getOrgApplications = async (req, res) => {
                 a.created_at AS submitted_at,
                 s.sfirst_name, 
                 s.slast_name,
-                sch.title as scholarship_name,
+                COALESCE(sch.title, a.scholarship_title_snapshot, 'Deleted Program') as scholarship_name,
                 (SELECT sch2.title 
                  FROM applications a2 
                  JOIN scholarships sch2 ON a2.scholarship_id = sch2.id
@@ -283,8 +283,8 @@ const getOrgApplications = async (req, res) => {
                  LIMIT 1) as conflicting_org
              FROM applications a
              JOIN students s ON a.student_id = s.id
-             JOIN scholarships sch ON a.scholarship_id = sch.id
-             WHERE sch.sub_admin_id = $1`,
+             LEFT JOIN scholarships sch ON a.scholarship_id = sch.id
+             WHERE COALESCE(sch.sub_admin_id, a.sub_admin_id_snapshot) = $1`,
             [subAdminId]
         );
 
@@ -317,6 +317,7 @@ const getOrgProfilePrograms = async (req, res) => {
              LEFT JOIN applications a ON a.scholarship_id = s.id
              WHERE s.sub_admin_id = $1 
                AND s.show_on_profile = true  -- <--- Only fetch programs explicitly set to true
+               AND COALESCE(s.is_archived, false) = false
              GROUP BY s.id
              ORDER BY s.created_at DESC`,
             [orgId]
@@ -426,6 +427,7 @@ const getOrgPrograms = async (req, res) => {
              LEFT JOIN students st ON a.student_id = st.id
              WHERE s.sub_admin_id = $1 
                AND COALESCE(s.taken_down, false) = false
+               AND COALESCE(s.is_archived, false) = false
              GROUP BY s.id
              ORDER BY s.created_at DESC`,
             [orgId]

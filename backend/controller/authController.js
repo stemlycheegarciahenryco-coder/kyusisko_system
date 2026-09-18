@@ -5,6 +5,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { trackEvent } = require('../utils/logger');
+const { authenticator } = require('otplib');
+const qrcode = require('qrcode');
 
 const MAX_ATTEMPTS = 5;
 const WINDOW_MINUTES = 10;
@@ -30,7 +32,7 @@ async function logAttempt(identifier, ip, success) {
 // 1. UNIFIED PORTAL LOGIN (System, Org, & Student)
 // ==========================================
 exports.portalLogin = async (req, res) => {
-    const { identifier, password } = req.body;
+    const { identifier, password, otp } = req.body;
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     const input = identifier ? identifier.trim() : '';
 
@@ -79,6 +81,23 @@ exports.portalLogin = async (req, res) => {
                 return res.status(401).json({ error: "Invalid Credentials" });
             }
 
+            // 🔐 MFA Verification Check
+            if (user.two_factor_enabled) {
+                if (!otp) {
+                    return res.json({ mfaRequired: true, message: "Authenticator code required" });
+                }
+
+                const isValidOtp = authenticator.verify({
+                    token: otp,
+                    secret: user.two_factor_secret
+                });
+
+                if (!isValidOtp) {
+                    await logAttempt(input, ip, false);
+                    return res.status(401).json({ error: "Invalid Authenticator code." });
+                }
+            }
+
             await logAttempt(input, ip, true);
             await trackEvent({
                 userId: user.id, subAdminId: null, studentId: null,
@@ -89,7 +108,6 @@ exports.portalLogin = async (req, res) => {
 
             const token = jwt.sign({ id: user.id, role: user.role, email: user.email, uid: user.uid }, process.env.JWT_SECRET, { expiresIn: '1d' });
             
-            // ✅ Applied dynamic cookie options
             res.cookie('token', token, cookieOptions);
 
             return res.json({ role: user.role, data: { id: user.id, uid: user.uid, email: user.email } });
@@ -103,13 +121,6 @@ exports.portalLogin = async (req, res) => {
         
         if (subResult.rows.length > 0) {
             const sub = subResult.rows[0];
-
-            // Co-admin rows have their own id, not the org's — every audit
-            // row for this org (programs, disbursements, approvals, etc.)
-            // is filed under the PARENT org's id via resolveOrgId() in the
-            // other controllers. Login has to match that, or a co-admin's
-            // login silently won't show up under the org's own audit trail
-            // (it'd sit under a sub_admin_id nothing ever queries for).
             const resolvedOrgId = sub.account_type === 'co_admin' ? sub.parent_org_id : sub.id;
 
             if (!sub.is_active) {
@@ -126,12 +137,25 @@ exports.portalLogin = async (req, res) => {
                 return res.status(401).json({ error: "Invalid Credentials" });
             }
 
+            // 🔐 MFA Verification Check
+            if (sub.two_factor_enabled) {
+                if (!otp) {
+                    return res.json({ mfaRequired: true, message: "Authenticator code required" });
+                }
+
+                const isValidOtp = authenticator.verify({
+                    token: otp,
+                    secret: sub.two_factor_secret
+                });
+
+                if (!isValidOtp) {
+                    await logAttempt(input, ip, false);
+                    return res.status(401).json({ error: "Invalid Authenticator code." });
+                }
+            }
+
             await logAttempt(input, ip, true);
             await trackEvent({
-                // userId is the actual actor (the org admin or co-admin who
-                // logged in) — this is what provider_audit_trails.actor_id
-                // gets set to, and what getActivityLogs joins against to
-                // show a real name instead of falling back to "System".
                 userId: sub.id, subAdminId: resolvedOrgId, studentId: null,
                 actionType: 'ORG_LOGIN', ipAddress: ip, email: input,
                 details: `Organization session initialized successfully for institution: "${sub.org_name}".`
@@ -139,7 +163,6 @@ exports.portalLogin = async (req, res) => {
 
             const token = jwt.sign({ id: sub.id, role: 'sub_admin', email: sub.sub_email }, process.env.JWT_SECRET, { expiresIn: '1d' });
             
-            // ✅ Applied dynamic cookie options
             res.cookie('token', token, cookieOptions);
 
             return res.json({
@@ -168,6 +191,23 @@ exports.portalLogin = async (req, res) => {
                 return res.status(401).json({ error: "Invalid Credentials" });
             }
 
+            // 🔐 MFA Verification Check
+            if (student.two_factor_enabled) {
+                if (!otp) {
+                    return res.json({ mfaRequired: true, message: "Authenticator code required" });
+                }
+
+                const isValidOtp = authenticator.verify({
+                    token: otp,
+                    secret: student.two_factor_secret
+                });
+
+                if (!isValidOtp) {
+                    await logAttempt(input, ip, false);
+                    return res.status(401).json({ error: "Invalid Authenticator code." });
+                }
+            }
+
             await logAttempt(input, ip, true);
             await trackEvent({
                 userId: null, subAdminId: null, studentId: student.id,
@@ -177,7 +217,6 @@ exports.portalLogin = async (req, res) => {
 
             const token = jwt.sign({ id: student.id, role: 'student', email: student.student_email }, process.env.JWT_SECRET, { expiresIn: '1d' });
             
-            // ✅ Applied dynamic cookie options
             res.cookie('token', token, cookieOptions);
 
             return res.json({ 
@@ -360,4 +399,112 @@ exports.logout = (req, res) => {
         sameSite: isProduction ? 'None' : 'lax'
     });
     res.json({ success: true, message: "Logged out successfully." });
+};
+
+// ==========================================
+// 6. MFA SETUP: GENERATE SECRET & QR CODE
+// ==========================================
+exports.generateMfaSetup = async (req, res) => {
+    // Requires a logged-in user (req.user populated by your JWT auth middleware)
+    const { id, email, role } = req.user;
+    
+    try {
+        // 1. Generate a unique base32 secret using otplib
+        const secret = authenticator.generateSecret();
+
+        // 2. Create the otpauth URL for the authenticator app
+        const otpauthUrl = authenticator.keyuri(
+            email, 
+            'KyusISKO', // Shows up as the issuer/app name in Google Authenticator
+            secret
+        );
+
+        // 3. Create the scannable QR code image
+        const qrCodeUrl = await qrcode.toDataURL(otpauthUrl);
+
+        // 4. Save the secret to the correct table, but do NOT enable MFA yet
+        let query = '';
+        if (role === 'student') {
+            query = 'UPDATE students SET two_factor_secret = $1 WHERE id = $2';
+        } else if (role === 'sub_admin') {
+            query = 'UPDATE sub_admins SET two_factor_secret = $1 WHERE id = $2';
+        } else {
+            query = 'UPDATE users SET two_factor_secret = $1 WHERE id = $2';
+        }
+        
+        await pool.query(query, [secret, id]);
+
+        // 5. Return the image and manual code to the frontend modal
+        res.json({
+            qrCodeUrl,
+            manualSecret: secret
+        });
+
+    } catch (err) {
+        console.error("MFA Generate Error:", err.message);
+        res.status(500).json({ error: "Failed to generate MFA setup." });
+    }
+};
+
+// ==========================================
+// 7. MFA SETUP: VERIFY CODE & ENABLE
+// ==========================================
+exports.verifyMfaSetup = async (req, res) => {
+    const { id, email, role } = req.user;
+    const { token } = req.body; // The 6-digit code typed by the user
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+
+    try {
+        // 1. Fetch the temporary secret from the database
+        let selectQuery = '';
+        let updateQuery = '';
+        
+        if (role === 'student') {
+            selectQuery = 'SELECT two_factor_secret FROM students WHERE id = $1';
+            updateQuery = 'UPDATE students SET two_factor_enabled = TRUE WHERE id = $1';
+        } else if (role === 'sub_admin') {
+            selectQuery = 'SELECT two_factor_secret FROM sub_admins WHERE id = $1';
+            updateQuery = 'UPDATE sub_admins SET two_factor_enabled = TRUE WHERE id = $1';
+        } else {
+            selectQuery = 'SELECT two_factor_secret FROM users WHERE id = $1';
+            updateQuery = 'UPDATE users SET two_factor_enabled = TRUE WHERE id = $1';
+        }
+
+        const { rows } = await pool.query(selectQuery, [id]);
+        if (rows.length === 0 || !rows[0].two_factor_secret) {
+            return res.status(400).json({ error: "MFA setup has not been initialized." });
+        }
+
+        const secret = rows[0].two_factor_secret;
+
+        // 2. Cryptographically verify the 6-digit code using otplib
+        const isVerified = authenticator.verify({
+            token: token,
+            secret: secret
+        });
+
+        if (!isVerified) {
+            return res.status(400).json({ error: "Invalid verification code. Please try again." });
+        }
+
+        // 3. Mark MFA as fully enabled in the DB
+        await pool.query(updateQuery, [id]);
+
+        // 4. Log the security event to the audit trails
+        let studentId = role === 'student' ? id : null;
+        let subAdminId = role === 'sub_admin' ? id : null;
+        let userId = (role !== 'student' && role !== 'sub_admin') ? id : null;
+
+        await trackEvent({
+            userId, subAdminId, studentId,
+            actionType: 'MFA_ENABLED', ipAddress: ip, email: email,
+            details: `Authenticator App successfully configured and enabled.`
+        });
+
+        res.json({ success: true, message: "Authenticator App enabled successfully." });
+
+    } catch (err) {
+        console.error("MFA Verify Error:", err.message);
+        res.status(500).json({ error: "Failed to verify MFA setup." });
+    }
 };

@@ -12,11 +12,12 @@ import SuccessfulProgramsReportPanel from './SuccessfulProgramsReportPanel';
 const getDisplayStatus = (rawStatus) => {
     const s = rawStatus?.toLowerCase();
     if (s === 'draft') return 'draft';
+    if (s === 'archived') return 'archived';
     if (s === 'closed' || s === 'deadline_passed') return 'closed';
     return 'active';
 };
 
-const STATUS_LABELS = { active: 'Active', closed: 'Closed', draft: 'Draft' };
+const STATUS_LABELS = { active: 'Active', closed: 'Closed', draft: 'Draft', archived: 'Archived' };
 
 const DEMOGRAPHIC_TABS = [
     { key: 'byProgram', label: 'By Program' },
@@ -49,6 +50,7 @@ export default function OrgReports() {
     const [totals, setTotals] = useState({
         totalAllocatedFund: 0,
         totalDisbursed: 0,
+        disbursedFromDeletedPrograms: 0,
         totalRemaining: 0,
         totalApprovedStudents: 0,
         programsMissingAmount: 0,
@@ -79,6 +81,7 @@ export default function OrgReports() {
                         ...prev,
                         totalAllocatedFund: finData.totalBudget || 0,
                         totalDisbursed: finData.totalDisbursed || 0,
+                        disbursedFromDeletedPrograms: finData.disbursedFromDeletedPrograms || 0,
                         totalRemaining: finData.totalRemaining || 0,
                         programsMissingAmount: finData.missingBudgetCount || 0,
                         draftProgramCount: finData.draftProgramCount || 0,
@@ -154,6 +157,9 @@ export default function OrgReports() {
             new Paragraph({ children: [new TextRun({ text: "FINANCIAL & FUND ALLOCATION", bold: true, size: 24 })] }),
             new Paragraph({ children: [new TextRun(`Total Program Budget: ₱${totals.totalAllocatedFund.toLocaleString()}`)] }),
             new Paragraph({ children: [new TextRun(`Total Disbursed: ₱${totals.totalDisbursed.toLocaleString()}`)] }),
+            ...(totals.disbursedFromDeletedPrograms > 0
+                ? [new Paragraph({ children: [new TextRun(`  (includes ₱${totals.disbursedFromDeletedPrograms.toLocaleString()} disbursed under programs since permanently deleted)`)] })]
+                : []),
             new Paragraph({ children: [new TextRun(`Total Remaining: ₱${totals.totalRemaining.toLocaleString()}`)] }),
             new Paragraph({ children: [new TextRun(`Programs With No Budget Set: ${totals.programsMissingAmount}`)] }),
             new Paragraph({ children: [new TextRun(`Draft Programs (excluded from totals): ${totals.draftProgramCount}`)] }),
@@ -249,6 +255,9 @@ export default function OrgReports() {
                 { text: 'FINANCIAL & FUND ALLOCATION', fontSize: 12, bold: true, margin: [0, 0, 0, 5] },
                 { text: `Total Program Budget: ₱${totals.totalAllocatedFund.toLocaleString()}` },
                 { text: `Total Disbursed: ₱${totals.totalDisbursed.toLocaleString()}` },
+                ...(totals.disbursedFromDeletedPrograms > 0
+                    ? [{ text: `  (includes ₱${totals.disbursedFromDeletedPrograms.toLocaleString()} disbursed under programs since permanently deleted)`, fontSize: 9, italics: true, color: '#666666' }]
+                    : []),
                 { text: `Total Remaining: ₱${totals.totalRemaining.toLocaleString()}` },
                 { text: `Programs With No Budget Set: ${totals.programsMissingAmount}` },
                 { text: `Draft Programs (excluded from totals): ${totals.draftProgramCount}`, margin: [0, 0, 0, 10] },

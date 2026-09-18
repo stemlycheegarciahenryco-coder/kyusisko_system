@@ -37,6 +37,31 @@ exports.getFinancialReport = async (req, res) => {
     `;
     const { rows } = await pool.query(query, [orgId]);
 
+    // Money already paid out under programs that have since been
+    // PERMANENTLY deleted from the Archive. The scholarship row (and its
+    // total_budget/remaining_budget) is gone, but applications.total_disbursed
+    // survives per student, so this keeps it in the org-wide disbursed total
+    // instead of silently vanishing when a program is hard-deleted.
+    // Requires the sub_admin_id_snapshot column — see
+    // migration_5_application_org_snapshot.sql.
+    let disbursedFromDeletedPrograms = 0;
+    try {
+      const deletedProgramQuery = `
+        SELECT COALESCE(SUM(a.total_disbursed), 0) AS total
+        FROM applications a
+        WHERE a.scholarship_id IS NULL
+          AND a.sub_admin_id_snapshot = $1
+          AND a.total_disbursed > 0;
+      `;
+      const { rows: deletedRows } = await pool.query(deletedProgramQuery, [orgId]);
+      disbursedFromDeletedPrograms = Number(deletedRows[0]?.total || 0);
+    } catch (snapshotErr) {
+      // sub_admin_id_snapshot column not added yet — degrade gracefully
+      // instead of failing the whole report. Run
+      // migration_5_application_org_snapshot.sql to enable this.
+      console.warn("Skipping deleted-program disbursed rollup:", snapshotErr.message);
+    }
+
     let totalBudget = 0;
     let totalDisbursed = 0;
     let totalRemaining = 0;
@@ -78,12 +103,17 @@ exports.getFinancialReport = async (req, res) => {
 
     const { coefficientOfVariation, highVarianceFlag } = analyzeFinancialSpread(budgets);
 
-    let interpretation = `Total program budget across all published scholarships is ₱${totalBudget.toLocaleString()}, of which ₱${totalDisbursed.toLocaleString()} has been disbursed to scholars (₱${totalRemaining.toLocaleString()} remaining). `;
+    const totalDisbursedIncludingDeleted = totalDisbursed + disbursedFromDeletedPrograms;
+
+    let interpretation = `Total program budget across all published scholarships is ₱${totalBudget.toLocaleString()}, of which ₱${totalDisbursedIncludingDeleted.toLocaleString()} has been disbursed to scholars (₱${totalRemaining.toLocaleString()} remaining). `;
     interpretation += missingBudgetCount > 0
       ? `${missingBudgetCount} published program(s) have no budget set and are excluded from allocation totals. `
       : `All published programs have a budget set. `;
     interpretation += draftProgramCount > 0
       ? `${draftProgramCount} program(s) are still in draft and excluded from totals until published. `
+      : '';
+    interpretation += disbursedFromDeletedPrograms > 0
+      ? `₱${disbursedFromDeletedPrograms.toLocaleString()} of that was disbursed under programs since permanently deleted — kept in the total from application records. `
       : '';
     interpretation += highVarianceFlag
       ? `Budget sizes vary sharply across programs (coefficient of variation ${coefficientOfVariation}) — consider reviewing for funding equity.`
@@ -93,7 +123,9 @@ exports.getFinancialReport = async (req, res) => {
       success: true,
       data: {
         totalBudget,
-        totalDisbursed,
+        totalDisbursed: totalDisbursedIncludingDeleted,
+        disbursedFromActivePrograms: totalDisbursed,
+        disbursedFromDeletedPrograms,
         totalRemaining,
         missingBudgetCount,
         draftProgramCount,
@@ -116,42 +148,49 @@ exports.getDemographicReport = async (req, res) => {
     if (!orgId) return res.status(404).json({ success: false, message: "Org not found." });
 
     const genderExpr = `COALESCE(INITCAP(TRIM(s.sgender)), 'Unspecified')`;
+    // Org scoping and program name both fall back to the applications-side
+    // snapshot once a scholarship is permanently deleted (scholarship_id ->
+    // NULL) — otherwise these INNER-JOIN-through-scholarships queries would
+    // silently drop that history instead of keeping it, which defeats the
+    // whole point of the snapshot migrations. Requires
+    // migration_5_application_org_snapshot.sql for the org part.
+    const orgScopeExpr = `COALESCE(prog.sub_admin_id, a.sub_admin_id_snapshot) = $1`;
 
     const byProgramQuery = `
-      SELECT prog.title AS name, ${genderExpr} AS gender, COUNT(DISTINCT a.student_id) AS count
+      SELECT COALESCE(prog.title, a.scholarship_title_snapshot, 'Deleted Program') AS name, ${genderExpr} AS gender, COUNT(DISTINCT a.student_id) AS count
       FROM applications a
-      JOIN scholarships prog ON a.scholarship_id = prog.id
+      LEFT JOIN scholarships prog ON a.scholarship_id = prog.id
       JOIN students s ON a.student_id = s.id
-      WHERE LOWER(a.status) = 'approved' AND prog.sub_admin_id = $1
-      GROUP BY prog.title, ${genderExpr};
+      WHERE LOWER(a.status) = 'approved' AND ${orgScopeExpr}
+      GROUP BY COALESCE(prog.title, a.scholarship_title_snapshot, 'Deleted Program'), ${genderExpr};
     `;
 
     const byCourseQuery = `
       SELECT COALESCE(c.name, sop.other_degree_program, 'Unspecified') AS name, ${genderExpr} AS gender, COUNT(DISTINCT a.student_id) AS count
       FROM applications a
-      JOIN scholarships prog ON a.scholarship_id = prog.id
+      LEFT JOIN scholarships prog ON a.scholarship_id = prog.id
       JOIN student_onboarding_profiles sop ON a.student_id = sop.student_id
       LEFT JOIN courses c ON sop.course_id = c.id
       JOIN students s ON a.student_id = s.id
-      WHERE LOWER(a.status) = 'approved' AND prog.sub_admin_id = $1
+      WHERE LOWER(a.status) = 'approved' AND ${orgScopeExpr}
       GROUP BY COALESCE(c.name, sop.other_degree_program, 'Unspecified'), ${genderExpr};
     `;
 
     const byDistrictQuery = `
       SELECT COALESCE(s.sdistrict, 'Unassigned') AS name, ${genderExpr} AS gender, COUNT(DISTINCT a.student_id) AS count
       FROM applications a
-      JOIN scholarships prog ON a.scholarship_id = prog.id
+      LEFT JOIN scholarships prog ON a.scholarship_id = prog.id
       JOIN students s ON a.student_id = s.id
-      WHERE LOWER(a.status) = 'approved' AND prog.sub_admin_id = $1
+      WHERE LOWER(a.status) = 'approved' AND ${orgScopeExpr}
       GROUP BY COALESCE(s.sdistrict, 'Unassigned'), ${genderExpr};
     `;
 
     const byBarangayQuery = `
       SELECT COALESCE(s.sbarangay, 'Unassigned') AS name, ${genderExpr} AS gender, COUNT(DISTINCT a.student_id) AS count
       FROM applications a
-      JOIN scholarships prog ON a.scholarship_id = prog.id
+      LEFT JOIN scholarships prog ON a.scholarship_id = prog.id
       JOIN students s ON a.student_id = s.id
-      WHERE LOWER(a.status) = 'approved' AND prog.sub_admin_id = $1
+      WHERE LOWER(a.status) = 'approved' AND ${orgScopeExpr}
       GROUP BY COALESCE(s.sbarangay, 'Unassigned'), ${genderExpr};
     `;
 
@@ -251,8 +290,8 @@ exports.getApplicationsOverviewReport = async (req, res) => {
     const statusCountsQuery = `
       SELECT LOWER(a.status) AS status, COUNT(*) AS count
       FROM applications a
-      JOIN scholarships s ON a.scholarship_id = s.id
-      WHERE s.sub_admin_id = $1
+      LEFT JOIN scholarships s ON a.scholarship_id = s.id
+      WHERE COALESCE(s.sub_admin_id, a.sub_admin_id_snapshot) = $1
       GROUP BY LOWER(a.status);
     `;
     const { rows: statusRows } = await pool.query(statusCountsQuery, [orgId]);
@@ -282,9 +321,9 @@ exports.getApplicationsOverviewReport = async (req, res) => {
     const demoQuery = `
       SELECT ${genderExpr} AS gender, COUNT(DISTINCT a.student_id) AS count
       FROM applications a
-      JOIN scholarships prog ON a.scholarship_id = prog.id
+      LEFT JOIN scholarships prog ON a.scholarship_id = prog.id
       JOIN students s ON a.student_id = s.id
-      WHERE prog.sub_admin_id = $1
+      WHERE COALESCE(prog.sub_admin_id, a.sub_admin_id_snapshot) = $1
       GROUP BY ${genderExpr};
     `;
     const { rows: demoRows } = await pool.query(demoQuery, [orgId]);
@@ -343,11 +382,14 @@ exports.getSuccessfulProgramsReport = async (req, res) => {
         s.slots,
         s.total_budget,
         s.remaining_budget,
+        s.is_archived,
         (SELECT COUNT(*) FROM applications a WHERE a.scholarship_id = s.id AND LOWER(a.status) IN ('approved','active')) AS active_scholars
       FROM scholarships s
       WHERE s.sub_admin_id = $1
-        AND s.is_archived = false
-        AND (LOWER(s.status) = 'closed' OR (s.deadline IS NOT NULL AND s.deadline < CURRENT_DATE))
+        AND (
+          LOWER(s.status) IN ('closed', 'archived')
+          OR (s.deadline IS NOT NULL AND s.deadline < CURRENT_DATE)
+        )
       ORDER BY s.deadline DESC NULLS LAST;
     `;
     const { rows } = await pool.query(query, [orgId]);
@@ -389,7 +431,10 @@ exports.getSuccessfulProgramsReport = async (req, res) => {
         id: p.id,
         title: p.title,
         status: p.status,
-        closed_reason: (p.status || '').toLowerCase() === 'closed' ? 'closed' : (isPastDeadline ? 'deadline_passed' : 'closed'),
+        is_archived: p.is_archived,
+        closed_reason: (p.status || '').toLowerCase() === 'archived'
+          ? 'archived'
+          : ((p.status || '').toLowerCase() === 'closed' ? 'closed' : (isPastDeadline ? 'deadline_passed' : 'closed')),
         deadline: p.deadline,
         slots: p.slots,
         total_budget: budget,
