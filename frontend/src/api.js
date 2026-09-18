@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const backendURL = import.meta.env.DEV 
-  ? (import.meta.env.VITE_LOCAL_API_URL)
+  ? (import.meta.env.VITE_LOCAL_API_URL || 'http://localhost:5000')
   : (import.meta.env.VITE_API_URL || '');
 
 const api = axios.create({
@@ -9,15 +9,7 @@ const api = axios.create({
   withCredentials: true
 });
 
-{/* Attach token from localStorage to every request
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
 
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});*/}
 
 api.interceptors.response.use(
   (response) => response,

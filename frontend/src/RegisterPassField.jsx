@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Eye, EyeOff, Check, X, Key } from "lucide-react";
 import PasswordValidator from "password-validator";
 
@@ -21,7 +21,6 @@ const REQUIREMENT_DEFS = [
 
 export default function RegisterPassField({ name, value = "", onChange, placeholder, error, showStrength = false }) {
   const [showPassword, setShowPassword] = useState(false);
-  const [strength, setStrength] = useState({ score: 0, label: "Empty", color: "bg-slate-200" });
 
   const failedRules = value ? passwordSchema.validate(value, { list: true }) : ["min", "max", "uppercase", "lowercase", "digits", "symbols"];
   const requirements = REQUIREMENT_DEFS.map(({ rules, label }) => ({
@@ -29,25 +28,22 @@ export default function RegisterPassField({ name, value = "", onChange, placehol
       met: rules.every(rule => !failedRules.includes(rule)),
   }));
 
-  useEffect(() => {
-    if (!showStrength) return;
-    
-    const calculateStrength = (pass) => {
-      if (!pass) return { score: 0, label: "Empty", color: "bg-slate-200" };
-      let score = requirements.filter(req => req.met).length;
+  // Calculate strength directly on render — completely removes the useEffect loop!
+  const calculateStrength = (pass) => {
+    if (!pass) return { score: 0, label: "Empty", color: "bg-slate-200" };
+    let score = requirements.filter(req => req.met).length;
 
-      switch (score) {
-        case 0: return { score: 10, label: "Invalid", color: "bg-red-500" };
-        case 1: return { score: 25, label: "Weak", color: "bg-orange-500" };
-        case 2: return { score: 50, label: "Fair", color: "bg-yellow-500" };
-        case 3: return { score: 75, label: "Good", color: "bg-[#093fb4]" };
-        case 4: return { score: 100, label: "Strong", color: "bg-emerald-500" };
-        default: return { score: 0, label: "Empty", color: "bg-slate-200" };
-      }
-    };
+    switch (score) {
+      case 0: return { score: 10, label: "Invalid", color: "bg-red-500" };
+      case 1: return { score: 25, label: "Weak", color: "bg-orange-500" };
+      case 2: return { score: 50, label: "Fair", color: "bg-yellow-500" };
+      case 3: return { score: 75, label: "Good", color: "bg-[#093fb4]" };
+      case 4: return { score: 100, label: "Strong", color: "bg-emerald-500" };
+      default: return { score: 0, label: "Empty", color: "bg-slate-200" };
+    }
+  };
 
-    setStrength(calculateStrength(value));
-  }, [value, showStrength, requirements]);
+  const strength = showStrength ? calculateStrength(value) : { score: 0, label: "Empty", color: "bg-slate-200" };
 
   return (
     <div className="flex flex-col w-full">
@@ -74,7 +70,7 @@ export default function RegisterPassField({ name, value = "", onChange, placehol
 
       {showStrength && value.length > 0 && (
         <div className="px-1 mt-4 space-y-2.5">
-          {/* Requirement Checklist (High contrast text) */}
+          {/* Requirement Checklist */}
           <div className="grid grid-cols-2 gap-y-1.5">
             {requirements.map((req, i) => (
               <div key={i} className="flex items-center gap-2">
@@ -90,7 +86,7 @@ export default function RegisterPassField({ name, value = "", onChange, placehol
             ))}
           </div>
 
-          {/* Strength Bar & Meta (High contrast text) */}
+          {/* Strength Bar & Meta */}
           <div className="flex justify-between items-center pt-2 border-t border-black/10">
             <span className="text-[10px] font-black uppercase text-slate-700 tracking-wider">
               Security: <span className={strength.score === 100 ? "text-emerald-600 font-black" : "text-slate-900 font-black ml-1"}>{strength.label}</span>

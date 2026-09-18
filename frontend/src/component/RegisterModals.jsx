@@ -210,6 +210,7 @@ export function ErrorModal({ isOpen, onClose, message }) {
           </div>
 
           <button 
+          
             onClick={onClose} 
             className="text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors block w-full py-1"
           >

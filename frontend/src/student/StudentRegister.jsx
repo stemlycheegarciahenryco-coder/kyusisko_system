@@ -417,7 +417,7 @@ export default function StudentRegister() {
 
             <SuccessModal 
                 isOpen={showSuccess} 
-                onConfirm={() => {setShowSuccess(false); navigate("/login");}} 
+                onConfirm={() =>  navigate("/login")} 
             />
 
             <ErrorModal 
