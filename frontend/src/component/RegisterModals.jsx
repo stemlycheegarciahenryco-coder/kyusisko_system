@@ -43,6 +43,7 @@ export function OtpModal({ isOpen, email, onVerify, onClose, loading }) {
         
         {/* Top Right Close Button */}
         <button 
+          type="button"
           onClick={onClose}
           className="absolute top-6 right-6 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-all"
         >
@@ -126,6 +127,7 @@ export function OtpModal({ isOpen, email, onVerify, onClose, loading }) {
         {/* ACTIONS */}
         <div className="space-y-3">
           <button 
+            type="button"
             onClick={() => onVerify(otp)}
             disabled={otp.length !== 6 || loading}
             className="w-full py-3.5 bg-[#093fb4] text-white rounded-2xl font-bold text-sm tracking-wide hover:bg-blue-800 disabled:opacity-40 transition-all shadow-md shadow-blue-200 flex items-center justify-center gap-2"
@@ -146,6 +148,7 @@ export function OtpModal({ isOpen, email, onVerify, onClose, loading }) {
           </div>
 
           <button 
+            type="button"
             onClick={onClose} 
             className="text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors block w-full py-1"
           >
@@ -169,6 +172,7 @@ export function ErrorModal({ isOpen, onClose, message }) {
         
         {/* Top Right Close Button */}
         <button 
+          type="button"
           onClick={onClose}
           className="absolute top-6 right-6 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-all"
         >
@@ -197,6 +201,7 @@ export function ErrorModal({ isOpen, onClose, message }) {
 
         <div className="space-y-3">
           <button 
+            type="button"
             onClick={onClose} 
             className="w-full py-3.5 bg-[#FF1E1E] text-white rounded-2xl font-bold text-sm tracking-wide hover:bg-red-700 transition-all active:scale-98 shadow-md shadow-red-200 flex items-center justify-center gap-2"
           >
@@ -210,7 +215,7 @@ export function ErrorModal({ isOpen, onClose, message }) {
           </div>
 
           <button 
-          
+            type="button"
             onClick={onClose} 
             className="text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors block w-full py-1"
           >

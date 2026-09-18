@@ -9,14 +9,22 @@ const api = axios.create({
   withCredentials: true
 });
 
+{/* Attach token from localStorage to every request
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
 
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});*/}
 
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (status === 403) {
+    if (error.response && error.response.status === 403) {
       console.warn(
-        `[403 Forbidden] Access denied for endpoint: ${requestUrl}. Check if your account role has permission.`
+        `[403 Forbidden] Access denied for endpoint: ${error.config?.url}. Check if your account role has permission.`
       );
     }
     if (error.response && error.response.status === 401) {

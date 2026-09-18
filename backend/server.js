@@ -46,11 +46,22 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+    // 1. Allow Postman / no-origin requests
+    if (!origin) return callback(null, true);
+
+    // 2. Allow hardcoded production & localhost domains
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
     }
+
+    // 3. THE FIX: Dynamically allow ANY local network IP for teammate testing (192.168.x.x)
+    const isLocalNetwork = /^http:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}):\d+$/.test(origin);
+    if (isLocalNetwork) {
+      return callback(null, true);
+    }
+
+    // 4. Reject everything else
+    callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
