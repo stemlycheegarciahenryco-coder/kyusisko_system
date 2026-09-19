@@ -14,11 +14,11 @@ export default function StudentLeftProfile() {
 
   // Syncing variables to perfectly read values from your full profile JOIN query
   const displayCourse = student.course_name === 'Others' || !student.course_name
-    ? student.other_degree_program || 'Information Systems'
+    ? student.other_degree_program || 'Student Course'
     : student.course_name;
 
   const displaySchool = student.college_name === 'Others' || !student.college_name
-    ? student.other_school || 'Quezon City University'
+    ? student.other_school || 'Student University/School'
     : student.college_name;
 
   return (

@@ -62,6 +62,12 @@ const otpSendLimiter = rateLimit({
 const otpVerifyLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, 
     max: process.env.NODE_ENV === 'development' ? 1000 : 5, 
+    keyGenerator: (req, res) => {
+        if (req.body && req.body.email) {
+            return req.body.email.toLowerCase(); // Rate limit by email first
+        }
+        return ipKeyGenerator(req, res); // Fallback to safely formatted IP
+    },
     store: createRedisStore('otp_verify'),
     message: { error: "Too many verification attempts. Please wait 15 minutes or request a new code." },
     standardHeaders: true,
