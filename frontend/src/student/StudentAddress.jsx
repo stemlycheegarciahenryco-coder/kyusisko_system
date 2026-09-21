@@ -1,9 +1,39 @@
 import React, { useState, useEffect } from "react";
 
-export default function StudentAddress({ regform, setRegForm, handleChange }) {
+export default function StudentAddress({ regform, setRegForm, handleChange, isSubmitted = false }) {
     const [allBarangays, setAllBarangays] = useState([]); 
     const [filteredBarangays, setFilteredBarangays] = useState([]); 
     const QC_CITY_CODE = '137404000';
+
+    const FieldStatus = Object.freeze({
+        INCOMPLETE: 'Incomplete',
+        INVALID: 'Invalid',
+        VALID: 'Valid'
+    });
+
+    // Address Status States
+    const [barangayStatus, setBarangayStatus] = useState(FieldStatus.INCOMPLETE);
+    const [districtStatus, setDistrictStatus] = useState(FieldStatus.INCOMPLETE);
+    const [streetStatus, setStreetStatus] = useState(FieldStatus.INCOMPLETE);
+    const [postalCodeStatus, setPostalCodeStatus] = useState(FieldStatus.INCOMPLETE);
+
+    // Track touched state to control when validation feedback triggers
+    const [touched, setTouched] = useState({
+        district: false,
+        barangay: false,
+        street: false,
+        zipCode: false
+    });
+
+    const handleBlur = (e) => {
+        const { name } = e.target;
+        setTouched(prev => ({ ...prev, [name]: true }));
+    };
+
+    // Helper to check if a value is selected and not a default placeholder
+    const isInvalidDropdownValue = (val) => {
+        return !val || val.trim() === "" || val === "Select District" || val === "Select Barangay";
+    };
 
     // 1. Fetch ALL QC Barangays once when component loads
     useEffect(() => {
@@ -16,24 +46,72 @@ export default function StudentAddress({ regform, setRegForm, handleChange }) {
             .catch(err => console.error("Error fetching barangays:", err));
     }, []);
 
-    // 2. Filter barangays whenever the selected District changes
+    // 2. Filter barangays & update District Status
     useEffect(() => {
-        if (regform.district) {
+        if (!isInvalidDropdownValue(regform.district)) {
             setFilteredBarangays(allBarangays);
+            setDistrictStatus(FieldStatus.VALID);
         } else {
             setFilteredBarangays([]);
+            setDistrictStatus(FieldStatus.INCOMPLETE);
         }
     }, [regform.district, allBarangays]);
 
-    // UI HELPER - Aligned with StudentRegister.jsx and LogIn.jsx
-    const Label = ({ text, required }) => (
-        <label className="text-xs font-black text-slate-800 uppercase tracking-wider ml-1 block mb-2">
+    // 3. Dynamic Validation Effects for Barangay, Street, and Postal Code
+    useEffect(() => {
+        // Barangay Validation
+        if (isInvalidDropdownValue(regform.barangay)) {
+            setBarangayStatus(FieldStatus.INCOMPLETE);
+        } else {
+            setBarangayStatus(FieldStatus.VALID);
+        }
+
+        // Street Validation
+        if (!regform.street || regform.street.trim() === "") {
+            setStreetStatus(FieldStatus.INCOMPLETE);
+        } else {
+            setStreetStatus(FieldStatus.VALID);
+        }
+
+        // Postal Code Validation (Must be exactly 4 digits)
+        if (!regform.zipCode || regform.zipCode.trim() === "") {
+            setPostalCodeStatus(FieldStatus.INCOMPLETE);
+        } else if (/^\d{4}$/.test(regform.zipCode)) {
+            setPostalCodeStatus(FieldStatus.VALID);
+        } else {
+            setPostalCodeStatus(FieldStatus.INVALID);
+        }
+    }, [regform.barangay, regform.street, regform.zipCode]);
+
+    // UI HELPER
+    const Label = ({ text, required, className = "" }) => (
+        <label className={`text-xs font-black uppercase tracking-wider ml-1 block mb-2 transition-colors ${className || "text-slate-800"}`}>
             {text} {required && <span className="text-[#FF1E1E]">*</span>}
         </label>
     );
 
-    // INPUT CLASS - Glassmorphism aligned
-    const inputClass = "w-full px-4 py-3.5 bg-white/60 border-2 border-white/80 rounded-2xl focus:bg-white focus:border-[#093fb4] outline-none transition-all placeholder:text-black/30 font-bold text-slate-900 text-base shadow-sm";
+    // Dynamic Class Generator for Border Colors
+    const getBorderClass = (fieldName, fieldStatus) => {
+        const isFieldTouched = touched[fieldName] || isSubmitted;
+        
+        // Triggers RED if field is touched/submitted AND is either INCOMPLETE or INVALID
+        const isError = isFieldTouched && (fieldStatus === FieldStatus.INCOMPLETE || fieldStatus === FieldStatus.INVALID);
+        
+        const borderStyle = isError 
+            ? "border-[#FF1E1E] focus:border-[#FF1E1E] bg-red-50/20 text-[#FF1E1E]" 
+            : "border-white/80 focus:border-[#093fb4]";
+
+        return `w-full px-4 py-3.5 bg-white/60 border-2 ${borderStyle} rounded-2xl focus:bg-white outline-none transition-all placeholder:text-black/30 font-bold text-slate-900 text-base shadow-sm`;
+    };
+
+    const getLabelClass = (fieldName, fieldStatus) => {
+        const isFieldTouched = touched[fieldName] || isSubmitted;
+        const isError = isFieldTouched && (fieldStatus === FieldStatus.INCOMPLETE || fieldStatus === FieldStatus.INVALID);
+        if (isError) {
+            return "text-[#FF1E1E]";
+        }
+        return "text-slate-800";
+    };
 
     return (
         <div className="pt-4 border-t border-slate-100">
@@ -44,13 +122,17 @@ export default function StudentAddress({ regform, setRegForm, handleChange }) {
 
                 {/* DISTRICT FIELD */}
                 <div>
-                    <Label text="District" required />
+                    <Label text="District" required className={getLabelClass("district", districtStatus)} />
                     <select 
                         name="district" 
-                        value={regform.district} 
-                        onChange={handleChange} 
+                        value={regform.district || ""} 
+                        onChange={(e) => {
+                            handleChange(e);
+                            setTouched(prev => ({ ...prev, district: true }));
+                        }} 
+                        onBlur={handleBlur}
                         required 
-                        className={inputClass}
+                        className={getBorderClass("district", districtStatus)}
                     >
                         <option value="" disabled>Select District</option>
                         {[1, 2, 3, 4, 5, 6].map(d => (
@@ -61,14 +143,18 @@ export default function StudentAddress({ regform, setRegForm, handleChange }) {
 
                 {/* BARANGAY FIELD */}
                 <div>
-                    <Label text="Barangay" required />
+                    <Label text="Barangay" required className={getLabelClass("barangay", barangayStatus)} />
                     <select 
                         name="barangay" 
-                        value={regform.barangay} 
-                        onChange={handleChange} 
+                        value={regform.barangay || ""} 
+                        onChange={(e) => {
+                            handleChange(e);
+                            setTouched(prev => ({ ...prev, barangay: true }));
+                        }} 
+                        onBlur={handleBlur}
                         required 
-                        disabled={!regform.district}
-                        className={inputClass}
+                        disabled={!regform.district || regform.district === "Select District"}
+                        className={getBorderClass("barangay", barangayStatus)}
                     >
                         <option value="" disabled>Select Barangay</option>
                         {filteredBarangays.map(b => (
@@ -79,34 +165,45 @@ export default function StudentAddress({ regform, setRegForm, handleChange }) {
 
                 {/* STREET / BLK / LOT */}
                 <div>
-                    <Label text="Street / Blk / Lot" required />
+                    <Label text="Street / Blk / Lot" required className={getLabelClass("street", streetStatus)} />
                     <input 
                         type="text" 
                         name="street" 
-                        value={regform.street} 
-                        onChange={handleChange} 
+                        value={regform.street || ""} 
+                        onChange={(e) => {
+                            handleChange(e);
+                            setTouched(prev => ({ ...prev, street: true }));
+                        }} 
+                        onBlur={handleBlur}
                         placeholder="House No., Street name" 
                         required
-                        className={inputClass} 
+                        className={getBorderClass("street", streetStatus)} 
                     />
                 </div>
 
-                {/* ZIP CODE */}
+                {/* POSTAL CODE */}
                 <div>
-                    <Label text="Postal Code" required />
+                    <Label text="Postal Code" required className={getLabelClass("zipCode", postalCodeStatus)} />
                     <input 
                         type="text" 
                         name="zipCode" 
                         maxLength="4"
-                        value={regform.zipCode} 
+                        value={regform.zipCode || ""} 
                         onChange={(e) => {
-                            const val = e.target.value.replace(/\D/g, "");
+                            const val = e.target.value.replace(/\D/g, ""); // Strip non-digits
                             setRegForm(prev => ({ ...prev, zipCode: val }));
+                            setTouched(prev => ({ ...prev, zipCode: true }));
                         }} 
+                        onBlur={handleBlur}
                         placeholder="1100" 
                         required
-                        className={inputClass} 
+                        className={getBorderClass("zipCode", postalCodeStatus)} 
                     />
+                    {(touched.zipCode || isSubmitted) && postalCodeStatus === FieldStatus.INVALID && (
+                        <p className="text-[#FF1E1E] text-xs mt-1 ml-1 font-bold">
+                            Postal code must be exactly 4 digits.
+                        </p>
+                    )}
                 </div>
             </div>
         </div>
