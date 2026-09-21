@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import api from "../api";
 import { X, Mail, Loader2 } from "lucide-react";
 import RegisterPassField from "../RegisterPassField";
@@ -35,7 +35,8 @@ export default function StudentRegister() {
     const FieldStatus = Object.freeze({
         INCOMPLETE: 'Incomplete',
         INVALID: 'Invalid',
-        VALID: 'Valid'
+        VALID: 'Valid',
+        NEGLIGIBLE: 'Negligible'
     });
 
     const [firstNameStatus, setFirstNameStatus] = useState(FieldStatus.INCOMPLETE);

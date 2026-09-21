@@ -25,6 +25,7 @@ export default function StudentAddress({ regform, setRegForm, handleChange, isSu
         zipCode: false
     });
 
+
     const handleBlur = (e) => {
         const { name } = e.target;
         setTouched(prev => ({ ...prev, [name]: true }));

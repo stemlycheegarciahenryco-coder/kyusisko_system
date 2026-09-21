@@ -59,7 +59,7 @@ export default function RegisterPassField({ name, value = "", onChange, placehol
                 <input
                     type={showPassword ? "text" : "password"}
                     name={name}
-                    value={value.trim()}
+                    value={value}
                     onChange={onChange}
                     maxLength={18}
                     placeholder={placeholder || "••••••••"}
