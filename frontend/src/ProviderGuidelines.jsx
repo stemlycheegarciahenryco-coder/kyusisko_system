@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
     ShieldCheck,
     ClipboardList,
@@ -40,7 +40,12 @@ const GuidelineSection = ({ icon: Icon, title, children }) => (
  * Main Content Component for Provider Guidelines
  * Can be exported and reused elsewhere in your layout structure.
  */
-export const ProviderGuidelinesMain = ({ onNavigate, isModal, handleFinishedReadingGuidelines }) => {
+export const ProviderGuidelinesMain = ({ onNavigate, isModal = false, handleFinishedReadingGuidelines = () => {} }) => {
+    useEffect(() => {
+        if (handleFinishedReadingGuidelines == null) {
+            handleFinishedReadingGuidelines = () => { }
+        }
+    })
     return (
         <main className="max-w-5xl mx-auto px-6 pt-12 relative z-10">
             {/* Welcome Section */}
@@ -344,7 +349,7 @@ export const ProviderGuidelinesMain = ({ onNavigate, isModal, handleFinishedRead
                 </div>
 
                 <button
-                    onClick={() => isModal == false ? onNavigate('/organization-register'): handleFinishedReadingGuidelines()}
+                    onClick={() => isModal == false ? onNavigate('/organization-register') : handleFinishedReadingGuidelines()}
                     className="w-full md:w-auto px-8 py-3.5 bg-[#093fb4] text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 hover:bg-[#07308a] transition-all shadow-md hover:shadow-lg whitespace-nowrap"
                 >
                     Continue to Registration <ArrowRight size={18} />
