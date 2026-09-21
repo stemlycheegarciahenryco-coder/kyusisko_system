@@ -25,6 +25,13 @@ const OrganizationRegisterPage = () => {
     const [showSuccess, setShowSuccess] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
 
+    const FieldStatus = Object.freeze({
+        INCOMPLETE: 'Incomplete',
+        INVALID: 'Invalid',
+        VALID: 'Valid'
+    });
+
+
     // Fetch location API profiles
     useEffect(() => {
         fetch('https://psgc.gitlab.io/api/regions/')

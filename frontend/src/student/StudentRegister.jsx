@@ -45,7 +45,7 @@ export default function StudentRegister() {
     const [contactNumberStatus, setContactNumberStatus] = useState(FieldStatus.INCOMPLETE);
     const [isSubmitted, setIsSubmitted] = useState(false);
 
-    // Track touched fields for instant blur/change feedback
+    // Track touched fields
     const [touched, setTouched] = useState({
         firstName: false,
         lastName: false,
@@ -85,12 +85,22 @@ export default function StudentRegister() {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(regform.email);
     })();
-    const showEmailError = (touched.email || isSubmitted) && regform.email.length > 0 && !isEmailValid;
 
     // PASSWORD VALIDATION
     const isPasswordValid = passwordSchema.validate(regform.password || "");
     const passwordsMatch = regform.password !== "" && regform.password === regform.confirmPassword;
-    const showMismatch = regform.confirmPassword.length > 0 && !passwordsMatch;
+
+    // PASSWORD STATUS HELPER
+    const getPasswordStatus = () => {
+        if (!regform.password) return FieldStatus.INCOMPLETE;
+        return isPasswordValid ? FieldStatus.VALID : FieldStatus.INVALID;
+    };
+
+    // CONFIRM PASSWORD STATUS HELPER
+    const getConfirmPasswordStatus = () => {
+        if (!regform.confirmPassword) return FieldStatus.INCOMPLETE;
+        return passwordsMatch ? FieldStatus.VALID : FieldStatus.INVALID;
+    };
 
     // BIRTHDATE CLAMP CHECK
     const isBirthDateValid = (() => {
@@ -100,25 +110,32 @@ export default function StudentRegister() {
         return entered >= new Date(minDate) && entered <= new Date(maxDate);
     })();
 
+    // CONTACT NUMBER VALIDATION
+    const isContactValid = (() => {
+        if (!regform.contactNumber) return false;
+        const cleaned = regform.contactNumber.replace(/[\s\-\(\)]/g, '');
+        const phMobileRegex = /^9\d{9}$/;
+        return phMobileRegex.test(cleaned);
+    })();
+
     const isFormInvalid = (() => {
         const optionalFields = ["middleName", "suffix"];
         const requiredFilled = Object.entries(regform).every(([key, value]) =>
             optionalFields.includes(key) ? true : value.trim() !== ""
         );
 
-        return !requiredFilled || !isPasswordValid || !passwordsMatch || !isBirthDateValid || !isEmailValid;
+        return !requiredFilled || !isPasswordValid || !passwordsMatch || !isBirthDateValid || !isEmailValid || !isContactValid;
     })();
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        
-        // Mark current field as touched on change
+
         setTouched(prev => ({ ...prev, [name]: true }));
 
         if (["firstName", "middleName", "lastName"].includes(name)) {
             const cleanVal = value.replace(/[^a-zA-Z\s-]/g, "");
             setRegForm(prev => ({ ...prev, [name]: cleanVal }));
-            
+
             if (name === "firstName") {
                 setFirstNameStatus(cleanVal.trim() ? FieldStatus.VALID : FieldStatus.INCOMPLETE);
             } else if (name === "lastName") {
@@ -231,47 +248,52 @@ export default function StudentRegister() {
         }
     };
 
-    // UI HELPER COMPONENTS
-    const Label = ({ text, required, className = "" }) => (
-        <label className={`text-xs font-black uppercase tracking-wider ml-1 block mb-2 transition-colors ${className || "text-slate-800"}`}>
-            {text} {required && <span className="text-[#FF1E1E]">*</span>}
-        </label>
-    );
+    // Standardized Input Field styling
+    const standardInputClass = "w-full px-4 py-3.5 bg-white/60 border-2 border-white/80 rounded-2xl outline-none focus:bg-white focus:border-[#093fb4] transition-all placeholder:text-black/30 font-bold text-slate-900 text-base shadow-sm";
 
-    // Border Styling Helper: Triggers red if touched/submitted and status is INCOMPLETE or INVALID
-    const getFieldBorderClass = (fieldName, status, value) => {
-        const baseClass = "w-full px-4 py-3.5 bg-white/60 border-2 rounded-2xl outline-none transition-all placeholder:text-black/30 font-bold text-slate-900 text-base shadow-sm";
-        const isFieldTouched = touched[fieldName] || isSubmitted;
-        
-        const isError = isFieldTouched && (!value || value.trim() === "" || status === FieldStatus.INCOMPLETE || status === FieldStatus.INVALID);
+    // UI HELPER COMPONENTS WITH ALWAYS-VISIBLE STATUS BADGE
+    const Label = ({ text, required, status, className = "" }) => {
+        const getStatusBadge = () => {
+            if (!status) return null;
 
-        if (isError) {
-            return `${baseClass} border-[#FF1E1E] focus:border-[#FF1E1E] bg-red-50/20 text-[#FF1E1E]`;
-        }
-        return `${baseClass} border-white/80 focus:bg-white focus:border-[#093fb4]`;
-    };
+            let colorClasses = "";
+            if (status === FieldStatus.VALID) {
+                colorClasses = "bg-emerald-100 text-emerald-700 border border-emerald-300";
+            } else if (status === FieldStatus.INVALID) {
+                colorClasses = "bg-red-100 text-[#FF1E1E] border border-red-200";
+            } else {
+                colorClasses = "bg-amber-100 text-amber-700 border border-amber-300";
+            }
 
-    const getLabelClass = (fieldName, status, value) => {
-        const isFieldTouched = touched[fieldName] || isSubmitted;
-        const isError = isFieldTouched && (!value || value.trim() === "" || status === FieldStatus.INCOMPLETE || status === FieldStatus.INVALID);
-        if (isError) {
-            return "text-[#FF1E1E]";
-        }
-        return "text-slate-800";
+            return (
+                <span className={`text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md ${colorClasses}`}>
+                    {status}
+                </span>
+            );
+        };
+
+        return (
+            <div className="flex items-center justify-between mb-2">
+                <label className={`text-xs font-black uppercase tracking-wider ml-1 block ${className || "text-slate-800"}`}>
+                    {text} {required && <span className="text-[#FF1E1E]">*</span>}
+                </label>
+                {getStatusBadge()}
+            </div>
+        );
     };
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 relative overflow-hidden bg-[#FFFCFB] font-sans">
+        <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 sm:py-12 relative overflow-x-hidden overflow-y-auto bg-[#FFFCFB] font-sans">
 
             {/* Background Image */}
             <div
-                className="absolute inset-0 bg-no-repeat bg-cover bg-center pointer-events-none"
+                className="fixed inset-0 bg-no-repeat bg-cover bg-center pointer-events-none"
                 style={{ backgroundImage: `url('/bg2.png')` }}
             />
 
             {/* POPUP FULLSCREEN LOADING OVERLAY */}
             {(loading || verifying) && (
-                <div className="absolute inset-0 bg-black/40 backdrop-blur-xs z-50 flex flex-col items-center justify-center">
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex flex-col items-center justify-center">
                     <div className="bg-white px-8 py-6 rounded-[2rem] shadow-2xl flex items-center gap-4 border border-white">
                         <Loader2 className="animate-spin text-[#093FB4]" size={36} />
                         <div>
@@ -282,7 +304,8 @@ export default function StudentRegister() {
                 </div>
             )}
 
-            <div className="w-full max-w-4xl bg-white/70 backdrop-blur-xl border border-white/40 rounded-[2.5rem] shadow-2xl p-8 sm:p-10 max-h-[95vh] overflow-y-auto relative z-10 custom-scrollbar">
+            {/* MAIN FORM CARD */}
+            <div className="w-full max-w-4xl bg-white/70 backdrop-blur-xl border border-white/40 rounded-[2.5rem] shadow-2xl p-8 sm:p-10 relative z-10 my-auto">
 
                 <button
                     type="button"
@@ -315,40 +338,40 @@ export default function StudentRegister() {
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                             <div>
-                                <Label text="First Name" required className={getLabelClass("firstName", firstNameStatus, regform.firstName)} />
-                                <input 
-                                    type="text" 
-                                    name="firstName" 
-                                    placeholder="Juan" 
-                                    value={regform.firstName} 
-                                    onChange={handleChange} 
+                                <Label text="First Name" required status={firstNameStatus} />
+                                <input
+                                    type="text"
+                                    name="firstName"
+                                    placeholder="Juan"
+                                    value={regform.firstName}
+                                    onChange={handleChange}
                                     onBlur={handleBlur}
-                                    required 
-                                    className={getFieldBorderClass("firstName", firstNameStatus, regform.firstName)} 
+                                    required
+                                    className={standardInputClass}
                                 />
                             </div>
                             <div>
                                 <Label text="Middle Name" />
-                                <input 
-                                    type="text" 
-                                    name="middleName" 
-                                    placeholder="Optional" 
-                                    value={regform.middleName} 
-                                    onChange={handleChange} 
-                                    className="w-full px-4 py-3.5 bg-white/60 border-2 border-white/80 rounded-2xl outline-none focus:bg-white focus:border-[#093fb4] transition-all placeholder:text-black/30 font-bold text-slate-900 text-base shadow-sm"
+                                <input
+                                    type="text"
+                                    name="middleName"
+                                    placeholder="Optional"
+                                    value={regform.middleName}
+                                    onChange={handleChange}
+                                    className={standardInputClass}
                                 />
                             </div>
                             <div>
-                                <Label text="Last Name" required className={getLabelClass("lastName", lastNameStatus, regform.lastName)} />
-                                <input 
-                                    type="text" 
-                                    name="lastName" 
-                                    placeholder="Dela Cruz" 
-                                    value={regform.lastName} 
-                                    onChange={handleChange} 
+                                <Label text="Last Name" required status={lastNameStatus} />
+                                <input
+                                    type="text"
+                                    name="lastName"
+                                    placeholder="Dela Cruz"
+                                    value={regform.lastName}
+                                    onChange={handleChange}
                                     onBlur={handleBlur}
-                                    required 
-                                    className={getFieldBorderClass("lastName", lastNameStatus, regform.lastName)} 
+                                    required
+                                    className={standardInputClass}
                                 />
                             </div>
                         </div>
@@ -356,19 +379,19 @@ export default function StudentRegister() {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-5">
                             <div>
                                 <Label text="Suffix" />
-                                <input 
-                                    type="text" 
-                                    name="suffix" 
-                                    placeholder="Jr, Sr (Optional)" 
-                                    value={regform.suffix} 
-                                    onChange={handleChange} 
-                                    className="w-full px-4 py-3.5 bg-white/60 border-2 border-white/80 rounded-2xl outline-none focus:bg-white focus:border-[#093fb4] transition-all placeholder:text-black/30 font-bold text-slate-900 text-base shadow-sm uppercase"
+                                <input
+                                    type="text"
+                                    name="suffix"
+                                    placeholder="Jr, Sr (Optional)"
+                                    value={regform.suffix}
+                                    onChange={handleChange}
+                                    className={`${standardInputClass} uppercase`}
                                 />
                             </div>
 
                             {/* Birth Date Input */}
                             <div>
-                                <Label text="Birth Date" required className={getLabelClass("birthDate", birthDateStatus, regform.birthDate)} />
+                                <Label text="Birth Date" required status={birthDateStatus} />
                                 <input
                                     type="date"
                                     name="birthDate"
@@ -378,9 +401,9 @@ export default function StudentRegister() {
                                     onChange={handleChange}
                                     onBlur={handleBlur}
                                     required
-                                    className={`${getFieldBorderClass("birthDate", birthDateStatus, regform.birthDate)} cursor-pointer`}
+                                    className={`${standardInputClass} cursor-pointer`}
                                 />
-                                {(touched.birthDate || isSubmitted) && birthDateStatus === FieldStatus.INVALID && (
+                                {birthDateStatus === FieldStatus.INVALID && (
                                     <span className="text-[10px] font-black text-[#FF1E1E] uppercase tracking-wider ml-2 mt-2 block">
                                         Must be 18 to 60 years old
                                     </span>
@@ -389,11 +412,11 @@ export default function StudentRegister() {
 
                             <div>
                                 <Label text="Gender" />
-                                <select 
-                                    name="gender" 
-                                    value={regform.gender} 
-                                    onChange={handleChange} 
-                                    className="w-full px-4 py-3.5 bg-white/60 border-2 border-white/80 rounded-2xl outline-none focus:bg-white focus:border-[#093fb4] transition-all font-bold text-slate-900 text-base shadow-sm"
+                                <select
+                                    name="gender"
+                                    value={regform.gender}
+                                    onChange={handleChange}
+                                    className={standardInputClass}
                                 >
                                     <option value="Male">Male</option>
                                     <option value="Female">Female</option>
@@ -427,7 +450,7 @@ export default function StudentRegister() {
 
                             {/* Email Field */}
                             <div>
-                                <Label text="Email Address" required className={getLabelClass("email", emailStatus, regform.email)} />
+                                <Label text="Email Address" required status={emailStatus} />
                                 <div className="relative group">
                                     <Mail size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-black/30 group-focus-within:text-[#093fb4] transition-colors z-10" />
                                     <input
@@ -438,10 +461,10 @@ export default function StudentRegister() {
                                         onChange={handleChange}
                                         onBlur={handleBlur}
                                         required
-                                        className={`${getFieldBorderClass("email", emailStatus, regform.email)} pl-12`}
+                                        className={`${standardInputClass} pl-12`}
                                     />
                                 </div>
-                                {showEmailError && (
+                                {emailStatus === FieldStatus.INVALID && (
                                     <span className="text-[10px] font-black text-[#FF1E1E] uppercase tracking-wider ml-2 mt-2 block">
                                         Invalid email format
                                     </span>
@@ -450,7 +473,7 @@ export default function StudentRegister() {
 
                             {/* Contact Field */}
                             <div>
-                                <Label text="Contact Number" required className={getLabelClass("contactNumber", contactNumberStatus, regform.contactNumber)} />
+                                <Label text="Contact Number" required status={contactNumberStatus} />
                                 <div className="relative group">
                                     <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none border-r border-slate-300 pr-3 z-10">
                                         <img src="/ph.svg" alt="PH" className="w-5 h-3.5 object-cover rounded-sm shadow-sm" />
@@ -464,7 +487,7 @@ export default function StudentRegister() {
                                         onBlur={handleBlur}
                                         required
                                         placeholder="9XXXXXXXXX"
-                                        className={`${getFieldBorderClass("contactNumber", contactNumberStatus, regform.contactNumber)} pl-28`}
+                                        className={`${standardInputClass} pl-28`}
                                     />
                                 </div>
                             </div>
@@ -473,24 +496,24 @@ export default function StudentRegister() {
                         {/* Passwords */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                             <div>
-                                <Label text="Password" required className={(isSubmitted || touched.password) && (!regform.password || !isPasswordValid) ? "text-[#FF1E1E]" : "text-slate-800"} />
+                                <Label text="Password" required status={getPasswordStatus()} />
                                 <RegisterPassField
                                     name="password"
                                     value={regform.password}
                                     onChange={handleChange}
+                                    onBlur={handleBlur}
                                     showStrength={true}
-                                    error={(isSubmitted || touched.password) && (!regform.password || !isPasswordValid)}
                                 />
                             </div>
                             <div>
-                                <Label text="Confirm Password" required className={showMismatch || ((isSubmitted || touched.confirmPassword) && !regform.confirmPassword) ? "text-[#FF1E1E]" : "text-slate-800"} />
+                                <Label text="Confirm Password" required status={getConfirmPasswordStatus()} />
                                 <RegisterPassField
                                     name="confirmPassword"
                                     value={regform.confirmPassword}
                                     onChange={handleChange}
-                                    error={showMismatch || ((isSubmitted || touched.confirmPassword) && !regform.confirmPassword)}
+                                    onBlur={handleBlur}
                                 />
-                                {showMismatch && (
+                                {getConfirmPasswordStatus() === FieldStatus.INVALID && (
                                     <span className="text-[10px] font-black text-[#FF1E1E] uppercase tracking-wider ml-2 mt-2 block">
                                         Passwords do not match
                                     </span>
