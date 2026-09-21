@@ -40,12 +40,7 @@ const GuidelineSection = ({ icon: Icon, title, children }) => (
  * Main Content Component for Provider Guidelines
  * Can be exported and reused elsewhere in your layout structure.
  */
-export const ProviderGuidelinesMain = ({ onNavigate, isModal = false, handleFinishedReadingGuidelines = () => {} }) => {
-    useEffect(() => {
-        if (handleFinishedReadingGuidelines == null) {
-            handleFinishedReadingGuidelines = () => { }
-        }
-    })
+export const ProviderGuidelinesMain = ({ onNavigate, isModal, handleFinishedReadingGuidelines}) => {
     return (
         <main className="max-w-5xl mx-auto px-6 pt-12 relative z-10">
             {/* Welcome Section */}
@@ -404,7 +399,7 @@ export default function ProviderGuidelines() {
             </header>
 
             {/* Render Main Section */}
-            <ProviderGuidelinesMain onNavigate={navigate} />
+            <ProviderGuidelinesMain onNavigate={navigate} isModal={false} handleFinishedReadingGuidelines={()=>{}}/>
         </div>
     );
 }
