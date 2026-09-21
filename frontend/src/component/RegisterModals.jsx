@@ -5,10 +5,24 @@ import React, { useState, useEffect, useRef } from "react";
 // White: #FFFCFB
 // Blue: #093fb4
 
-/* ── 1. OTP / EMAIL VERIFICATION MODAL ── */
-export function OtpModal({ isOpen, email, onVerify, onClose, loading }) {
+/* ── 1. OTP / EMAIL VERIFICATION MODAL ──
+   Contract for the two callback props (important for the fix below):
+
+   - onVerify(otp) : should return `false` (or reject/throw) when the code is
+     wrong or expired, so this modal knows to clear the boxes. Return anything
+     truthy (or just resolve) on success. If your parent currently just opens
+     an <ErrorModal /> on failure without returning/throwing anything, add a
+     `return false` (or `throw`) in that catch block.
+
+   - onResend()    : should call your resend-OTP endpoint and return a Promise
+     that rejects on failure. On success this modal resets its own 120s timer
+     and clears the boxes automatically.
+*/
+export function OtpModal({ isOpen, email, onVerify, onClose, loading, onResend }) {
   const [otp, setOtp] = useState("");
   const [timer, setTimer] = useState(120);
+  const [resending, setResending] = useState(false);
+  const [resendMsg, setResendMsg] = useState("");
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -25,6 +39,7 @@ export function OtpModal({ isOpen, email, onVerify, onClose, loading }) {
     if (isOpen) {
       setTimer(120);
       setOtp("");
+      setResendMsg("");
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [isOpen]);
@@ -36,6 +51,40 @@ export function OtpModal({ isOpen, email, onVerify, onClose, loading }) {
   };
 
   if (!isOpen) return null;
+
+  // Wraps the parent's onVerify so a wrong/expired code visibly clears the
+  // input instead of silently doing nothing.
+  const handleVerifyClick = async () => {
+    try {
+      const result = await onVerify(otp);
+      if (result === false) {
+        setOtp("");
+        setTimeout(() => inputRef.current?.focus(), 50);
+      }
+    } catch (err) {
+      setOtp("");
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  };
+
+  const handleResend = async () => {
+    if (resending) return;
+    setResending(true);
+    setResendMsg("");
+    try {
+      if (onResend) {
+        await onResend();
+      }
+      setTimer(120);
+      setOtp("");
+      setResendMsg("A new code has been sent.");
+      setTimeout(() => inputRef.current?.focus(), 100);
+    } catch (err) {
+      setResendMsg("Couldn't resend the code. Please try again.");
+    } finally {
+      setResending(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in duration-200">
@@ -50,17 +99,7 @@ export function OtpModal({ isOpen, email, onVerify, onClose, loading }) {
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
 
-        {/* Top Floating Icon Badge with Sparkles */}
-        <div className="relative w-16 h-16 mx-auto mb-5">
-          <div className="w-16 h-16 bg-blue-50 text-[#093fb4] rounded-full flex items-center justify-center border-4 border-blue-100/50 shadow-sm">
-            <svg className="w-7 h-7 translate-x-0.5 -translate-y-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="m22 2-7 20-4-9-9-4Z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M22 2 11 13"/></svg>
-          </div>
-          {/* Sparkles */}
-          <span className="absolute -top-1 -right-2 text-blue-400 text-xs font-bold">✦</span>
-          <span className="absolute bottom-0 -left-2 text-blue-300 text-sm font-bold">✦</span>
-        </div>
-
-        <h2 className="text-xl font-black text-slate-900 mb-1 tracking-tight">Verify Your Email</h2>
+        <h2 className="text-xl font-black text-slate-900 mb-1 tracking-tight mt-2">Verify Your Email</h2>
         <p className="text-slate-500 text-xs font-medium mb-6 leading-relaxed">
           We've sent a 6-digit verification code to<br />
           <span className="text-[#093fb4] font-bold break-all">{email}</span>
@@ -103,24 +142,31 @@ export function OtpModal({ isOpen, email, onVerify, onClose, loading }) {
           />
         </div>
 
-        {/* TIMER PILL BADGE */}
-        <div className="mb-4">
-          {timer > 0 ? (
+        {/* TIMER PILL BADGE / RESEND */}
+        <div className="mb-4 space-y-2">
+          {timer > 0 && (
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50/80 rounded-full text-slate-600 text-xs font-semibold">
               <svg className="w-3.5 h-3.5 text-[#093fb4]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               <span>Code expires in <strong className="text-[#093fb4] font-black">{formatTime(timer)}</strong></span>
             </div>
-          ) : (
-            <div className="text-xs text-slate-500">
-              Didn't receive the code?{" "}
-              <button 
-                type="button"
-                onClick={() => setTimer(120)} 
-                className="text-[#093fb4] font-bold hover:underline"
-              >
-                Resend code
-              </button>
-            </div>
+          )}
+          <div className="text-xs text-slate-500">
+            Didn't receive the code?{" "}
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={timer > 0 || resending}
+              className={`font-bold transition-colors ${
+                timer > 0
+                  ? "text-slate-300 cursor-not-allowed"
+                  : "text-[#093fb4] hover:underline disabled:opacity-50"
+              }`}
+            >
+              {resending ? "Sending..." : "Resend code"}
+            </button>
+          </div>
+          {resendMsg && (
+            <p className="mt-2 text-[10px] font-bold text-slate-400">{resendMsg}</p>
           )}
         </div>
 
@@ -128,7 +174,7 @@ export function OtpModal({ isOpen, email, onVerify, onClose, loading }) {
         <div className="space-y-3">
           <button 
             type="button"
-            onClick={() => onVerify(otp)}
+            onClick={handleVerifyClick}
             disabled={otp.length !== 6 || loading}
             className="w-full py-3.5 bg-[#093fb4] text-white rounded-2xl font-bold text-sm tracking-wide hover:bg-blue-800 disabled:opacity-40 transition-all shadow-md shadow-blue-200 flex items-center justify-center gap-2"
           >
@@ -162,12 +208,15 @@ export function OtpModal({ isOpen, email, onVerify, onClose, loading }) {
 }
 
 
-/* ── 2. REDESIGNED ERROR MODAL ── */
+/* ── 2. REDESIGNED ERROR MODAL ──
+   z-index bumped above OtpModal (z-[130] vs z-[120]) so that if the OTP
+   modal is still open underneath, the error is always visible on top
+   instead of silently rendering behind it. */
 export function ErrorModal({ isOpen, onClose, message }) {
   if (!isOpen) return null;
   
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in duration-200">
       <div className="w-full max-w-sm bg-[#FFFCFB] rounded-[2.5rem] p-8 text-center shadow-2xl border border-slate-100 relative animate-in zoom-in-95 duration-200">
         
         {/* Top Right Close Button */}

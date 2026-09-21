@@ -1,11 +1,33 @@
-import React, { useState } from 'react';
-import { IconShieldCheck, IconArrowLeft, IconAlertTriangle, IconX } from '@tabler/icons-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { IconShieldCheck, IconArrowLeft, IconAlertTriangle, IconX, IconRefresh } from '@tabler/icons-react';
 import api from './api';
+
+// How long the "Resend Code" button stays disabled after a send.
+const RESEND_COOLDOWN = 30; // seconds
 
 export default function OTPVerification({ studentId, method, onVerified, onCancel }) {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN);
+  const [resendMsg, setResendMsg] = useState('');
+  const inputsRef = useRef([]);
+
+  // Countdown for the resend cooldown.
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setInterval(() => {
+      setResendCooldown((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [resendCooldown]);
+
+  const clearOtpInputs = () => {
+    setOtp(['', '', '', '', '', '']);
+    // Refocus the first box so the user immediately sees it's ready for a new code.
+    setTimeout(() => inputsRef.current[0]?.focus(), 50);
+  };
 
   const handleChange = (element, index) => {
     if (isNaN(element.value)) return false;
@@ -34,7 +56,8 @@ export default function OTPVerification({ studentId, method, onVerified, onCance
 
     setLoading(true);
     setError('');
-    
+    setResendMsg('');
+
     try {
       const res = await api.post('/students/verify-otp', { studentId, code });
       if (res.data) {
@@ -42,15 +65,38 @@ export default function OTPVerification({ studentId, method, onVerified, onCance
       }
     } catch (err) {
       setError(err.response?.data?.error || 'Invalid or Expired Code');
+      // Wipe the boxes so an invalid/expired code doesn't just sit there silently -
+      // the cleared inputs + the red error banner make the failure obvious.
+      clearOtpInputs();
     } finally {
       setLoading(false);
     }
   };
 
+  const handleResend = async () => {
+    if (resendCooldown > 0 || resendLoading) return;
+    setResendLoading(true);
+    setError('');
+    setResendMsg('');
+    try {
+      // NOTE: adjust this endpoint to whatever your backend actually exposes
+      // for re-sending a code (it should generate a new OTP and call your
+      // emailService.sendEmailOTP, or the SMS equivalent, for `method`).
+      await api.post('/students/resend-otp', { studentId, method });
+      setResendMsg('A new code has been sent.');
+      setResendCooldown(RESEND_COOLDOWN);
+      clearOtpInputs();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Could not resend the code. Please try again.');
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
   return (
-    <div 
+    <div
       className="min-h-screen w-full flex items-center justify-center p-4 bg-[#FFFCFB] bg-no-repeat relative overflow-hidden font-sans"
-      style={{ 
+      style={{
         backgroundImage: `url('/bg2.png')`,
         backgroundSize: '100% 100%',
         backgroundPosition: 'center'
@@ -58,10 +104,10 @@ export default function OTPVerification({ studentId, method, onVerified, onCance
     >
       {/* Slim Rectangular Card */}
       <div className="bg-white w-full max-w-[380px] rounded-[1.5rem] shadow-2xl overflow-hidden border border-slate-100 relative z-10 animate-in fade-in zoom-in duration-300">
-        
+
         {/* Close/Cancel Button */}
-        <button 
-          onClick={onCancel} 
+        <button
+          onClick={onCancel}
           className="absolute top-4 right-4 text-slate-300 hover:text-[#FF1E1E] transition-colors p-2 z-20"
         >
           <IconX size={20} />
@@ -91,6 +137,7 @@ export default function OTPVerification({ studentId, method, onVerified, onCance
               {otp.map((data, index) => (
                 <input
                   key={index}
+                  ref={(el) => (inputsRef.current[index] = el)}
                   type="text"
                   maxLength="1"
                   className="w-11 h-14 text-center text-xl font-black bg-slate-50 border border-slate-100 rounded-xl focus:border-[#093fb4] focus:bg-white transition-all outline-none"
@@ -109,6 +156,12 @@ export default function OTPVerification({ studentId, method, onVerified, onCance
               </div>
             )}
 
+            {resendMsg && !error && (
+              <div className="p-3 rounded-xl border flex items-center gap-2 bg-emerald-50 border-emerald-100">
+                <p className="text-[9px] font-black text-emerald-600 uppercase">{resendMsg}</p>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading}
@@ -118,7 +171,21 @@ export default function OTPVerification({ studentId, method, onVerified, onCance
             </button>
           </form>
 
-          <button 
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={resendCooldown > 0 || resendLoading}
+            className="w-full flex items-center justify-center gap-2 text-[#093fb4] hover:text-[#073496] disabled:text-slate-300 font-black text-[9px] uppercase tracking-widest transition-colors"
+          >
+            <IconRefresh size={14} className={resendLoading ? 'animate-spin' : ''} />
+            {resendLoading
+              ? 'Sending...'
+              : resendCooldown > 0
+                ? `Resend Code (${resendCooldown}s)`
+                : 'Resend Code'}
+          </button>
+
+          <button
             onClick={onCancel}
             className="w-full flex items-center justify-center gap-2 text-slate-400 hover:text-slate-600 font-black text-[9px] uppercase tracking-widest transition-colors"
           >

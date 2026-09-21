@@ -43,16 +43,37 @@ exports.initiateOTP = async (email, method) => {
  * Verifies the code and finally issues the JWT Token
  */
 exports.verifyOTP = async (req, res) => {
-    // You should send the email in the request body instead of studentId
-    const { email, code } = req.body; 
+    // FIX: The frontend (OTPVerification.jsx) sends { studentId, code } — it
+    // never sends `email` — so this used to look up `WHERE email = undefined`
+    // and fail every single time with "Invalid or expired code.", regardless
+    // of whether the code was actually correct. We now accept either and
+    // resolve studentId -> email ourselves when email isn't provided.
+    const { studentId, email, code } = req.body;
 
     try {
+        let targetEmail = email;
+
+        if (!targetEmail && studentId) {
+            const studentLookup = await pool.query(
+                'SELECT student_email FROM students WHERE id = $1',
+                [studentId]
+            );
+            if (studentLookup.rows.length === 0) {
+                return res.status(404).json({ error: 'Student not found.' });
+            }
+            targetEmail = studentLookup.rows[0].student_email;
+        }
+
+        if (!targetEmail) {
+            return res.status(400).json({ error: 'Missing email or studentId.' });
+        }
+
         // 1. Check if OTP is valid and not expired using email
         const result = await pool.query(
             `SELECT * FROM otp_codes 
              WHERE email = $1 AND code = $2 AND expires_at > NOW() 
              ORDER BY created_at DESC LIMIT 1`,
-            [email, code]
+            [targetEmail, code]
         );
 
         if (result.rows.length === 0) {
@@ -60,10 +81,10 @@ exports.verifyOTP = async (req, res) => {
         }
 
         // 2. Clear codes for this email
-        await pool.query('DELETE FROM otp_codes WHERE email = $1', [email]);
+        await pool.query('DELETE FROM otp_codes WHERE email = $1', [targetEmail]);
 
         // 3. Fetch student details using the email
-        const studentRes = await pool.query('SELECT * FROM students WHERE student_email = $1', [email]);
+        const studentRes = await pool.query('SELECT * FROM students WHERE student_email = $1', [targetEmail]);
         
         if (studentRes.rows.length === 0) {
             return res.status(404).json({ error: 'Student not found.' });
@@ -96,4 +117,39 @@ exports.verifyOTP = async (req, res) => {
     }
 };
 
-//EMAIL CHECK EXISTING 
+/**
+ * ROUTE: POST /api/security/resend-otp
+ * Regenerates and resends a code for an in-progress login OTP flow.
+ * Frontend (OTPVerification.jsx) sends { studentId, method } — no route or
+ * handler existed for this before, so every "Resend Code" click 404'd.
+ */
+exports.resendOTP = async (req, res) => {
+    const { studentId, email, method } = req.body;
+
+    try {
+        let targetEmail = email;
+
+        if (!targetEmail && studentId) {
+            const studentLookup = await pool.query(
+                'SELECT student_email FROM students WHERE id = $1',
+                [studentId]
+            );
+            if (studentLookup.rows.length === 0) {
+                return res.status(404).json({ error: 'Student not found.' });
+            }
+            targetEmail = studentLookup.rows[0].student_email;
+        }
+
+        if (!targetEmail) {
+            return res.status(400).json({ error: 'Missing email or studentId.' });
+        }
+
+        await exports.initiateOTP(targetEmail, method || 'email');
+        return res.json({ message: 'Verification code resent.' });
+    } catch (err) {
+        console.error('Resend OTP Error:', err.message);
+        return res.status(500).json({ error: 'Failed to resend code.' });
+    }
+};
+
+//EMAIL CHECK EXISTING
