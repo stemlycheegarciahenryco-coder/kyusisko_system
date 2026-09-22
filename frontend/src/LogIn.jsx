@@ -217,24 +217,48 @@ export default function LogIn() {
             </div>
           )}
 
-          <button 
-            type="submit" 
-            disabled={loading || (showMfa && otp.length !== 6)}
-            className="w-full bg-[#093fb4] hover:bg-[#073496] text-white font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-2.5 group shadow-xl shadow-[#093fb4]/25 active:scale-[0.98] disabled:bg-[#093fb4]/70 disabled:active:scale-100 text-sm tracking-wider uppercase"
-          >
-            {loading ? (
-              <span>Verifying...</span>
-            ) : (
-              <>
-                {showMfa ? "VERIFY CODE" : "LOG IN"}
-                <IconLogin size={20} stroke={2.5} className="group-hover:translate-x-1 transition-transform" />
-              </>
+          <div className="space-y-4">
+            <button 
+              type="submit" 
+              disabled={loading || (showMfa && otp.length !== 6)}
+              className="w-full bg-[#093fb4] hover:bg-[#073496] text-white font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-2.5 group shadow-xl shadow-[#093fb4]/25 active:scale-[0.98] disabled:bg-[#093fb4]/70 disabled:active:scale-100 text-sm tracking-wider uppercase"
+            >
+              {loading ? (
+                <span>Verifying...</span>
+              ) : (
+                <>
+                  {showMfa ? "VERIFY CODE" : "LOG IN"}
+                  <IconLogin size={20} stroke={2.5} className="group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
+            </button>
+
+            {!showMfa && (
+              <div className="w-full mt-3 flex items-start justify-center gap-2 text-xs">
+                <span className="font-bold text-slate-500 pt-[1px]">
+                  Don't have an account?
+                </span>
+                <div className="flex flex-col items-start gap-1.5">
+                  <a
+                    href="/student-register"
+                    className="font-black text-[#093fb4] hover:text-[#073496] hover:underline transition-colors tracking-wide"
+                  >
+                    Create Student Account
+                  </a>
+                  <a
+                    href="/organization-register"
+                    className="font-black text-[#093fb4] hover:text-[#073496] hover:underline transition-colors tracking-wide"
+                  >
+                    Create Provider Account
+                  </a>
+                </div>
+              </div>
             )}
-          </button>
+          </div>
         </form>
 
         {!showMfa && (
-          <div className="mt-8 flex flex-col items-center gap-6 border-t border-black/10 pt-6">
+          <div className="mt-8 flex flex-col items-center border-t border-black/10 pt-6">
               <button
                 type="button"
                 onClick={() => navigate('/forgot-password')}
@@ -242,28 +266,7 @@ export default function LogIn() {
               >
                 Forgot Password?
               </button>
-
-             <div className="w-full text-center flex flex-col items-center gap-3">
-                <p className="text-xs font-bold text-slate-500">
-                  Don't have an account?
-                </p>
-                <button
-                  type="button"
-                  onClick={() => navigate('/StudentRegister')}
-                  className="text-xs font-black text-[#093fb4] hover:text-[#073496] hover:underline transition-colors tracking-widest uppercase"
-                >
-                  Create Student Account
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/OrgRegister')}
-                  className="text-xs font-black text-[#093fb4] hover:text-[#073496] hover:underline transition-colors tracking-widest uppercase"
-                >
-                  Create Provider Account
-                </button>
-              </div>
-              </div>
-   
+          </div>
         )}
       </div>
     </div>
