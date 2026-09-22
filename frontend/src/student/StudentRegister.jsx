@@ -194,6 +194,14 @@ export default function StudentRegister() {
         }
     };
 
+    // FIX: OtpModal was previously rendered without an onResend prop, so its
+    // handleResend() silently skipped calling the backend entirely and just
+    // showed "A new code has been sent." with nothing actually sent. This
+    // reuses the same endpoint as the initial send.
+    const handleResendOtp = () => {
+        return api.post('/send-registration-otp', { email: regform.email });
+    };
+
     // UI HELPER COMPONENTS - ALIGNED WITH LOGIN.JSX
     const Label = ({ text, required }) => (
         <label className="text-xs font-black text-slate-800 uppercase tracking-wider ml-1 block mb-2">
@@ -431,6 +439,7 @@ export default function StudentRegister() {
                 email={regform.email} 
                 onClose={() => setShowOtpModal(false)} 
                 onVerify={handleVerifyOtp} 
+                onResend={handleResendOtp}
                 loading={verifying}
             />
         </div>

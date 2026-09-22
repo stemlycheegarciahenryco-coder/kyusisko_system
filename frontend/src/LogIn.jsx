@@ -234,7 +234,7 @@ export default function LogIn() {
         </form>
 
         {!showMfa && (
-          <div className="mt-8 flex justify-center border-t border-black/10 pt-6">
+          <div className="mt-8 flex flex-col items-center gap-6 border-t border-black/10 pt-6">
               <button
                 type="button"
                 onClick={() => navigate('/forgot-password')}
@@ -242,7 +242,28 @@ export default function LogIn() {
               >
                 Forgot Password?
               </button>
-          </div>
+
+             <div className="w-full text-center flex flex-col items-center gap-3">
+                <p className="text-xs font-bold text-slate-500">
+                  Don't have an account?
+                </p>
+                <button
+                  type="button"
+                  onClick={() => navigate('/StudentRegister')}
+                  className="text-xs font-black text-[#093fb4] hover:text-[#073496] hover:underline transition-colors tracking-widest uppercase"
+                >
+                  Create Student Account
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/OrgRegister')}
+                  className="text-xs font-black text-[#093fb4] hover:text-[#073496] hover:underline transition-colors tracking-widest uppercase"
+                >
+                  Create Provider Account
+                </button>
+              </div>
+              </div>
+   
         )}
       </div>
     </div>

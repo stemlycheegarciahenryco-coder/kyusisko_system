@@ -5,7 +5,6 @@ import api from '../api';
 const inputCls = "w-full px-5 py-4 bg-black/10 border-2 border-black/15 rounded-2xl focus:bg-white focus:border-[#093fb4] outline-none transition-all placeholder:text-black/45 font-bold text-black text-sm shadow-sm disabled:opacity-60 disabled:bg-black/5 disabled:border-transparent disabled:cursor-not-allowed";
 const labelCls = "text-xs font-black text-black/70 uppercase ml-1 tracking-[0.15em] block mb-2";
 
-// 1. Dynamic Section Title with Edit Toggle
 function SectionTitle({ icon: Icon, title, description, isEditing, onToggleEdit }) {
   return (
     <div className="mb-6 pt-6 border-t-2 border-black/5 first:border-0 first:pt-0 flex justify-between items-start">
@@ -43,7 +42,6 @@ function Field({ label, children }) {
   );
 }
 
-// 2. Custom Phone Field with built-in +63 Prefix and Inline Error/Helper Text
 function ContactField({ label, value, onChange, disabled, error }) {
   return (
     <div className="space-y-1">
@@ -68,7 +66,6 @@ function ContactField({ label, value, onChange, disabled, error }) {
           className="w-full px-4 py-4 bg-transparent outline-none font-bold text-black text-sm placeholder:text-black/30 disabled:cursor-not-allowed"
         />
       </div>
-      {/* Permanent Helper Text that turns into an Error Warning */}
       {error ? (
         <p className="text-[10px] font-black text-red-600 uppercase tracking-wider ml-2 mt-1.5">{error}</p>
       ) : (
@@ -81,8 +78,8 @@ function ContactField({ label, value, onChange, disabled, error }) {
 export default function StudentEditProfile({ studentData, onClose, onRefresh }) {
   const [form, setForm] = useState({
     bio: studentData?.bio || '',
-    college_id: studentData?.college_id || '',
-    course_id: studentData?.course_id || '',
+    college_id: '', 
+    course_id: '',  
     other_school: studentData?.other_school || '',
     other_degree_program: studentData?.other_degree_program || '',
     sports_interests: Array.isArray(studentData?.sports_interests) ? studentData.sports_interests.join(', ') : studentData?.sports_interests || '',
@@ -113,9 +110,7 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
     family: false
   });
 
-  // NEW: Tracks if the user has interacted with any edit button at all
   const [hasEdited, setHasEdited] = useState(false);
-
   const [colleges, setColleges] = useState([]);
   const [courses, setCourses] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -124,6 +119,7 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
   const [contactErrors, setContactErrors] = useState({});
   const [globalError, setGlobalError] = useState('');
 
+  // Auto-match onboarding data on mount
   useEffect(() => {
     const fetchLookups = async () => {
       try {
@@ -133,14 +129,38 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
         ]);
         setColleges(collegeRes.data);
         setCourses(courseRes.data);
+
+        // Find the correct dropdown ID based on the string name returned from backend
+        let matchedCollegeId = '';
+        if (studentData?.other_school && studentData.other_school !== 'Currently not enrolled') {
+          matchedCollegeId = 'Others';
+        } else if (studentData?.college_name) {
+          const found = collegeRes.data.find(c => c.name === studentData.college_name);
+          if (found) matchedCollegeId = found.id;
+        }
+
+        let matchedCourseId = '';
+        if (studentData?.other_degree_program && studentData.other_degree_program !== 'Currently not enrolled') {
+          matchedCourseId = 'Others';
+        } else if (studentData?.course_name) {
+          const found = courseRes.data.find(c => c.name === studentData.course_name);
+          if (found) matchedCourseId = found.id;
+        }
+
+        setForm(prev => ({
+          ...prev,
+          college_id: matchedCollegeId,
+          course_id: matchedCourseId
+        }));
+
       } catch (err) { }
     };
     fetchLookups();
-  }, []);
+  }, [studentData]);
 
   const handleToggleEdit = (section) => {
     setEditMode(p => ({ ...p, [section]: !p[section] }));
-    setHasEdited(true); // Permanently unlocks the Save button once they try to edit
+    setHasEdited(true);
   };
 
   const handleContactChange = (field, e) => {
@@ -164,7 +184,6 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
     
     for (const key of phoneFields) {
       const val = form[key];
-      // Only validate if they typed something (optional caregiver fields) OR if it's the main student number
       if (val && val.length !== 10) {
         newErrors[key] = "Must be a valid 10-digit number starting with 9";
         hasError = true;
@@ -297,7 +316,6 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
                   </Field>
                 </div>
                 
-                {/* STRICT GWA PERCENTAGE LOGIC */}
                 <Field label="GWA (Percentage)">
                   <div className="relative">
                     <input 
@@ -309,13 +327,13 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
                       className={inputCls} 
                       value={form.gwa} 
                       onChange={e => {
-                        let val = e.target.value.replace(/\D/g, ''); // Strip decimals or weird chars
+                        let val = e.target.value.replace(/\D/g, ''); 
                         if (val === '') {
                           setForm({ ...form, gwa: '' });
                           return;
                         }
                         let num = parseInt(val, 10);
-                        if (num > 100) num = 100; // Hard cap at 100
+                        if (num > 100) num = 100; 
                         setForm({ ...form, gwa: num });
                       }} 
                     />

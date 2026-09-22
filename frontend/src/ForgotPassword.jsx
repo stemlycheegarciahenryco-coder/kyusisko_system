@@ -85,7 +85,7 @@ export default function ForgotPassword() {
               Reset Password
             </h2>
             <p className="text-slate-600 text-sm font-bold leading-normal mt-3 px-2">
-              Enter your email address to receive a 6-digit recovery code.
+              Enter your email address.
             </p>
           </div>
 

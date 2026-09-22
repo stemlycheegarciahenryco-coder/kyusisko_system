@@ -23,6 +23,20 @@ export function OtpModal({ isOpen, email, onVerify, onClose, loading, onResend }
   const [timer, setTimer] = useState(120);
   const [resending, setResending] = useState(false);
   const [resendMsg, setResendMsg] = useState("");
+
+  // Resend is available much sooner than the 2-minute code-expiry window —
+  // this is a short, separate cooldown just to stop rapid double-clicks.
+  const RESEND_COOLDOWN = 10; // seconds
+  const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN);
+
+  // Backend allows 2 resends per 15 minutes (see otpSendLimiter). Mirror that
+  // limit on the client so a 3rd click shows an immediate, clear message
+  // instead of relying only on a 429 round-trip.
+  const MAX_RESENDS = 2;
+  const LOCKOUT_SECONDS = 15 * 60;
+  const [resendCount, setResendCount] = useState(0);
+  const [lockoutSecondsLeft, setLockoutSecondsLeft] = useState(0);
+
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -36,10 +50,33 @@ export function OtpModal({ isOpen, email, onVerify, onClose, loading, onResend }
   }, [isOpen, timer]);
 
   useEffect(() => {
+    let interval;
+    if (isOpen && resendCooldown > 0) {
+      interval = setInterval(() => {
+        setResendCooldown((prev) => (prev <= 1 ? 0 : prev - 1));
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isOpen, resendCooldown]);
+
+  useEffect(() => {
+    let interval;
+    if (isOpen && lockoutSecondsLeft > 0) {
+      interval = setInterval(() => {
+        setLockoutSecondsLeft((prev) => (prev <= 1 ? 0 : prev - 1));
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isOpen, lockoutSecondsLeft]);
+
+  useEffect(() => {
     if (isOpen) {
       setTimer(120);
       setOtp("");
       setResendMsg("");
+      setResendCooldown(RESEND_COOLDOWN);
+      setResendCount(0);
+      setLockoutSecondsLeft(0);
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [isOpen]);
@@ -68,19 +105,40 @@ export function OtpModal({ isOpen, email, onVerify, onClose, loading, onResend }
   };
 
   const handleResend = async () => {
-    if (resending) return;
+    if (resending || resendCooldown > 0 || lockoutSecondsLeft > 0) return;
+
+    if (resendCount >= MAX_RESENDS) {
+      setLockoutSecondsLeft(LOCKOUT_SECONDS);
+      setResendMsg("");
+      return;
+    }
+
     setResending(true);
     setResendMsg("");
     try {
-      if (onResend) {
-        await onResend();
+      if (!onResend) {
+        // Previously this silently skipped the call and still reported
+        // success below — meaning a parent that forgot to wire up onResend
+        // would show "A new code has been sent." without ever hitting the
+        // backend. Now it fails loudly instead.
+        throw new Error("onResend handler is not wired up in the parent component.");
       }
+      await onResend();
       setTimer(120);
       setOtp("");
+      setResendCount((prev) => prev + 1);
+      setResendCooldown(RESEND_COOLDOWN);
       setResendMsg("A new code has been sent.");
       setTimeout(() => inputRef.current?.focus(), 100);
     } catch (err) {
-      setResendMsg("Couldn't resend the code. Please try again.");
+      console.error("Resend OTP failed:", err);
+      // The backend's own limiter (2 per 15 min) can still fire even if our
+      // client-side count somehow gets out of sync — surface that clearly.
+      if (err?.response?.status === 429) {
+        setLockoutSecondsLeft(LOCKOUT_SECONDS);
+      } else {
+        setResendMsg(err?.response?.data?.error || "Couldn't resend the code. Please try again.");
+      }
     } finally {
       setResending(false);
     }
@@ -150,21 +208,33 @@ export function OtpModal({ isOpen, email, onVerify, onClose, loading, onResend }
               <span>Code expires in <strong className="text-[#093fb4] font-black">{formatTime(timer)}</strong></span>
             </div>
           )}
-          <div className="text-xs text-slate-500">
-            Didn't receive the code?{" "}
-            <button
-              type="button"
-              onClick={handleResend}
-              disabled={timer > 0 || resending}
-              className={`font-bold transition-colors ${
-                timer > 0
-                  ? "text-slate-300 cursor-not-allowed"
-                  : "text-[#093fb4] hover:underline disabled:opacity-50"
-              }`}
-            >
-              {resending ? "Sending..." : "Resend code"}
-            </button>
-          </div>
+
+          {lockoutSecondsLeft > 0 ? (
+            <div className="text-[11px] font-bold text-[#FF1E1E] bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+              Too many OTP requests. Please wait {formatTime(lockoutSecondsLeft)} before requesting another code.
+            </div>
+          ) : (
+            <div className="text-xs text-slate-500">
+              Didn't receive the code?{" "}
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={resendCooldown > 0 || resending}
+                className={`font-bold transition-colors ${
+                  resendCooldown > 0
+                    ? "text-slate-300 cursor-not-allowed"
+                    : "text-[#093fb4] hover:underline disabled:opacity-50"
+                }`}
+              >
+                {resending
+                  ? "Sending..."
+                  : resendCooldown > 0
+                    ? `Resend code (${resendCooldown}s)`
+                    : "Resend code"}
+              </button>
+            </div>
+          )}
+
           {resendMsg && (
             <p className="mt-2 text-[10px] font-bold text-slate-400">{resendMsg}</p>
           )}

@@ -43,7 +43,7 @@ const generalLimiter = rateLimit({
 // ----------------------------------------------------
 const otpSendLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, 
-    max: process.env.NODE_ENV === 'development' ? 1000 : 3, 
+    max: process.env.NODE_ENV === 'development' ? 1000 : 2, 
     keyGenerator: (req, res) => {
         if (req.body && req.body.email) {
             return req.body.email.toLowerCase(); // Rate limit by email first

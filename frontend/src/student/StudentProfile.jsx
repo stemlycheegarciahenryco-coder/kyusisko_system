@@ -43,8 +43,6 @@ export default function StudentProfile() {
 
   useEffect(() => () => { if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current); }, []);
 
-  // Passed to the edit modal as `onRefresh`: applies the saved fields to
-  // the UI immediately via context, then re-syncs from the server in the background.
   const handleProfileSaved = async (patch) => {
     if (patch) {
       updateStudent(patch);
@@ -68,7 +66,6 @@ export default function StudentProfile() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Show the new image instantly instead of waiting on the upload + refetch.
     const localPreviewUrl = URL.createObjectURL(file);
     setAvatarPreview(localPreviewUrl);
 
@@ -79,7 +76,6 @@ export default function StudentProfile() {
       await refreshProfile();
       window.dispatchEvent(new Event('profilePicUpdated'));
     } catch (err) {
-      // Revert the optimistic preview if the upload actually failed.
       setAvatarPreview(null);
     } finally {
       URL.revokeObjectURL(localPreviewUrl);
@@ -179,7 +175,6 @@ export default function StudentProfile() {
                 onClick={() => setIsEditModalOpen(true)}
                 className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-xs font-black uppercase tracking-[0.1em] text-black/70 bg-white/60 border-2 border-white/80 rounded-2xl hover:bg-white hover:text-[#093fb4] hover:border-[#093fb4]/40 transition-all shadow-sm active:scale-95 shrink-0"
               >
-                {/* APPLIED PENCIL ICON WITH STROKEWIDTH */}
                 <Pencil size={16} strokeWidth={2.5}/> Edit Profile
               </button>
             </div>
@@ -201,7 +196,8 @@ export default function StudentProfile() {
               </div>
               <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/60 border-2 border-white/80 rounded-xl text-xs font-black uppercase tracking-widest text-black/70 shadow-sm">
                 <Award size={18} className="text-[#093fb4]" strokeWidth={2.5}/>
-                <span>GWA: <strong className="text-black ml-1">{student.gwa ? Number(student.gwa).toFixed(2) : '—'}</strong></span>
+                {/* APPLIED PERCENTAGE FORMATTING TO GWA */}
+                <span>GWA: <strong className="text-black ml-1">{student.gwa ? `${student.gwa}%` : '—'}</strong></span>
               </div>
             </div>
           </div>

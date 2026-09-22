@@ -6,8 +6,6 @@ import {
     Mail,
     Phone,
     CheckCircle2,
-    ChevronLeft,
-    ChevronRight,
     ChevronDown,
     UserPlus,
     Search,
@@ -16,11 +14,9 @@ import {
     Building2,
     FileCheck,
     BadgeCheck,
-    Calendar,
-    Layers,
-    GraduationCap
 } from 'lucide-react';
 import HomeNav from './HomeNav';
+import HomeProgram from './HomeProgram';
 
 alert(`WARNING: THIS IS A SCHOOL PROJECT! 
 \nThis platform is created solely for academic and educational purposes. We do not offer real scholarship programs, financial aid, or official grants. Do not submit sensitive personal data, financial information, or official credentials.
@@ -55,204 +51,10 @@ const ScrollReveal = ({ children, delay = 0 }) => {
     );
 };
 
-/* ─── Upgraded Mock Scholarship Data ────────────────────────── */
-const SCHOLARSHIPS = [
-    {
-        id: 1,
-        title: 'QC Financial Assistance for Tertiary Education',
-        provider: 'QC Government',
-        coverage: '₱25,000 per Semester',
-        criteria: 'QC Resident & GWA of 2.0 or higher',
-        deadline: 'June 15, 2026',
-        tag: 'Local Gov',
-        img: '/org1.png'
-    },
-    {
-        id: 2,
-        title: 'DOST-SEI Merit Scholarship Program',
-        provider: 'Department of Science and Technology',
-        coverage: 'Full Tuition + ₱7,000/mo Stipend',
-        criteria: 'STEM Strand or Top 5% of Non-STEM',
-        deadline: 'May 30, 2026',
-        tag: 'Science & Tech',
-        img: '/org2.png'
-    },
-    {
-        id: 3,
-        title: 'CHED Tertiary Education Subsidy (TES)',
-        provider: 'CHED UniFAST',
-        coverage: '₱40,000 per Academic Year',
-        criteria: 'Parihas/Listahanan or Low Income Bracket',
-        deadline: 'July 10, 2026',
-        tag: 'National Gov',
-        img: '/org3.png'
-    },
-    {
-        id: 4,
-        title: 'SM Foundation College Scholarship',
-        provider: 'SM Foundation',
-        coverage: 'Full Tuition + Monthly Allowance',
-        criteria: 'Max Gross Family Income < ₱250k/yr',
-        deadline: 'June 01, 2026',
-        tag: 'Private',
-        img: '/org4.png'
-    },
-    {
-        id: 5,
-        title: 'Ayala Foundation Education Grant',
-        provider: 'Ayala Foundation',
-        coverage: '₱30,000 Annual Allowance + Laptop',
-        criteria: 'Regular 2nd Year College Students',
-        deadline: 'June 20, 2026',
-        tag: 'Corporate',
-        img: '/org5.png'
-    },
-    {
-        id: 6,
-        title: 'TESDA Training for Work Scholarship',
-        provider: 'TESDA',
-        coverage: 'Free Training + Assessment Fee',
-        criteria: 'At least 18 y/o & Tech-Voc Student',
-        deadline: 'Ongoing Admission',
-        tag: 'Technical',
-        img: '/org6.png'
-    },
-];
-
-/* ─── Upgraded Scholarship Carousel ─────────────────────────── */
-const ScholarshipCarousel = () => {
-    const navigate = useNavigate();
-    const [current, setCurrent] = useState(0);
-    const visible = 3;
-    const total = SCHOLARSHIPS.length;
-    const intervalRef = useRef();
-
-    const next = () => setCurrent(p => (p + 1) % total);
-    const prev = () => setCurrent(p => (p - 1 + total) % total);
-
-    useEffect(() => {
-        intervalRef.current = setInterval(next, 5000); // 5s read time for textual data
-        return () => clearInterval(intervalRef.current);
-    }, []);
-
-    const getSlice = () => {
-        const items = [];
-        for (let i = 0; i < visible; i++) {
-            items.push(SCHOLARSHIPS[(current + i) % total]);
-        }
-        return items;
-    };
-
-    return (
-        <div className="relative">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {getSlice().map((program, i) => (
-                    <div
-                        key={program.id + '-' + i}
-                        className="bg-white rounded-2xl border border-slate-100 shadow-lg flex flex-col justify-between overflow-hidden group hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
-                    >
-                        {/* Header Content Top */}
-                        <div>
-                            {/* Media Container with Dynamic Fallback Overlay */}
-                            <div className="h-36 bg-slate-50 flex items-center justify-center overflow-hidden relative border-b border-slate-50">
-                                <img
-                                    src={program.img}
-                                    alt={program.provider}
-                                    onError={e => {
-                                        e.target.style.display = 'none';
-                                        e.target.nextSibling.style.display = 'flex';
-                                    }}
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90"
-                                />
-                                <div className="hidden w-full h-full absolute inset-0 items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100">
-                                    <Building2 size={44} className="text-[#093FB4]/30" strokeWidth={1.5} />
-                                </div>
-                                {/* Custom Label Category Pill Tag */}
-                                <div className="absolute top-4 left-4">
-                                    <span className="text-[11px] font-black uppercase tracking-widest text-white bg-[#093FB4] shadow-md px-2.5 py-1 rounded-md">
-                                        {program.tag}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Text Core Content details body info elements */}
-                            <div className="p-6 space-y-4">
-                                <div>
-                                    <p className="text-[13px] font-black text-slate-400 uppercase tracking-wide truncate mb-0.5">
-                                        {program.provider}
-                                    </p>
-                                    <h4 className="text-lg font-black text-slate-900 leading-snug line-clamp-2 group-hover:text-[#093FB4] transition-colors h-12">
-                                        {program.title}
-                                    </h4>
-                                </div>
-
-                                <hr className="border-slate-100" />
-
-                                {/* Info specifications breakdown blocks section */}
-                                <div className="space-y-2.5 text-sm font-medium text-slate-600">
-                                    <div className="flex items-center gap-2.5">
-                                        <div className="w-5 h-5 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                                            <GraduationCap size={14} strokeWidth={2.5} />
-                                        </div>
-                                        <span className="truncate"><strong>Coverage:</strong> {program.coverage}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2.5">
-                                        <div className="w-5 h-5 rounded bg-blue-50 text-[#093FB4] flex items-center justify-center flex-shrink-0">
-                                            <Layers size={14} strokeWidth={2.5} />
-                                        </div>
-                                        <span className="truncate"><strong>Criteria:</strong> {program.criteria}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2.5">
-                                        <div className="w-5 h-5 rounded bg-red-50 text-[#FF1E1E] flex items-center justify-center flex-shrink-0">
-                                            <Calendar size={14} strokeWidth={2.5} />
-                                        </div>
-                                        <span><strong>Deadline:</strong> <span className="text-red-600 font-bold">{program.deadline}</span></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Application Direct Prompt Footer Block Action */}
-                        <div className="p-6 pt-0">
-                            <button
-                                onClick={() => navigate('/login')}
-                                className="w-full py-2.5 bg-slate-50 border border-slate-100 group-hover:bg-[#093FB4] group-hover:text-white group-hover:border-[#093FB4] rounded-xl text-[13px] font-black uppercase tracking-widest text-slate-700 transition-all flex items-center justify-center gap-2"
-                            >
-                                Apply Now <ArrowRight size={15} strokeWidth={3} />
-                            </button>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* Control Dots Slider Navigation Layout links panel bar */}
-            <div className="flex items-center justify-center gap-4 mt-10">
-                <button
-                    onClick={prev}
-                    className="p-2.5 rounded-full bg-white border border-slate-200 hover:bg-[#093FB4] hover:text-white hover:border-[#093FB4] transition-all shadow"
-                >
-                    <ChevronLeft size={20} strokeWidth={2.5} />
-                </button>
-                <div className="flex gap-2">
-                    {SCHOLARSHIPS.map((_, i) => (
-                        <button
-                            key={i}
-                            onClick={() => setCurrent(i)}
-                            className={`h-1.5 rounded-full transition-all duration-300 ${i === current ? 'w-7 bg-[#093FB4]' : 'w-1.5 bg-slate-300'
-                                }`}
-                        />
-                    ))}
-                </div>
-                <button
-                    onClick={next}
-                    className="p-2.5 rounded-full bg-white border border-slate-200 hover:bg-[#093FB4] hover:text-white hover:border-[#093FB4] transition-all shadow"
-                >
-                    <ChevronRight size={20} strokeWidth={2.5} />
-                </button>
-            </div>
-        </div>
-    );
-};
+/* ─── Featured scholarships are now fetched dynamically ───────
+   See ./HomeProgram.jsx — it pulls active scholarship programs
+   from the API, and falls back to showing partnered organizations
+   when there are no active programs to display. ── */
 
 /* ─── Steps data ─────────────────────────────────────────────── */
 const STUDENT_STEPS = [
@@ -436,7 +238,7 @@ export default function Home() {
                         </ScrollReveal>
 
                         <ScrollReveal delay={100}>
-                            <ScholarshipCarousel />
+                            <HomeProgram />
                         </ScrollReveal>
 
                         <ScrollReveal delay={200}>
