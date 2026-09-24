@@ -6,18 +6,7 @@ import { useOrganization } from './useOrganization';
 import { OrgSuccessModal, OtpModal, ErrorModal } from './component/RegisterModals';
 import { useNavigate } from 'react-router-dom';
 import LoadingScreen from './component/LoadingScreen';
-import RegisterPassField from './RegisterPassField';
-import PasswordValidator from "password-validator";
 import { ProviderGuidelinesMain } from './ProviderGuidelines';
-
-const passwordSchema = new PasswordValidator();
-passwordSchema
-    .is().min(12)
-    .is().max(18)
-    .has().uppercase()
-    .has().lowercase()
-    .has().digits(1)
-    .has().symbols(1);
 
 const FieldStatus = Object.freeze({
     INCOMPLETE: 'Incomplete',
@@ -49,7 +38,7 @@ const OrganizationRegisterPage = () => {
     // Track touched fields
     const [touched, setTouched] = useState({});
 
-    // Field Status States
+    // Field Status States (password status fields removed)
     const [status, setStatus] = useState({
         org_name: FieldStatus.INCOMPLETE,
         provider_type: FieldStatus.INCOMPLETE,
@@ -57,8 +46,6 @@ const OrganizationRegisterPage = () => {
         contact_number: FieldStatus.INCOMPLETE,
         tel_number: null,
         website: null,
-        password: FieldStatus.INCOMPLETE,
-        confirm_password: FieldStatus.INCOMPLETE,
         region: FieldStatus.INCOMPLETE,
         city: FieldStatus.INCOMPLETE,
         barangay: FieldStatus.INCOMPLETE,
@@ -117,23 +104,7 @@ const OrganizationRegisterPage = () => {
         const cleanTel = telVal.replace(/[\s\-\(\)]/g, '');
         const trimmedWebsite = formData.website?.trim() || '';
 
-        // Password validation
-        let passwordStatus = FieldStatus.INCOMPLETE;
-        if (formData.password) {
-            passwordStatus = passwordSchema.validate(formData.password)
-                ? FieldStatus.VALID
-                : FieldStatus.INVALID;
-        }
-
-        // Confirm Password validation
-        let confirmPasswordStatus = FieldStatus.INCOMPLETE;
-        if (formData.confirm_password) {
-            confirmPasswordStatus = (formData.confirm_password === formData.password && passwordStatus === FieldStatus.VALID)
-                ? FieldStatus.VALID
-                : FieldStatus.INVALID;
-        }
-
-        // Optional Fields logic: Show null when empty, VALID/INVALID when populated
+        // Optional Fields logic
         let telStatus = null;
         if (cleanTel.length > 0) {
             telStatus = telephoneRegex.test(cleanTel) ? FieldStatus.VALID : FieldStatus.INVALID;
@@ -158,9 +129,6 @@ const OrganizationRegisterPage = () => {
 
             tel_number: telStatus,
             website: websiteStatus,
-
-            password: passwordStatus,
-            confirm_password: confirmPasswordStatus,
 
             region: formData.region ? FieldStatus.VALID : FieldStatus.INCOMPLETE,
             city: formData.city ? FieldStatus.VALID : FieldStatus.INCOMPLETE,
@@ -230,10 +198,10 @@ const OrganizationRegisterPage = () => {
         }
     };
 
-    // Form Validity Check (Strict check for required fields; disable form if optional fields are explicitly INVALID)
+    // Required fields check without password and confirm_password
     const requiredFields = [
         'org_name', 'provider_type', 'sub_email', 'contact_number',
-        'password', 'confirm_password', 'region', 'city', 'barangay', 'street_address'
+        'region', 'city', 'barangay', 'street_address'
     ];
 
     const hasInvalidRequiredFields = requiredFields.some(key => status[key] !== FieldStatus.VALID);
@@ -403,37 +371,6 @@ const OrganizationRegisterPage = () => {
                                 />
                             </div>
                         </Field>
-
-                        <Field label="Password" required status={status.password} labelClass={getLabelClass("password")}>
-                            <RegisterPassField
-                                name="password"
-                                value={formData.password || ""}
-                                onChange={(e) => {
-                                    handleChange(e);
-                                    setTouched(prev => ({ ...prev, password: true }));
-                                }}
-                                showStrength={true}
-                                error={(touched.password || isSubmitted) && status.password === FieldStatus.INVALID}
-                            />
-                        </Field>
-
-                        <Field label="Confirm Password" required status={status.confirm_password} labelClass={getLabelClass("confirm_password")}>
-                            <RegisterPassField
-                                name="confirm_password"
-                                value={formData.confirm_password || ""}
-                                onChange={(e) => {
-                                    handleChange(e);
-                                    setTouched(prev => ({ ...prev, confirm_password: true }));
-                                }}
-                                showStrength={false}
-                                error={(touched.confirm_password || isSubmitted) && status.confirm_password === FieldStatus.INVALID}
-                            />
-                            {(touched.confirm_password || isSubmitted) && status.confirm_password === FieldStatus.INVALID && (
-                                <span className="text-[10px] font-black text-[#FF1E1E] uppercase tracking-wider ml-1 mt-1 block">
-                                    Passwords do not match.
-                                </span>
-                            )}
-                        </Field>
                     </div>
 
                     <SectionLabel label="Provider Address" />
@@ -519,7 +456,7 @@ const OrganizationRegisterPage = () => {
                     <button
                         type="submit"
                         disabled={isFormDisabled || loading || verifying}
-                        className="w-full bg-[#093fb4] hover:bg-[#073496] disabled:bg-[#093fb4]/50 disabled:cursor-not-allowed text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-[#093fb4]/25 active:scale-[0.98] uppercase text-sm tracking-[0.2em] mt-8"
+                        className="w-full bg-[#093fb4] hover:bg-[#073496] disabled:bg-[#093fb4]/50 disabled:cursor-not-allowed text-[#ffffff] font-black py-4 rounded-2xl transition-all shadow-xl shadow-[#093fb4]/25 active:scale-[0.98] uppercase text-sm tracking-[0.2em] mt-8"
                     >
                         {loading || verifying ? "Processing Onboarding..." : "Submit Registration"}
                     </button>
@@ -552,7 +489,7 @@ const OrganizationRegisterPage = () => {
                 </div>
             )}
 
-            <OtpModal isOpen={showOtpModal} email={formData.sub_email} onVerify={handleOtpVerified} onCancel={() => setShowOtpModal(false)} />
+            <OtpModal isOpen={showOtpModal} email={formData.sub_email} onVerify={handleOtpVerified} onClose={() => setShowOtpModal(false)} />
             <ErrorModal isOpen={showError} onClose={() => setShowError(false)} message={errorMessage} />
             <OrgSuccessModal isOpen={showSuccess} message="Registration Submitted! Awaiting Admin verification." onConfirm={() => navigate('/')} />
         </div>
