@@ -51,11 +51,6 @@ const ScrollReveal = ({ children, delay = 0 }) => {
     );
 };
 
-/* ─── Featured scholarships are now fetched dynamically ───────
-   See ./HomeProgram.jsx — it pulls active scholarship programs
-   from the API, and falls back to showing partnered organizations
-   when there are no active programs to display. ── */
-
 /* ─── Steps data ─────────────────────────────────────────────── */
 const STUDENT_STEPS = [
     { icon: UserPlus, label: 'Create Account', desc: 'Sign up for free with your student email and basic personal information.' },
@@ -222,7 +217,7 @@ export default function Home() {
                     </div>
                 </section>
 
-                {/* ── SECTION 2 — UPDATED TO SCHOLARSHIP PROGRAMS ── */}
+                {/* ── SECTION 2 — SCHOLARSHIP PROGRAMS ── */}
                 <section id="scholarships" className="bg-white py-28 px-8">
                     <div className="max-w-6xl mx-auto">
                         <ScrollReveal>
@@ -433,7 +428,8 @@ export default function Home() {
                 <div className="max-w-6xl mx-auto">
                     <div className="grid md:grid-cols-3 gap-12 mb-10">
                         <div className="space-y-4">
-                            <img src="/logo.png" alt="Logo" className="h-10 w-auto brightness-0 invert opacity-70" />
+                            {/* 1. Increased Logo Size */}
+                            <img src="/logo.png" alt="Logo" className="h-16 w-auto brightness-0 invert opacity-70" />
                             <p className="text-[13px] text-slate-400 font-semibold uppercase tracking-widest leading-relaxed max-w-[200px]">
                                 Empowering QC students through scholarship access.
                             </p>
@@ -442,30 +438,34 @@ export default function Home() {
                         <div>
                             <p className="text-[12px] font-black text-white uppercase tracking-[0.3em] mb-5">Quick Links</p>
                             <div className="space-y-3">
-                                {['About Us', 'Scholarships', 'Provider Guidelines', 'Student Login'].map(link => (
-                                    <p key={link} className="text-[15px] text-slate-400 hover:text-white transition-colors cursor-pointer font-semibold">
-                                        {link}
-                                    </p>
-                                ))}
+                                {/* 2. Active Routing/Scrolling for Quick Links */}
+                                <p onClick={() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })} className="text-[15px] text-slate-400 hover:text-white transition-colors cursor-pointer font-semibold">
+                                    About Us
+                                </p>
+                                <p onClick={() => navigate('/scholarships')} className="text-[15px] text-slate-400 hover:text-white transition-colors cursor-pointer font-semibold">
+                                    Scholarships
+                                </p>
+                                <p onClick={() => navigate('/provider-guidelines')} className="text-[15px] text-slate-400 hover:text-white transition-colors cursor-pointer font-semibold">
+                                    Provider Guidelines
+                                </p>
+                               
                             </div>
                         </div>
 
                         <div>
                             <p className="text-[12px] font-black text-white uppercase tracking-[0.3em] mb-5">Contact Us</p>
                             <div className="space-y-4">
-                                <div className="flex items-center gap-3 text-[15px] font-semibold text-slate-400 hover:text-[#4d7fff] transition-colors cursor-pointer">
-                                    <Mail size={16} className="text-[#4d7fff]" /> support@kyusisko.ph
-                                </div>
-                                <div className="flex items-center gap-3 text-[15px] font-semibold text-slate-400 hover:text-[#FF1E1E] transition-colors cursor-pointer">
-                                    <Phone size={16} className="text-[#FF1E1E]" /> +63 912 345 6789
+                                {/* 3. Removed click/hover events from email */}
+                                <div className="flex items-center gap-3 text-[15px] font-semibold text-slate-400">
+                                    <Mail size={16} className="text-[#4d7fff]" /> kyusisko.ph@gmail.com
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="border-t border-slate-800 pt-7 flex flex-col md:flex-row justify-between items-center gap-3">
-                        <p className="text-[12px] text-slate-500 font-black uppercase tracking-widest">© 2026 KyusISKO Platform. All rights reserved.</p>
-                        <p className="text-[12px] text-slate-600 font-semibold uppercase tracking-widest">Made with ❤ for QC Students</p>
+                    <div className="border-t border-slate-800 pt-7 flex flex-col md:flex-row justify-center items-center gap-3">
+                        {/* 4. Removed "Made with <3" and centered copyright */}
+                        <p className="text-[12px] text-slate-500 font-black uppercase tracking-widest text-center">© 2026 KyusISKO Platform. All rights reserved.</p>
                     </div>
                 </div>
             </footer>

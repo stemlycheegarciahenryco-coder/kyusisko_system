@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import api from "../api";
-import { X, Mail, Loader2 } from "lucide-react";
+import { Mail, Loader2, ArrowLeft } from "lucide-react"; // Removed X, added ArrowLeft
 import RegisterPassField from "../RegisterPassField";
 import TermsModal from "../TermsModal";
 import { SuccessModal, ErrorModal, OtpModal } from "../component/RegisterModals";
@@ -249,10 +249,6 @@ export default function StudentRegister() {
         }
     };
 
-    // FIX: OtpModal was previously rendered without an onResend prop, so its
-    // handleResend() silently skipped calling the backend entirely and just
-    // showed "A new code has been sent." with nothing actually sent. This
-    // reuses the same endpoint as the initial send.
     const handleResendOtp = () => {
         return api.post('/send-registration-otp', { email: regform.email });
     };
@@ -300,6 +296,14 @@ export default function StudentRegister() {
                 style={{ backgroundImage: `url('/bg2.png')` }}
             />
 
+            {/* NEW FLOATING BACK BUTTON */}
+            <button
+                onClick={() => navigate('/')}
+                className="fixed top-6 left-6 z-50 flex items-center gap-2 text-xs font-black text-slate-700 uppercase tracking-widest bg-white/80 backdrop-blur-md hover:bg-white px-5 py-3 rounded-2xl border border-white/60 transition-all shadow-lg active:scale-95 cursor-pointer"
+            >
+                <ArrowLeft size={18} strokeWidth={2.5} /> Back
+            </button>
+
             {/* POPUP FULLSCREEN LOADING OVERLAY */}
             {(loading || verifying) && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex flex-col items-center justify-center">
@@ -315,18 +319,6 @@ export default function StudentRegister() {
 
             {/* MAIN FORM CARD */}
             <div className="w-full max-w-4xl bg-white/70 backdrop-blur-xl border border-white/40 rounded-[2.5rem] shadow-2xl p-8 sm:p-10 relative z-10 my-auto">
-
-                <button
-                    type="button"
-                    onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        window.location.href = '/';
-                    }}
-                    className="absolute top-7 right-7 text-black/30 hover:text-[#FF1E1E] transition-colors p-1 cursor-pointer z-50"
-                >
-                    <X size={24} strokeWidth={2.5} />
-                </button>
 
                 <div className="text-center mb-8 mt-2">
                     <div className="inline-flex items-center justify-center mb-4">
