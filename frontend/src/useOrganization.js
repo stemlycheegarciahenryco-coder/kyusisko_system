@@ -90,7 +90,8 @@ export const useOrganization = () => {
         }
       });
 
-      const response = await api.post(`/onboarding-orgs/comply/${orgId}`, data, {
+      const response = await api.post(`/onboarding-orgs/comply/${orgId}`, data,
+          {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
