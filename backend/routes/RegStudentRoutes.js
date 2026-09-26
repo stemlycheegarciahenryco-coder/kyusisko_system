@@ -192,11 +192,11 @@ router.post('/send-registration-otp', otpSendLimiter, async (req, res) => {
         }
         // Upsert logic: If the email already has an OTP, update it.
         await pool.query(
-            `INSERT INTO otp_codes (email, code, method, expires_at) 
-             VALUES ($1, $2, 'email', $3)
-             ON CONFLICT (email) DO UPDATE SET code = $2, expires_at = $3`,
-            [email, otp, expiresAt]
-        );
+    `INSERT INTO otp_codes (email, code, method, purpose, expires_at) 
+     VALUES ($1, $2, 'email', 'registration_student', $3)
+     ON CONFLICT (email, purpose) DO UPDATE SET code = $2, expires_at = $3`,
+    [email, otp, expiresAt]
+);
 
         // FIX: Respond to the client immediately once the OTP is safely saved.
         // The frontend no longer waits on the Gmail SMTP round-trip (which can
@@ -232,13 +232,9 @@ router.post('/verify-registration-otp', otpVerifyLimiter, async (req, res) => {
     const { email, otp } = req.body; 
     
     try {
-        // 1. Look for matching records with EITHER 'email' or 'org_reg' methods
         const result = await pool.query(
             `SELECT * FROM otp_codes 
-             WHERE email = $1 
-             AND code = $2 
-             AND method IN ('email', 'org_reg') -- 👈 Accepts both method types dynamically
-             AND expires_at > NOW()`,
+             WHERE email = $1 AND code = $2 AND purpose = 'registration_student' AND expires_at > NOW()`,
             [email, otp]
         );
 
@@ -246,13 +242,9 @@ router.post('/verify-registration-otp', otpVerifyLimiter, async (req, res) => {
             return res.status(400).json({ error: "Invalid or expired verification code." });
         }
 
-        // Capture the specific method found so we delete the exact one used
-        const verifiedMethod = result.rows[0].method;
-
-        // 2. Cleanup specifically for this email and the matched method
         await pool.query(
-            `DELETE FROM otp_codes WHERE email = $1 AND method = $2`, 
-            [email, verifiedMethod]
+            `DELETE FROM otp_codes WHERE email = $1 AND purpose = 'registration_student'`, 
+            [email]
         );
         
         res.json({ success: true });

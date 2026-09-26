@@ -451,15 +451,14 @@ router.post('/request-otp', otpSendLimiter, async (req, res) => {
         const generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
 
         await pool.query(
-            `INSERT INTO otp_codes (email, code, method, expires_at, created_at) 
-             VALUES ($1, $2, $3, NOW() + INTERVAL '10 minutes', NOW())
-             ON CONFLICT (email) DO UPDATE SET 
-                code = $2, 
-                method = $3, 
-                expires_at = NOW() + INTERVAL '10 minutes',
-                created_at = NOW()`,
-            [email, generatedCode, 'org_reg']
-        );
+    `INSERT INTO otp_codes (email, code, method, purpose, expires_at, created_at) 
+     VALUES ($1, $2, 'email', 'registration_org', NOW() + INTERVAL '10 minutes', NOW())
+     ON CONFLICT (email, purpose) DO UPDATE SET 
+        code = $2, 
+        expires_at = NOW() + INTERVAL '10 minutes',
+        created_at = NOW()`,
+    [email, generatedCode]
+);
 
         await sendOrgOTPEmail(email, generatedCode);
         res.json({ message: "Verification code sent!" });
@@ -475,7 +474,7 @@ router.post('/verify-otp', otpVerifyLimiter, async (req, res) => {
     try {
         const result = await pool.query(
             `SELECT * FROM otp_codes 
-             WHERE email = $1 AND code = $2 AND method = 'org_reg' AND expires_at > NOW()`,
+             WHERE email = $1 AND code = $2 AND purpose = 'registration_org' AND expires_at > NOW()`,
             [email, otp]
         );
 
@@ -483,7 +482,7 @@ router.post('/verify-otp', otpVerifyLimiter, async (req, res) => {
             return res.status(400).json({ error: "Invalid or expired code." });
         }
 
-        await pool.query(`DELETE FROM otp_codes WHERE email = $1 AND method = 'org_reg'`, [email]);
+        await pool.query(`DELETE FROM otp_codes WHERE email = $1 AND purpose = 'registration_org'`, [email]);
         res.json({ message: "Verified!" });
     } catch (err) {
         res.status(500).json({ error: "Verification failed." });

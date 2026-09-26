@@ -421,7 +421,7 @@ export default function StudentRegister() {
                                 >
                                     <option value="Male">Male</option>
                                     <option value="Female">Female</option>
-                                    <option value="Transgender">Transgender</option>
+                                    <option value="Prefer not to Say">Prefer not to Say</option>
                                     <option value="Others">Others</option>
                                 </select>
                             </div>

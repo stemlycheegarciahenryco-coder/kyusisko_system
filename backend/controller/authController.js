@@ -137,7 +137,7 @@ exports.portalLogin = async (req, res) => {
                 return res.status(401).json({ error: "Invalid Credentials" });
             }
 
-            // 🔐 MFA Verification Check
+            // 🔐 MFA Verification Check in the sub
             if (sub.two_factor_enabled) {
                 if (!otp) {
                     return res.json({ mfaRequired: true, message: "Authenticator code required" });
@@ -191,22 +191,63 @@ exports.portalLogin = async (req, res) => {
                 return res.status(401).json({ error: "Invalid Credentials" });
             }
 
-            // 🔐 MFA Verification Check
-            if (student.two_factor_enabled) {
-                if (!otp) {
-                    return res.json({ mfaRequired: true, message: "Authenticator code required" });
-                }
+            // 🔐 MFA Verification Check in teh student
+           // 🔐 MFA Verification Check
+if (student.two_factor_enabled) {
 
-                const isValidOtp = authenticator.verify({
-                    token: otp,
-                    secret: student.two_factor_secret
-                });
+    if (student.preferred_2fa_method === 'email') {
+        if (!otp) {
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+            const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-                if (!isValidOtp) {
-                    await logAttempt(input, ip, false);
-                    return res.status(401).json({ error: "Invalid Authenticator code." });
-                }
-            }
+            await pool.query(
+                `INSERT INTO otp_codes (email, code, method, purpose, expires_at)
+                 VALUES ($1, $2, 'email', 'login', $3)
+                 ON CONFLICT (email, purpose) DO UPDATE SET code = $2, expires_at = $3`,
+                [student.student_email, code, expiresAt]
+            );
+
+            await transporter.sendMail({
+                from: `"KyusISKO" <${process.env.RESEND_FROM_EMAIL}>`,
+                to: student.student_email,
+                subject: 'Your Login Code — KyusISKO',
+                html: `<div style="font-family: sans-serif; max-width: 400px; margin: auto; border: 1px solid #e2e8f0; padding: 20px; border-radius: 16px;">
+                    <h2 style="color: #1e293b; text-align: center;">Login Verification</h2>
+                    <div style="background: #f1f5f9; padding: 20px; border-radius: 12px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #2563eb;">${code}</div>
+                    <p style="color: #94a3b8; font-size: 12px; text-align: center; margin-top: 20px;">Expires in 10 minutes.</p>
+                </div>`
+            });
+
+            return res.json({ mfaRequired: true, method: 'email', message: "Verification code sent to your email." });
+        }
+
+        const otpCheck = await pool.query(
+            `SELECT * FROM otp_codes WHERE email = $1 AND code = $2 AND purpose = 'login' AND expires_at > NOW()`,
+            [student.student_email, otp]
+        );
+
+        if (otpCheck.rows.length === 0) {
+            await logAttempt(input, ip, false);
+            return res.status(401).json({ error: "Invalid or expired code." });
+        }
+
+        await pool.query(`DELETE FROM otp_codes WHERE email = $1 AND purpose = 'login'`, [student.student_email]);
+
+    } else {
+        // Auth App (TOTP) — unchanged
+        if (!otp) {
+            return res.json({ mfaRequired: true, method: 'otp', message: "Authenticator code required" });
+        }
+        const isValidOtp = authenticator.verify({
+            token: otp,
+            secret: student.two_factor_secret
+        });
+        if (!isValidOtp) {
+            await logAttempt(input, ip, false);
+            return res.status(401).json({ error: "Invalid Authenticator code." });
+        }
+    }
+}
 
             await logAttempt(input, ip, true);
             await trackEvent({
@@ -271,27 +312,29 @@ exports.forgotPassword = async (req, res) => {
         else if (studentRes.rows.length > 0) studentId = studentRes.rows[0].id;
 
         const code = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); 
+const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-        await pool.query(
-            'INSERT INTO password_reset_tokens (email, token, expires_at) VALUES ($1, $2, $3)',
-            [email, code, expiresAt]
-        );
+await pool.query(
+    `INSERT INTO otp_codes (email, code, method, purpose, expires_at) 
+     VALUES ($1, $2, 'email', 'password_reset', $3)
+     ON CONFLICT (email, purpose) DO UPDATE SET code = $2, expires_at = $3`,
+    [email, code, expiresAt]
+);
 
-        await transporter.sendMail({
-            from: `"KyusISKO" <${process.env.RESEND_FROM_EMAIL}>`,
-            to: email,
-            subject: 'Your Verification Code — KyusISKO',
-            html: `
-                <div style="font-family: sans-serif; max-width: 400px; margin: auto; border: 1px solid #e2e8f0; padding: 20px; border-radius: 16px;">
-                    <h2 style="color: #1e293b; text-align: center;">Password Reset Request</h2>
-                    <p style="color: #64748b; text-align: center;">Use the code below to reset your password. It expires in 10 minutes.</p>
-                    <div style="background: #f1f5f9; padding: 20px; border-radius: 12px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #2563eb;">
-                        ${code}
-                    </div>
-                    <p style="color: #94a3b8; font-size: 12px; text-align: center; margin-top: 20px;">If you did not request this, please ignore this email.</p>
-                </div>`
-        });
+await transporter.sendMail({
+    from: `"KyusISKO" <${process.env.RESEND_FROM_EMAIL}>`,
+    to: email,
+    subject: 'Your Verification Code — KyusISKO',
+    html: `
+        <div style="font-family: sans-serif; max-width: 400px; margin: auto; border: 1px solid #e2e8f0; padding: 20px; border-radius: 16px;">
+            <h2 style="color: #1e293b; text-align: center;">Password Reset Request</h2>
+            <p style="color: #64748b; text-align: center;">Use the code below to reset your password. It expires in 10 minutes.</p>
+            <div style="background: #f1f5f9; padding: 20px; border-radius: 12px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #2563eb;">
+                ${code}
+            </div>
+            <p style="color: #94a3b8; font-size: 12px; text-align: center; margin-top: 20px;">If you did not request this, please ignore this email.</p>
+        </div>`
+});
 
         await trackEvent({
             userId, subAdminId, studentId,
@@ -315,7 +358,7 @@ exports.resetPassword = async (req, res) => {
 
     try {
         const tokenCheck = await pool.query(
-            'SELECT * FROM password_reset_tokens WHERE email = $1 AND token = $2 AND used = FALSE AND expires_at > NOW()',
+            `SELECT * FROM otp_codes WHERE email = $1 AND code = $2 AND purpose = 'password_reset' AND expires_at > NOW()`,
             [email, token]
         );
 
@@ -349,7 +392,7 @@ exports.resetPassword = async (req, res) => {
             await pool.query('UPDATE students SET student_password_hash = $1 WHERE student_email = $2', [hashed, email]);
         }
 
-        await pool.query('UPDATE password_reset_tokens SET used = TRUE WHERE token = $1 AND email = $2', [token, email]);
+          await pool.query(`DELETE FROM otp_codes WHERE email = $1 AND purpose = 'password_reset'`, [email]);
         
         await trackEvent({
             userId, subAdminId, studentId,

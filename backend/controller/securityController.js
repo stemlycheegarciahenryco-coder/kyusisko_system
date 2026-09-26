@@ -11,24 +11,19 @@ const JWT_SECRET = process.env.JWT_SECRET;
 exports.initiateOTP = async (email, method) => {
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60000);
-
-    // Clean the method string: remove spaces and make lowercase
     const cleanMethod = method ? method.trim().toLowerCase() : '';
 
     try {
         await pool.query(
-            `INSERT INTO otp_codes (email, code, method, expires_at) 
-             VALUES ($1, $2, $3, $4)
-             ON CONFLICT (email) 
-             DO UPDATE SET code = $2, expires_at = $4`,
+            `INSERT INTO otp_codes (email, code, method, purpose, expires_at) 
+             VALUES ($1, $2, $3, 'login', $4)
+             ON CONFLICT (email, purpose) 
+             DO UPDATE SET code = $2, method = $3, expires_at = $4`,
             [email, otpCode, cleanMethod, expiresAt]
         );
 
-        // Now the check will pass correctly
         if (cleanMethod === 'email') {
-            console.log("DEBUG: Attempting to send email...");
             await sendEmailOTP(email, otpCode);
-            console.log("DEBUG: Email sent!");
         }
         
         return { success: true };
@@ -70,18 +65,17 @@ exports.verifyOTP = async (req, res) => {
 
         // 1. Check if OTP is valid and not expired using email
         const result = await pool.query(
-            `SELECT * FROM otp_codes 
-             WHERE email = $1 AND code = $2 AND expires_at > NOW() 
-             ORDER BY created_at DESC LIMIT 1`,
-            [targetEmail, code]
-        );
+    `SELECT * FROM otp_codes 
+     WHERE email = $1 AND code = $2 AND purpose = 'login' AND expires_at > NOW() 
+     ORDER BY created_at DESC LIMIT 1`,
+    [targetEmail, code]
+);
 
-        if (result.rows.length === 0) {
-            return res.status(400).json({ error: 'Invalid or expired code.' });
-        }
+if (result.rows.length === 0) {
+    return res.status(400).json({ error: 'Invalid or expired code.' });
+}
 
-        // 2. Clear codes for this email
-        await pool.query('DELETE FROM otp_codes WHERE email = $1', [targetEmail]);
+await pool.query(`DELETE FROM otp_codes WHERE email = $1 AND purpose = 'login'`, [targetEmail]);
 
         // 3. Fetch student details using the email
         const studentRes = await pool.query('SELECT * FROM students WHERE student_email = $1', [targetEmail]);

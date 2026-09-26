@@ -23,6 +23,7 @@ export default function LogIn() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState(''); 
   const [verifiedStatus, setVerifiedStatus] = useState(false);
+  const [mfaMethod, setMfaMethod] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -55,6 +56,7 @@ export default function LogIn() {
       // 🚀 Check if backend is demanding the Authenticator code
       if (response.data.mfaRequired) {
         setShowMfa(true);
+        setMfaMethod(response.data.method);
         setLoading(false);
         return; 
       }
@@ -109,14 +111,15 @@ export default function LogIn() {
       <div className="max-w-md w-full bg-white/70 backdrop-blur-xl rounded-[2.5rem] shadow-2xl p-10 border border-white/40 relative z-10">
         <button 
           onClick={() => {
-            if (showMfa) {
-               setShowMfa(false); // Let them go back to email/pass
-               setOtp('');
-               setErrorMessage('');
-            } else {
-               navigate('/');
-            }
-          }} 
+  if (showMfa) {
+     setShowMfa(false);
+     setOtp('');
+     setMfaMethod(null); // 👈 add this
+     setErrorMessage('');
+  } else {
+     navigate('/');
+  }
+}}
           className="absolute top-7 right-7 text-black/30 hover:text-[#FF1E1E] transition-colors p-1"
         >
           <IconX size={24} stroke={2.5} />
@@ -137,10 +140,12 @@ export default function LogIn() {
             {showMfa ? "Two-Factor Auth" : "Portal Login"}
           </p>
           {showMfa && (
-            <p className="text-xs text-slate-500 mt-2 font-semibold">
-              Enter the 6-digit code from your Authenticator app.
-            </p>
-          )}
+  <p className="text-xs text-slate-500 mt-2 font-semibold">
+    {mfaMethod === 'email' 
+      ? "Enter the code sent to your email." 
+      : "Enter the 6-digit code from your Authenticator app."}
+  </p>
+)}
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
@@ -190,9 +195,9 @@ export default function LogIn() {
             </>
           ) : (
             <div className="space-y-2">
-              <label className="text-xs font-black text-slate-800 uppercase ml-1 tracking-wider block">
-                Authenticator Code
-              </label>
+             <label className="text-xs font-black text-slate-800 uppercase ml-1 tracking-wider block">
+  {mfaMethod === 'email' ? 'Email Verification Code' : 'Authenticator Code'}
+</label>
               <div className="relative group">
                 <IconShieldLock size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-black/30 group-focus-within:text-[#093fb4] transition-colors" />
                 <input 

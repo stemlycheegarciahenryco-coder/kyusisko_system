@@ -8,7 +8,7 @@ const stdCtrl = require ('../controller/studentController');
 const {verifyToken, isStudent} = require('../middleware/auth');
 const upload = require('../middleware/multerConfig');
 
-const { authLimiter, generalLimiter, otpSendLimiter } = require('../middleware/rateLimiter');
+const { authLimiter, generalLimiter, otpVerifyLimiter ,otpSendLimiter } = require('../middleware/rateLimiter');
 
 // ==========================================
 // 1. SYSTEM & ORGANIZATION AUTHENTICATION 
@@ -24,7 +24,7 @@ router.post('/auth/portal-login', authLimiter, authCtrl.portalLogin);
 
 // Shared Security Utilities
 router.post('/auth/forgot-password', otpSendLimiter, authCtrl.forgotPassword);
-router.post('/auth/reset-password', otpSendLimiter, authCtrl.resetPassword);
+router.post('/auth/reset-password', otpVerifyLimiter, authCtrl.resetPassword);
 router.get('/auth/login-attempts', authCtrl.getLogInAttempt); 
 router.post('/auth/logout', authCtrl.logout);
 
