@@ -20,6 +20,8 @@ import RootLayout from './rootadmin/RootLayout';
 import StudentLog from './rootadmin/RootStudentLog';
 import RootAudit from './rootadmin/RootAudit';
 
+
+
 //Student
 import StudentRegister from './student/StudentRegister';
 
@@ -54,7 +56,7 @@ import ApplicationForm from './ApplicationForm';
 
 import  VerifyReset from  './VerifyReset';
 
-
+import ApproveLogin from './ApproveLogin'
 
 
 import ScholarList from './ScholarshipList';
@@ -81,7 +83,7 @@ export default function App() {
       <Route path="/" element={<Home />} />
       <Route path="/organization-register" element= {<OrganizationRegisterPage/>}/>
       <Route path="/provider-guidelines" element={<ProviderGuidelines />} />
-     <Route path="/student-onboard" element= {<StudentOnboarding/>}/>
+     
 
       {/* 2. STUDENT FLOW: Publicly accessible scholarship routes */}
 
@@ -90,7 +92,7 @@ export default function App() {
       <Route path="/login" element={<LogIn />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/verify-reset" element={<VerifyReset />} />
-    
+      <Route path="/approve-login" element={<ApproveLogin />} />
       <Route path="/compliance/:id" element={<CompliancePage />} />
 
           
@@ -140,8 +142,10 @@ export default function App() {
       {/* 6. Student LAYOUT: Wrapped in StudentLayout */}
       
       <Route element={<ProtectedRoutes allowedRoles={['student']} />}>
+      <Route path="/student-onboard" element= {<StudentOnboarding/>}/>
         <Route element={<StudentLayout />}>
           <Route path="/scholarships" element={<ScholarList />} />
+          
         <Route path="/StudentProfile" element={<StudentProfile />} />
         <Route path="/MyScholarships" element={<MyScholarships />} />
         <Route path="/my-scholarships/:applicationId" element={<ProgramDetailPage />} />

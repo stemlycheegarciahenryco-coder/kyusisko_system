@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { trackEvent } = require('../utils/logger');
-const { authenticator } = require('otplib');
+const { authenticator } = require('@otplib/v12-adapter');
 const qrcode = require('qrcode');
 
 const MAX_ATTEMPTS = 5;
@@ -32,7 +32,7 @@ async function logAttempt(identifier, ip, success) {
 // 1. UNIFIED PORTAL LOGIN (System, Org, & Student)
 // ==========================================
 exports.portalLogin = async (req, res) => {
-    const { identifier, password, otp } = req.body;
+    const { identifier, password, otp, mfaMethod } = req.body;
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     const input = identifier ? identifier.trim() : '';
 
@@ -191,52 +191,26 @@ exports.portalLogin = async (req, res) => {
                 return res.status(401).json({ error: "Invalid Credentials" });
             }
 
-            // 🔐 MFA Verification Check in teh student
-           // 🔐 MFA Verification Check
+            // 🔐 MFA Verification Check for the student
 if (student.two_factor_enabled) {
 
-    if (student.preferred_2fa_method === 'email') {
-        if (!otp) {
-            const code = Math.floor(100000 + Math.random() * 900000).toString();
-            const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    const hasAuthApp = !!student.two_factor_secret;
 
-            await pool.query(
-                `INSERT INTO otp_codes (email, code, method, purpose, expires_at)
-                 VALUES ($1, $2, 'email', 'login', $3)
-                 ON CONFLICT (email, purpose) DO UPDATE SET code = $2, expires_at = $3`,
-                [student.student_email, code, expiresAt]
-            );
+    // Step 1: no method chosen yet by the frontend -> tell it what's on offer
+    if (!mfaMethod) {
+        const availableMethods = [];
+        if (hasAuthApp) availableMethods.push('otp');
+        availableMethods.push('email_approval'); // always available once MFA is on, no setup needed
 
-            await transporter.sendMail({
-                from: `"KyusISKO" <${process.env.RESEND_FROM_EMAIL}>`,
-                to: student.student_email,
-                subject: 'Your Login Code — KyusISKO',
-                html: `<div style="font-family: sans-serif; max-width: 400px; margin: auto; border: 1px solid #e2e8f0; padding: 20px; border-radius: 16px;">
-                    <h2 style="color: #1e293b; text-align: center;">Login Verification</h2>
-                    <div style="background: #f1f5f9; padding: 20px; border-radius: 12px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #2563eb;">${code}</div>
-                    <p style="color: #94a3b8; font-size: 12px; text-align: center; margin-top: 20px;">Expires in 10 minutes.</p>
-                </div>`
-            });
+        return res.json({ mfaRequired: true, chooseMethod: true, availableMethods });
+    }
 
-            return res.json({ mfaRequired: true, method: 'email', message: "Verification code sent to your email." });
+    if (mfaMethod === 'otp') {
+        if (!hasAuthApp) {
+            return res.status(400).json({ error: "Authenticator App is not set up for this account." });
         }
-
-        const otpCheck = await pool.query(
-            `SELECT * FROM otp_codes WHERE email = $1 AND code = $2 AND purpose = 'login' AND expires_at > NOW()`,
-            [student.student_email, otp]
-        );
-
-        if (otpCheck.rows.length === 0) {
-            await logAttempt(input, ip, false);
-            return res.status(401).json({ error: "Invalid or expired code." });
-        }
-
-        await pool.query(`DELETE FROM otp_codes WHERE email = $1 AND purpose = 'login'`, [student.student_email]);
-
-    } else {
-        // Auth App (TOTP) — unchanged
         if (!otp) {
-            return res.json({ mfaRequired: true, method: 'otp', message: "Authenticator code required" });
+            return res.json({ mfaRequired: true, method: 'otp' });
         }
         const isValidOtp = authenticator.verify({
             token: otp,
@@ -246,6 +220,67 @@ if (student.two_factor_enabled) {
             await logAttempt(input, ip, false);
             return res.status(401).json({ error: "Invalid Authenticator code." });
         }
+
+    } else if (mfaMethod === 'email_approval') {
+
+        if (!otp) {
+            // No approval token yet -> create one and email the approve link
+            const token = crypto.randomBytes(32).toString('hex');
+            const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+            const userAgent = req.headers['user-agent'] || 'Unknown device';
+
+            await pool.query(
+                `INSERT INTO login_approvals (email, token, ip_address, user_agent, expires_at) 
+                 VALUES ($1, $2, $3, $4, $5)`,
+                [student.student_email, token, ip, userAgent, expiresAt]
+            );
+                                        //must be turn to CLIENT_URL for production
+            const approveUrl = `${process.env.LOCAL_CLIENT_URL}/approve-login?token=${token}`;
+
+            await transporter.sendMail({
+                from: `"KyusISKO" <${process.env.RESEND_FROM_EMAIL}>`,
+                to: student.student_email,
+                subject: 'Approve Your Login — KyusISKO',
+                html: `<div style="font-family: sans-serif; max-width: 420px; margin: auto; border: 1px solid #e2e8f0; padding: 24px; border-radius: 16px;">
+                    <h2 style="color: #1e293b; text-align: center;">New Login Attempt</h2>
+                    <p style="color: #64748b; text-align: center; font-size: 13px;">Someone is trying to log into your account from:</p>
+                    <p style="color: #334155; text-align: center; font-size: 13px; font-weight: bold;">${userAgent}</p>
+                    <div style="text-align: center; margin: 24px 0;">
+                        <a href="${approveUrl}" style="background:#2563eb; color:#fff; padding:14px 28px; border-radius:12px; text-decoration:none; font-weight:bold;">Review This Login</a>
+                    </div>
+                    <p style="color: #94a3b8; font-size: 12px; text-align: center;">Expires in 10 minutes. If this wasn't you, you can deny it on the next page.</p>
+                </div>`
+            });
+
+            return res.json({ mfaRequired: true, method: 'email_approval', pollToken: token, message: "Check your email to approve this login." });
+        }
+
+        // otp here is actually the poll token the frontend is checking on
+        const approvalCheck = await pool.query(
+            `SELECT status FROM login_approvals WHERE token = $1 AND email = $2 AND expires_at > NOW()`,
+            [otp, student.student_email]
+        );
+
+        if (approvalCheck.rows.length === 0) {
+            await logAttempt(input, ip, false);
+            return res.status(401).json({ error: "Approval request expired or invalid." });
+        }
+
+        const status = approvalCheck.rows[0].status;
+
+        if (status === 'denied') {
+            await logAttempt(input, ip, false);
+            return res.status(401).json({ error: "Login was denied." });
+        }
+        if (status === 'pending') {
+            return res.json({ mfaRequired: true, method: 'email_approval', pollToken: otp, pending: true });
+        }
+
+        // status === 'approved' -> consume it so it can't be reused, then continue below
+        await pool.query(`DELETE FROM login_approvals WHERE token = $1`, [otp]);
+
+    } else {
+        return res.status(400).json({ error: "Invalid verification method selected." });
     }
 }
 
@@ -549,5 +584,31 @@ exports.verifyMfaSetup = async (req, res) => {
     } catch (err) {
         console.error("MFA Verify Error:", err.message);
         res.status(500).json({ error: "Failed to verify MFA setup." });
+    }
+};
+
+exports.respondLoginApproval = async (req, res) => {
+    const { token, decision } = req.body; // decision: 'approved' | 'denied'
+
+    if (!['approved', 'denied'].includes(decision)) {
+        return res.status(400).json({ error: "Invalid decision." });
+    }
+
+    try {
+        const result = await pool.query(
+            `UPDATE login_approvals SET status = $1 
+             WHERE token = $2 AND status = 'pending' AND expires_at > NOW() 
+             RETURNING id`,
+            [decision, token]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(400).json({ error: "This request has expired or was already handled." });
+        }
+
+        res.json({ message: decision === 'approved' ? "Login approved." : "Login denied." });
+    } catch (err) {
+        console.error("Approval Response Error:", err.message);
+        res.status(500).json({ error: "Server Error" });
     }
 };

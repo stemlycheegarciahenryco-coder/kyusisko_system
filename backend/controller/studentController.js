@@ -289,6 +289,7 @@ exports.getFullProfile = async (req, res) => {
         s.year_level,s.gwa,
         s.two_factor_enabled, 
         s.preferred_2fa_method,
+        s.two_factor_secret,
         c.name AS college_name, p.other_school, 
         cr.name AS course_name, p.other_degree_program,
         p.religion, p.other_religion,
@@ -310,7 +311,16 @@ exports.getFullProfile = async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Student not found" });
     }
-    res.json(result.rows[0]);
+
+    const student = result.rows[0];
+
+    // Never send the raw secret to the frontend — only whether one exists.
+    const { two_factor_secret, ...safeProfile } = student;
+
+    res.json({
+      ...safeProfile,
+      has_auth_app: !!two_factor_secret
+    });
   } catch (err) {
     console.error("Fetch Error:", err.message);
     res.status(500).json({ error: "Internal Server Error" });

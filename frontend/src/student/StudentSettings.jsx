@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Mail, 
-  MessageSquare, 
   ShieldCheck, 
   Smartphone, 
   Key, 
@@ -24,8 +23,16 @@ export default function StudentSettings() {
 
   // --- MFA STATE ---
   const [is2FAEnabled, setIs2FAEnabled] = useState(false);
-  const [method, setMethod] = useState('email');
+  const [hasAuthApp, setHasAuthApp] = useState(false); // does a two_factor_secret already exist?
   const [loading, setLoading] = useState(true);
+
+  // --- AUTHENTICATOR APP SETUP STATE ---
+  const [showAuthSetup, setShowAuthSetup] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [manualSecret, setManualSecret] = useState('');
+  const [verifyCode, setVerifyCode] = useState('');
+  const [setupError, setSetupError] = useState('');
+  const [isSettingUp, setIsSettingUp] = useState(false);
 
   // --- PASSWORD STATE ---
   const [currentPassword, setCurrentPassword] = useState('');
@@ -41,7 +48,7 @@ export default function StudentSettings() {
       try {
         const res = await api.get('/students/profile-full/me'); 
         setIs2FAEnabled(res.data.two_factor_enabled);
-        setMethod(res.data.preferred_2fa_method || 'email');
+        setHasAuthApp(!!res.data.has_auth_app);
       } catch (err) {
         console.error("Error fetching security settings", err);
       } finally {
@@ -51,12 +58,13 @@ export default function StudentSettings() {
     fetchSettings();
   }, []);
 
-  // 2. Save MFA changes to the DB
-  const saveSecuritySettings = async (enabled, selectedMethod) => {
+  // 2. Save MFA on/off to the DB — method is no longer decided here,
+  // it's chosen by the student at login time instead.
+  const saveSecuritySettings = async (enabled) => {
     try {
       await api.put('/students/update-2fa', { 
         two_factor_enabled: enabled,
-        preferred_2fa_method: selectedMethod
+        preferred_2fa_method: null
       });
     } catch (err) {
       console.error("Save Error:", err);
@@ -67,12 +75,44 @@ export default function StudentSettings() {
   const handleToggleMFA = () => {
     const nextState = !is2FAEnabled;
     setIs2FAEnabled(nextState);
-    saveSecuritySettings(nextState, method);
+    saveSecuritySettings(nextState);
   };
 
-  const handleMethodChange = (newMethod) => {
-    setMethod(newMethod);
-    saveSecuritySettings(is2FAEnabled, newMethod);
+  // Opens the QR modal — used for both first-time setup and reconfiguring
+  const startAuthAppSetup = async () => {
+    setSetupError('');
+    setIsSettingUp(true);
+    try {
+      const res = await api.post('/auth/mfa/generate');
+      setQrCodeUrl(res.data.qrCodeUrl);
+      setManualSecret(res.data.manualSecret);
+      setShowAuthSetup(true);
+    } catch (err) {
+      console.error("MFA Setup Error:", err);
+      alert("Failed to start Authenticator setup. Please try again.");
+    } finally {
+      setIsSettingUp(false);
+    }
+  };
+
+  const handleVerifyAuthSetup = async () => {
+    setSetupError('');
+    try {
+      await api.post('/auth/mfa/verify', { token: verifyCode });
+      // Secret confirmed working server-side — Auth App is now a usable login option
+      setHasAuthApp(true);
+      setIs2FAEnabled(true); // verifying also flips two_factor_enabled server-side
+      setShowAuthSetup(false);
+      setVerifyCode('');
+    } catch (err) {
+      setSetupError(err.response?.data?.error || "Invalid code. Please try again.");
+    }
+  };
+
+  const handleCancelAuthSetup = () => {
+    setShowAuthSetup(false);
+    setVerifyCode('');
+    setSetupError('');
   };
 
   // 3. Handle Password Change Submit
@@ -294,48 +334,56 @@ export default function StudentSettings() {
               {is2FAEnabled && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-top-2 pt-8 border-t-2 border-black/5">
                   <p className="text-[10px] font-black text-black/50 uppercase tracking-[0.2em] mb-4">
-                    Select Primary MFA Method
+                    Available Verification Methods
                   </p>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <button 
-                      type="button"
-                      onClick={() => handleMethodChange('email')}
-                      className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 transition-all group ${
-                        method === 'email' 
-                          ? 'border-[#093fb4] bg-white text-[#093fb4] shadow-md' 
-                          : 'border-transparent bg-black/5 text-black/40 hover:bg-black/10 hover:text-black/70'
-                      }`}
-                    >
-                      <Mail size={28} strokeWidth={2.5} className={method === 'email' ? '' : 'group-hover:scale-110 transition-transform'} /> 
-                      <span className="text-[10px] font-black uppercase tracking-widest">Email (Gmail)</span>
-                    </button>
-                    
-                    <button 
-                      type="button"
-                      onClick={() => handleMethodChange('sms')}
-                      className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 transition-all group ${
-                        method === 'sms' 
-                          ? 'border-[#093fb4] bg-white text-[#093fb4] shadow-md' 
-                          : 'border-transparent bg-black/5 text-black/40 hover:bg-black/10 hover:text-black/70'
-                      }`}
-                    >
-                      <MessageSquare size={28} strokeWidth={2.5} className={method === 'sms' ? '' : 'group-hover:scale-110 transition-transform'} /> 
-                      <span className="text-[10px] font-black uppercase tracking-widest">SMS Text</span>
-                    </button>
+                  <p className="text-xs text-black/40 font-bold mb-4">
+                    You'll choose one of these each time you log in.
+                  </p>
 
-                    <button 
-                      type="button"
-                      onClick={() => handleMethodChange('otp')}
-                      className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 transition-all group ${
-                        method === 'otp' 
-                          ? 'border-[#093fb4] bg-white text-[#093fb4] shadow-md' 
-                          : 'border-transparent bg-black/5 text-black/40 hover:bg-black/10 hover:text-black/70'
-                      }`}
-                    >
-                      <Smartphone size={28} strokeWidth={2.5} className={method === 'otp' ? '' : 'group-hover:scale-110 transition-transform'} /> 
-                      <span className="text-[10px] font-black uppercase tracking-widest">Auth App</span>
-                    </button>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Email Approval — always available once MFA is on, no setup needed */}
+                    <div className="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 border-[#093fb4]/20 bg-white">
+                      <Mail size={28} strokeWidth={2.5} className="text-[#093fb4]" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-black">Email Approval</span>
+                      <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-emerald-600">
+                        <CheckCircle2 size={12} strokeWidth={3} /> Always Available
+                      </span>
+                    </div>
+
+                    {/* Auth App — needs to be configured before it shows up as a login option */}
+                    <div className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 bg-white ${hasAuthApp ? 'border-[#093fb4]/20' : 'border-black/10'}`}>
+                      {isSettingUp ? (
+                        <Loader2 size={28} strokeWidth={2.5} className="animate-spin text-[#093fb4]" />
+                      ) : (
+                        <Smartphone size={28} strokeWidth={2.5} className={hasAuthApp ? 'text-[#093fb4]' : 'text-black/30'} />
+                      )}
+                      <span className="text-[10px] font-black uppercase tracking-widest text-black">Authenticator App</span>
+
+                      {hasAuthApp ? (
+                        <>
+                          <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-emerald-600">
+                            <CheckCircle2 size={12} strokeWidth={3} /> Configured
+                          </span>
+                          <button
+                            type="button"
+                            onClick={startAuthAppSetup}
+                            disabled={isSettingUp}
+                            className="text-[9px] font-black text-[#093fb4]/70 hover:text-[#093fb4] hover:underline uppercase tracking-widest disabled:opacity-50"
+                          >
+                            Lost your device? Reconfigure
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={startAuthAppSetup}
+                          disabled={isSettingUp}
+                          className="text-[9px] font-black text-white bg-[#093fb4] hover:bg-[#073496] px-4 py-2 rounded-xl uppercase tracking-widest disabled:opacity-50"
+                        >
+                          Set Up
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -344,6 +392,77 @@ export default function StudentSettings() {
         )}
 
       </div>
+
+      {/* --- AUTHENTICATOR APP SETUP MODAL --- */}
+      {showAuthSetup && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2.5rem] p-8 md:p-10 max-w-sm w-full space-y-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            
+            <div className="text-center space-y-2">
+              <div className="w-14 h-14 rounded-2xl bg-[#093fb4]/10 text-[#093fb4] flex items-center justify-center mx-auto">
+                <Smartphone size={28} strokeWidth={2.5} />
+              </div>
+              <h3 className="font-black text-black text-xl uppercase tracking-tight">Set Up Authenticator</h3>
+              <p className="text-xs text-black/50 font-bold">
+                Scan this with Google Authenticator, Microsoft Authenticator, or Authy.
+              </p>
+            </div>
+
+            {qrCodeUrl && (
+              <div className="flex justify-center">
+                <img src={qrCodeUrl} alt="Scan QR code" className="w-48 h-48 rounded-2xl border-2 border-black/5 p-2" />
+              </div>
+            )}
+
+            {manualSecret && (
+              <div className="text-center space-y-1">
+                <p className="text-[10px] font-black text-black/40 uppercase tracking-wider">Can't scan? Enter manually:</p>
+                <code className="inline-block text-xs bg-black/5 px-3 py-2 rounded-lg break-all font-bold text-black/70">
+                  {manualSecret}
+                </code>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className={labelCls}>Enter the 6-digit code from your app</label>
+              <input
+                type="text"
+                maxLength="6"
+                value={verifyCode}
+                onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, ''))}
+                className={`${inputCls} text-center tracking-[0.5em] pl-4`}
+                placeholder="123456"
+                autoFocus
+              />
+            </div>
+
+            {setupError && (
+              <div className="p-4 rounded-2xl bg-red-50 border-2 border-red-200 text-red-600 text-xs font-black uppercase tracking-wide flex items-center gap-2">
+                <X size={16} strokeWidth={2.5} className="shrink-0" />
+                {setupError}
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleCancelAuthSetup}
+                className="flex-1 py-4 rounded-2xl font-black text-xs uppercase tracking-widest bg-black/5 text-black/60 hover:bg-black/10 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleVerifyAuthSetup}
+                disabled={verifyCode.length !== 6}
+                className="flex-1 py-4 rounded-2xl font-black text-xs uppercase tracking-widest bg-[#093fb4] hover:bg-[#073496] text-white shadow-lg shadow-[#093fb4]/25 disabled:opacity-40 disabled:pointer-events-none transition-all"
+              >
+                Verify &amp; Enable
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

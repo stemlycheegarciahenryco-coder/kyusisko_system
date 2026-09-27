@@ -28,6 +28,8 @@ router.post('/auth/reset-password', otpVerifyLimiter, authCtrl.resetPassword);
 router.get('/auth/login-attempts', authCtrl.getLogInAttempt); 
 router.post('/auth/logout', authCtrl.logout);
 
+router.post('/auth/respond-login-approval', authCtrl.respondLoginApproval);
+
 router.post('/auth/mfa/generate', verifyToken, authCtrl.generateMfaSetup);
 router.post('/auth/mfa/verify', verifyToken, authCtrl.verifyMfaSetup);
 
