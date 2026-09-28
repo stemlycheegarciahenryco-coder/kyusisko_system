@@ -101,17 +101,31 @@ export default function ApplicationForm() {
     if (id) loadData();
   }, [id]);
 
+  const MAX_FILE_SIZE_MB = 5;
+  const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
   const handleInputChange = (fieldId, value, fieldType) => {
     if (fieldType === 'file' && value) {
       const allowedExtensions = ['pdf', 'docx', 'doc'];
       const fileExt = value.name.split('.').pop().toLowerCase();
+
       if (!allowedExtensions.includes(fileExt)) {
         setErrors(prev => ({ ...prev, [fieldId]: "Invalid format. Please use PDF or DOCX." }));
         setFormData(prev => ({ ...prev, [fieldId]: null }));
         return;
-      } else {
-        setErrors(prev => ({ ...prev, [fieldId]: null }));
       }
+
+      if (value.size > MAX_FILE_SIZE_BYTES) {
+        const sizeMB = (value.size / (1024 * 1024)).toFixed(1);
+        setErrors(prev => ({
+          ...prev,
+          [fieldId]: `File is too large (${sizeMB}MB). Max size is ${MAX_FILE_SIZE_MB}MB.`
+        }));
+        setFormData(prev => ({ ...prev, [fieldId]: null }));
+        return;
+      }
+
+      setErrors(prev => ({ ...prev, [fieldId]: null }));
     }
     setFormData(prev => ({ ...prev, [fieldId]: value }));
   };
@@ -405,7 +419,7 @@ export default function ApplicationForm() {
                               </>
                             )}
                             <span className="text-xs text-slate-500 font-bold uppercase tracking-tight mt-1">
-                              Accepted formats: PDF, DOCX &nbsp;•&nbsp; Max file size: 10MB
+                              Accepted formats: PDF, DOCX &nbsp;•&nbsp; Max file size: 5MB
                             </span>
                           </div>
                         </div>

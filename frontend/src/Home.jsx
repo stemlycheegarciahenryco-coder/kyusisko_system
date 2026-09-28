@@ -136,18 +136,11 @@ export default function Home() {
             <main className="flex-grow relative z-10">
 
                 {/* ── SECTION 1: HERO ── */}
-                <section className="relative w-full overflow-hidden">
+                <section className="relative w-full h-[560px] sm:h-[620px] lg:h-[700px] overflow-hidden">
                     <img
                         src="/circle.jpg"
                         alt="QC Memorial Circle"
-                        style={{
-                            display: 'block',
-                            width: '100%',
-                            height: 'auto',
-                            minHeight: '100vh',
-                            objectFit: 'cover',
-                            objectPosition: 'center center',
-                        }}
+                        className="absolute inset-0 w-full h-full object-cover object-center"
                     />
 
                     <div
@@ -159,14 +152,14 @@ export default function Home() {
                     />
 
                     <div className="absolute inset-0 flex flex-col">
-                        <div className="w-full relative z-20">
+                        <div className="w-full relative z-20 shrink-0">
                             <HomeNav />
                         </div>
-
-                        <div className="flex-grow flex items-start pt-4 lg:pt-8">
-                            <div className="w-full max-w-6xl mx-auto px-8 grid lg:grid-cols-2 gap-12 items-center py-12">
+                            {/*section header second*/}
+                        <div className="flex-1 min-h-0 flex items-center overflow-hidden">
+                            <div className="w-full max-w-6xl mx-auto px-6 sm:px-8">
                                 <ScrollReveal>
-                                    <div className="space-y-7">
+                                    <div className="space-y-5 max-w-2xl">
                                         <div className="flex flex-wrap gap-2">
                                             <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/15 backdrop-blur-sm text-white rounded-lg text-[12px] font-black tracking-[0.2em] uppercase border border-white/30">
                                                 <CheckCircle2 size={15} strokeWidth={3} /> 100% Free
@@ -176,42 +169,33 @@ export default function Home() {
                                             </div>
                                         </div>
 
-                                        <h2 className="text-6xl lg:text-8xl font-black leading-[0.92] tracking-tighter text-white drop-shadow-2xl">
+                                        <h2 className="text-4xl sm:text-5xl lg:text-7xl font-black leading-[0.95] tracking-tighter text-white drop-shadow-2xl">
                                             Kyus<span className="text-[#4d7fff]">IS</span><span className="text-[#FF1E1E]">KO</span>
                                             <br />
-                                            <span className="text-white text-4xl lg:text-5xl uppercase font-black">for College Students</span>
+                                            <span className="text-white text-2xl sm:text-3xl lg:text-5xl uppercase font-black">for College Students</span>
                                         </h2>
 
-                                        <p className="text-base text-white/80 font-semibold max-w-sm leading-relaxed">
+                                        <p className="text-sm sm:text-base text-white/80 font-semibold max-w-lg leading-relaxed">
                                             The premier scholarship discovery platform for Quezon City college students.
                                             Find, apply, and get funded — all in one place.
                                         </p>
 
-                                        <div className="flex flex-wrap gap-4 pt-2">
+                                        <div className="flex flex-wrap gap-3 sm:gap-4 pt-1">
                                             <button
                                                 onClick={() => navigate('/student-register')}
-                                                className="px-10 py-5 bg-[#093FB4] text-white font-black rounded-xl shadow-2xl hover:bg-[#0731a8] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 group text-[13px] uppercase tracking-[0.2em]"
+                                                className="px-6 sm:px-10 py-3 sm:py-5 bg-[#093FB4] text-white font-black rounded-xl shadow-2xl hover:bg-[#0731a8] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 group text-[13px] uppercase tracking-[0.2em]"
                                             >
                                                 Get Started <ArrowRight size={18} strokeWidth={3} className="group-hover:translate-x-1 transition-transform" />
                                             </button>
                                             <button
                                                 onClick={() => document.getElementById('scholarships')?.scrollIntoView({ behavior: 'smooth' })}
-                                                className="px-10 py-5 bg-white/15 backdrop-blur-sm text-white font-black rounded-xl border border-white/40 hover:bg-white/25 transition-all text-[13px] uppercase tracking-[0.2em]"
+                                                className="px-6 sm:px-10 py-3 sm:py-5 bg-white/15 backdrop-blur-sm text-white font-black rounded-xl border border-white/40 hover:bg-white/25 transition-all text-[13px] uppercase tracking-[0.2em]"
                                             >
                                                 Browse Scholarships
                                             </button>
                                         </div>
                                     </div>
                                 </ScrollReveal>
-
-                                <div className="hidden lg:block relative rounded-[2.5rem] overflow-hidden shadow-2xl border-[8px] border-white/20 max-w-md mx-auto lg:ml-auto group cursor-pointer">
-                                    <img
-                                        src="/isko.png"
-                                        alt="Graduates"
-                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                                    />
-                                    <div className="absolute inset-0 bg-[#093FB4]/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -408,11 +392,11 @@ export default function Home() {
                             </ScrollReveal>
 
                             <ScrollReveal delay={150}>
-                                <div className="relative rounded-[2.5rem] overflow-hidden shadow-2xl border-[8px] border-white group cursor-pointer">
+                                <div className="relative aspect-[4/3] lg:aspect-[5/4] w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-[8px] border-white group cursor-pointer mt-4 lg:mt-0">
                                     <img
                                         src="/isko2.png"
                                         alt="Success"
-                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                                     />
                                     <div className="absolute inset-0 bg-[#093FB4]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                                 </div>

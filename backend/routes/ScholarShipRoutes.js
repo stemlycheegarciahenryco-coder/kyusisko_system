@@ -4,6 +4,9 @@ const scholarship = require('../controller/scholarshipController');
 const { verifyToken } = require('../middleware/auth');
 const upload = require('../middleware/multerConfig'); // Import your multer config
 
+
+
+router.get('/public', scholarship.getPublicScholarships);
 router.use(verifyToken); 
 
 // Core Scholarship Routes

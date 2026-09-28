@@ -19,7 +19,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 } // ✅ Fixed: Cleaned up your comment limit to accurately match 10MB
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit — matches Supabase storage bucket limit
 });
 
 module.exports = upload;

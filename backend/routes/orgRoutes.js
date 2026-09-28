@@ -13,7 +13,7 @@ router.patch('/cover-picture/me', verifyToken, uploadOrgPic.single('cover_pic'),
 router.get('/applications', verifyToken, orgController.getOrgApplications);
 //orgprofile-
 router.get('/dashboard-programs/me', verifyToken, orgController.getOrgPrograms);
-
+router.get('/partners', orgController.getPartnerOrganizations);
 // Dedicated profile programs endpoint orgprofile-
 router.get('/profile-programs/me', verifyToken, orgController.getOrgProfilePrograms);
 

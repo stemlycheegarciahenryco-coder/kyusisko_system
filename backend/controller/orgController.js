@@ -921,6 +921,24 @@ const blockCoAdmin = async (req, res) => {
     }
 };
 
+// GET /api/organizations/partners
+// No auth — public homepage fallback listing partnered organizations.
+const getPartnerOrganizations = async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT id, org_name, org_pic, provider_type
+             FROM sub_admins
+             WHERE account_type = 'org'
+             ORDER BY org_name ASC`
+        );
+
+        res.status(200).json({ success: true, data: result.rows });
+    } catch (err) {
+        console.error("Partner Organizations Error:", err.message);
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
 // Add to exports:
 module.exports = {
     logReportDownload, 
@@ -939,5 +957,6 @@ module.exports = {
     addCoAdmin,
     getCoAdmins,
     removeCoAdmin,
-    blockCoAdmin
+    blockCoAdmin,
+    getPartnerOrganizations,
 };

@@ -166,6 +166,32 @@ const createScholarship = async (req, res) => {
   }
 };
 
+
+
+// GET /api/scholarships/public
+// No auth — used on the homepage for anonymous visitors.
+const getPublicScholarships = async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+        s.id, s.title, s.description, s.deadline, s.criteria, s.fund_type,
+        sa.org_pic, 
+        sa.org_name,
+        sa.provider_type 
+       FROM scholarships s
+       LEFT JOIN sub_admins sa ON s.sub_admin_id = sa.id
+       WHERE s.status IN ('open', 'active')
+         AND s.is_archived IS NOT TRUE
+       ORDER BY s.created_at DESC`
+    );
+
+    res.status(200).json({ success: true, data: result.rows });
+  } catch (err) {
+    console.error("Public Scholarships Error:", err.message);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // GET /api/scholarships
 const getScholarships = async (req, res) => {
   try {
@@ -610,6 +636,7 @@ const getRequirements = async (req, res) => {
 
 module.exports = {
   createScholarship,
+  getPublicScholarships,
   getScholarships,
   getArchivedScholarships,
   getScholarshipById,

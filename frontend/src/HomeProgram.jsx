@@ -60,9 +60,10 @@ const normalizeProgram = (raw) => {
         id: raw.id ?? raw._id,
         title: raw.title || raw.program_name || 'Untitled Program',
         provider: raw.org_name || raw.provider || 'Unknown Provider',
+        providerType: raw.provider_type || raw.org_type || 'Partner Organization',
         img: raw.org_pic || raw.logo || raw.image || null,
-        tag: raw.tag || raw.provider_type || raw.category || 'Scholarship',
-        coverage: raw.amount_range || raw.coverage || 'Coverage Varies',
+        tag: raw.tag || raw.category || 'Scholarship',
+        fundType: raw.fund_type || raw.coverage || raw.amount_range || 'Coverage Varies',
         criteria,
         criteriaSummary: criteria.length ? criteria[0] : 'See full eligibility details',
         deadline: raw.deadline
@@ -122,7 +123,7 @@ const RequirementsModal = ({ program, onClose, onApply }) => (
                 </h3>
                 <div className="flex flex-wrap gap-2 mt-4">
                     <span className="bg-white/10 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full backdrop-blur-md">
-                        Coverage: {program.coverage}
+                        Fund Type: {program.fundType}
                     </span>
                     <span className="bg-[#FF1E1E] text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full">
                         Deadline: {program.deadline}
@@ -290,7 +291,7 @@ export default function HomeProgram() {
                             key={org.id}
                             className="bg-white rounded-2xl border border-slate-100 shadow-md p-6 flex flex-col items-center text-center gap-3 hover:shadow-xl hover:-translate-y-1 transition-all"
                         >
-                            <div className="w-16 h-16 rounded-2xl overflow-hidden bg-blue-50 flex items-center justify-center border border-blue-100">
+                            <div className="w-16 h-16 rounded-full overflow-hidden bg-blue-50 flex items-center justify-center border border-blue-100">
                                 {org.img ? (
                                     <img
                                         src={org.img}
@@ -326,56 +327,62 @@ export default function HomeProgram() {
                         className="bg-white rounded-2xl border border-slate-100 shadow-lg flex flex-col justify-between overflow-hidden group hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
                     >
                         <button type="button" onClick={() => setActiveProgram(program)} className="text-left">
-                            <div className="h-36 bg-slate-50 flex items-center justify-center overflow-hidden relative border-b border-slate-50">
-                                {program.img ? (
-                                    <img
-                                        src={program.img}
-                                        alt={program.provider}
-                                        onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90"
-                                    />
-                                ) : null}
-                                <div className={`${program.img ? 'hidden' : 'flex'} w-full h-full absolute inset-0 items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100`}>
-                                    <Building2 size={44} className="text-[#093FB4]/30" strokeWidth={1.5} />
-                                </div>
-                                <div className="absolute top-4 left-4">
-                                    <span className="text-[11px] font-black uppercase tracking-widest text-white bg-[#093FB4] shadow-md px-2.5 py-1 rounded-md">
-                                        {program.tag}
+                            <div className="p-6 pb-5">
+                                <div className="flex items-start justify-between gap-3 mb-4">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="w-12 h-12 rounded-full overflow-hidden bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
+                                            {program.img ? (
+                                                <img
+                                                    src={program.img}
+                                                    alt={program.provider}
+                                                    onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : null}
+                                            <div className={`${program.img ? 'hidden' : 'flex'} w-full h-full items-center justify-center`}>
+                                                <Building2 size={20} className="text-[#093FB4]/40" strokeWidth={1.5} />
+                                            </div>
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-[13px] font-black text-slate-800 uppercase tracking-wide truncate">
+                                                {program.provider}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-white bg-[#093FB4] shadow-md px-2.5 py-1 rounded-md shrink-0 whitespace-nowrap">
+                                        {program.providerType}
                                     </span>
                                 </div>
+
+                                <h4 className="text-lg font-black text-slate-900 leading-snug line-clamp-2 group-hover:text-[#093FB4] transition-colors mb-2">
+                                    {program.title}
+                                </h4>
+
+                                <p className="text-[13px] text-slate-500 leading-relaxed line-clamp-2 min-h-[2.5em] font-medium">
+                                    {program.description || 'Full program details available once you view requirements.'}
+                                </p>
                             </div>
 
-                            <div className="p-6 space-y-4">
-                                <div>
-                                    <p className="text-[13px] font-black text-slate-400 uppercase tracking-wide truncate mb-0.5">
-                                        {program.provider}
-                                    </p>
-                                    <h4 className="text-lg font-black text-slate-900 leading-snug line-clamp-2 group-hover:text-[#093FB4] transition-colors h-12">
-                                        {program.title}
-                                    </h4>
+                            <hr className="border-slate-100 mx-6" />
+
+                            <div className="p-6 pt-4 space-y-2.5 text-sm font-medium text-slate-600">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-5 h-5 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                                        <Wallet size={14} strokeWidth={2.5} />
+                                    </div>
+                                    <span className="truncate"><strong>Fund Type:</strong> {program.fundType}</span>
                                 </div>
-
-                                <hr className="border-slate-100" />
-
-                                <div className="space-y-2.5 text-sm font-medium text-slate-600">
-                                    <div className="flex items-center gap-2.5">
-                                        <div className="w-5 h-5 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                                            <GraduationCap size={14} strokeWidth={2.5} />
-                                        </div>
-                                        <span className="truncate"><strong>Coverage:</strong> {program.coverage}</span>
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-5 h-5 rounded bg-blue-50 text-[#093FB4] flex items-center justify-center flex-shrink-0">
+                                        <Layers size={14} strokeWidth={2.5} />
                                     </div>
-                                    <div className="flex items-center gap-2.5">
-                                        <div className="w-5 h-5 rounded bg-blue-50 text-[#093FB4] flex items-center justify-center flex-shrink-0">
-                                            <Layers size={14} strokeWidth={2.5} />
-                                        </div>
-                                        <span className="truncate"><strong>Criteria:</strong> {program.criteriaSummary}</span>
+                                    <span className="truncate"><strong>Criteria:</strong> {program.criteriaSummary}</span>
+                                </div>
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-5 h-5 rounded bg-red-50 text-[#FF1E1E] flex items-center justify-center flex-shrink-0">
+                                        <Calendar size={14} strokeWidth={2.5} />
                                     </div>
-                                    <div className="flex items-center gap-2.5">
-                                        <div className="w-5 h-5 rounded bg-red-50 text-[#FF1E1E] flex items-center justify-center flex-shrink-0">
-                                            <Calendar size={14} strokeWidth={2.5} />
-                                        </div>
-                                        <span><strong>Deadline:</strong> <span className="text-red-600 font-bold">{program.deadline}</span></span>
-                                    </div>
+                                    <span><strong>Deadline:</strong> <span className="text-red-600 font-bold">{program.deadline}</span></span>
                                 </div>
                             </div>
                         </button>
