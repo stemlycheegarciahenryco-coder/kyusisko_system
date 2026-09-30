@@ -191,7 +191,7 @@ export default function StudentSettings() {
           }`}
         >
           <ShieldCheck size={18} strokeWidth={2.5} />
-          MFA Security
+           Security
         </button>
       </div>
 

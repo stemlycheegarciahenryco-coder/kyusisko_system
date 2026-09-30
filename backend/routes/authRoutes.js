@@ -7,6 +7,7 @@ const adminCtrl = require('../controller/adminController');
 const stdCtrl = require ('../controller/studentController');
 const {verifyToken, isStudent} = require('../middleware/auth');
 const upload = require('../middleware/multerConfig');
+const handleUpload = require('../middleware/handleUpload');
 
 const { authLimiter, generalLimiter, otpVerifyLimiter ,otpSendLimiter } = require('../middleware/rateLimiter');
 
@@ -46,8 +47,9 @@ router.patch('/students/:id/status', stdCtrl.updateStudentStatus);
 router.get('/students/profile-full/me', verifyToken, isStudent, stdCtrl.getFullProfile);
 router.get('/students/my-scholarships', verifyToken, isStudent, stdCtrl.getMyScholarships);
 router.get('/students/:id', stdCtrl.getStudentById);
-router.patch('/students/update-portfolio', verifyToken, isStudent, upload.array('files', 10), stdCtrl.updatePortfolio);
-router.put('/upload-profile/me',verifyToken, isStudent, upload.single('profile_image'), stdCtrl.updateProfilePic);
+router.patch('/students/update-portfolio', verifyToken, isStudent, handleUpload(upload.array('files', 10)), stdCtrl.updatePortfolio);
+router.delete('/students/portfolio-item', verifyToken, isStudent, stdCtrl.removePortfolioItem);
+router.put('/upload-profile/me',verifyToken, isStudent, handleUpload(upload.single('profile_image')), stdCtrl.updateProfilePic);
 router.put('/students/parent-profile/me', verifyToken, isStudent, stdCtrl.saveOrUpdateParentProfile);
 router.put('/students/personal-info/me', verifyToken, isStudent, stdCtrl.updatePersonalInfo);
 

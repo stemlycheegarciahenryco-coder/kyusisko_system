@@ -141,9 +141,9 @@ exports.updatePortfolio = async (req, res) => {
     await pool.query(
       `UPDATE students 
        SET bio = COALESCE($1, bio),
-           academic_student_id = $2,
-           year_level = $3,
-           gwa = $4
+           academic_student_id = COALESCE($2, academic_student_id),
+           year_level = COALESCE($3, year_level),
+           gwa = COALESCE($4, gwa)
        WHERE id = $5`,
       [bio || null, academic_student_id || null, year_level || null, parsedGwa, student_id]
     );
@@ -228,29 +228,82 @@ exports.updatePortfolio = async (req, res) => {
     // ─────────────────────────────────────────────────────────────────────────
     // 🚀 SCENARIO B: Trigger AI Background Re-Matching for this Student
     // ─────────────────────────────────────────────────────────────────────────
-    await triggerStudentReMatch(student_id);
+    // Fire-and-forget: queueing match jobs shouldn't slow down the response
+    triggerStudentReMatch(student_id);
 
-    res.json({ message: "Profile updated successfully!" });
+    const latest = await pool.query('SELECT portfolio_data FROM students WHERE id = $1', [student_id]);
+
+    res.json({
+      message: "Profile updated successfully!",
+      portfolio_data: latest.rows[0]?.portfolio_data || []
+    });
   } catch (err) {
     console.error("Error updating profile fields:", err.message);
+
+    if (err.code === '23505' && err.constraint === 'students_academic_student_id_key') {
+      return res.status(409).json({ error: "That Student ID is already used by another account. Please double-check and try again." });
+    }
+
     res.status(500).json({ error: "Server error while updating profile." });
+  }
+};
+
+// Remove a single uploaded portfolio document
+// DELETE /api/students/portfolio-item?file_path=portfolio/student_1/123_0.pdf
+exports.removePortfolioItem = async (req, res) => {
+  const student_id = req.user.id;
+  const { file_path } = req.query;
+
+  if (!file_path) {
+    return res.status(400).json({ error: "file_path is required." });
+  }
+
+  try {
+    const result = await pool.query('SELECT portfolio_data FROM students WHERE id = $1', [student_id]);
+    const current = result.rows[0]?.portfolio_data || [];
+
+    // Only allow removing files that belong to THIS student's portfolio
+    const target = current.find(item => item.file_path === file_path);
+    if (!target) {
+      return res.status(404).json({ error: "Document not found in your portfolio." });
+    }
+
+    const { error: removeError } = await supabaseAdmin.storage
+      .from('student-portfolio')
+      .remove([file_path]);
+    if (removeError) throw removeError;
+
+    const updated = current.filter(item => item.file_path !== file_path);
+    await pool.query(
+      'UPDATE students SET portfolio_data = $1 WHERE id = $2',
+      [JSON.stringify(updated), student_id]
+    );
+
+    triggerStudentReMatch(student_id);
+
+    res.json({ message: "Document removed.", portfolio_data: updated });
+  } catch (err) {
+    console.error("Error removing portfolio item:", err.message);
+    res.status(500).json({ error: "Failed to remove document." });
   }
 };
 
 // PERSONAL EDIT INFO UPDATE
 exports.updatePersonalInfo = async (req, res) => {
   const  id = req.user.id;
-  const { scontact_number, sstreet, sbarangay, sgender, religion, other_religion } = req.body;
+  const { scontact_number, sstreet, sdistrict, sbarangay, szip_code, sgender, religion, other_religion } = req.body;
 
   try {
     await pool.query(
       `UPDATE students 
        SET scontact_number = COALESCE($1, scontact_number),
            sstreet = COALESCE($2, sstreet),
-           sbarangay = COALESCE($3, sbarangay),
-           sgender = COALESCE($4, sgender)
-       WHERE id = $5`,
-      [scontact_number, sstreet, sbarangay, sgender, id]
+           sdistrict = COALESCE($3, sdistrict),
+           sbarangay = COALESCE($4, sbarangay),
+           szip_code = COALESCE($5, szip_code),
+           sgender = COALESCE($6, sgender)
+       WHERE id = $7`,
+      [scontact_number, sstreet, sdistrict, sbarangay, szip_code, sgender, id]
     );
 
     await pool.query(

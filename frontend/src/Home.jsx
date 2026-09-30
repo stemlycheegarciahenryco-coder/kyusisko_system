@@ -54,43 +54,35 @@ const ScrollReveal = ({ children, delay = 0 }) => {
 /* ─── Steps data ─────────────────────────────────────────────── */
 const STUDENT_STEPS = [
     { icon: UserPlus, label: 'Create Account', desc: 'Sign up for free with your student email and basic personal information.' },
-    { icon: Search, label: 'Browse Scholarships', desc: 'Explore verified scholarships filtered by your course, year level, and financial need.' },
-    { icon: FileCheck, label: 'Submit Application', desc: 'Upload your requirements and apply directly through the platform — no extra steps.' },
-    { icon: BadgeCheck, label: 'Get Notified', desc: 'Track your application status in real-time and receive updates instantly.' },
+    { icon: BookOpen, label: 'Set Up Your Profile', desc: 'Complete your profile so you can be matched with scholarships that fit you.' },
+    { icon: Search, label: 'Find the Best Scholarship for You', desc: 'Explore and browse scholarship programs.' },
+    { icon: FileCheck, label: 'Submit and Track Your Application', desc: 'Monitor you application status and comply with the provider requirements.' },
 ];
 
 const PROVIDER_STEPS = [
-    { icon: Building2, label: 'Register Organization', desc: 'Create a verified provider account for your institution or organization.' },
-    { icon: BookOpen, label: 'Post Scholarships', desc: 'Publish your scholarship programs with full details, requirements, and available slots.' },
-    { icon: FileCheck, label: 'Review Applications', desc: 'Manage and evaluate student submissions all in one organized dashboard.' },
-    { icon: Send, label: 'Award Scholars', desc: 'Notify selected scholars and onboard them seamlessly through the platform.' },
+    { icon: Building2, label: 'Create Provider Account', desc: 'Register an account for your institution or organization.' },
+    { icon: BadgeCheck, label: 'Wait for Approval', desc: 'Our team reviews your details to verify your organization as a provider.' },
+    { icon: BookOpen, label: 'Set Up the Provider Profile', desc: 'Once approved, complete your organization profile.' },
+    { icon: FileCheck, label: 'Post and Review Scholarship Applicants', desc: 'Publish scholarships and review the students who apply.' },
 ];
 
 /* ─── FAQ data ───────────────────────────────────────────────── */
 const FAQS = [
     {
-        q: 'Is KyusISKO free to use?',
-        a: 'Yes, KyusISKO is completely free for all Quezon City college students. There are no hidden fees or premium tiers — just sign up and start applying.'
-    },
-    {
-        q: 'Who can apply for scholarships on KyusISKO?',
-        a: 'Any college student residing in or attending a college within Quezon City can register and apply. Some scholarships may have additional eligibility requirements set by the provider.'
+        q: 'Who can apply to KyusISKO?',
+        a: 'Students and providers can use the platform and utilize the platform features.'
     },
     {
         q: 'How do I know if a scholarship provider is legitimate?',
         a: 'All scholarship providers on KyusISKO go through a vetting and verification process before their listings are published. You will see a "Vetted Provider" badge on verified organizations.'
     },
     {
-        q: 'Can I apply to multiple scholarships at the same time?',
-        a: 'Yes! You can browse and apply to as many scholarships as you qualify for. Your dashboard lets you track all your applications in one place.'
+        q: 'How to use KyusISKO as a student?',
+        a: 'Register, and set up your profile to find the best scholarship that can help your academic journey.'
     },
     {
-        q: 'How do organizations partner with KyusISKO?',
-        a: 'Organizations can register through the "Partner With Us" option in the navigation bar. After submitting your details, our team will review and approve your provider account.'
-    },
-    {
-        q: 'How long does the application review take?',
-        a: 'Review timelines vary per scholarship provider. Once your application is submitted, you will receive status updates directly on your KyusISKO dashboard and via email.'
+        q: 'How to use KyusISKO as a provider?',
+        a: 'Create an account and comply with the requirements for verification of the provider. After approval, you can use and manage the platform  such as scholarship applicants management, tracking reports, and monitor the scholarship program status.'
     },
 ];
 
@@ -116,7 +108,7 @@ const FAQItem = ({ q, a, index }) => {
                         className={`flex-shrink-0 ml-4 transition-all duration-300 ${open ? 'rotate-180 text-[#093FB4]' : 'text-slate-400'}`}
                     />
                 </button>
-                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${open ? 'max-h-48' : 'max-h-0'}`}>
+                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${open ? 'max-h-64' : 'max-h-0'}`}>
                     <p className="px-7 pb-6 text-base text-slate-600 leading-relaxed font-medium bg-white">
                         {a}
                     </p>
@@ -170,7 +162,7 @@ export default function Home() {
                                         </div>
 
                                         <h2 className="text-4xl sm:text-5xl lg:text-7xl font-black leading-[0.95] tracking-tighter text-white drop-shadow-2xl">
-                                            Kyus<span className="text-[#4d7fff]">IS</span><span className="text-[#FF1E1E]">KO</span>
+                                            Kyus<span className="text-[#4d7fff]">IS</span><span className="text-[#4d7fff]">KO</span>
                                             <br />
                                             <span className="text-white text-2xl sm:text-3xl lg:text-5xl uppercase font-black">for College Students</span>
                                         </h2>
@@ -206,7 +198,7 @@ export default function Home() {
                     <div className="max-w-6xl mx-auto">
                         <ScrollReveal>
                             <div className="text-center mb-16 space-y-4">
-                                <span className="text-[#FF1E1E] text-[12px] font-black uppercase tracking-[0.5em]">Active Openings</span>
+                                <span className="text-[#093FB4] text-[12px] font-black uppercase tracking-[0.5em]">Active Openings</span>
                                 <h3 className="text-4xl lg:text-6xl font-black text-slate-900 tracking-tighter uppercase">
                                     Featured <span className="text-[#093FB4]">Scholarships</span>
                                 </h3>
@@ -220,28 +212,18 @@ export default function Home() {
                             <HomeProgram />
                         </ScrollReveal>
 
-                        <ScrollReveal delay={200}>
-                            <div className="text-center mt-12">
-                                <button
-                                    onClick={() => navigate('/scholarships')}
-                                    className="px-10 py-5 border-2 border-[#093FB4] text-[#093FB4] text-[13px] font-black uppercase tracking-widest rounded-xl hover:bg-[#093FB4] hover:text-white transition-all"
-                                >
-                                    View All Scholarships
-                                </button>
-                            </div>
-                        </ScrollReveal>
                     </div>
                 </section>
 
                 {/* ── SECTION 3 — HOW TO APPLY ── */}
                 <section className="py-28 px-8 relative overflow-hidden" style={{ backgroundColor: '#FFFCFB' }}>
                     <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#093FB4]/6 rounded-full blur-3xl -translate-y-1/3 translate-x-1/4 pointer-events-none" />
-                    <div className="absolute bottom-0 left-0 w-[350px] h-[350px] bg-[#FF1E1E]/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4 pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 w-[350px] h-[350px] bg-[#093FB4]/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4 pointer-events-none" />
 
                     <div className="max-w-6xl mx-auto relative z-10">
                         <ScrollReveal>
                             <div className="text-center mb-16 space-y-4">
-                                <span className="text-[#FF1E1E] text-[12px] font-black uppercase tracking-[0.5em]">Simple Process</span>
+                                
                                 <h3 className="text-4xl lg:text-6xl font-black text-slate-900 tracking-tighter uppercase">
                                     How to <span className="text-[#093FB4]">Get Started</span>
                                 </h3>
@@ -297,12 +279,12 @@ export default function Home() {
                                 <div className="space-y-5">
                                     {PROVIDER_STEPS.map((step, i) => (
                                         <ScrollReveal key={i} delay={i * 80}>
-                                            <div className="flex items-start gap-5 p-6 bg-white border border-slate-200 rounded-2xl hover:border-[#FF1E1E]/40 hover:shadow-lg transition-all duration-300 group">
-                                                <div className="flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-xl bg-[#FF1E1E]/10 text-[#FF1E1E] group-hover:bg-[#FF1E1E] group-hover:text-white transition-all">
+                                            <div className="flex items-start gap-5 p-6 bg-white border border-slate-200 rounded-2xl hover:border-[#093FB4]/40 hover:shadow-lg transition-all duration-300 group">
+                                                <div className="flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-xl bg-[#093FB4]/10 text-[#093FB4] group-hover:bg-[#093FB4] group-hover:text-white transition-all">
                                                     <step.icon size={22} strokeWidth={2.5} />
                                                 </div>
                                                 <div>
-                                                    <span className="text-[12px] font-black text-[#FF1E1E] uppercase tracking-widest">Step {i + 1}</span>
+                                                    <span className="text-[12px] font-black text-[#093FB4] uppercase tracking-widest">Step {i + 1}</span>
                                                     <p className="text-[17px] font-black text-slate-900 mt-0.5">{step.label}</p>
                                                     <p className="text-[15px] text-slate-500 mt-1 leading-relaxed font-medium">{step.desc}</p>
                                                 </div>
@@ -328,7 +310,7 @@ export default function Home() {
                     <div className="max-w-4xl mx-auto">
                         <ScrollReveal>
                             <div className="text-center mb-16 space-y-4">
-                                <span className="text-[#FF1E1E] text-[12px] font-black uppercase tracking-[0.5em]">Got Questions?</span>
+                                <span className="text-[#093FB4] text-[12px] font-black uppercase tracking-[0.5em]">Got Questions?</span>
                                 <h3 className="text-4xl lg:text-6xl font-black text-slate-900 tracking-tighter uppercase">
                                     Frequently Asked <span className="text-[#093FB4]">Questions</span>
                                 </h3>
@@ -364,7 +346,7 @@ export default function Home() {
                         <div className="grid lg:grid-cols-2 gap-16 items-center">
                             <ScrollReveal>
                                 <div className="space-y-7">
-                                    <span className="text-[#FF1E1E] text-[12px] font-black uppercase tracking-[0.5em]">The Mission</span>
+                                    <span className="text-[#093FB4] text-[12px] font-black uppercase tracking-[0.5em]">The Mission</span>
                                     <h4 className="text-4xl lg:text-6xl font-black text-slate-900 tracking-tighter uppercase">
                                         About Kyus<span className="text-[#093FB4]">ISKO</span>
                                     </h4>
@@ -376,18 +358,6 @@ export default function Home() {
                                         We partner with government agencies, private corporations, and foundations to ensure every deserving student
                                         has access to funding opportunities — all in one place, completely free.
                                     </p>
-                                    <div className="grid grid-cols-3 gap-4 pt-2">
-                                        {[
-                                            { label: 'Scholarships', value: '50+' },
-                                            { label: 'Students Helped', value: '2,000+' },
-                                            { label: 'Partner Orgs', value: '30+' },
-                                        ].map(stat => (
-                                            <div key={stat.label} className="bg-[#093FB4]/5 border border-[#093FB4]/15 rounded-2xl p-5 text-center">
-                                                <p className="text-3xl font-black text-[#093FB4]">{stat.value}</p>
-                                                <p className="text-[12px] font-black text-slate-500 uppercase tracking-widest mt-1">{stat.label}</p>
-                                            </div>
-                                        ))}
-                                    </div>
                                 </div>
                             </ScrollReveal>
 
