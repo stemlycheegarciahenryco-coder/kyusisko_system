@@ -14,6 +14,7 @@ const RootOrganization = () => {
     const [selectedOrg, setSelectedOrg] = useState(null);
     const [search, setSearch] = useState('');
     const [activeTab, setActiveTab] = useState('all');
+    const [filterArchive, setFilterArchive] = useState(false);
 
     const colors = { red: '#FF1E1E', white: '#FFFCFB', blue: '#093fb4' };
 
@@ -32,14 +33,21 @@ const RootOrganization = () => {
     useEffect(() => { fetchOrgs(); }, []);
 
     const countByStatus = (status) =>
-        orgs.filter((o) => o.status === status).length;
+        orgs.filter((o) => (filterArchive ? o.is_archived : !o.is_archived) && (status === 'all' || o.status === status)).length;
 
     const filteredOrgs = orgs.filter((org) => {
+        // Filter by archive state
+        const matchArchive = filterArchive ? org.is_archived : !org.is_archived;
+        
+        // Filter by tab
         const matchTab = activeTab === 'all' || org.status === activeTab;
+        
+        // Filter by search query
         const matchSearch =
-            org.org_name.toLowerCase().includes(search.toLowerCase()) ||
-            org.sub_email.toLowerCase().includes(search.toLowerCase());
-        return matchTab && matchSearch;
+            org.org_name?.toLowerCase().includes(search.toLowerCase()) ||
+            org.sub_email?.toLowerCase().includes(search.toLowerCase());
+
+        return matchArchive && matchTab && matchSearch;
     });
 
     const swalConfig = (title, text, icon, confirmColor) => ({
@@ -62,9 +70,6 @@ const RootOrganization = () => {
                 setSelectedOrg(null);
                 fetchOrgs();
 
-                // NEW: Show the generated Provider ID / email / password ONCE so the
-                // admin can relay them to the provider. This is the only place the
-                // plaintext password is ever visible.
                 if (creds) {
                     await Swal.fire({
                         title: 'Provider Approved!',
@@ -94,7 +99,6 @@ const RootOrganization = () => {
         }
     };
 
-    // NEW: Called from RootOrgView's reject modal with checked reasons + optional note
     const handleReject = async (org, reasons, note) => {
         try {
             await api.post(`/onboarding-orgs/reject/${org.id}`, { reasons, note });
@@ -120,12 +124,12 @@ const RootOrganization = () => {
     };
 
     const handleArchive = (org) => {
-        alert(`Archive ${org.id}`)
-    }
+        alert(`Archive ${org.id}`);
+    };
 
     const handleDelete = (org) => {
-        alert(`Delete ${org.id}`)
-    }
+        alert(`Delete ${org.id}`);
+    };
 
     if (loading)
         return (
@@ -145,15 +149,45 @@ const RootOrganization = () => {
                     Providers Management
                 </h2>
                 <div className="px-5 py-3 rounded-2xl border border-[#093fb4] bg-white shadow-sm">
-                    <p className="text-xl font-black leading-none text-[#093fb4]">{orgs.length}</p>
-                    <p className="text-[9px] font-black uppercase tracking-widest text-black mt-1">Total Providers</p>
+                    <p className="text-xl font-black leading-none text-[#093fb4]">{filteredOrgs.length}</p>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-black mt-1">
+                        {filterArchive ? 'Archived Providers' : 'Total Providers'}
+                    </p>
                 </div>
+            </div>
+
+            {/* Controls Bar: Search & Archive Checkbox */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-6">
+                {/* Search */}
+                <div className="relative w-full md:max-w-md">
+                    <IconSearch size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-black/40" />
+                    <input
+                        placeholder="Search by name or email..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="w-full pl-12 pr-6 py-3.5 bg-white border border-[#093fb4]/20 rounded-[1.5rem] outline-none focus:ring-4 focus:ring-[#093fb4]/10 text-black font-medium transition-all text-sm"
+                    />
+                </div>
+
+                {/* Show Archived Checkbox UI */}
+                <label className="flex items-center gap-3 px-5 py-3 bg-white border border-[#093fb4]/20 rounded-[1.5rem] cursor-pointer hover:border-[#093fb4]/40 transition-all select-none shadow-sm shrink-0">
+                    <input
+                        type="checkbox"
+                        checked={filterArchive}
+                        onChange={(e) => setFilterArchive(e.target.checked)}
+                        className="w-4 h-4 text-[#093fb4] rounded border-slate-300 focus:ring-[#093fb4] accent-[#093fb4] cursor-pointer"
+                    />
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                        <ArchiveIcon size={16} className={filterArchive ? 'text-amber-600' : 'text-slate-400'} />
+                        Show Archived
+                    </span>
+                </label>
             </div>
 
             {/* Tabs */}
             <div className="flex flex-wrap gap-2 mb-6">
                 {TABS.map((tab) => {
-                    const count = tab === 'all' ? orgs.length : countByStatus(tab);
+                    const count = countByStatus(tab);
                     const isActive = activeTab === tab;
                     return (
                         <button
@@ -176,17 +210,6 @@ const RootOrganization = () => {
                 })}
             </div>
 
-            {/* Search */}
-            <div className="relative w-full md:max-w-md mb-6">
-                <IconSearch size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-black/40" />
-                <input
-                    placeholder="Search by name or email..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full pl-12 pr-6 py-3.5 bg-white border border-[#093fb4]/20 rounded-[1.5rem] outline-none focus:ring-4 focus:ring-[#093fb4]/10 text-black font-medium transition-all text-sm"
-                />
-            </div>
-
             {/* Table */}
             <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-blue-900/5 border border-slate-100 overflow-hidden">
                 <div className="overflow-x-auto">
@@ -204,12 +227,11 @@ const RootOrganization = () => {
                             {filteredOrgs.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="px-8 py-12 text-center text-sm font-bold text-slate-400 italic">
-                                        No providers found.
+                                        No {filterArchive ? 'archived ' : ''}providers found.
                                     </td>
                                 </tr>
                             ) : (
                                 filteredOrgs.map((org) => {
-                                    // Check if this provider has updated compliance docs
                                     const isUpdatedResubmission = org.status === 'pending' && org.rejection_reason;
 
                                     return (
@@ -248,7 +270,6 @@ const RootOrganization = () => {
                                                 </span>
                                             </td>
                                             <td className="px-8 py-5 text-right flex justify-end items-center gap-4">
-                                                {/* View / Details — Neutral Slate */}
                                                 <button
                                                     onClick={() => setSelectedOrg(org)}
                                                     title="View Details"
@@ -257,7 +278,6 @@ const RootOrganization = () => {
                                                     <IconEye size={20} />
                                                 </button>
 
-                                                {/* Archive / Delete — Warning Amber / Rose */}
                                                 <button
                                                     onClick={() => handleArchive(org)}
                                                     title="Archive"
@@ -282,7 +302,7 @@ const RootOrganization = () => {
                 onReject={handleReject}
                 onBlock={handleBlockToggle}
                 colors={colors}
-                fetchOrgs={fetchOrgs} // Added line here
+                fetchOrgs={fetchOrgs}
             />
         </div>
     );
