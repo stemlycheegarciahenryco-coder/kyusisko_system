@@ -234,7 +234,7 @@ if (student.two_factor_enabled) {
                  VALUES ($1, $2, $3, $4, $5)`,
                 [student.student_email, token, ip, userAgent, expiresAt]
             );
-                                        //must be turn to CLIENT_URL for production
+                                        //REVIEW LOGIN must be turn to CLIENT_URL for production
             const approveUrl = `${process.env.LOCAL_CLIENT_URL}/approve-login?token=${token}`;
 
             await transporter.sendMail({

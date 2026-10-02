@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import {
   University, CheckCircle2,
-  Clock, XCircle, AlertCircle, Bookmark, ClipboardCheck, FileText, Receipt, PhilippinePeso
+  Clock, XCircle, AlertCircle, Bookmark, ClipboardCheck
 } from 'lucide-react';
 import StudentTopNav from './StudentTopNav';
 
@@ -24,7 +24,6 @@ const TABS = [
   { key: 'active', label: 'Active', icon: <CheckCircle2 size={14} />, desc: 'Approved & active scholarships' },
   { key: 'renewal', label: 'Renewal', icon: <AlertCircle size={14} />, desc: 'Renewal requirements & active submissions' },
   { key: 'saved', label: 'Saved', icon: <Bookmark size={14} />, desc: 'Saved scholarships' },
-  { key: 'receipts', label: 'Receipts', icon: <Receipt size={14} />, desc: 'Funds released to you, with dates and amounts' },
 ];
 
 // ==========================================
@@ -84,21 +83,16 @@ export default function MyScholarships() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('pending');
   const [savedScholarships, setSavedScholarships] = useState([]);
-  const [receipts, setReceipts] = useState([]);
-  const [totalReceived, setTotalReceived] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [scholarRes, savedRes, receiptsRes] = await Promise.all([
+        const [scholarRes, savedRes] = await Promise.all([
           api.get('/students/my-scholarships'),
           api.get('/recommendations/saved-scholarships'),
-          api.get('/applications/my-disbursements'),
         ]);
         setScholarships(scholarRes.data.data || []);
         setSavedScholarships(savedRes.data.data || []);
-        setReceipts(receiptsRes.data.data?.entries || []);
-        setTotalReceived(receiptsRes.data.data?.total_received || 0);
       } catch (err) {
         console.error("My Scholarships Error:", err);
       } finally {
@@ -141,7 +135,6 @@ export default function MyScholarships() {
       (s, i, arr) => arr.findIndex(x => x.application_id === s.application_id) === i
     ),
     saved: savedScholarships,
-    receipts: receipts,
   };
 
   const displayed = tabItems[activeTab] || [];
@@ -151,17 +144,14 @@ export default function MyScholarships() {
       <StudentTopNav />
       <div className="max-w-4xl mx-auto px-4 pt-24 pb-10">
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 mb-6">
           {TABS.map(tab => {
             const count = tabItems[tab.key]?.length || 0;
             const isActive = activeTab === tab.key;
             return (
               <button
                 key={tab.key}
-                onClick={() => {
-                  setActiveTab(tab.key);
-                  setExpanded(null);
-                }}
+                onClick={() => setActiveTab(tab.key)}
                 className={`relative flex flex-col items-center justify-between text-center gap-1 py-3 px-1 rounded-2xl border font-black transition-all ${
                   isActive
                     ? 'bg-[#093fb4] text-white border-[#093fb4] shadow-lg shadow-[#093fb4]/20'
@@ -210,35 +200,6 @@ export default function MyScholarships() {
               ))}
             </div>
           )
-        ) : activeTab === 'receipts' ? (
-          <>
-            <div className="bg-[#093fb4] rounded-2xl p-6 mb-4 flex items-center justify-between text-white shadow-lg shadow-[#093fb4]/20">
-              <div>
-                <p className="text-[11px] font-black uppercase tracking-widest text-white/60 mb-1">Total Received</p>
-                <p className="text-3xl font-black tracking-tight">₱{Number(totalReceived).toLocaleString()}</p>
-              </div>
-              <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center">
-                <Receipt size={26} />
-              </div>
-            </div>
-
-            {displayed.length === 0 ? (
-              <div className="bg-[#FFFCFB] rounded-2xl border border-black/8 p-16 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                  <Receipt size={24} className="text-slate-300" />
-                </div>
-                <p className="text-[13px] font-black uppercase tracking-widest text-slate-400">
-                  No funds received yet
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {displayed.map((r) => (
-                  <ReceiptCard key={r.id} r={r} />
-                ))}
-              </div>
-            )}
-          </>
         ) : (
           displayed.length === 0 ? (
             <div className="bg-[#FFFCFB] rounded-2xl border border-black/8 p-16 text-center">
@@ -281,35 +242,6 @@ function SavedScholarshipCard({ s, onUnsave }) {
       >
         Remove
       </button>
-    </div>
-  );
-}
-
-function ReceiptCard({ r }) {
-  const formattedDate = r.disbursed_at
-    ? new Date(r.disbursed_at).toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' })
-    : '—';
-
-  return (
-    <div className="bg-[#FFFCFB] rounded-2xl border border-black/8 p-5 flex items-center gap-4">
-      <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center shrink-0">
-        <PhilippinePeso size={20} className="text-emerald-600" />
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-xs font-black uppercase tracking-wide text-slate-800 truncate">{r.program_name}</h3>
-          <p className="text-lg font-black text-emerald-600 shrink-0">₱{Number(r.amount).toLocaleString()}</p>
-        </div>
-        <div className="flex items-center gap-2 mt-1">
-          <p className="text-[12px] font-bold text-[#093fb4]">{r.org_name}</p>
-          <span className="text-slate-300">·</span>
-          <p className="text-[12px] font-bold text-slate-400">{formattedDate}</p>
-        </div>
-        {r.remarks && (
-          <p className="text-[11px] font-medium text-slate-400 mt-1.5 italic">"{r.remarks}"</p>
-        )}
-      </div>
     </div>
   );
 }
