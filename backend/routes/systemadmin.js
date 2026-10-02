@@ -42,6 +42,39 @@ router.post('/create-co-admin', verifyToken, async (req, res) => {
     }
 });
 
+
+// Archive
+router.patch('/archive/:id', verifyToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query(
+            `UPDATE users 
+             SET is_archived = NOT is_archived 
+             WHERE id = $1 
+             RETURNING id, last_name, is_archived`,
+            [id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Co-Admin not found" });
+        }
+
+        const subAdmin = result.rows[0];
+        const statusText = subAdmin.is_archived ? 'archived' : 'unarchived';
+
+        res.json({
+            message: `${subAdmin.org_name} successfully ${statusText}.`,
+            data: {
+                id: subAdmin.id,
+                isArchived: subAdmin.is_archived
+            }
+        });
+    } catch (err) {
+        console.error("Archive error:", err);
+        res.status(500).json({ error: "Failed to update archive status" });
+    }
+});
+
 /**
  * @route   PATCH /api/system-admin/toggle-status/:id
  * @desc    Block or unblock a co-admin account (Root Admin Only)
@@ -91,7 +124,7 @@ router.get('/co-admins', verifyToken, async (req, res) => {
 
     try {
         const result = await pool.query(
-            `SELECT id, email, uid, account_status, first_name, last_name 
+            `SELECT id, email, uid, account_status, first_name, last_name, is_archived
              FROM users 
              WHERE role = 'co_admin' 
              ORDER BY id DESC`

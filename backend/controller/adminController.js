@@ -112,7 +112,6 @@ exports.getReports = async (req, res) => {
         sc.gwa_requirement,
         sc.fund_type,
         sc.status AS scholarship_status,
-        sc.amount_range,
         sc.criteria,
         sc.taken_down,
 

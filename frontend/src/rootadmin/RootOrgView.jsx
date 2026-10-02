@@ -528,9 +528,13 @@ function InfoCard({ icon, label, value }) {
       <div className="w-7 h-7 rounded-lg bg-[#EEF2FF] flex items-center justify-center shrink-0 mt-0.5">
         {icon}
       </div>
-      <div>
-        <p className="text-[9px] font-black uppercase tracking-widest text-black/40 mb-0.5">{label}</p>
-        <p className="text-xs font-bold text-slate-800 ">{value || '—'}</p>
+      <div className="min-w-0 flex-1">
+        <p className="text-[9px] font-black uppercase tracking-widest text-black/40 mb-0.5 truncate">
+          {label}
+        </p>
+        <p className="text-xs font-bold text-slate-800 break-words">
+          {value || '—'}
+        </p>
       </div>
     </div>
   );

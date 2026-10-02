@@ -26,7 +26,7 @@ router.get('/list', verifyToken, async (req, res) => {
         id, org_name, first_name, middle_name, last_name, 
         sub_email, contact_number, tel_number, is_active, status,
         region, city, barangay, street_address, website, provider_type, proof_files,
-        provider_code
+        provider_code, is_archived
        FROM sub_admins 
        ORDER BY status = 'pending' DESC, id DESC`
         );
@@ -183,6 +183,37 @@ router.patch('/block/:id', verifyToken, async (req, res) => {
         res.json({ message: `${result.rows[0].org_name} ${status}` });
     } catch (err) {
         res.status(500).json({ error: "Toggle failed" });
+    }
+});
+
+router.patch('/archive/:id', verifyToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query(
+            `UPDATE sub_admins 
+             SET is_archived = NOT is_archived 
+             WHERE id = $1 
+             RETURNING id, org_name, is_archived`,
+            [id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Sub-admin not found" });
+        }
+
+        const subAdmin = result.rows[0];
+        const statusText = subAdmin.is_archived ? 'archived' : 'unarchived';
+
+        res.json({
+            message: `${subAdmin.first_name} successfully ${statusText}.`,
+            data: {
+                id: subAdmin.id,
+                isArchived: subAdmin.is_archived
+            }
+        });
+    } catch (err) {
+        console.error("Archive error:", err);
+        res.status(500).json({ error: "Failed to update archive status" });
     }
 });
 

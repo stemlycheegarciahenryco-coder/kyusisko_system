@@ -3,8 +3,7 @@ import api from '../api';
 import { IconEye, IconUser, IconSearch, IconRefresh } from '@tabler/icons-react';
 import Swal from 'sweetalert2';
 import RootOrgView from './RootOrgView';
-import { ArchiveIcon, Box, Pen, Trash } from 'lucide-react';
-import { Archive } from '@phosphor-icons/react';
+import { ArchiveIcon, Trash2Icon } from 'lucide-react';
 
 const TABS = ['all', 'pending', 'approved', 'rejected'];
 
@@ -32,16 +31,25 @@ const RootOrganization = () => {
 
     useEffect(() => { fetchOrgs(); }, []);
 
+    // Count records matching the current archive state and status
     const countByStatus = (status) =>
-        orgs.filter((o) => (filterArchive ? o.is_archived : !o.is_archived) && (status === 'all' || o.status === status)).length;
+        orgs.filter((o) => {
+            const isArchived = Boolean(o.is_archived);
+            const matchArchive = filterArchive ? isArchived : !isArchived;
+            const matchStatus = status === 'all' || o.status === status;
+            return matchArchive && matchStatus;
+        }).length;
 
+    // Filter organizations by archive state, tab status, and search query
     const filteredOrgs = orgs.filter((org) => {
-        // Filter by archive state
-        const matchArchive = filterArchive ? org.is_archived : !org.is_archived;
-        
+        const isArchived = Boolean(org.is_archived);
+
+        // Show archived items only when filterArchive is true, otherwise show non-archived items
+        const matchArchive = filterArchive ? isArchived : !isArchived;
+
         // Filter by tab
         const matchTab = activeTab === 'all' || org.status === activeTab;
-        
+
         // Filter by search query
         const matchSearch =
             org.org_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -123,12 +131,56 @@ const RootOrganization = () => {
         }
     };
 
-    const handleArchive = (org) => {
-        alert(`Archive ${org.id}`);
+    const handleArchive = async (org) => {
+        try {
+            await api.patch(`/onboarding-orgs/archive/${org.id}`);
+            Swal.fire({ title: 'Status Updated', icon: 'success', timer: 1500, showConfirmButton: false });
+            setSelectedOrg(null);
+            fetchOrgs();
+        } catch { Swal.fire('Error', 'Action failed.', 'error'); }
     };
 
-    const handleDelete = (org) => {
-        alert(`Delete ${org.id}`);
+    const handleDelete = async (org) => {
+        const result = await Swal.fire(
+            swalConfig(
+                'Delete Provider?',
+                `Are you sure you want to permanently delete ${org.org_name}? This action cannot be undone.`,
+                'warning',
+                colors.red
+            )
+        );
+
+        if (result.isConfirmed) {
+            try {
+                await api.delete(`/onboarding-orgs/delete/${org.id}`);
+
+                Swal.fire({
+                    title: 'Deleted!',
+                    text: `${org.org_name} has been removed.`,
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false,
+                    background: colors.white,
+                    color: '#0f172a',
+                    borderRadius: '24px',
+                });
+
+                if (selectedOrg?.id === org.id) {
+                    setSelectedOrg(null);
+                }
+                fetchOrgs();
+            } catch (err) {
+                Swal.fire({
+                    title: 'Error',
+                    text: err.response?.data?.error || 'Failed to delete provider.',
+                    icon: 'error',
+                    background: colors.white,
+                    color: '#0f172a',
+                    borderRadius: '24px',
+                    confirmButtonColor: colors.blue,
+                });
+            }
+        }
     };
 
     if (loading)
@@ -273,18 +325,31 @@ const RootOrganization = () => {
                                                 <button
                                                     onClick={() => setSelectedOrg(org)}
                                                     title="View Details"
-                                                    className="p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl hover:scale-110 transition-all shadow-md shadow-emerald-500/20"
+                                                    className="flex items-center gap-2 p-3 bg-blue-600/10 hover:bg-blue-600 text-[10px] font-black uppercase text-blue-500 hover:text-white border border-blue-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
                                                 >
                                                     <IconEye size={20} />
+                                                    <span>View</span>
                                                 </button>
 
                                                 <button
                                                     onClick={() => handleArchive(org)}
                                                     title="Archive"
-                                                    className="p-3 bg-amber-600/10 hover:bg-amber-600 text-amber-500 hover:text-white border border-amber-600/20 rounded-2xl hover:scale-110 transition-all shadow-md"
+                                                    className="flex items-center gap-2 p-3 bg-amber-600/10 hover:bg-amber-600 text-[10px] font-black uppercase text-amber-500 hover:text-white border border-amber-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
                                                 >
                                                     <ArchiveIcon size={20} />
+                                                    <span>{filterArchive? 'Unarchive' : 'Archive'}</span>
                                                 </button>
+
+                                                {Boolean(org.is_archived) && (
+                                                    <button
+                                                        onClick={() => handleDelete(org)}
+                                                        title="Delete"
+                                                        className="flex items-center gap-2 p-3 bg-red-600/20 hover:bg-red-600 text-[10px] font-black uppercase text-red-500 hover:text-white border border-red-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
+                                                    >
+                                                        <Trash2Icon size={20} />
+                                                        <span>Delete</span>
+                                                    </button>
+                                                )}
                                             </td>
                                         </tr>
                                     );

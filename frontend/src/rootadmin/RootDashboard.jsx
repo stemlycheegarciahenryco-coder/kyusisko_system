@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { Users, ClipboardList, UserCog, GraduationCap, UserPlus, Building2, Trash2, Filter, Archive, BlocksIcon } from 'lucide-react';
+import { Users, ClipboardList, UserCog, GraduationCap, UserPlus, Building2, Trash2, Filter, Archive, UnlockIcon } from 'lucide-react';
 import api from '../api';
-import { IconCancel, IconCheck } from '@tabler/icons-react';
+import { IconLock } from '@tabler/icons-react';
+import Swal from 'sweetalert2';
 
 const STAT_CARDS = [
     { key: 'totalStudents', label: 'Total Students', icon: Users, color: 'bg-blue-50 text-blue-600' },
@@ -20,7 +21,6 @@ export default function RootDashboard() {
     const [filterStatus, setFilterStatus] = useState('active'); // Options: 'all', 'active', 'suspended', 'deleted'
     const [filterArchived, setFilterArchived] = useState(false);
     const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', password: '' });
-    const [formMessage, setFormMessage] = useState('');
 
     const userRole = localStorage.getItem('userRole') || 'co_admin';
     const PIE_COLORS = ['#2563eb', '#f59e0b', '#10b981', '#7c3aed'];
@@ -34,69 +34,157 @@ export default function RootDashboard() {
             setLoading(true);
             const resStats = await api.get('/stats');
             setStats(resStats.data);
-
-            if (userRole === 'root_admin') {
-                const resAdmins = await api.get('/system-admin/co-admins');
-                if (resAdmins.data.success) {
-                    setCoAdmins(resAdmins.data.data);
-                }
-            }
+            await fetchAdmins();
         } catch (err) {
             console.error("Failed to load root parameters:", err);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error Loading Data',
+                text: 'Failed to retrieve dashboard parameters. Please refresh or try again.',
+                confirmButtonColor: '#2563eb'
+            });
         } finally {
             setLoading(false);
         }
     };
 
+    const fetchAdmins = async () => {
+        if (userRole === 'root_admin') {
+            try {
+                const resAdmins = await api.get('/system-admin/co-admins');
+                if (resAdmins.data.success) {
+                    setCoAdmins(resAdmins.data.data);
+                }
+            } catch (err) {
+                console.error("Failed to fetch co-admins:", err);
+            }
+        }
+    }; 
+
     const handleCreateCoAdmin = async (e) => {
         e.preventDefault();
-        setFormMessage('');
         try {
             const response = await api.post('/system-admin/create-co-admin', formData);
             if (response.data.success) {
                 const createdAdmin = response.data.data;
-                setFormMessage(`✅ Registered! Generated ID: ${createdAdmin.uid}`);
                 setCoAdmins([{ ...createdAdmin, account_status: createdAdmin.account_status || 'active' }, ...coAdmins]);
                 setFormData({ firstName: '', lastName: '', email: '', password: '' });
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Co-Admin Created',
+                    text: `Account successfully registered! Generated ID: ${createdAdmin.uid || createdAdmin.id}`,
+                    confirmButtonColor: '#2563eb'
+                });
             }
         } catch (err) {
-            setFormMessage(`❌ ${err.response?.data?.message || 'Failed to register account.'}`);
+            Swal.fire({
+                icon: 'error',
+                title: 'Registration Failed',
+                text: err.response?.data?.message || 'Failed to register account.',
+                confirmButtonColor: '#2563eb'
+            });
         }
     };
 
     const handleToggleStatus = async (id, currentStatus) => {
+        const actionText = currentStatus === 'active' ? 'block' : 'unblock';
         const nextStatus = currentStatus === 'active' ? 'suspended' : 'active';
+
+        const confirm = await Swal.fire({
+            title: `Are you sure?`,
+            text: `Do you want to ${actionText} this Co-Admin account?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: currentStatus === 'active' ? '#dc2626' : '#16a34a',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: `Yes, ${actionText}`
+        });
+
+        if (!confirm.isConfirmed) return;
+
         try {
             const response = await api.patch(`/system-admin/toggle-status/${id}`, { status: nextStatus });
             if (response.data.success) {
                 setCoAdmins(coAdmins.map(admin => admin.id === id ? { ...admin, account_status: nextStatus } : admin));
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Status Updated',
+                    text: `Account has been successfully ${nextStatus === 'suspended' ? 'blocked' : 'unblocked'}.`,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
             }
         } catch (err) {
             console.error("Could not complete requested state transition:", err);
+            Swal.fire({
+                icon: 'error',
+                title: 'Action Failed',
+                text: err.response?.data?.message || 'Could not update account status.',
+                confirmButtonColor: '#2563eb'
+            });
         }
     };
 
     const handleDeleteCoAdmin = async (id) => {
-        if (!window.confirm("Are you sure you want to delete this Co-Admin account? This action cannot be undone.")) {
-            return;
-        }
+        const confirm = await Swal.fire({
+            title: 'Delete Co-Admin Account?',
+            text: 'This action cannot be undone. Are you sure you want to delete this account?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#e11d48',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Yes, Delete'
+        });
+
+        if (!confirm.isConfirmed) return;
+
         try {
             const response = await api.delete(`/system-admin/co-admins/${id}`);
             if (response.data.success || response.status === 200) {
-                // Mark as deleted in frontend state so it shows up under the 'deleted' filter
                 setCoAdmins(coAdmins.map(admin => admin.id === id ? { ...admin, account_status: 'deleted' } : admin));
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Deleted!',
+                    text: 'Co-Admin account has been deleted.',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
             }
         } catch (err) {
             console.error("Failed to delete co-admin:", err);
-            alert(err.response?.data?.message || "Failed to delete account.");
+            Swal.fire({
+                icon: 'error',
+                title: 'Delete Failed',
+                text: err.response?.data?.message || 'Failed to delete account.',
+                confirmButtonColor: '#2563eb'
+            });
         }
     };
 
-    // Filter co-admins based on dropdown choice
-    const filteredCoAdmins = coAdmins.filter(admin => {
-        if (filterStatus === 'all') return admin.account_status !== 'deleted';
-        return admin.account_status === filterStatus;
-    });
+    const handleArchive = async (admin) => {
+        try {
+            await api.patch(`/system-admin/archive/${admin.id}`);
+            Swal.fire({ title: 'Status Updated', icon: 'success', timer: 1500, showConfirmButton: false });
+            fetchAdmins();
+        } catch (err) {
+            Swal.fire('Error', err.response?.data?.message || 'Action failed.', 'error');
+            console.error(err);
+        }
+    };
+
+    // Cached filtered co-admins calculation for optimized re-renders
+    const filteredCoAdmins = useMemo(() => {
+        return coAdmins.filter(admin => {
+            const isArchived = Boolean(admin.is_archived);
+            const matchesArchive = filterArchived ? isArchived : !isArchived;
+            if (filterStatus === 'all') return admin.account_status !== 'deleted' && matchesArchive;
+            return admin.account_status === filterStatus && matchesArchive;
+        });
+    }, [coAdmins, filterStatus, filterArchived]);
+
     return (
         <div className="p-8 space-y-8 max-w-7xl mx-auto bg-gray-50 min-h-screen font-['Inter']">
 
@@ -122,7 +210,7 @@ export default function RootDashboard() {
                                 </div>
                                 <div>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{card.label}</p>
-                                    <p className="text-2xl font-black text-slate-800">{loading ? '...' : stats?.[card.key]}</p>
+                                    <p className="text-2xl font-black text-slate-800">{loading ? '...' : stats?.[card.key] ?? 0}</p>
                                 </div>
                             </div>
                         </div>
@@ -288,12 +376,6 @@ export default function RootDashboard() {
                             >
                                 Create Co-Admin Account
                             </button>
-
-                            {formMessage && (
-                                <p className="text-[10px] font-black text-center uppercase tracking-tight mt-2 text-blue-600 bg-blue-50/50 py-1.5 rounded-lg">
-                                    {formMessage}
-                                </p>
-                            )}
                         </form>
 
                         {/* Co-Admins Status & List Table View */}
@@ -304,24 +386,26 @@ export default function RootDashboard() {
                                 </p>
                                 <div className="flex items-center gap-3">
                                     {/* Checkbox */}
-                                    <div className="flex items-center  gap-1.5 text-xs text-slate-600 bg-slate-50 border border-slate-200 px-2 py-1 rounded-xl ">
+                                    <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
                                         <input
                                             type="checkbox"
                                             id="filter-checkbox"
-                                            className="rounded border-slate-300 text-slate-600 focus:ring-0 cursor-pointer"
-                                            onClick={(e) => { setFilterArchived(e.target.checked) }}
+                                            checked={filterArchived}
+                                            className="w-4 h-4 rounded border-slate-300 text-slate-600 focus:ring-0 cursor-pointer"
+                                            onChange={(e) => setFilterArchived(e.target.checked)}
                                         />
-                                        <label htmlFor="filter-checkbox" className="cursor-pointer text-[10px] font-bold select-none">
-                                            Archive
+                                        <label htmlFor="filter-checkbox" className="cursor-pointer text-xs font-semibold uppercase select-none">
+                                            Show Archive
                                         </label>
                                     </div>
+
                                     {/* Filter Dropdown */}
-                                    <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2 py-1 rounded-xl">
-                                        <Filter size={10} className="text-slate-400" />
+                                    <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+                                        <Filter size={14} className="text-slate-400" />
                                         <select
                                             value={filterStatus}
                                             onChange={(e) => setFilterStatus(e.target.value)}
-                                            className="text-[10px] font-bold text-slate-700 bg-transparent focus:outline-none cursor-pointer uppercase"
+                                            className="text-xs font-semibold text-slate-700 bg-transparent focus:outline-none cursor-pointer uppercase"
                                         >
                                             <option value="all">All</option>
                                             <option value="active">Active</option>
@@ -329,9 +413,7 @@ export default function RootDashboard() {
                                             <option value="deleted">Deleted</option>
                                         </select>
                                     </div>
-
                                 </div>
-
                             </div>
 
                             {/* Co-Admins List */}
@@ -369,30 +451,38 @@ export default function RootDashboard() {
                                                         <button
                                                             type="button"
                                                             onClick={() => handleToggleStatus(admin.id, admin.account_status)}
-                                                            className={`text-[10px] font-black uppercase tracking-wider px-3.5 py-2 rounded-xl border transition-all cursor-pointer items-center flex gap-1.5 ${admin.account_status === 'active'
-                                                                ? 'bg-red-50 text-slate-700 border-slate-200 hover:bg-red-100'
-                                                                : 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100'
-                                                                }`}
+                                                            className={`flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer ${
+                                                                admin.account_status === 'active'
+                                                                    ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+                                                                    : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                                            }`}
                                                         >
-                                                    {admin.account_status === 'active' ? <IconCancel/>: <IconCheck/>}
+                                                            {admin.account_status === 'active' ? (
+                                                                <IconLock size={12} />
+                                                            ) : (
+                                                                <UnlockIcon size={12} />
+                                                            )}
                                                             {admin.account_status === 'active' ? 'Block' : 'Unblock'}
                                                         </button>
 
                                                         <button
                                                             type="button"
-                                                            className="text-[10px] items-center flex gap-1.5 font-black uppercase tracking-wider px-3.5 py-2 rounded-xl border transition-all cursor-pointer bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-100"
+                                                            className="flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+                                                            onClick={() => handleArchive(admin)}
                                                         >
-                                                            <Archive />
-                                                            Archive
+                                                            <Archive size={12} />
+                                                            {Boolean(admin.is_archived) ? 'Unarchive' : 'Archive'}
                                                         </button>
 
-                                                        {admin.account_status !== 'active' && (
+                                                        {/* Only render Delete button if the account status is blocked/suspended */}
+                                                        {admin.account_status === 'suspended' && (
                                                             <button
                                                                 type="button"
+                                                                className="flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
                                                                 onClick={() => handleDeleteCoAdmin(admin.id)}
-                                                                className="bg-red-500 hover:bg-red-600 text-white text-[10px] font-black uppercase tracking-wider px-3.5 py-2 rounded-xl border border-red-600 transition-all cursor-pointer flex items-center gap-1.5"
                                                             >
-                                                                <Trash2 size={12} /> Delete
+                                                                <Trash2 size={12} />
+                                                                Delete
                                                             </button>
                                                         )}
                                                     </>
@@ -406,7 +496,6 @@ export default function RootDashboard() {
                     </div>
                 </section>
             )}
-
         </div>
     );
 }
