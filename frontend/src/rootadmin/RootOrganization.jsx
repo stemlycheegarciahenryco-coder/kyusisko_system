@@ -5,7 +5,8 @@ import Swal from 'sweetalert2';
 import RootOrgView from './RootOrgView';
 import { ArchiveIcon, Trash2Icon } from 'lucide-react';
 
-const TABS = ['all', 'pending', 'approved', 'rejected'];
+// Added 'blocked' tab
+const TABS = ['all', 'pending', 'approved', 'rejected', 'blocked'];
 
 const RootOrganization = () => {
     const [orgs, setOrgs] = useState([]);
@@ -31,13 +32,20 @@ const RootOrganization = () => {
 
     useEffect(() => { fetchOrgs(); }, []);
 
-    // Count records matching the current archive state and status
+    // Helper to evaluate tab status matching
+    const matchStatusOrAccess = (org, tab) => {
+        if (tab === 'all') return true;
+        if (tab === 'blocked') return !org.is_active;
+        return org.status === tab;
+    };
+
+    // Count records matching the current archive state and tab status
     const countByStatus = (status) =>
         orgs.filter((o) => {
             const isArchived = Boolean(o.is_archived);
             const matchArchive = filterArchive ? isArchived : !isArchived;
-            const matchStatus = status === 'all' || o.status === status;
-            return matchArchive && matchStatus;
+            const matchTab = matchStatusOrAccess(o, status);
+            return matchArchive && matchTab;
         }).length;
 
     // Filter organizations by archive state, tab status, and search query
@@ -47,8 +55,8 @@ const RootOrganization = () => {
         // Show archived items only when filterArchive is true, otherwise show non-archived items
         const matchArchive = filterArchive ? isArchived : !isArchived;
 
-        // Filter by tab
-        const matchTab = activeTab === 'all' || org.status === activeTab;
+        // Filter by tab (handles 'blocked' access flag vs status tabs)
+        const matchTab = matchStatusOrAccess(org, activeTab);
 
         // Filter by search query
         const matchSearch =
@@ -190,7 +198,13 @@ const RootOrganization = () => {
             </div>
         );
 
-    const tabLabels = { all: 'All', pending: 'Pending', approved: 'Approved', rejected: 'Rejected' };
+    const tabLabels = {
+        all: 'All',
+        pending: 'Pending',
+        approved: 'Approved',
+        rejected: 'Rejected',
+        blocked: 'Blocked',
+    };
 
     return (
         <div className="p-8 min-h-screen font-['Inter',_sans-serif]" style={{ backgroundColor: colors.white }}>
@@ -337,10 +351,10 @@ const RootOrganization = () => {
                                                     className="flex items-center gap-2 p-3 bg-amber-600/10 hover:bg-amber-600 text-[10px] font-black uppercase text-amber-500 hover:text-white border border-amber-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
                                                 >
                                                     <ArchiveIcon size={20} />
-                                                    <span>{filterArchive? 'Unarchive' : 'Archive'}</span>
+                                                    <span>{filterArchive ? 'Unarchive' : 'Archive'}</span>
                                                 </button>
 
-                                                {Boolean(org.is_archived) && (
+                                                {!org.is_active && (
                                                     <button
                                                         onClick={() => handleDelete(org)}
                                                         title="Delete"
@@ -374,3 +388,4 @@ const RootOrganization = () => {
 };
 
 export default RootOrganization;
+
