@@ -125,7 +125,7 @@ const OrgProfile = () => {
     );
 
     return (
-        <div className="min-h-screen bg-slate-50/60 font-['Inter'] text-slate-800 pb-16">
+        <div className="min-h-screen bg-slate-50/60  text-slate-800 pb-16">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
 
                 {/* ── 1. UNIFIED HEADER HERO BANNER & OVERVIEW CARD ── */}

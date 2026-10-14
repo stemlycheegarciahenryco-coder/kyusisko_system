@@ -55,7 +55,7 @@ const ViewProgram = ({ scholarship, onClose }) => {
   );
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 sm:p-6 font-['Inter']">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 sm:p-6 ">
       <div className="bg-white/90 backdrop-blur-xl rounded-[2.5rem] w-full max-w-3xl max-h-[90vh] flex flex-col border border-white/60 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
         {/* Header */}

@@ -136,7 +136,7 @@ const CreateScholarship = () => {
   };
 
   return (
-    <div className="p-4 md:p-8 bg-[#f8fafc] min-h-screen font-['Inter'] relative text-slate-900">
+    <div className="p-4 md:p-8 bg-[#f8fafc] min-h-screen  relative text-slate-900">
       
       {/* Warning Modal */}
       {validationModal.open && (

@@ -230,7 +230,7 @@ const OrganizationRegisterPage = () => {
 
     return (
         <div
-            className="min-h-screen w-full flex items-start justify-center py-10 px-4 relative font-['Inter']"
+            className="min-h-screen w-full flex items-start justify-center py-10 px-4 relative"
             style={{
                 backgroundImage: "url('/memorial.jpg')",
                 backgroundSize: 'cover',

@@ -29,10 +29,10 @@ const fmtDate = (d, month = 'short') =>
   d ? new Date(d).toLocaleDateString('en-PH', { month, day: 'numeric', year: 'numeric' }) : '—';
 
 /*
-  The page is rendered as a full-screen layer (fixed inset-0) so any left
-  student profile / sidebar coming from a parent layout is covered and not shown.
+  Normal page container. The top nav stays visible, and the left profile is
+  hidden by StudentLayout (HIDE_SIDEBAR_PATHS includes '/my-scholarships').
 */
-const PAGE_SHELL = "fixed inset-0 z-[60] overflow-y-auto bg-[#FFFCFB] font-['Inter']";
+const PAGE_SHELL = "w-full";
 
 export default function ProgramDetailPage() {
   const { applicationId } = useParams();
@@ -63,14 +63,6 @@ export default function ProgramDetailPage() {
     fetchHistory();
   }, [applicationId]);
 
-  // The page is a full-screen layer with its own scroll, so freeze the page
-  // behind it. This leaves exactly ONE scrollbar on the right of the browser.
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prev; };
-  }, []);
-
   const fileName = (path) => {
     if (!path) return 'Document';
     const clean = path.split('?')[0];
@@ -81,7 +73,7 @@ export default function ProgramDetailPage() {
 
   if (loading) {
     return (
-      <div className={`${PAGE_SHELL} flex items-center justify-center`}>
+      <div className={`${PAGE_SHELL} min-h-[60vh] flex items-center justify-center`}>
         <div className="flex flex-col items-center gap-4">
           <Loader2 size={32} strokeWidth={2.5} className="text-[#093fb4] animate-spin" />
           <p className="text-[11px] font-black uppercase tracking-[0.2em] text-black/40">Loading Program Data...</p>
@@ -92,7 +84,7 @@ export default function ProgramDetailPage() {
 
   if (error || !data) {
     return (
-      <div className={`${PAGE_SHELL} flex flex-col items-center justify-center gap-5`}>
+      <div className={`${PAGE_SHELL} min-h-[60vh] flex flex-col items-center justify-center gap-5`}>
         <p className="text-sm font-black uppercase tracking-wider text-red-600 bg-red-50 px-6 py-3 rounded-xl border-2 border-red-100">{error || 'Program not found.'}</p>
         <button
           onClick={goBack}
@@ -112,7 +104,7 @@ export default function ProgramDetailPage() {
 
   return (
     <div className={PAGE_SHELL}>
-      <div className="max-w-[1400px] mx-auto px-4 md:px-6 py-5 md:py-6">
+      <div>
 
         <button
           onClick={goBack}

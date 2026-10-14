@@ -83,7 +83,7 @@ const HomeNav = () => {
 
   return (
     <header
-      className={`sticky top-0 z-[60] font-['Inter'] transition-all duration-500 ${
+      className={`sticky top-0 z-[60]  transition-all duration-500 ${
         scrolled
           ? 'bg-slate-900/90 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.2)] border-b border-slate-800'
           : 'bg-transparent border-b border-white/10'

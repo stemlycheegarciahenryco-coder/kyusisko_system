@@ -195,7 +195,7 @@ export default function AddPortfolioModal({ onClose, studentData, onSaved }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-5 overflow-y-auto font-['Inter']">
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-5 overflow-y-auto ">
       <div className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden my-auto border border-slate-200">
         <div className="p-8 md:p-10 max-h-[88vh] overflow-y-auto scrollbar-thin">
 

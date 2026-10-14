@@ -174,7 +174,7 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
 
   return (
     <div
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-['Inter',_sans-serif]"
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="bg-[#FFFCFB] w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
@@ -284,7 +284,7 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
                     value={newField}
                     onChange={(e) => setNewField(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddField())}
-                    className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-slate-400 transition-all font-['Inter']"
+                    className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-slate-400 transition-all "
                   />
                   <button
                     type="button"

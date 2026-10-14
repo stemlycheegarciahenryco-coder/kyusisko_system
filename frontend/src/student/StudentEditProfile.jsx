@@ -296,7 +296,7 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
   const currentBarangayMissing = form.sbarangay && !barangays.some(b => b.name === form.sbarangay);
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-['Inter']">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 ">
       {/* Always-visible scrollbar on the side of the form body */}
       <style>{`
         .edit-profile-scroll { scrollbar-width: thin; scrollbar-color: #093fb4 #e5e7eb; }

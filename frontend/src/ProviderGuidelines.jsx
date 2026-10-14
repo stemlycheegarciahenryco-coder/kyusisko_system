@@ -368,7 +368,7 @@ export default function ProviderGuidelines() {
     const navigate = useNavigate();
 
     return (
-        <div className="min-h-screen bg-slate-50 font-['Inter'] pb-20 relative">
+        <div className="min-h-screen bg-slate-50  pb-20 relative">
             {/* Header */}
             <header className="bg-white/95 backdrop-blur-md border-b border-slate-100 sticky top-0 z-50 shadow-sm">
                 <div className="max-w-5xl mx-auto px-6 h-24 flex items-center justify-between">

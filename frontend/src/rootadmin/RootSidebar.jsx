@@ -64,7 +64,7 @@ export default function RootSidebar() {
 
       {/* 2. THE MAIN SIDEBAR COMPONENT FRAME */}
       <div className={`
-        fixed md:sticky top-0 left-0 h-screen bg-[#FFFCFB] flex flex-col rounded-r-[2rem] border-r border-slate-50 shadow-2xl shadow-[#093fb4]/15 font-['Inter'] z-20 transition-all duration-300 ease-in-out
+        fixed md:sticky top-0 left-0 h-screen bg-[#FFFCFB] flex flex-col rounded-r-[2rem] border-r border-slate-50 shadow-2xl shadow-[#093fb4]/15  z-20 transition-all duration-300 ease-in-out
         ${isOpen ? 'translate-x-0 w-72' : '-translate-x-full md:translate-x-0'}
         ${isExpanded ? 'md:w-72' : 'md:w-28'}
       `}>

@@ -8,7 +8,7 @@ export default function StudentParent({ student }) {
   const hasAnyFamily = hasMother || hasFather || hasGuardian;
 
   return (
-    <div className="bg-white/70 backdrop-blur-xl rounded-[2.5rem] border border-white/40 shadow-2xl p-8 md:p-10 space-y-6 font-['Inter']">
+    <div className="bg-white/70 backdrop-blur-xl rounded-[2.5rem] border border-white/40 shadow-2xl p-8 md:p-10 space-y-6 ">
       <div className="flex items-center gap-3 pb-4 border-b border-black/5 text-slate-800 font-black text-sm uppercase tracking-widest">
         <Users size={22} className="text-[#093fb4]" stroke={2.5} />
         <span>Family Information</span>

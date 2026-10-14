@@ -183,7 +183,7 @@ export default function ApplicationForm() {
     .join(', ');
 
   return (
-    <div className="min-h-screen bg-slate-50 font-['Inter'] antialiased relative">
+    <div className="min-h-screen bg-slate-50  antialiased relative">
       
       {/* REUSABLE FULLSCREEN LOADING OVERLAY */}
       <LoadingScreen isLoading={loading || submitting} />

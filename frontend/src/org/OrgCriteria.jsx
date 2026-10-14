@@ -77,7 +77,7 @@ const OrgCriteria = ({ criteria = [], setCriteria }) => {
   };
 
   return (
-    <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs h-full flex flex-col font-['Inter']">
+    <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs h-full flex flex-col ">
       <div className="flex items-center gap-2.5 pb-4 mb-5 border-b border-slate-100 shrink-0">
         <div className="p-2 bg-purple-50 rounded-xl text-purple-600">
           <Shield size={18} />

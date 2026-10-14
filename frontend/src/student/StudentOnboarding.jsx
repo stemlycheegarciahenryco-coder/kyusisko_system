@@ -159,7 +159,7 @@ const StudentOnboarding = () => {
 
   // --- STYLING CONSTANTS ---
   const colors = { blue: '#093fb4' };
-  const inputStyle = "w-full px-5 py-4 bg-black/5 border-2 border-transparent rounded-2xl focus:bg-white focus:border-[#093fb4] outline-none transition-all placeholder:text-black/30 font-bold text-black text-sm shadow-sm font-['Inter'] mt-2";
+  const inputStyle = "w-full px-5 py-4 bg-black/5 border-2 border-transparent rounded-2xl focus:bg-white focus:border-[#093fb4] outline-none transition-all placeholder:text-black/30 font-bold text-black text-sm shadow-sm  mt-2";
   const labelStyle = "text-[10px] font-black text-black uppercase ml-1 tracking-[0.2em] block mb-2";
   const unselectedBtn = "p-5 rounded-2xl font-black text-sm uppercase border-2 transition-all flex justify-between items-center border-transparent bg-black/5 text-black/40 hover:bg-black/10 hover:text-black/70";
   const selectedBtn = "p-5 rounded-2xl font-black text-sm uppercase border-2 transition-all flex justify-between items-center border-[#093fb4] bg-white text-[#093fb4] shadow-md";
@@ -167,7 +167,7 @@ const StudentOnboarding = () => {
   // --- NEW LOADING SCREEN ---
   if (loadingLookups) {
     return (
-      <div className="relative min-h-screen flex flex-col items-center justify-center p-6 font-['Inter']">
+      <div className="relative min-h-screen flex flex-col items-center justify-center p-6 ">
         <div className="fixed inset-0 z-0 opacity-70" style={{ backgroundImage: `url('/memorial.jpg')`, backgroundSize: '100% 100%', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }} />
         <div className="relative z-10 flex flex-col items-center p-10 bg-white/90 backdrop-blur-xl rounded-[2.5rem] shadow-2xl border-4 border-white">
           <Loader2 size={56} className="animate-spin text-[#093fb4] mb-4" strokeWidth={2.5} />
@@ -179,7 +179,7 @@ const StudentOnboarding = () => {
   }
 
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center p-4 md:p-6 overflow-hidden font-['Inter']">
+    <div className="relative min-h-screen flex flex-col items-center justify-center p-4 md:p-6 overflow-hidden ">
       
       {/* Background Image */}
       <div className="fixed inset-0 z-0 opacity-70" style={{ backgroundImage: `url('/memorial.jpg')`, backgroundSize: '100% 100%', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }} />

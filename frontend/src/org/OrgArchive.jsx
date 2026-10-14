@@ -75,7 +75,7 @@ export default function OrgArchive() {
   }
 
   return (
-    <div className="p-4 md:p-8 bg-[#FFFCFB] min-h-screen text-slate-800 font-['Inter']">
+    <div className="p-4 md:p-8 bg-[#FFFCFB] min-h-screen text-slate-800 ">
       <div className="max-w-7xl mx-auto space-y-8">
 
         {/* ── HEADER ── */}

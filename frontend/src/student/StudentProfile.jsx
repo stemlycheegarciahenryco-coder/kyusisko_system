@@ -112,7 +112,7 @@ export default function StudentProfile() {
   const hasGuardian = !!student?.guardian_name;
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 font-['Inter'] antialiased">
+    <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8  antialiased">
       
       {showWelcomeModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-300">

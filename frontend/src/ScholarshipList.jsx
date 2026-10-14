@@ -139,7 +139,7 @@ export default function ScholarshipList() {
     }
 
     return (
-      <div className="space-y-6 font-['Inter']">
+      <div className="space-y-6 ">
         {scholarships.map((s) => {
           return (
             <div
@@ -264,7 +264,7 @@ export default function ScholarshipList() {
       {/* 🛡️ MULTI-CHECKBOX REPORT MODAL */}
       {reportModal.open && (
         <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 font-['Inter']"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 "
           onClick={() => setReportModal({ open: false, id: null, selectedReasons: [], otherReason: '' })}
         >
           {/* 

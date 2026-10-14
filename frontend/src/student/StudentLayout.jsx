@@ -6,11 +6,14 @@ import { StudentProvider } from './StudentContext';
 
 // Pages where the left profile sidebar is redundant (e.g. the page already
 // shows full profile details, or the page needs the full width for its own UI)
-const HIDE_SIDEBAR_PATHS = ['/StudentProfile', '/MyScholarships', '/StudentMessages'];
+const HIDE_SIDEBAR_PATHS = ['/StudentProfile', '/MyScholarships', '/my-scholarships', '/StudentMessages', '/StudentSettings',
+    '/apply'];
 
 export default function StudentLayout() {
   const location = useLocation();
-  const hideSidebar = HIDE_SIDEBAR_PATHS.includes(location.pathname);
+  const hideSidebar = HIDE_SIDEBAR_PATHS.some((path) =>
+    location.pathname.toLowerCase().startsWith(path.toLowerCase())
+  );
 
   return (
     <StudentProvider>

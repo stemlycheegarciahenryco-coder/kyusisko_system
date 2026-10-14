@@ -5,16 +5,18 @@ import {
   University, CheckCircle2,
   Clock, XCircle, AlertCircle, Bookmark, ClipboardCheck
 } from 'lucide-react';
-import StudentTopNav from './StudentTopNav';
+
+// NOTE: StudentTopNav is intentionally NOT imported here anymore.
+// StudentLayout already renders it for every student page.
 
 const backendURL = 'http://localhost:5000';
 
 // 🚀 FIXED: Added 'renewal_approved' to the active array group mapping
 const getTabGroup = (status) => {
   if (['pending', 'not_eligible'].includes(status)) return 'pending';
-  if (['under_review', 'compliance', 'need_changes', 'submitted'].includes(status)) return 'compliance'; 
+  if (['under_review', 'compliance', 'need_changes', 'submitted'].includes(status)) return 'compliance';
   if (['approved', 'active', 'terminated', 'renewal_approved'].includes(status)) return 'active';
-  if (['renewing', 'renewal_pending'].includes(status)) return 'renewal'; 
+  if (['renewing', 'renewal_pending'].includes(status)) return 'renewal';
   return 'pending';
 };
 
@@ -52,30 +54,31 @@ function ScholarshipCard({ s, onOpenHistory }) {
   return (
     <div
       onClick={() => onOpenHistory(s.application_id)}
-      className="bg-[#FFFCFB] rounded-2xl border border-black/8 shadow-sm overflow-hidden cursor-pointer hover:border-[#093fb4]/30 hover:shadow-md transition-all"
+      className="bg-white rounded-3xl border-2 border-black/5 shadow-sm overflow-hidden cursor-pointer hover:border-[#093fb4]/30 hover:shadow-md transition-all"
     >
       <div className="p-5 flex items-center gap-4">
-        <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 flex items-center justify-center">
+        <div className="w-14 h-14 rounded-2xl overflow-hidden bg-black/5 border-2 border-black/5 shrink-0 flex items-center justify-center">
           {s.org_pic ? (
             <img src={s.org_pic} className="w-full h-full object-cover" alt={s.org_name} />
           ) : (
-            <span className="text-lg font-bold text-slate-400">{s.org_name?.substring(0, 2).toUpperCase()}</span>
+            <span className="text-lg font-black text-black/30">{s.org_name?.substring(0, 2).toUpperCase()}</span>
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="text-sm font-bold text-slate-900 leading-tight truncate">{s.title}</h2>
-          <p className="text-[13px] font-semibold text-[#093fb4] mt-0.5">{s.org_name}</p>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <h2 className="text-base font-black text-black uppercase tracking-tight leading-tight truncate">{s.title}</h2>
+          <p className="text-[11px] font-black text-[#093fb4] uppercase tracking-[0.2em] mt-1">{s.org_name}</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-black/40 mt-1">
             Applied {new Date(s.applied_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
           </p>
         </div>
-        <span className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border shrink-0 ${sc.cls}`}>
+        <span className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl border-2 shrink-0 ${sc.cls}`}>
           {sc.icon} {sc.label}
         </span>
       </div>
     </div>
   );
 }
+
 // --- 2. MAIN CONTAINER CONTROLLER ---
 export default function MyScholarships() {
   const navigate = useNavigate();
@@ -103,10 +106,10 @@ export default function MyScholarships() {
   }, []);
 
   if (loading) return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-50">
+    <div className="flex items-center justify-center min-h-[60vh]">
       <div className="flex flex-col items-center gap-3">
         <div className="w-10 h-10 border-4 border-[#093fb4] border-t-transparent rounded-full animate-spin" />
-        <p className="text-[13px] font-black uppercase tracking-widest text-slate-400">Loading...</p>
+        <p className="text-[11px] font-black uppercase tracking-[0.2em] text-black/40">Loading...</p>
       </div>
     </div>
   );
@@ -140,105 +143,101 @@ export default function MyScholarships() {
   const displayed = tabItems[activeTab] || [];
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <StudentTopNav />
-      <div className="max-w-4xl mx-auto px-4 pt-24 pb-10">
+    // The layout already provides the page background, nav, width and padding.
+    <div className="w-full">
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 mb-6">
-          {TABS.map(tab => {
-            const count = tabItems[tab.key]?.length || 0;
-            const isActive = activeTab === tab.key;
-            return (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`relative flex flex-col items-center justify-between text-center gap-1 py-3 px-1 rounded-2xl border font-black transition-all ${
-                  isActive
-                    ? 'bg-[#093fb4] text-white border-[#093fb4] shadow-lg shadow-[#093fb4]/20'
-                    : 'bg-[#FFFCFB] text-black/50 border-black/8 hover:border-[#093fb4]/30 hover:text-[#093fb4]'
-                }`}
-              >
-                <div className="flex flex-col items-center gap-1">
-                  {tab.icon}
-                  <span className="text-[12px] uppercase tracking-wider block leading-tight">{tab.label}</span>
-                </div>
-                {count > 0 && (
-                  <span className={`text-[11px] font-black px-2 py-0.5 rounded-full mt-1 ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-[#093fb4]/10 text-[#093fb4]'
-                  }`}>
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        <p className="text-[12px] font-bold text-black/30 uppercase tracking-widest mb-4">
-          {TABS.find(t => t.key === activeTab)?.desc}
-        </p>
-
-        {activeTab === 'saved' ? (  
-          displayed.length === 0 ? (
-            <div className="bg-[#FFFCFB] rounded-2xl border border-black/8 p-16 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                <Bookmark size={24} className="text-slate-300" />
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-6">
+        {TABS.map(tab => {
+          const count = tabItems[tab.key]?.length || 0;
+          const isActive = activeTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`relative flex flex-col items-center justify-between text-center gap-1 py-4 px-2 rounded-3xl border-2 font-black transition-all ${
+                isActive
+                  ? 'bg-[#093fb4] text-white border-[#093fb4] shadow-lg shadow-[#093fb4]/20'
+                  : 'bg-white text-black/50 border-black/5 hover:border-[#093fb4]/30 hover:text-[#093fb4]'
+              }`}
+            >
+              <div className="flex flex-col items-center gap-1">
+                {tab.icon}
+                <span className="text-[11px] font-black uppercase tracking-widest block leading-tight">{tab.label}</span>
               </div>
-              <p className="text-[13px] font-black uppercase tracking-widest text-slate-400">No saved scholarships</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {displayed.map((s) => (
-                <SavedScholarshipCard
-                  key={`saved-${s.scholarship_id}`}
-                  s={s}
-                  onUnsave={async () => {
-                    await api.delete(`/recommendations/${s.scholarship_id}/unsave`);
-                    setSavedScholarships(prev => prev.filter(x => x.scholarship_id !== s.scholarship_id));
-                  }}
-                />
-              ))}
-            </div>
-          )
-        ) : (
-          displayed.length === 0 ? (
-            <div className="bg-[#FFFCFB] rounded-2xl border border-black/8 p-16 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                <University size={24} className="text-slate-300" />
-              </div>
-              <p className="text-[13px] font-black uppercase tracking-widest text-slate-400">
-                Nothing here yet
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {displayed.map((s) => (
-                <ScholarshipCard
-                  key={`${activeTab}-${s.application_id}`}
-                  s={s}
-                  onOpenHistory={(appId) => navigate(`/my-scholarships/${appId}`)}
-                />
-              ))}
-            </div>
-          )
-        )}
+              {count > 0 && (
+                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full mt-1 ${
+                  isActive ? 'bg-white/20 text-white' : 'bg-[#093fb4]/10 text-[#093fb4]'
+                }`}>
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
+
+      <p className="text-[10px] font-black text-black/40 uppercase tracking-widest mb-4 ml-1">
+        {TABS.find(t => t.key === activeTab)?.desc}
+      </p>
+
+      {activeTab === 'saved' ? (
+        displayed.length === 0 ? (
+          <div className="bg-white rounded-3xl border-2 border-black/5 shadow-sm p-16 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-black/5 flex items-center justify-center mx-auto mb-4">
+              <Bookmark size={24} className="text-black/20" />
+            </div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-black/40">No saved scholarships</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {displayed.map((s) => (
+              <SavedScholarshipCard
+                key={`saved-${s.scholarship_id}`}
+                s={s}
+                onUnsave={async () => {
+                  await api.delete(`/recommendations/${s.scholarship_id}/unsave`);
+                  setSavedScholarships(prev => prev.filter(x => x.scholarship_id !== s.scholarship_id));
+                }}
+              />
+            ))}
+          </div>
+        )
+      ) : (
+        displayed.length === 0 ? (
+          <div className="bg-white rounded-3xl border-2 border-black/5 shadow-sm p-16 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-black/5 flex items-center justify-center mx-auto mb-4">
+              <University size={24} className="text-black/20" />
+            </div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-black/40">
+              Nothing here yet
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {displayed.map((s) => (
+              <ScholarshipCard
+                key={`${activeTab}-${s.application_id}`}
+                s={s}
+                onOpenHistory={(appId) => navigate(`/my-scholarships/${appId}`)}
+              />
+            ))}
+          </div>
+        )
+      )}
     </div>
   );
 }
 
-
-
 function SavedScholarshipCard({ s, onUnsave }) {
   return (
-    <div className="bg-[#FFFCFB] rounded-2xl border border-black/8 p-4 flex items-center justify-between gap-4">
-      <div>
-        <h3 className="text-xs font-black uppercase tracking-wide text-slate-800">{s.title}</h3>
-        <p className="text-[12px] font-bold text-[#093fb4] mt-0.5">{s.org_name}</p>
+    <div className="bg-white rounded-3xl border-2 border-black/5 shadow-sm p-5 flex items-center justify-between gap-4">
+      <div className="min-w-0">
+        <h3 className="text-base font-black uppercase tracking-tight text-black truncate">{s.title}</h3>
+        <p className="text-[11px] font-black text-[#093fb4] uppercase tracking-[0.2em] mt-1">{s.org_name}</p>
       </div>
-      <button 
+      <button
         onClick={onUnsave}
-        className="text-[12px] font-black text-red-500 hover:underline bg-red-50 px-2.5 py-1 rounded-md border border-red-100"
+        className="text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-100 bg-red-50 px-4 py-2 rounded-xl border-2 border-red-100 transition-colors shrink-0"
       >
         Remove
       </button>

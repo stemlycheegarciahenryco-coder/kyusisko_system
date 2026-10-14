@@ -80,7 +80,7 @@ const EditProgram = ({ scholarship, onUpdateSuccess, onCancel }) => {
   const labelCls = "block text-xs font-black text-slate-700 uppercase tracking-widest mb-2 ml-1";
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 overflow-y-auto font-['Inter']">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 overflow-y-auto ">
       <div className="bg-white/90 backdrop-blur-xl p-8 md:p-10 rounded-[2.5rem] max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-white/60 custom-scrollbar">
         
         {/* FIXED: Added a flex container for the header to align the Title and X button */}

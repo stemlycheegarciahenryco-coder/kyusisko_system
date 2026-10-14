@@ -22,7 +22,7 @@ export default function StudentLeftProfile() {
     : student.college_name;
 
   return (
-    <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] border-2 border-white/80 overflow-hidden shadow-xl font-['Inter']">
+    <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] border-2 border-white/80 overflow-hidden shadow-xl ">
       
       {/* Header Banner Background */}
       <div className="h-28 bg-[#093fb4] relative">

@@ -133,7 +133,7 @@ export default function OrgSettings() {
   };
 
   return (
-    <div className="p-8 bg-slate-50 min-h-screen font-['Inter']">
+    <div className="p-8 bg-slate-50 min-h-screen ">
       <header className="mb-10">
         <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase flex items-center gap-3">
           <Settings className="text-[#093fb4]" size={32} /> Organization Settings

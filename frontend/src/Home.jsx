@@ -123,7 +123,7 @@ export default function Home() {
     const navigate = useNavigate();
 
     return (
-        <div className="min-h-screen bg-[#FFFCFB] font-['Inter'] text-slate-800 flex flex-col relative selection:bg-blue-100 selection:text-[#093FB4]">
+        <div className="min-h-screen bg-[#FFFCFB]  text-slate-800 flex flex-col relative selection:bg-blue-100 selection:text-[#093FB4]">
 
             <main className="flex-grow relative z-10">
 

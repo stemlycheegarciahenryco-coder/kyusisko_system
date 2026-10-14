@@ -186,7 +186,7 @@ export default function RootDashboard() {
     }, [coAdmins, filterStatus, filterArchived]);
 
     return (
-        <div className="p-8 space-y-8 max-w-7xl mx-auto bg-gray-50 min-h-screen font-['Inter']">
+        <div className="p-8 space-y-8 max-w-7xl mx-auto bg-gray-50 min-h-screen ">
 
             {/* Header */}
             <div className="flex justify-between items-center">

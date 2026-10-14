@@ -89,7 +89,7 @@ export default function RootReports() {
   ];
 
   return (
-    <div className="font-['Inter'] p-6 max-w-5xl mx-auto">
+    <div className=" p-6 max-w-5xl mx-auto">
 
       {/* Header */}
       <div className="mb-6">

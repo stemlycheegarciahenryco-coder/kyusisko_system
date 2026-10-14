@@ -6,7 +6,7 @@ import api from './api';
 function OrgSuccessModal({ isOpen, onConfirm }) {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#093fb4]/20 backdrop-blur-md font-['Inter',_sans-serif]">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#093fb4]/20 backdrop-blur-md">
       <div className="w-full max-w-md bg-[#FFFCFB] rounded-[2.5rem] p-8 text-center shadow-2xl border border-slate-100/50 animate-in fade-in zoom-in duration-300">
         <div className="w-20 h-20 bg-green-100 text-green-600 rounded-3xl flex items-center justify-center mx-auto mb-6">
           <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -110,14 +110,14 @@ export const CompliancePage = () => {
 
   if (fetching) {
     return (
-      <div className="flex justify-center items-center h-screen bg-[#FFFCFB] font-['Inter',_sans-serif]">
+      <div className="flex justify-center items-center h-screen bg-[#FFFCFB]">
         <p className="text-slate-400 animate-pulse font-black uppercase text-xs tracking-widest">Syncing application context...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center font-['Inter',_sans-serif]">
+    <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
       <div className="max-w-xl w-full bg-[#FFFCFB] p-8 rounded-[2.5rem] shadow-2xl shadow-blue-900/5 border border-slate-100">
         
         <div className="text-center mb-8">

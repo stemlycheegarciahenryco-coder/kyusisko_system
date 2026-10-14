@@ -193,7 +193,7 @@ const RootOrganization = () => {
 
     if (loading)
         return (
-            <div className="p-10 text-slate-500 font-bold italic animate-pulse text-center font-['Inter',_sans-serif]">
+            <div className="p-10 text-slate-500 font-bold italic animate-pulse text-center">
                 Syncing Providers...
             </div>
         );
@@ -207,7 +207,7 @@ const RootOrganization = () => {
     };
 
     return (
-        <div className="p-8 min-h-screen font-['Inter',_sans-serif]" style={{ backgroundColor: colors.white }}>
+        <div className="p-8 min-h-screen" style={{ backgroundColor: colors.white }}>
 
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 bg-white p-8 rounded-[2.5rem] border border-[#093fb4]/10 shadow-sm mb-6">
