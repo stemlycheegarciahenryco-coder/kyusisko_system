@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../api';
+import { useUnsavedChanges } from '../component/unsavedGuard';
 import OrgEditProfile from '../component/OrgEditProfile';
 import FeatureProgram from '../component/FeatureProgram';
 import {
@@ -22,6 +23,9 @@ const OrgProfile = () => {
     const [programs, setPrograms] = useState([]);
     const [availableOptions, setAvailableOptions] = useState([]);
     
+    // The edit-profile form is open = possible unsaved edits
+    useUnsavedChanges(isEditModalOpen);
+
     const fileRef = useRef();
     const coverFileRef = useRef();
 

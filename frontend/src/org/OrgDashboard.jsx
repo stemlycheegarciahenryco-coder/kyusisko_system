@@ -192,6 +192,7 @@ export default function OrgDashboard() {
                 value={stats.pendingApps ?? 0}
                 change="Pending "
                 changeColor="text-amber-600"
+                onClick={() => navigate('/OrgApplicantPrograms')}
               />
               <MetricCard 
                 icon={<FileText size={22} className="text-emerald-500" />}
@@ -200,6 +201,7 @@ export default function OrgDashboard() {
                 value={stats.draftPrograms ?? 0}
                 change="Saved drafts"
                 changeColor="text-emerald-600"
+                onClick={() => navigate('/ProgramView')}
               />
               <MetricCard 
                 icon={<GraduationCap size={22} className="text-purple-500" />}
@@ -208,6 +210,7 @@ export default function OrgDashboard() {
                 value={stats.activePrograms ?? 0}
                 change="Publish"
                 changeColor="text-purple-600"
+                onClick={() => navigate('/ProgramView')}
               /> 
               <MetricCard 
                 icon={<Users size={22} className="text-blue-500" />}
@@ -216,6 +219,7 @@ export default function OrgDashboard() {
                 value={stats.totalActiveApps ?? 0}
                 change="Applications"
                 changeColor="text-blue-600"
+                onClick={() => navigate('/OrgApplicantPrograms')}
               />
             </div>
 
@@ -304,9 +308,18 @@ export default function OrgDashboard() {
 }
 
 // ─── Helper Components ────────────────────────────────────────────────────────
-function MetricCard({ icon, iconBg, label, value, change, changeColor }) {
+function MetricCard({ icon, iconBg, label, value, change, changeColor, onClick }) {
+  const clickable = typeof onClick === 'function';
+
   return (
-    <div className="bg-white p-4 md:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between min-w-0">
+    <div
+      onClick={onClick}
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
+      className={`bg-white p-4 md:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between min-w-0 transition-all
+        ${clickable ? 'cursor-pointer hover:shadow-md hover:-translate-y-0.5 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-400' : ''}`}
+    >
       <div className="flex items-center gap-3 min-w-0 w-full">
         <div className={`p-3 rounded-2xl ${iconBg} shrink-0`}>
           {icon}

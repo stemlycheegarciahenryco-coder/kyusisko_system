@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api, { backendURL } from '../api';
-import { Users, ArrowRight, Calendar, Layers, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Users, ArrowRight, Calendar, Layers, ChevronLeft, ChevronRight, Shield, CheckCircle } from 'lucide-react';
 
 /* ─────────────────────────────────────────────────────────────────
    PALETTE  (derived entirely from #FFFCFB + #093fb4)
@@ -47,6 +47,9 @@ export default function OrgApplicantPrograms() {
   const [programs, setPrograms] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
+  const [activeTab, setActiveTab] = useState('active'); // 'active' | 'closed'
+  const [conflicts, setConflicts] = useState([]);
+  const [loadingConflicts, setLoadingConflicts] = useState(true);
 
   useEffect(() => {
     const fetchPrograms = async () => {
@@ -68,8 +71,38 @@ export default function OrgApplicantPrograms() {
     fetchPrograms();
   }, []);
 
-  const totalPages     = Math.ceil(programs.length / CARDS_PER_PAGE);
-  const paginatedProgs = programs.slice(currentPage * CARDS_PER_PAGE, (currentPage + 1) * CARDS_PER_PAGE);
+  // Student Monitored Applications (moved here from the dashboard right bar)
+  useEffect(() => {
+    const fetchConflicts = async () => {
+      try {
+        const res = await api.get('/organizations/conflicts');
+        setConflicts(res.data?.data || []);
+      } catch (err) {
+        console.error("Failed to fetch monitored applications", err);
+      } finally {
+        setLoadingConflicts(false);
+      }
+    };
+    fetchConflicts();
+  }, []);
+
+  // Segregate programs by status
+  const activePrograms = programs.filter(p => getDisplayStatus(p.status) === 'active');
+  const closedPrograms = programs.filter(p => getDisplayStatus(p.status) === 'closed');
+  const tabPrograms    = activeTab === 'active' ? activePrograms : closedPrograms;
+
+  const totalPages     = Math.ceil(tabPrograms.length / CARDS_PER_PAGE);
+  const paginatedProgs = tabPrograms.slice(currentPage * CARDS_PER_PAGE, (currentPage + 1) * CARDS_PER_PAGE);
+
+  const switchTab = (tab) => {
+    setActiveTab(tab);
+    setCurrentPage(0);
+  };
+
+  const TAB_LIST = [
+    { key: 'active', label: 'Active',  count: activePrograms.length },
+    { key: 'closed', label: 'Closed',  count: closedPrograms.length },
+  ];
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: C.white }}>
@@ -82,7 +115,7 @@ export default function OrgApplicantPrograms() {
   );
 
   return (
-    <div style={{ padding: '32px 28px 60px', background: C.white, minHeight: '100vh', fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div style={{ padding: '32px 28px 60px', background: C.white, minHeight: '100vh' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
 
         {/* ── Header ── */}
@@ -117,13 +150,80 @@ export default function OrgApplicantPrograms() {
           )}
         </div>
 
+        {/* ── Student Monitored Applications ── */}
+        <div style={{ background: C.white, border: `1.5px solid ${C.borderLight}`, borderRadius: 20, padding: '18px 20px', marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <Shield size={16} color="#9333ea" />
+            <span style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.textStrong }}>
+              Student Monitored Applications
+            </span>
+            {conflicts.length > 0 && (
+              <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 999, background: C.closedBg, color: C.closedText, border: `1px solid ${C.closedBorder}` }}>
+                {conflicts.length}
+              </span>
+            )}
+          </div>
+
+          {loadingConflicts ? (
+            <p style={{ fontSize: 12, fontWeight: 700, color: C.textMuted, margin: 0 }}>Checking status…</p>
+          ) : conflicts.length > 0 ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10, maxHeight: 220, overflowY: 'auto' }}>
+              {conflicts.map(c => (
+                <div key={c.student_id} style={{ padding: '10px 14px', background: C.closedBg, border: `1px solid ${C.closedBorder}`, borderRadius: 12 }}>
+                  <p style={{ fontSize: 13, fontWeight: 800, color: '#450a0a', margin: 0 }}>{c.sfirst_name} {c.slast_name}</p>
+                  <p style={{ fontSize: 12, fontWeight: 500, color: '#b91c1c', margin: '2px 0 0' }}>{c.conflict_display}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 34, height: 34, borderRadius: '50%', background: C.activeBg, border: `1px solid ${C.activeBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <CheckCircle size={18} color={C.activeText} />
+              </div>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 800, color: C.textStrong, margin: 0 }}>No Scholarship Conflicts</p>
+                <p style={{ fontSize: 12, fontWeight: 500, color: C.textMuted, margin: '2px 0 0' }}>All monitored applications are in good standing.</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Status tabs ── */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+          {TAB_LIST.map(tab => {
+            const isActive = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => switchTab(tab.key)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '9px 18px', borderRadius: 12, cursor: 'pointer',
+                  fontSize: 11.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em',
+                  border: `1.5px solid ${isActive ? C.brand : C.border}`,
+                  background: isActive ? C.brand : C.white,
+                  color: isActive ? C.white : C.textBody,
+                  transition: 'all .15s',
+                }}
+              >
+                {tab.label}
+                <span style={{ fontSize: 10.5, fontWeight: 800, padding: '1px 8px', borderRadius: 999, background: isActive ? 'rgba(255,255,255,0.2)' : C.brandLight, color: isActive ? C.white : C.brand }}>
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
         {/* ── Empty state ── */}
-        {programs.length === 0 ? (
+        {tabPrograms.length === 0 ? (
           <div style={{ background: C.surface, borderRadius: 20, border: `1.5px solid ${C.borderLight}`, padding: '64px 32px', textAlign: 'center' }}>
             <div style={{ width: 52, height: 52, borderRadius: 16, background: C.brandLight, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
               <Users size={22} color={C.brandMid} />
             </div>
-            <p style={{ fontSize: 12, fontWeight: 800, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.12em' }}>No programs found</p>
+            <p style={{ fontSize: 12, fontWeight: 800, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+              {activeTab === 'active' ? 'No active programs' : 'No closed programs'}
+            </p>
           </div>
         ) : (
           <>

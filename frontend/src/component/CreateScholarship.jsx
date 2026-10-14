@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, FileUp, X, AlertTriangle, ClipboardList, Folder, Shield, BookOpen, Info, Calendar, PhilippinePeso, GraduationCap, Send } from 'lucide-react';
 import DatePicker from 'react-datepicker';
@@ -7,9 +7,51 @@ import "react-datepicker/dist/react-datepicker.css";
 import api from '../api';
 import ScholarshipRequirements from '../component/ScholarshipRequirements';
 import OrgCriteria from '../org/OrgCriteria';
+import { useUnsavedChanges, useGuardedNavigate, clearUnsavedChanges } from '../component/unsavedGuard';
+
+// Click-to-open "i" reminder popover (closes on outside click)
+function InfoTip({ label, title = 'Reminder', align = 'left', children }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [open]);
+
+  return (
+    <div className="relative flex items-center shrink-0" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label={label}
+        className={`rounded-full transition-colors cursor-pointer ${open ? 'text-[#093fb4]' : 'text-slate-400 hover:text-[#093fb4]'}`}
+      >
+        <Info size={20} />
+      </button>
+
+      {open && (
+        <div className={`absolute top-full mt-2 z-30 w-64 bg-white border border-blue-200 rounded-2xl shadow-xl p-4 text-left ${align === 'right' ? 'right-0' : 'left-0'}`}>
+          <div className="flex items-start justify-between gap-2 mb-1.5">
+            <p className="text-xs font-black text-[#093fb4] uppercase tracking-wide">{title}</p>
+            <button type="button" onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+              <X size={14} />
+            </button>
+          </div>
+          <div className="text-xs text-slate-600 font-medium leading-relaxed normal-case tracking-normal">{children}</div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const CreateScholarship = () => {
   const navigate = useNavigate();
+  const guardedNavigate = useGuardedNavigate();
   const [loading, setLoading] = useState(false);
   const [criteria, setCriteria] = useState([]);
   const [attachments, setAttachments] = useState([]); 
@@ -52,8 +94,25 @@ const CreateScholarship = () => {
     fund_type: '' 
   });
 
+  // Anything typed/selected/uploaded counts as unsaved work
+  const isDirty =
+    Object.values(formData).some((v) => v !== '' && v !== null && v !== undefined) ||
+    attachments.length > 0 ||
+    checked.length > 0 ||
+    newReq.trim() !== '' ||
+    criteria.length > 0 ||
+    hasGwa ||
+    hasBudget;
+
+  useUnsavedChanges(isDirty);
+
   const inputStyle = "w-full h-[52px] pl-10 pr-4 py-3.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-[#093fb4] focus:ring-4 focus:ring-[#093fb4]/10 outline-none text-sm md:text-base transition-all font-medium text-slate-900 placeholder:text-slate-400";
   const labelStyle = "block text-xs md:text-sm font-bold text-slate-800 uppercase tracking-wide mb-2";
+
+  // Fixed-height label row so inputs line up even when a label wraps to 2 lines
+  const numberInputStyle = `${inputStyle} [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`;
+  const labelRowStyle = "flex items-end justify-between gap-2 min-h-[2.5rem] mb-2";
+  const rowLabelStyle = "block text-xs md:text-sm font-bold text-slate-800 uppercase tracking-wide leading-tight";
 
   const sanitize = (value) => value.replace(/[<>&"']/g, '');
 
@@ -126,6 +185,7 @@ const CreateScholarship = () => {
       await api.post('/scholarships', data, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
+      clearUnsavedChanges(); // published successfully -> nothing left to lose
       navigate('/ProgramView');
     } catch (err) { 
       console.error(err);
@@ -162,7 +222,7 @@ const CreateScholarship = () => {
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-4">
           <div>
-            <button onClick={() => navigate(-1)} className="flex items-center gap-2 mb-4 font-bold text-sm text-slate-500 uppercase tracking-wider hover:text-[#093fb4] transition-colors">
+            <button onClick={() => guardedNavigate(-1)} className="flex items-center gap-2 mb-4 font-bold text-sm text-slate-500 uppercase tracking-wider hover:text-[#093fb4] transition-colors">
               <ArrowLeft size={16} strokeWidth={2.5} /> Back
             </button>
             <div className="flex items-center gap-4">
@@ -208,11 +268,11 @@ const CreateScholarship = () => {
                   <span className="text-xs font-bold text-slate-400">{formData.title.length}/100</span>
                 </div>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400"><ClipboardList size={18} /></div>
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400"></div>
                   <input 
                     type="text" 
                     maxLength={100} 
-                    placeholder="Enter official program title" 
+                    placeholder="Enter Program Title" 
                     className={inputStyle} 
                     onChange={(e) => setFormData({...formData, title: sanitize(e.target.value)})} 
                   />
@@ -220,16 +280,16 @@ const CreateScholarship = () => {
               </div>
 
               {/* Slots & Deadline */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-4">
+              <div className="grid grid-cols-2 gap-4 items-start">
                 <div>
-                  <label className={labelStyle}>Available Slots</label>
+                  <div className={labelRowStyle}><label className={rowLabelStyle}>Available Slots</label></div>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400"><span className="text-sm font-bold font-sans">#</span></div>
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400"></div>
                     <input 
                       type="number" 
                       min="0" 
-                      placeholder="e.g., 50" 
-                      className={inputStyle} 
+                      placeholder="Slots" 
+                      className={numberInputStyle} 
                       value={formData.slots}
                       onKeyDown={preventInvalidNumberKeys}
                       onChange={(e) => {
@@ -242,14 +302,14 @@ const CreateScholarship = () => {
                   </div>
                 </div>
                 <div>
-                  <label className={labelStyle}>Application Deadline <span className="text-red-500">*</span></label>
+                  <div className={labelRowStyle}><label className={rowLabelStyle}>Application Deadline <span className="text-red-500">*</span></label></div>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 z-10"><Calendar size={18} /></div>
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 z-10"></div>
                     <DatePicker
                       selected={formData.deadline ? new Date(formData.deadline) : null}
                       onChange={(date) => setFormData({...formData, deadline: date})}
                       dateFormat="yyyy-MM-dd"
-                      placeholderText="Select closing date"
+                      placeholderText="Select date"
                       minDate={getTomorrow()}
                       shouldCloseOnSelect={true}
                       className={inputStyle}
@@ -260,11 +320,18 @@ const CreateScholarship = () => {
               </div>
 
               {/* Toggles: Total Budget & GWA */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-4">
+              <div className="grid grid-cols-2 gap-4 items-start">
                 {/* Total Program Budget Toggle Component */}
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className={labelStyle}>Total Program Budget</label>
+                  <div className="flex items-end min-h-[2.5rem] mb-2">
+                    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 min-w-0">
+                      <label className={rowLabelStyle}>Total Budget</label>
+                      <InfoTip label="Total budget info">
+                        Total fund for this program. Per-student amounts are set later in <span className="font-bold text-slate-800">Disbursement Management</span>.
+                      </InfoTip>
+                    </div>
+                  </div>
+                  <div className="mb-2.5">
                     <button
                       type="button"
                       onClick={() => {
@@ -288,7 +355,7 @@ const CreateScholarship = () => {
                         min="0"
                         step="0.01"
                         placeholder="e.g., 500000" 
-                        className={inputStyle} 
+                        className={numberInputStyle} 
                         value={formData.budget}
                         onKeyDown={preventInvalidNumberKeys}
                         onChange={(e) => {
@@ -298,7 +365,6 @@ const CreateScholarship = () => {
                           }
                         }}
                       />
-                      <p className="text-[11px] text-slate-400 font-medium mt-1.5 ml-1">Total fund for this program — per-student amounts are set later in Disbursement Management</p>
                     </div>
                   ) : (
                     <div className="h-[52px] px-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center">
@@ -309,8 +375,15 @@ const CreateScholarship = () => {
 
                 {/* GWA Toggle Component */}
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className={labelStyle}>GWA Requirement</label>
+                  <div className="flex items-end min-h-[2.5rem] mb-2">
+                    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 min-w-0">
+                      <label className={rowLabelStyle}>GWA Criteria</label>
+                      <InfoTip label="GWA format reminder" align="right">
+                        Enter the minimum GWA as a <span className="font-bold text-slate-800">percentage</span> (e.g. <span className="font-bold text-slate-800">85</span>), not the 1.00–5.00 scale (e.g. 1.25, 1.50).
+                      </InfoTip>
+                    </div>
+                  </div>
+                  <div className="mb-2.5">
                     <button
                       type="button"
                       onClick={() => {
@@ -327,23 +400,25 @@ const CreateScholarship = () => {
                   {hasGwa ? (
                     <div className="relative animate-in fade-in duration-200">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                        <GraduationCap size={18} />
+                       
                       </div>
                       <input 
                         type="number" 
                         step="0.01" 
                         min="0"
-                        placeholder="e.g., 2.50" 
-                        className={inputStyle} 
+                        max="100"
+                        placeholder="e.g., 85" 
+                        className={`${numberInputStyle} pr-10`} 
                         value={formData.gwa}
                         onKeyDown={preventInvalidNumberKeys}
                         onChange={(e) => {
                           const val = e.target.value;
-                          if (val === '' || Number(val) >= 0) {
+                          if (val === '' || (Number(val) >= 0 && Number(val) <= 100)) {
                             setFormData({ ...formData, gwa: val });
                           }
                         }} 
                       />
+                      <span className="absolute inset-y-0 right-4 flex items-center text-sm font-bold text-slate-400 pointer-events-none">%</span>
                     </div>
                   ) : (
                     <div className="h-[52px] px-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center">
@@ -448,7 +523,7 @@ const CreateScholarship = () => {
         <div className="flex flex-col sm:flex-row items-center justify-end gap-4 pt-4 pb-12">
           <button 
             type="button" 
-            onClick={() => navigate(-1)} 
+            onClick={() => guardedNavigate(-1)} 
             className="w-full sm:w-auto px-8 py-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl font-bold text-sm uppercase tracking-wider transition-all shadow-sm"
           >
             Cancel

@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, Form, LucideScroll, 
   LogOut, User, Menu, Logs, Flag, Settings, Archive 
 } from 'lucide-react';
 import api from '../api';
 import LogoutModal from '../component/LogoutModal';
+import UnsavedChangesModal from '../component/UnsavedChangesModal';
+import { hasUnsavedChanges, requestLeave, clearUnsavedChanges } from '../component/unsavedGuard';
 
 export default function OrgSidebar() {
   const [isExpanded, setIsExpanded] = useState(true);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [orgData, setOrgData] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchOrgProfile = async () => {
@@ -25,6 +28,7 @@ export default function OrgSidebar() {
   }, []);
 
   const handleLogout = () => {
+    clearUnsavedChanges(); // user already confirmed leaving; skip the browser prompt
     localStorage.clear();
     window.location.href = '/';
   };
@@ -85,6 +89,12 @@ export default function OrgSidebar() {
             key={item.name} 
             to={item.path} 
             title={!isExpanded ? item.name : undefined}
+            onClick={(e) => {
+              // If the current page has unsaved work, ask before leaving
+              if (!hasUnsavedChanges()) return;
+              e.preventDefault();
+              requestLeave(() => navigate(item.path));
+            }}
             className={({ isActive }) => `
               flex items-center rounded-xl text-xs font-black uppercase tracking-wider transition-all
               ${isExpanded ? 'gap-3.5 px-4 py-3' : 'justify-center py-3 px-0'}
@@ -100,7 +110,7 @@ export default function OrgSidebar() {
       {/* Logout Action */}
       <div className="p-3 border-t border-slate-200/80">
         <button 
-          onClick={() => setShowLogoutDialog(true)}
+          onClick={() => requestLeave(() => setShowLogoutDialog(true))}
           title={!isExpanded ? "Sign Out" : undefined}
           className={`
             w-full flex items-center rounded-xl transition-all font-bold text-xs uppercase tracking-wider cursor-pointer
@@ -114,6 +124,9 @@ export default function OrgSidebar() {
           {isExpanded && <span>Sign Out</span>}
         </button>
       </div>
+
+      {/* Unsaved changes confirmation (shared by all org pages) */}
+      <UnsavedChangesModal />
 
       {/* Reusable Logout Dialog */}
       <LogoutModal 

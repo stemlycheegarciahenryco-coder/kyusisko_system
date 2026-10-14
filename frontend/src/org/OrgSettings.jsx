@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
+import { useUnsavedChanges } from '../component/unsavedGuard';
 import { Settings, UserPlus, Lock, Users, Trash2, Shield, Eye, EyeOff, AlertCircle, ArrowRightLeft, ShieldOff, ShieldCheck } from 'lucide-react';
 
 export default function OrgSettings() {
@@ -19,6 +20,12 @@ export default function OrgSettings() {
   // Password State
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [showPasswords, setShowPasswords] = useState(false);
+
+  // Half-filled password / co-admin forms count as unsaved work
+  const isDirty =
+    Object.values(passwordForm).some((v) => v !== '') ||
+    Object.values(addForm).some((v) => v.trim() !== '');
+  useUnsavedChanges(isDirty);
 
   useEffect(() => {
   const orgInfo = JSON.parse(localStorage.getItem('orgInfo') || '{}');

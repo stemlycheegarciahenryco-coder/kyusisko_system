@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, CheckCircle, Bell, ChevronLeft, ChevronRight, CheckCheck } from 'lucide-react';
+import { Bell, ChevronLeft, ChevronRight, CheckCheck } from 'lucide-react';
 import api from '../api'; 
 
 // ─── Helper Function: Time Ago ───────────────────────────────────────────────
@@ -94,30 +94,22 @@ function MiniCalendar({ programs = [] }) {
 
 // ─── Sidebar Component ─────────────────────────────────────────────────────────
 export default function OrgRightBar({ programs = [] }) {
-  const [conflicts, setConflicts] = useState([]);
-  const [loadingConflicts, setLoadingConflicts] = useState(true);
-
   const [notifications, setNotifications] = useState([]);
   const [loadingNotifs, setLoadingNotifs] = useState(true);
 
   useEffect(() => {
-    const fetchRightBarData = async () => {
+    const fetchNotifications = async () => {
       try {
-        const conflictsRes = await api.get('/organizations/conflicts');
-        setConflicts(conflictsRes.data?.data || []);
-        
-        // Fetch Notifications instead of Activity Logs
         const notifRes = await api.get('/notif/org');
         setNotifications(notifRes.data?.data || []);
       } catch (err) {
         console.error("Error fetching right bar data:", err);
       } finally {
-        setLoadingConflicts(false);
         setLoadingNotifs(false);
       }
     };
-    
-    fetchRightBarData();
+
+    fetchNotifications();
   }, []);
 
   const handleMarkAllRead = async () => {
@@ -137,41 +129,7 @@ export default function OrgRightBar({ programs = [] }) {
       {/* 1. Mini Calendar (Top Right) */}
       <MiniCalendar programs={programs} />
 
-      {/* 2. Monitored Applications Section */}
-      <section className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col items-center text-center">
-        <div className="w-full flex items-center gap-2.5 text-sm font-extrabold text-slate-900 mb-4">
-          <Shield size={18} className="text-purple-600 shrink-0" />
-          <span>Student Monitored Applications</span>
-        </div>
-
-        {loadingConflicts ? (
-          <div className="py-6 text-xs font-bold text-slate-400 animate-pulse">Checking status...</div>
-        ) : conflicts.length > 0 ? (
-          <div className="w-full space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
-            {conflicts.map(c => (
-              <div 
-                key={c.student_id} 
-                className="p-3 bg-red-50/70 rounded-xl border border-red-200/80 text-left transition-colors"
-              >
-                <p className="font-extrabold text-sm text-red-950">{c.sfirst_name} {c.slast_name}</p>
-                <p className="text-xs text-red-700 font-medium mt-0.5">
-                  {c.conflict_display} 
-                </p>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="py-6 flex flex-col items-center justify-center">
-            <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mb-3 border border-emerald-100">
-              <CheckCircle size={26} className="text-emerald-500" />
-            </div>
-            <h4 className="text-sm font-extrabold text-slate-900">No Scholarship Conflicts</h4>
-            <p className="text-xs font-medium text-slate-500 mt-1">All monitored applications are in good standing.</p>
-          </div>
-        )}
-      </section>
-
-      {/* 3. Notifications Section */}
+      {/* 2. Notifications Section */}
       <section className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex-1 flex flex-col">
         <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
           <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
