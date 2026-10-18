@@ -259,7 +259,7 @@ const RootOrganization = () => {
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
-                            className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all ${isActive
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all cursor-pointer ${isActive
                                 ? 'bg-[#093fb4] text-white border-[#093fb4] shadow-md shadow-blue-900/10'
                                 : 'bg-white text-slate-500 border-slate-200 hover:border-[#093fb4]/30'
                                 }`}

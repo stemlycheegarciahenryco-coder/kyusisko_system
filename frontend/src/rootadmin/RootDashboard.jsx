@@ -1,6 +1,6 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { Users, ClipboardList, UserCog, GraduationCap, UserPlus, Building2, Trash2, Filter, Archive, UnlockIcon } from 'lucide-react';
+import { Users, ClipboardList, UserCog, GraduationCap, UserPlus, Building2, Trash2, Filter, Archive, UnlockIcon, Search, X } from 'lucide-react';
 import api from '../api';
 import { IconLock } from '@tabler/icons-react';
 import Swal from 'sweetalert2';
@@ -12,31 +12,40 @@ const STAT_CARDS = [
     { key: 'totalApplications', label: 'Total Applications', icon: ClipboardList, color: 'bg-purple-50 text-purple-600' },
 ];
 
+const CHART_CONFIG = [
+    { key: 'totalStudents', name: 'Students', color: '#2563eb' },
+    { key: 'totalSubAdmins', name: 'Organizations', color: '#f59e0b' },
+    { key: 'totalScholarships', name: 'Scholarships', color: '#10b981' },
+];
+
 export default function RootDashboard() {
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
 
     // Co-Admin Feature Management States
     const [coAdmins, setCoAdmins] = useState([]);
-    const [filterStatus, setFilterStatus] = useState('active'); // Options: 'all', 'active', 'suspended', 'deleted'
+    const [filterStatus, setFilterStatus] = useState('all');
     const [filterArchived, setFilterArchived] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
     const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', password: '' });
 
     const userRole = localStorage.getItem('userRole') || 'co_admin';
-    const PIE_COLORS = ['#2563eb', '#f59e0b', '#10b981', '#7c3aed'];
 
-    useEffect(() => {
-        fetchStatsAndAdmins();
-    }, []);
-
-    const fetchStatsAndAdmins = async () => {
+    const fetchDashboardData = useCallback(async () => {
         try {
             setLoading(true);
-            const resStats = await api.get('/stats');
-            setStats(resStats.data);
-            await fetchAdmins();
+            const promises = [api.get('/stats')];
+
+            if (userRole === 'root_admin') {
+                promises.push(api.get('/system-admin/co-admins'));
+            }
+
+            const [statsRes, adminsRes] = await Promise.all(promises);
+
+            if (statsRes?.data) setStats(statsRes.data);
+            if (adminsRes?.data?.success) setCoAdmins(adminsRes.data.data);
         } catch (err) {
-            console.error("Failed to load root parameters:", err);
+            console.error("Failed to load dashboard data:", err);
             Swal.fire({
                 icon: 'error',
                 title: 'Error Loading Data',
@@ -46,20 +55,11 @@ export default function RootDashboard() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [userRole]);
 
-    const fetchAdmins = async () => {
-        if (userRole === 'root_admin') {
-            try {
-                const resAdmins = await api.get('/system-admin/co-admins');
-                if (resAdmins.data.success) {
-                    setCoAdmins(resAdmins.data.data);
-                }
-            } catch (err) {
-                console.error("Failed to fetch co-admins:", err);
-            }
-        }
-    }; 
+    useEffect(() => {
+        fetchDashboardData();
+    }, [fetchDashboardData]);
 
     const handleCreateCoAdmin = async (e) => {
         e.preventDefault();
@@ -67,7 +67,14 @@ export default function RootDashboard() {
             const response = await api.post('/system-admin/create-co-admin', formData);
             if (response.data.success) {
                 const createdAdmin = response.data.data;
-                setCoAdmins([{ ...createdAdmin, account_status: createdAdmin.account_status || 'active' }, ...coAdmins]);
+                const normalizedAdmin = {
+                    ...createdAdmin,
+                    first_name: createdAdmin.first_name || formData.firstName,
+                    last_name: createdAdmin.last_name || formData.lastName,
+                    account_status: createdAdmin.account_status || 'active'
+                };
+
+                setCoAdmins(prev => [normalizedAdmin, ...prev]);
                 setFormData({ firstName: '', lastName: '', email: '', password: '' });
 
                 Swal.fire({
@@ -106,7 +113,7 @@ export default function RootDashboard() {
         try {
             const response = await api.patch(`/system-admin/toggle-status/${id}`, { status: nextStatus });
             if (response.data.success) {
-                setCoAdmins(coAdmins.map(admin => admin.id === id ? { ...admin, account_status: nextStatus } : admin));
+                setCoAdmins(prev => prev.map(admin => admin.id === id ? { ...admin, account_status: nextStatus } : admin));
 
                 Swal.fire({
                     icon: 'success',
@@ -143,7 +150,7 @@ export default function RootDashboard() {
         try {
             const response = await api.delete(`/system-admin/co-admins/${id}`);
             if (response.data.success || response.status === 200) {
-                setCoAdmins(coAdmins.map(admin => admin.id === id ? { ...admin, account_status: 'deleted' } : admin));
+                setCoAdmins(prev => prev.map(admin => admin.id === id ? { ...admin, account_status: 'deleted' } : admin));
 
                 Swal.fire({
                     icon: 'success',
@@ -166,28 +173,49 @@ export default function RootDashboard() {
 
     const handleArchive = async (admin) => {
         try {
-            await api.patch(`/system-admin/archive/${admin.id}`);
-            Swal.fire({ title: 'Status Updated', icon: 'success', timer: 1500, showConfirmButton: false });
-            fetchAdmins();
+            const response = await api.patch(`/system-admin/archive/${admin.id}`);
+            if (response.data.success || response.status === 200) {
+                setCoAdmins(prev => prev.map(item => item.id === admin.id ? { ...item, is_archived: !item.is_archived } : item));
+                Swal.fire({ title: 'Status Updated', icon: 'success', timer: 1500, showConfirmButton: false });
+            }
         } catch (err) {
             Swal.fire('Error', err.response?.data?.message || 'Action failed.', 'error');
             console.error(err);
         }
     };
 
-    // Cached filtered co-admins calculation for optimized re-renders
+    // Filter and search logic for Co-Admins
     const filteredCoAdmins = useMemo(() => {
         return coAdmins.filter(admin => {
             const isArchived = Boolean(admin.is_archived);
             const matchesArchive = filterArchived ? isArchived : !isArchived;
-            if (filterStatus === 'all') return admin.account_status !== 'deleted' && matchesArchive;
-            return admin.account_status === filterStatus && matchesArchive;
+            const matchesStatus = filterStatus === 'all' 
+                ? admin.account_status !== 'deleted' 
+                : admin.account_status === filterStatus;
+
+            // Search Matching Logic (Name, Email, UID)
+            const query = searchQuery.trim().toLowerCase();
+            const fullName = `${admin.first_name || ''} ${admin.last_name || ''}`.toLowerCase();
+            const email = (admin.email || '').toLowerCase();
+            const uid = (admin.uid || '').toLowerCase();
+
+            const matchesSearch = !query || fullName.includes(query) || email.includes(query) || uid.includes(query);
+
+            return matchesStatus && matchesArchive && matchesSearch;
         });
-    }, [coAdmins, filterStatus, filterArchived]);
+    }, [coAdmins, filterStatus, filterArchived, searchQuery]);
+
+    const pieChartData = useMemo(() => {
+        if (!stats) return [];
+        return CHART_CONFIG.map(cfg => ({
+            name: cfg.name,
+            value: stats[cfg.key] || 0,
+            color: cfg.color
+        }));
+    }, [stats]);
 
     return (
         <div className="p-8 space-y-8 max-w-7xl mx-auto bg-gray-50 min-h-screen font-['Inter']">
-
             {/* Header */}
             <div className="flex justify-between items-center">
                 <div>
@@ -199,7 +227,6 @@ export default function RootDashboard() {
 
             {/* Top Overview Workspace */}
             <div className="space-y-6">
-
                 {/* Stat Cards Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {STAT_CARDS.map((card) => (
@@ -219,7 +246,6 @@ export default function RootDashboard() {
 
                 {/* Pie Chart & Analytics Section */}
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-stretch">
-
                     {/* Pie Chart */}
                     <div className="bg-white p-6 rounded-[2.5rem] border border-blue-400 shadow-sm flex flex-col justify-between min-h-[360px] xl:col-span-1">
                         <div>
@@ -232,11 +258,7 @@ export default function RootDashboard() {
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie
-                                            data={[
-                                                { name: 'Students', value: stats.totalStudents || 0 },
-                                                { name: 'Organizations', value: stats.totalSubAdmins || 0 },
-                                                { name: 'Scholarships', value: stats.totalScholarships || 0 },
-                                            ]}
+                                            data={pieChartData}
                                             cx="50%"
                                             cy="45%"
                                             innerRadius={55}
@@ -244,8 +266,8 @@ export default function RootDashboard() {
                                             paddingAngle={6}
                                             dataKey="value"
                                         >
-                                            {PIE_COLORS.map((color, index) => (
-                                                <Cell key={`cell-${index}`} fill={color} stroke="none" />
+                                            {pieChartData.map((entry) => (
+                                                <Cell key={`cell-${entry.name}`} fill={entry.color} stroke="none" />
                                             ))}
                                         </Pie>
                                         <Tooltip contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
@@ -262,7 +284,6 @@ export default function RootDashboard() {
 
                     {/* Recent Items Overview Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 xl:col-span-2">
-
                         {/* Recent Students */}
                         <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col justify-between min-h-[360px]">
                             <div>
@@ -316,9 +337,7 @@ export default function RootDashboard() {
                                 </div>
                             </div>
                         </div>
-
                     </div>
-
                 </div>
             </div>
 
@@ -380,11 +399,33 @@ export default function RootDashboard() {
 
                         {/* Co-Admins Status & List Table View */}
                         <div className="lg:col-span-2 space-y-4">
-                            <div className="flex items-center justify-between">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">
                                     Co-Admins List
                                 </p>
-                                <div className="flex items-center gap-3">
+
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {/* Search Bar Input */}
+                                    <div className="relative flex-1 min-w-[180px] sm:w-48 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 flex items-center gap-2 focus-within:border-blue-600 focus-within:bg-white transition-all">
+                                        <Search size={14} className="text-slate-400 shrink-0" />
+                                        <input
+                                            type="text"
+                                            placeholder="Search co-admin..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="w-full text-xs font-semibold text-slate-800 bg-transparent focus:outline-none placeholder:text-slate-400"
+                                        />
+                                        {searchQuery && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setSearchQuery('')}
+                                                className="text-slate-400 hover:text-slate-600 focus:outline-none"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        )}
+                                    </div>
+
                                     {/* Checkbox */}
                                     <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
                                         <input
@@ -395,7 +436,7 @@ export default function RootDashboard() {
                                             onChange={(e) => setFilterArchived(e.target.checked)}
                                         />
                                         <label htmlFor="filter-checkbox" className="cursor-pointer text-xs font-semibold uppercase select-none">
-                                            Show Archive
+                                            Archive
                                         </label>
                                     </div>
 
@@ -422,7 +463,9 @@ export default function RootDashboard() {
                                     <p className="text-xs font-medium text-slate-400 italic text-center py-4">Loading administrators...</p>
                                 ) : filteredCoAdmins.length === 0 ? (
                                     <p className="text-xs font-medium text-slate-400 italic py-4 text-center">
-                                        No {filterStatus === 'all' ? '' : filterStatus} co-admins found.
+                                        {searchQuery 
+                                            ? `No co-admins matching "${searchQuery}"` 
+                                            : `No ${filterStatus === 'all' ? '' : filterStatus} co-admins found.`}
                                     </p>
                                 ) : (
                                     filteredCoAdmins.map((admin) => (
@@ -474,7 +517,6 @@ export default function RootDashboard() {
                                                             {Boolean(admin.is_archived) ? 'Unarchive' : 'Archive'}
                                                         </button>
 
-                                                        {/* Only render Delete button if the account status is blocked/suspended */}
                                                         {admin.account_status === 'suspended' && (
                                                             <button
                                                                 type="button"
