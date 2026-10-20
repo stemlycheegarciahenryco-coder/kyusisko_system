@@ -247,7 +247,7 @@ export default function LogIn() {
             <>
               <div className="space-y-2">
                 <label className="text-xs font-black text-slate-800 uppercase ml-1 tracking-wider block">
-                  Email Address / Username
+                  Email Address
                 </label>
                 <div className="relative group">
                   <IconMail size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-black/30 group-focus-within:text-[#093fb4] transition-colors" />

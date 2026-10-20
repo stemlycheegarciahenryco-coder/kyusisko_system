@@ -1,33 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api, { backendURL } from '../api';
-import { Users, ArrowRight, Calendar, Layers, ChevronLeft, ChevronRight, Shield, CheckCircle } from 'lucide-react';
-
-/* ─────────────────────────────────────────────────────────────────
-   PALETTE  (derived entirely from #FFFCFB + #093fb4)
-   ───────────────────────────────────────────────────────────────── */
-const C = {
-  white:       '#FFFCFB',
-  brand:       '#093fb4',
-  brandLight:  '#e8eef8',
-  brandMid:    '#d0dcf2',
-  brandStrong: '#072f87',
-  textStrong:  '#0f1f3d',
-  textBody:    '#3d5080',
-  textMuted:   '#7a8fbb',
-  border:      '#d0dcf2',
-  borderLight: '#e8eef8',
-  surface:     '#f4f6fc',
-  danger:      '#7a2d3d',
-  dangerLight: '#f4e8eb',
-  // Aligned with ScholarshipManager.jsx's status badge palette
-  activeBg:    '#ecfdf5', // emerald-50
-  activeText:  '#059669', // emerald-600
-  activeBorder:'#d1fae5', // emerald-100
-  closedBg:    '#fef2f2', // red-50
-  closedText:  '#dc2626', // red-600
-  closedBorder:'#fee2e2', // red-100
-};
+import {
+  Users, ArrowRight, Calendar, Layers, ChevronLeft, ChevronRight,
+  Shield, CheckCircle, XCircle, Search,
+} from 'lucide-react';
 
 // Programs on this page are only ever Active or Closed — drafts and
 // archived programs are hidden entirely, and a past-deadline program
@@ -42,19 +19,78 @@ const getDisplayStatus = (rawStatus) => {
 
 const CARDS_PER_PAGE = 6;
 
+const TABS = [
+  { key: 'all', label: 'All', icon: Users },
+  { key: 'active', label: 'Active', icon: CheckCircle },
+  { key: 'closed', label: 'Closed', icon: XCircle },
+];
+
+const norm = (v) => (v || '').trim().toLowerCase();
+
+function StatusBadge({ status }) {
+  const isActive = status === 'active';
+  return (
+    <span
+      className={`inline-block px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest ${
+        isActive
+          ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
+          : 'bg-red-50 text-red-600 border-red-200'
+      }`}
+    >
+      {isActive ? 'Active' : 'Closed'}
+    </span>
+  );
+}
+
+function ApplicantAvatar({ applicant, index }) {
+  const firstName = applicant.sfirst_name || '';
+  const lastName = applicant.slast_name || '';
+  const raw = applicant.sprofile_pic || '';
+  const hasValidImg = raw.trim() !== '';
+  const fullImgUrl = hasValidImg
+    ? (raw.startsWith('http') ? raw : `${backendURL}/uploads/${raw}`)
+    : null;
+
+  return (
+    <div
+      title={`${firstName} ${lastName}`.trim() || 'Applicant'}
+      className={`w-9 h-9 rounded-full border-2 border-white bg-[#093fb4] overflow-hidden shrink-0 relative shadow-sm ${index === 0 ? '' : '-ml-3'}`}
+    >
+      {hasValidImg && (
+        <img
+          src={fullImgUrl}
+          alt=""
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            e.target.style.display = 'none';
+            if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+          }}
+        />
+      )}
+      <div
+        className="w-full h-full bg-[#093fb4] text-white text-[11px] font-black uppercase items-center justify-center"
+        style={{ display: hasValidImg ? 'none' : 'flex' }}
+      >
+        {firstName[0] || '?'}{lastName[0] || ''}
+      </div>
+    </div>
+  );
+}
+
 export default function OrgApplicantPrograms() {
   const navigate = useNavigate();
   const [programs, setPrograms] = useState([]);
-  const [loading, setLoading]   = useState(true);
+  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
-  const [activeTab, setActiveTab] = useState('active'); // 'active' | 'closed'
+  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'active' | 'closed'
+  const [searchQuery, setSearchQuery] = useState('');
   const [conflicts, setConflicts] = useState([]);
   const [loadingConflicts, setLoadingConflicts] = useState(true);
+  const [expandedConflict, setExpandedConflict] = useState(null);
 
   useEffect(() => {
     const fetchPrograms = async () => {
       try {
-        // ✅ Updated to secure /me endpoint
         const res = await api.get('/organizations/dashboard-programs/me');
         const allPrograms = res.data.data || res.data || [];
         setPrograms(
@@ -71,7 +107,7 @@ export default function OrgApplicantPrograms() {
     fetchPrograms();
   }, []);
 
-  // Student Monitored Applications (moved here from the dashboard right bar)
+  // Student Monitored Applications
   useEffect(() => {
     const fetchConflicts = async () => {
       try {
@@ -86,264 +122,343 @@ export default function OrgApplicantPrograms() {
     fetchConflicts();
   }, []);
 
+  // Programs of THIS organization where the monitored student has applied
+  const findStudentPrograms = (c) =>
+    programs.filter(p =>
+      (p.applicants || []).some(a =>
+        (a.student_id != null && String(a.student_id) === String(c.student_id)) ||
+        (norm(a.sfirst_name) === norm(c.sfirst_name) && norm(a.slast_name) === norm(c.slast_name))
+      )
+    );
+
+  const goToStudentInProgram = (program, c) => {
+    navigate(`/scholarship-applications/${program.id}/applicants`, {
+      state: { search: `${c.sfirst_name || ''} ${c.slast_name || ''}`.trim() },
+    });
+  };
+
+  const handleConflictClick = (c) => {
+    const matches = findStudentPrograms(c);
+    if (matches.length === 1) {
+      goToStudentInProgram(matches[0], c);
+    } else if (matches.length > 1) {
+      setExpandedConflict(prev => (prev === c.student_id ? null : c.student_id));
+    }
+  };
+
   // Segregate programs by status
   const activePrograms = programs.filter(p => getDisplayStatus(p.status) === 'active');
   const closedPrograms = programs.filter(p => getDisplayStatus(p.status) === 'closed');
-  const tabPrograms    = activeTab === 'active' ? activePrograms : closedPrograms;
+  const countFor = (key) =>
+    key === 'all' ? programs.length : key === 'active' ? activePrograms.length : closedPrograms.length;
 
-  const totalPages     = Math.ceil(tabPrograms.length / CARDS_PER_PAGE);
-  const paginatedProgs = tabPrograms.slice(currentPage * CARDS_PER_PAGE, (currentPage + 1) * CARDS_PER_PAGE);
+  const baseList =
+    activeTab === 'all' ? programs : activeTab === 'active' ? activePrograms : closedPrograms;
+  const tabPrograms = baseList.filter(p =>
+    (p.title || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const totalPages = Math.ceil(tabPrograms.length / CARDS_PER_PAGE);
+  const paginatedProgs = tabPrograms.slice(
+    currentPage * CARDS_PER_PAGE,
+    (currentPage + 1) * CARDS_PER_PAGE
+  );
+
+  const totalApplicants = programs.reduce((sum, p) => sum + (p.applicants?.length || 0), 0);
 
   const switchTab = (tab) => {
     setActiveTab(tab);
     setCurrentPage(0);
   };
 
-  const TAB_LIST = [
-    { key: 'active', label: 'Active',  count: activePrograms.length },
-    { key: 'closed', label: 'Closed',  count: closedPrograms.length },
-  ];
-
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: C.white }}>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-        <div style={{ width: 38, height: 38, border: `4px solid ${C.brand}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.75s linear infinite' }} />
-        <p style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.14em', color: C.textMuted }}>Loading Programs…</p>
+    <div className="flex items-center justify-center min-h-screen bg-white">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-10 h-10 border-4 border-[#093fb4] border-t-transparent rounded-full animate-spin" />
+        <p className="text-[12px] font-black uppercase tracking-widest text-black">Loading Programs...</p>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 
   return (
-    <div style={{ padding: '32px 28px 60px', background: C.white, minHeight: '100vh' }}>
-      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+    <div className="min-h-screen bg-white p-8">
+      <div className="max-w-6xl mx-auto">
 
-        {/* ── Header ── */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 16, marginBottom: 32 }}>
+        {/* Page Header + Searchbar Row */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 style={{ fontSize: 28, fontWeight: 900, color: C.textStrong, letterSpacing: '-0.03em', lineHeight: 1.15, margin: 0 }}>
-             Manage Students
+            <h1 className="text-2xl font-black text-black uppercase tracking-tight">
+              Manage <span className="text-[#093fb4]">Students</span>
             </h1>
-    
-          </div>
-
-          {totalPages > 1 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, letterSpacing: '0.06em' }}>
-                {currentPage + 1} / {totalPages}
-              </span>
-              <button
-                onClick={() => setCurrentPage(p => Math.max(p - 1, 0))}
-                disabled={currentPage === 0}
-                style={{ width: 32, height: 32, borderRadius: 8, border: `1.5px solid ${C.border}`, background: C.white, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: currentPage === 0 ? 'not-allowed' : 'pointer', opacity: currentPage === 0 ? 0.35 : 1, color: C.textBody }}
-              >
-                <ChevronLeft size={15} />
-              </button>
-              <button
-                onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages - 1))}
-                disabled={currentPage === totalPages - 1}
-                style={{ width: 32, height: 32, borderRadius: 8, border: `1.5px solid ${C.border}`, background: C.white, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: currentPage === totalPages - 1 ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages - 1 ? 0.35 : 1, color: C.textBody }}
-              >
-                <ChevronRight size={15} />
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* ── Student Monitored Applications ── */}
-        <div style={{ background: C.white, border: `1.5px solid ${C.borderLight}`, borderRadius: 20, padding: '18px 20px', marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            <Shield size={16} color="#9333ea" />
-            <span style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.textStrong }}>
-              Student Monitored Applications
-            </span>
-            {conflicts.length > 0 && (
-              <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 999, background: C.closedBg, color: C.closedText, border: `1px solid ${C.closedBorder}` }}>
-                {conflicts.length}
-              </span>
-            )}
-          </div>
-
-          {loadingConflicts ? (
-            <p style={{ fontSize: 12, fontWeight: 700, color: C.textMuted, margin: 0 }}>Checking status…</p>
-          ) : conflicts.length > 0 ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10, maxHeight: 220, overflowY: 'auto' }}>
-              {conflicts.map(c => (
-                <div key={c.student_id} style={{ padding: '10px 14px', background: C.closedBg, border: `1px solid ${C.closedBorder}`, borderRadius: 12 }}>
-                  <p style={{ fontSize: 13, fontWeight: 800, color: '#450a0a', margin: 0 }}>{c.sfirst_name} {c.slast_name}</p>
-                  <p style={{ fontSize: 12, fontWeight: 500, color: '#b91c1c', margin: '2px 0 0' }}>{c.conflict_display}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 34, height: 34, borderRadius: '50%', background: C.activeBg, border: `1px solid ${C.activeBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <CheckCircle size={18} color={C.activeText} />
-              </div>
-              <div>
-                <p style={{ fontSize: 13, fontWeight: 800, color: C.textStrong, margin: 0 }}>No Scholarship Conflicts</p>
-                <p style={{ fontSize: 12, fontWeight: 500, color: C.textMuted, margin: '2px 0 0' }}>All monitored applications are in good standing.</p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ── Status tabs ── */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-          {TAB_LIST.map(tab => {
-            const isActive = activeTab === tab.key;
-            return (
-              <button
-                key={tab.key}
-                onClick={() => switchTab(tab.key)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '9px 18px', borderRadius: 12, cursor: 'pointer',
-                  fontSize: 11.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em',
-                  border: `1.5px solid ${isActive ? C.brand : C.border}`,
-                  background: isActive ? C.brand : C.white,
-                  color: isActive ? C.white : C.textBody,
-                  transition: 'all .15s',
-                }}
-              >
-                {tab.label}
-                <span style={{ fontSize: 10.5, fontWeight: 800, padding: '1px 8px', borderRadius: 999, background: isActive ? 'rgba(255,255,255,0.2)' : C.brandLight, color: isActive ? C.white : C.brand }}>
-                  {tab.count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* ── Empty state ── */}
-        {tabPrograms.length === 0 ? (
-          <div style={{ background: C.surface, borderRadius: 20, border: `1.5px solid ${C.borderLight}`, padding: '64px 32px', textAlign: 'center' }}>
-            <div style={{ width: 52, height: 52, borderRadius: 16, background: C.brandLight, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-              <Users size={22} color={C.brandMid} />
-            </div>
-            <p style={{ fontSize: 12, fontWeight: 800, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
-              {activeTab === 'active' ? 'No active programs' : 'No closed programs'}
+            <p className="text-[12px] font-bold text-black mt-1 uppercase tracking-widest">
+              {programs.length} programs found
+              <span className="text-slate-400"> · {totalApplicants} total applicants</span>
             </p>
           </div>
-        ) : (
-          <>
-            {/* ── Grid ── */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 18 }}>
-              {paginatedProgs.map((program) => {
-                const totalApplicants    = program.applicants?.length || 0;
-                const truncatedApplicants = program.applicants?.slice(0, 4) || [];
-                const extraCount         = totalApplicants - 4;
-                const displayStatus      = getDisplayStatus(program.status);
 
-                /* status badge style — aligned with ScholarshipManager palette */
-                const badgeStyle = displayStatus === 'active'
-                  ? { background: C.activeBg, color: C.activeText, border: `1px solid ${C.activeBorder}` }
-                  : { background: C.closedBg, color: C.closedText, border: `1px solid ${C.closedBorder}` };
-                const badgeLabel = displayStatus === 'active' ? 'Active' : 'Closed';
+          <div className="relative w-full md:w-72">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+            <input
+              type="text"
+              placeholder="Search by program title..."
+              value={searchQuery}
+              onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(0); }}
+              className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-300 rounded-xl text-[13px] font-medium text-black focus:border-[#093fb4] focus:outline-none transition-all"
+            />
+          </div>
+        </div>
 
+        {/* Two aligned columns: LEFT = tabs + tiles, RIGHT = monitored applications.
+            Both columns start at the same top edge. */}
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-6 items-start">
+
+          {/* ───────────── LEFT: tabs + program tiles ───────────── */}
+          <div className="min-w-0 order-2 lg:order-1">
+
+            {/* Status Tabs */}
+            <div className="flex items-center gap-2 mb-5 overflow-x-auto">
+              {TABS.map(({ key, label, icon: Icon }) => {
+                const isActive = activeTab === key;
                 return (
-                  <div
-                    key={program.id}
-                    onClick={() => navigate(`/scholarship-applications/${program.id}/applicants`)}
-                    style={{ background: C.white, border: `1.5px solid ${C.borderLight}`, borderRadius: 20, padding: '20px 18px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 236, cursor: 'pointer', transition: 'border-color .15s, box-shadow .15s' }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = C.brandMid; e.currentTarget.style.boxShadow = `0 4px 20px ${C.brand}14`; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = C.borderLight; e.currentTarget.style.boxShadow = 'none'; }}
+                  <button
+                    key={key}
+                    onClick={() => switchTab(key)}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all border shrink-0 ${
+                      isActive
+                        ? 'bg-[#093fb4] text-white border-[#093fb4] shadow-md shadow-[#093fb4]/20'
+                        : 'bg-white text-slate-600 border-slate-300 hover:text-[#093fb4] hover:border-[#093fb4]'
+                    }`}
                   >
-                    <div>
-                      {/* Icon + badge row */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 12 }}>
-                        <div style={{ width: 38, height: 38, borderRadius: 10, background: C.brandLight, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <Layers size={17} color={C.brand} />
-                        </div>
-                        <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '4px 12px', borderRadius: 999, ...badgeStyle }}>
-                          {badgeLabel}
-                        </span>
-                      </div>
-
-                      {/* Title */}
-                      <h2 style={{ fontSize: 15.5, fontWeight: 800, color: C.textStrong, letterSpacing: '-0.01em', lineHeight: 1.35, marginBottom: 14, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                        {program.title}
-                      </h2>
-
-                      {/* Applicant avatars */}
-                      <div style={{ marginBottom: 4 }}>
-                        <p style={{ fontSize: 11.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.textBody, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <Users size={12} /> Applicants ({totalApplicants})
-                        </p>
-                        {totalApplicants === 0 ? (
-                          <p style={{ fontSize: 12.5, fontStyle: 'italic', color: C.textMuted }}>No submissions yet</p>
-                        ) : (
-                          <div style={{ display: 'flex', alignItems: 'center' }}>
-                            {truncatedApplicants.map((applicant, index) => {
-                              const firstName  = applicant.sfirst_name || '';
-                              const lastName   = applicant.slast_name  || '';
-                              const rawFileName = applicant.sprofile_pic || '';
-                              const hasValidImg = rawFileName && rawFileName.trim() !== '';
-                              const fullImgUrl  = hasValidImg
-                                ? (rawFileName.startsWith('http') ? rawFileName : `${backendURL}/uploads/${rawFileName}`)
-                                : null;
-                              return (
-                                <div
-                                  key={applicant.id || index}
-                                  title={`${firstName} ${lastName}`.trim() || 'Applicant'}
-                                  style={{ width: 40, height: 40, borderRadius: '50%', border: `2.5px solid ${C.white}`, marginLeft: index === 0 ? 0 : -12, background: C.brandMid, overflow: 'hidden', flexShrink: 0, position: 'relative', boxShadow: '0 1px 3px rgba(15,31,61,0.12)' }}
-                                >
-                                  {hasValidImg && (
-                                    <img src={fullImgUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                      onError={e => { e.target.style.display = 'none'; e.target.nextSibling?.removeAttribute('style'); }} />
-                                  )}
-                                  <div style={{ width: '100%', height: '100%', background: C.brand, color: C.white, fontSize: 14, fontWeight: 800, display: hasValidImg ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', textTransform: 'uppercase' }}>
-                                    {firstName[0] || '?'}{lastName[0] || ''}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                            {extraCount > 0 && (
-                              <div style={{ width: 40, height: 40, borderRadius: '50%', border: `2.5px solid ${C.white}`, marginLeft: -12, background: C.surface, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                <span style={{ fontSize: 12, fontWeight: 800, color: C.textBody }}>+{extraCount}</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Footer */}
-                    <div style={{ paddingTop: 12, marginTop: 8, borderTop: `1px solid ${C.borderLight}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      {program.deadline ? (
-                        <span style={{ fontSize: 12.5, fontWeight: 700, color: C.textBody, display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <Calendar size={12.5} color={C.textMuted} />
-                          {new Date(program.deadline).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: 11.5, fontWeight: 600, color: C.textMuted }}>No deadline set</span>
-                      )}
-                      <div style={{ width: 32, height: 32, borderRadius: 10, background: C.surface, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textMuted, transition: 'background .15s, color .15s' }}
-                        onMouseEnter={e => { e.currentTarget.style.background = C.brand; e.currentTarget.style.color = C.white; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = C.surface; e.currentTarget.style.color = C.textMuted; }}
-                      >
-                        <ArrowRight size={14} />
-                      </div>
-                    </div>
-                  </div>
+                    <Icon size={13} />
+                    {label}
+                    <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                      isActive ? 'bg-white/20 text-white' : 'bg-slate-600 text-white'
+                    }`}>
+                      {countFor(key)}
+                    </span>
+                  </button>
                 );
               })}
             </div>
 
-            {/* ── Dot indicators ── */}
-            {totalPages > 1 && (
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 32 }}>
-                {Array.from({ length: totalPages }).map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setCurrentPage(i)}
-                    style={{ borderRadius: 999, border: 'none', cursor: 'pointer', transition: 'all 0.2s', padding: 0, width: i === currentPage ? 24 : 8, height: 8, background: i === currentPage ? C.brand : C.brandMid }}
-                  />
-                ))}
+            {/* Program tiles */}
+            {tabPrograms.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-slate-300 shadow-sm py-16 px-8 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-[#093fb4]/10 text-[#093fb4] flex items-center justify-center mx-auto mb-4">
+                  <Users size={22} />
+                </div>
+                <p className="text-[12px] font-black uppercase tracking-widest text-slate-400">
+                  {searchQuery
+                    ? 'No matching programs found'
+                    : activeTab === 'active'
+                      ? 'No active programs'
+                      : activeTab === 'closed'
+                        ? 'No closed programs'
+                        : 'No programs found'}
+                </p>
               </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {paginatedProgs.map((program) => {
+                    const applicants = program.applicants || [];
+                    const total = applicants.length;
+                    const extra = total - 4;
+                    const displayStatus = getDisplayStatus(program.status);
+
+                    return (
+                      <div
+                        key={program.id}
+                        onClick={() => navigate(`/scholarship-applications/${program.id}/applicants`)}
+                        className="group bg-white rounded-2xl border border-slate-300 shadow-sm p-5 flex flex-col justify-between min-h-[230px] cursor-pointer hover:border-[#093fb4]/50 hover:shadow-md transition-all"
+                      >
+                        <div>
+                          {/* Icon + status */}
+                          <div className="flex items-start justify-between gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-xl bg-[#093fb4]/10 text-[#093fb4] flex items-center justify-center shrink-0">
+                              <Layers size={18} />
+                            </div>
+                            <StatusBadge status={displayStatus} />
+                          </div>
+
+                          {/* Title */}
+                          <h2 className="text-base font-black text-black uppercase tracking-tight leading-snug line-clamp-2 mb-4">
+                            {program.title}
+                          </h2>
+
+                          {/* Applicants */}
+                          <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-slate-600 mb-2.5">
+                            <Users size={13} /> Applicants ({total})
+                          </p>
+                          {total === 0 ? (
+                            <p className="text-[12px] font-medium italic text-slate-400">No submissions yet</p>
+                          ) : (
+                            <div className="flex items-center">
+                              {applicants.slice(0, 4).map((a, i) => (
+                                <ApplicantAvatar key={a.id || i} applicant={a} index={i} />
+                              ))}
+                              {extra > 0 && (
+                                <div className="w-9 h-9 -ml-3 rounded-full border-2 border-white bg-slate-600 text-white text-[11px] font-black flex items-center justify-center shrink-0">
+                                  +{extra}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-200">
+                          {program.deadline ? (
+                            <span className="inline-flex items-center gap-2 text-[13px] font-bold text-slate-700">
+                              <Calendar size={14} className="text-slate-400" />
+                              {new Date(program.deadline).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </span>
+                          ) : (
+                            <span className="text-[12px] font-medium text-slate-400">No deadline set</span>
+                          )}
+                          <span className="inline-flex w-8 h-8 items-center justify-center rounded-xl bg-slate-100 text-slate-400 group-hover:bg-[#093fb4] group-hover:text-white transition-colors">
+                            <ArrowRight size={15} />
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between mt-6">
+                    <span className="text-[11px] font-black uppercase tracking-widest text-slate-500">
+                      Page {currentPage + 1} of {totalPages}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setCurrentPage(p => Math.max(p - 1, 0))}
+                        disabled={currentPage === 0}
+                        className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-600 hover:border-[#093fb4] hover:text-[#093fb4] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <ChevronLeft size={16} />
+                      </button>
+                      <button
+                        onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages - 1))}
+                        disabled={currentPage === totalPages - 1}
+                        className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-600 hover:border-[#093fb4] hover:text-[#093fb4] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <ChevronRight size={16} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
-          </>
-        )}
+          </div>
+
+          {/* ───────────── RIGHT: Student Monitored Applications ───────────── */}
+          <aside className="order-1 lg:order-2 lg:sticky lg:top-6 bg-white rounded-2xl border border-slate-300 shadow-sm overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-200">
+              <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                <Shield size={17} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-[12px] font-black uppercase tracking-widest text-black leading-tight">
+                  Monitored Students
+                </h2>
+                <p className="text-[11px] font-medium text-slate-500 mt-0.5">Scholarship conflicts to review</p>
+              </div>
+              {conflicts.length > 0 && (
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-red-500 text-white shrink-0">
+                  {conflicts.length}
+                </span>
+              )}
+            </div>
+
+            {/* Body */}
+            <div className="p-3 max-h-96 lg:max-h-[calc(100vh-16rem)] overflow-y-auto">
+              {loadingConflicts ? (
+                <p className="px-2 py-6 text-center text-[12px] font-bold text-slate-400 uppercase tracking-widest animate-pulse">
+                  Checking status...
+                </p>
+              ) : conflicts.length > 0 ? (
+                <div className="space-y-2.5">
+                  {conflicts.map((c) => {
+                    const matches = findStudentPrograms(c);
+                    const clickable = matches.length > 0;
+                    const isExpanded = expandedConflict === c.student_id;
+
+                    return (
+                      <div
+                        key={c.student_id}
+                        className={`rounded-xl border bg-white overflow-hidden transition-colors ${
+                          clickable ? 'border-slate-200 hover:border-red-300' : 'border-slate-200'
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleConflictClick(c)}
+                          disabled={!clickable}
+                          title={clickable ? 'View this student in your program' : 'This student is not in your programs'}
+                          className={`group w-full flex items-start gap-3 px-3.5 py-3 text-left transition-colors ${
+                            clickable ? 'cursor-pointer hover:bg-red-50/50' : 'cursor-default'
+                          }`}
+                        >
+                          <div className="w-9 h-9 rounded-full bg-red-50 text-red-600 border border-red-100 flex items-center justify-center text-[11px] font-black uppercase shrink-0">
+                            {(c.sfirst_name || '?')[0]}{(c.slast_name || '')[0]}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[13px] font-black text-black uppercase tracking-tight truncate">
+                              {c.sfirst_name} {c.slast_name}
+                            </p>
+                            <p className="text-[12px] font-semibold text-red-600 mt-0.5 leading-snug">
+                              {c.conflict_display}
+                            </p>
+                            {!clickable && (
+                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1.5">
+                                Not in your programs
+                              </p>
+                            )}
+                          </div>
+                          {clickable && (
+                            <ArrowRight
+                              size={15}
+                              className={`shrink-0 mt-2 text-slate-400 group-hover:text-red-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                            />
+                          )}
+                        </button>
+
+                        {isExpanded && matches.length > 1 && (
+                          <div className="space-y-2 px-3 pb-3">
+                            {matches.map((p) => (
+                              <button
+                                key={p.id}
+                                type="button"
+                                onClick={() => goToStudentInProgram(p, c)}
+                                className="w-full text-left px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-[11px] font-black uppercase tracking-widest text-[#093fb4] hover:border-[#093fb4] transition-colors truncate"
+                              >
+                                {p.title}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center text-center px-3 py-8">
+                  <div className="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center mb-3">
+                    <CheckCircle size={24} className="text-emerald-600" />
+                  </div>
+                  <p className="text-[13px] font-black text-black uppercase tracking-tight">No Scholarship Conflicts</p>
+                  <p className="text-[12px] font-medium text-slate-500 mt-1 leading-snug">
+                    All monitored applications are in good standing.
+                  </p>
+                </div>
+              )}
+            </div>
+          </aside>
+
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, FileUp, X, AlertTriangle, ClipboardList, Folder, Shield, BookOpen, Info, Calendar, PhilippinePeso, GraduationCap, Send } from 'lucide-react';
+import { ArrowLeft, Loader2, FileUp, X, AlertTriangle, ClipboardList, Folder, BookOpen, Info, GraduationCap, Send } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -106,13 +106,13 @@ const CreateScholarship = () => {
 
   useUnsavedChanges(isDirty);
 
-  const inputStyle = "w-full h-[52px] pl-10 pr-4 py-3.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-[#093fb4] focus:ring-4 focus:ring-[#093fb4]/10 outline-none text-sm md:text-base transition-all font-medium text-slate-900 placeholder:text-slate-400";
-  const labelStyle = "block text-xs md:text-sm font-bold text-slate-800 uppercase tracking-wide mb-2";
+  const inputStyle = "w-full h-11 px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-[#093fb4] focus:ring-4 focus:ring-[#093fb4]/10 outline-none text-sm transition-all font-medium text-slate-900 placeholder:text-slate-400";
+  const labelStyle = "block text-xs font-bold text-slate-800 uppercase tracking-wide mb-2";
 
   // Fixed-height label row so inputs line up even when a label wraps to 2 lines
   const numberInputStyle = `${inputStyle} [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`;
-  const labelRowStyle = "flex items-end justify-between gap-2 min-h-[2.5rem] mb-2";
-  const rowLabelStyle = "block text-xs md:text-sm font-bold text-slate-800 uppercase tracking-wide leading-tight";
+  const labelRowStyle = "flex items-end justify-between gap-2 min-h-[2rem] mb-2";
+  const rowLabelStyle = "block text-xs font-bold text-slate-800 uppercase tracking-wide leading-tight";
 
   const sanitize = (value) => value.replace(/[<>&"']/g, '');
 
@@ -208,9 +208,9 @@ const CreateScholarship = () => {
             <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-500 mb-5 border border-amber-100">
               <AlertTriangle size={28} strokeWidth={2.5} />
             </div>
-            <h3 className="text-base md:text-lg font-black text-slate-900 uppercase tracking-wide mb-2">{validationModal.title}</h3>
-            <p className="text-slate-600 text-sm md:text-base font-medium leading-relaxed mb-8 px-2">{validationModal.message}</p>
-            <button onClick={() => setValidationModal({ open: false, title: '', message: '' })} className="w-full py-4 bg-[#093fb4] text-white font-bold rounded-xl uppercase text-xs md:text-sm tracking-wider hover:bg-[#07369a] transition-all shadow-md">
+            <h3 className="text-sm md:text-base font-black text-slate-900 uppercase tracking-wide mb-2">{validationModal.title}</h3>
+            <p className="text-slate-600 text-sm font-medium leading-relaxed mb-6 px-2">{validationModal.message}</p>
+            <button onClick={() => setValidationModal({ open: false, title: '', message: '' })} className="w-full py-3 bg-[#093fb4] text-white font-bold rounded-xl uppercase text-xs tracking-wider hover:bg-[#07369a] transition-all shadow-md">
               Understand
             </button>
           </div>
@@ -222,27 +222,27 @@ const CreateScholarship = () => {
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-4">
           <div>
-            <button onClick={() => guardedNavigate(-1)} className="flex items-center gap-2 mb-4 font-bold text-sm text-slate-500 uppercase tracking-wider hover:text-[#093fb4] transition-colors">
+            <button onClick={() => guardedNavigate(-1)} className="flex items-center gap-2 mb-3 font-bold text-xs text-slate-500 uppercase tracking-wider hover:text-[#093fb4] transition-colors">
               <ArrowLeft size={16} strokeWidth={2.5} /> Back
             </button>
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-[#093fb4] text-white rounded-2xl flex items-center justify-center shadow-lg shadow-[#093fb4]/20 shrink-0">
-                <GraduationCap size={28} />
+              <div className="w-12 h-12 bg-[#093fb4] text-white rounded-2xl flex items-center justify-center shadow-lg shadow-[#093fb4]/20 shrink-0">
+                <GraduationCap size={24} />
               </div>
               <div>
-                <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">Create Scholarship Program</h1>
-                <p className="text-sm text-slate-500 font-medium mt-1">Fill in the program details, requirements, and criteria to publish your scholarship.</p>
+                <h1 className="text-xl md:text-2xl font-black tracking-tight text-slate-900">Create Scholarship Program</h1>
+                <p className="text-xs md:text-[13px] text-slate-500 font-medium mt-1">Fill in the program details, requirements, and criteria to publish your scholarship.</p>
               </div>
             </div>
           </div>
           
-          <div className="bg-blue-50/80 border border-blue-200 rounded-2xl p-5 max-w-sm flex items-start gap-4">
+          <div className="bg-blue-50/80 border border-blue-200 rounded-2xl p-4 max-w-sm flex items-start gap-3">
             <div className="p-2 bg-blue-100 rounded-xl text-[#093fb4] shrink-0">
               <Info size={20} />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-slate-900 mb-1">Important Note:</h4>
-              <p className="text-sm text-slate-700 font-medium leading-relaxed">Provide accurate and complete information to help students determine their eligibility.</p>
+              <h4 className="text-[13px] font-bold text-slate-900 mb-0.5">Important Note:</h4>
+              <p className="text-xs md:text-[13px] text-slate-700 font-medium leading-relaxed">Provide accurate and complete information to help students determine their eligibility.</p>
             </div>
           </div>
         </div>
@@ -251,16 +251,16 @@ const CreateScholarship = () => {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-stretch">
           
           {/* Column 1: Core Details */}
-          <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm flex flex-col h-full">
+          <div className="bg-white p-5 md:p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col h-full">
             <div className="flex items-center gap-3 pb-5 mb-6 border-b border-slate-100">
               <div className="p-2.5 bg-blue-50 rounded-xl text-[#093fb4]"><ClipboardList size={20} /></div>
               <div>
-                <h2 className="text-base font-black text-slate-900 uppercase tracking-wide">Program Information</h2>
+                <h2 className="text-sm font-black text-slate-900 uppercase tracking-wide">Program Information</h2>
                 <p className="text-xs text-slate-500 font-medium mt-0.5">Basic details about your scholarship</p>
               </div>
             </div>
             
-            <div className="space-y-6 flex-grow">
+            <div className="space-y-5 flex-grow">
               {/* Title Field */}
               <div>
                 <div className="flex justify-between items-center mb-2">
@@ -268,7 +268,6 @@ const CreateScholarship = () => {
                   <span className="text-xs font-bold text-slate-400">{formData.title.length}/100</span>
                 </div>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400"></div>
                   <input 
                     type="text" 
                     maxLength={100} 
@@ -284,7 +283,6 @@ const CreateScholarship = () => {
                 <div>
                   <div className={labelRowStyle}><label className={rowLabelStyle}>Available Slots</label></div>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400"></div>
                     <input 
                       type="number" 
                       min="0" 
@@ -304,7 +302,6 @@ const CreateScholarship = () => {
                 <div>
                   <div className={labelRowStyle}><label className={rowLabelStyle}>Application Deadline <span className="text-red-500">*</span></label></div>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 z-10"></div>
                     <DatePicker
                       selected={formData.deadline ? new Date(formData.deadline) : null}
                       onChange={(date) => setFormData({...formData, deadline: date})}
@@ -323,7 +320,7 @@ const CreateScholarship = () => {
               <div className="grid grid-cols-2 gap-4 items-start">
                 {/* Total Program Budget Toggle Component */}
                 <div>
-                  <div className="flex items-end min-h-[2.5rem] mb-2">
+                  <div className="flex items-end min-h-[2rem] mb-2">
                     <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 min-w-0">
                       <label className={rowLabelStyle}>Total Budget</label>
                       <InfoTip label="Total budget info">
@@ -347,14 +344,11 @@ const CreateScholarship = () => {
 
                   {hasBudget ? (
                     <div className="relative animate-in fade-in duration-200">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                        <PhilippinePeso size={18} />
-                      </div>
                       <input 
                         type="number"
                         min="0"
                         step="0.01"
-                        placeholder="e.g., 500000" 
+                        placeholder="₱ e.g., 500000" 
                         className={numberInputStyle} 
                         value={formData.budget}
                         onKeyDown={preventInvalidNumberKeys}
@@ -367,7 +361,7 @@ const CreateScholarship = () => {
                       />
                     </div>
                   ) : (
-                    <div className="h-[52px] px-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center">
+                    <div className="h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center">
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Not Set</span>
                     </div>
                   )}
@@ -375,7 +369,7 @@ const CreateScholarship = () => {
 
                 {/* GWA Toggle Component */}
                 <div>
-                  <div className="flex items-end min-h-[2.5rem] mb-2">
+                  <div className="flex items-end min-h-[2rem] mb-2">
                     <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 min-w-0">
                       <label className={rowLabelStyle}>GWA Criteria</label>
                       <InfoTip label="GWA format reminder" align="right">
@@ -421,7 +415,7 @@ const CreateScholarship = () => {
                       <span className="absolute inset-y-0 right-4 flex items-center text-sm font-bold text-slate-400 pointer-events-none">%</span>
                     </div>
                   ) : (
-                    <div className="h-[52px] px-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center">
+                    <div className="h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center">
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">No Requirement</span>
                     </div>
                   )}
@@ -432,7 +426,6 @@ const CreateScholarship = () => {
               <div>
                 <label className={labelStyle}>Funding Coverage <span className="text-red-500">*</span></label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400"><Shield size={18} /></div>
                   <select 
                     className={`${inputStyle} appearance-none pr-10`}
                     onChange={(e) => setFormData({...formData, fund_type: e.target.value})}
@@ -468,12 +461,12 @@ const CreateScholarship = () => {
         </div>
 
         {/* Full Width Block: Description Area */}
-        <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm mt-6">
+        <div className="bg-white p-5 md:p-6 rounded-3xl border border-slate-200 shadow-sm mt-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between pb-5 mb-5 border-b border-slate-100 gap-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 bg-blue-50 rounded-xl text-[#093fb4]"><BookOpen size={20} /></div>
               <div>
-                <h2 className="text-base font-black text-slate-900 uppercase tracking-wide">Program Description</h2>
+                <h2 className="text-sm font-black text-slate-900 uppercase tracking-wide">Program Description</h2>
                 <p className="text-xs text-slate-500 font-medium mt-0.5">Provide a detailed overview of the scholarship</p>
               </div>
             </div>
@@ -484,18 +477,18 @@ const CreateScholarship = () => {
           
           <textarea 
             maxLength={2000}
-            className="w-full h-56 p-5 bg-slate-50 border border-slate-300 rounded-2xl outline-none focus:bg-white focus:border-[#093fb4] focus:ring-4 focus:ring-[#093fb4]/10 transition-all font-medium text-slate-800 text-sm md:text-base leading-relaxed placeholder:text-slate-400 resize-y"
+            className="w-full h-48 p-4 bg-slate-50 border border-slate-300 rounded-2xl outline-none focus:bg-white focus:border-[#093fb4] focus:ring-4 focus:ring-[#093fb4]/10 transition-all font-medium text-slate-800 text-sm leading-relaxed placeholder:text-slate-400 resize-y"
             onChange={(e) => setFormData({...formData, description: sanitize(e.target.value)})}
             placeholder="Outline the scholarship qualifications, expected milestones, maintaining requirements, and any other relevant information for the applicants..."
           />
         </div>
 
         {/* Full Width Block: Attached Form Upload */}
-        <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm mt-6">
+        <div className="bg-white p-5 md:p-6 rounded-3xl border border-slate-200 shadow-sm mt-6">
           <div className="flex items-center gap-3 pb-5 mb-5 border-b border-slate-100">
             <div className="p-2.5 bg-blue-50 rounded-xl text-[#093fb4]"><FileUp size={20} /></div>
             <div>
-              <h2 className="text-base font-black text-slate-900 uppercase tracking-wide">Attached Form Upload</h2>
+              <h2 className="text-sm font-black text-slate-900 uppercase tracking-wide">Attached Form Upload</h2>
               <p className="text-xs text-slate-500 font-medium mt-0.5">Upload optional guidelines, templates, or forms for applicants</p>
             </div>
           </div>
@@ -524,16 +517,16 @@ const CreateScholarship = () => {
           <button 
             type="button" 
             onClick={() => guardedNavigate(-1)} 
-            className="w-full sm:w-auto px-8 py-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl font-bold text-sm uppercase tracking-wider transition-all shadow-sm"
+            className="w-full sm:w-auto px-6 py-3 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl font-bold text-xs md:text-[13px] uppercase tracking-wider transition-all shadow-sm"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="w-full sm:w-auto px-10 py-4 bg-[#093fb4] hover:bg-[#07369a] text-white rounded-xl font-black text-sm uppercase tracking-wider transition-all shadow-xl shadow-[#093fb4]/20 flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto px-8 py-3 bg-[#093fb4] hover:bg-[#07369a] text-white rounded-xl font-black text-xs md:text-[13px] uppercase tracking-wider transition-all shadow-xl shadow-[#093fb4]/20 flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            {loading ? <Loader2 className="animate-spin w-5 h-5" /> : <><Send size={18} className="-mt-0.5" /> Publish Program</>}
+            {loading ? <Loader2 className="animate-spin w-5 h-5" /> : <><Send size={16} className="-mt-0.5" /> Publish Program</>}
           </button>
         </div>
       </div>

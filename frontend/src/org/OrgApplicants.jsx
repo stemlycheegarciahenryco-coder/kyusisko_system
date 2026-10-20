@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import api, { backendURL } from '../api';
 import {
     ArrowLeft, Users, Clock, CheckCircle,
@@ -20,14 +20,19 @@ const TABS = [
 export default function OrgApplicants() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const [applications, setApplications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('all');
-    const [searchQuery, setSearchQuery] = useState('');
+    // Pre-filled when arriving from a Student Monitored Applications card
+    const [searchQuery, setSearchQuery] = useState(location.state?.search || '');
 
     const [terminateModal, setTerminateModal] = useState({ show: false, app: null });
     const [renewModal, setRenewModal] = useState({ show: false, app: null });
     const [disbursementModal, setDisbursementModal] = useState({ show: false, app: null });
+    const [deleteModal, setDeleteModal] = useState({ show: false, app: null });
+    const [deleting, setDeleting] = useState(false);
+    const [errorModal, setErrorModal] = useState({ show: false, message: '' });
     const [program, setProgram] = useState(null);
     const remainingBudget = program?.remaining_budget ?? null;
 
@@ -42,16 +47,26 @@ export default function OrgApplicants() {
     };
 
 
-  const handleDelete = async (appId) => {
-  if (!window.confirm("Are you sure you want to delete this application record?")) return;
-  try {
-    await api.delete(`/applications/scholarship/${id}/applications/${appId}`);
-    setApplications(prev => prev.filter(app => app.id !== appId));
-  } catch (err) {
-    console.error("Failed to delete applicant", err);
-    alert("Failed to delete applicant record.");
-  }
-};
+  // Delete now goes through a confirmation dialog instead of window.confirm / alert
+  const handleDeleteConfirm = async () => {
+    const target = deleteModal.app;
+    if (!target) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/applications/scholarship/${id}/applications/${target.id}`);
+      setApplications(prev => prev.filter(app => app.id !== target.id));
+      setDeleteModal({ show: false, app: null });
+    } catch (err) {
+      console.error("Failed to delete applicant", err);
+      setDeleteModal({ show: false, app: null });
+      setErrorModal({
+        show: true,
+        message: err.response?.data?.message || "Failed to delete applicant record.",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const handleRenewConfirm = async (reason, docs) => {
     try {
@@ -92,7 +107,10 @@ export default function OrgApplicants() {
       setDisbursementModal({ show: false, app: null });
     } catch (error) {
       console.error("Disbursement Error:", error);
-      alert(error.response?.data?.message || "Failed to process disbursement.");
+      setErrorModal({
+        show: true,
+        message: error.response?.data?.message || "Failed to process disbursement.",
+      });
     }
   };
     const fetchApplicants = async () => {
@@ -128,7 +146,7 @@ export default function OrgApplicants() {
         <div className="flex items-center justify-center min-h-screen bg-white">
             <div className="flex flex-col items-center gap-3">
                 <div className="w-10 h-10 border-4 border-[#093fb4] border-t-transparent rounded-full animate-spin" />
-                <p className="text-[11px] font-black uppercase tracking-widest text-black">Loading Applicants...</p>
+                <p className="text-[12px] font-black uppercase tracking-widest text-black">Loading Applicants...</p>
             </div>
         </div>
     );
@@ -141,14 +159,14 @@ export default function OrgApplicants() {
                 <div className="flex items-center justify-between mb-6">
                     <button
                         onClick={() => navigate(-1)}
-                        className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-black hover:text-[#093fb4] transition-colors"
+                        className="flex items-center gap-2 text-[12px] font-black uppercase tracking-widest text-black hover:text-[#093fb4] transition-colors"
                     >
                         <ArrowLeft size={16} /> Back to Programs
                     </button>
 
                     <button
                         onClick={() => navigate(`/scholarship-applications/${id}/disbursements`)}
-                        className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#093fb4] hover:text-[#0730a0] transition-colors"
+                        className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-[#093fb4] hover:text-[#0730a0] transition-colors"
                     >
                         <ListOrdered size={14} /> View Disbursement Ledger
                     </button>
@@ -160,7 +178,7 @@ export default function OrgApplicants() {
                         <h1 className="text-2xl font-black text-black uppercase tracking-tight">
                             {program?.title || 'Scholarship'} <span className="text-[#093fb4]">Applicants</span>
                         </h1>
-                        <p className="text-[11px] font-bold text-black mt-1 uppercase tracking-widest">
+                        <p className="text-[12px] font-bold text-black mt-1 uppercase tracking-widest">
                             {applications.length} total applications found
                             {program?.total_budget != null && (
                                 <span className="text-slate-400"> · ₱{Number(program.total_budget).toLocaleString()} total budget</span>
@@ -179,7 +197,7 @@ export default function OrgApplicants() {
                             placeholder="Search by name or email..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-medium text-black focus:border-[#093fb4] focus:outline-none transition-all"
+                            className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-300 rounded-xl text-[13px] font-medium text-black focus:border-[#093fb4] focus:outline-none transition-all"
                         />
                     </div>
                 </div>
@@ -194,14 +212,14 @@ export default function OrgApplicants() {
                             <button
                                 key={key}
                                 onClick={() => setActiveTab(key)}
-                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border shrink-0 ${isActive
+                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all border shrink-0 ${isActive
                                         ? 'bg-[#093fb4] text-white border-[#093fb4] shadow-md shadow-[#093fb4]/20'
                                         : 'bg-white text-slate-600 border-slate-300 hover:text-[#093fb4] hover:border-[#093fb4]'
                                     }`}
                             >
                                 <Icon size={12} />
                                 {label}
-                                <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-black ${isActive ? 'bg-white/20 text-white' : 'bg-slate-600 text-white'
+                                <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-black ${isActive ? 'bg-white/20 text-white' : 'bg-slate-600 text-white'
                                     }`}>
                                     {count}
                                 </span>
@@ -215,7 +233,7 @@ export default function OrgApplicants() {
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="border-b border-slate-300 bg-white text-[10px] font-black uppercase tracking-widest text-slate-600">
+                                <tr className="border-b border-slate-300 bg-white text-[11px] font-black uppercase tracking-widest text-slate-600">
                                     <th className="py-4 px-6">Profile & Name</th>
                                     <th className="py-4 px-6">School & Course</th>
                                     <th className="py-4 px-6">Email</th>
@@ -228,7 +246,7 @@ export default function OrgApplicants() {
                             <tbody className="divide-y divide-slate-200">
                                 {filteredApps.length === 0 ? (
                                     <tr>
-                                        <td colSpan="7" className="py-12 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">
+                                        <td colSpan="7" className="py-12 text-center text-[13px] font-bold text-slate-400 uppercase tracking-widest">
                                             No matching records found in this category
                                         </td>
                                     </tr>
@@ -263,17 +281,17 @@ export default function OrgApplicants() {
                                                         ) : null}
 
                                                         <div
-                                                            className="w-9 h-9 rounded-xl bg-[#093fb4] flex items-center justify-center text-white font-black text-xs uppercase shrink-0"
+                                                            className="w-9 h-9 rounded-xl bg-[#093fb4] flex items-center justify-center text-white font-black text-[13px] uppercase shrink-0"
                                                             style={{ display: hasValidImg ? 'none' : 'flex' }}
                                                         >
                                                             {app.sfirst_name?.[0]}{app.slast_name?.[0]}
                                                         </div>
 
                                                         <div>
-                                                            <span className="block text-xs font-black text-black uppercase tracking-tight">
+                                                            <span className="block text-[13px] font-black text-black uppercase tracking-tight">
                                                                 {app.sfirst_name} {app.slast_name}
                                                             </span>
-                                                            <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
                                                                 ID: #APP-{app.id}
                                                             </span>
                                                         </div>
@@ -282,21 +300,21 @@ export default function OrgApplicants() {
 
                                                 {/* School & Course */}
                                                 <td className="py-4 px-6">
-                                                    <span className="block text-xs font-bold text-black">
+                                                    <span className="block text-[13px] font-bold text-black">
                                                         {app.school_name}
                                                     </span>
-                                                    <span className="block text-[10px] font-medium text-slate-500">
+                                                    <span className="block text-[11px] font-medium text-slate-500">
                                                         {app.course_name}
                                                     </span>
                                                 </td>
 
                                                 {/* Student Email */}
-                                                <td className="py-4 px-6 text-xs font-medium text-slate-700">
+                                                <td className="py-4 px-6 text-[13px] font-medium text-slate-700">
                                                     {app.student_email || '—'}
                                                 </td>
 
                                                 {/* Contact Number */}
-                                                <td className="py-4 px-6 text-xs font-mono font-medium text-slate-700">
+                                                <td className="py-4 px-6 text-[13px] font-mono font-medium text-slate-700">
                                                     {verifiedContactNumber}
                                                 </td>
 
@@ -349,7 +367,7 @@ export default function OrgApplicants() {
                                                                         }
                                                                     }}
                                                                     disabled={['renewing', 'submitted'].includes(app.status)}
-                                                                    className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border shrink-0 ${['approved', 'active'].includes(app.status)
+                                                                    className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all border shrink-0 ${['approved', 'active'].includes(app.status)
                                                                             ? 'bg-white text-slate-600 border-slate-300 hover:text-[#093fb4] hover:border-[#093fb4]'
                                                                             : 'bg-white border-slate-200 text-slate-300 cursor-not-allowed'
                                                                         }`}
@@ -363,7 +381,7 @@ export default function OrgApplicants() {
                                                                         e.stopPropagation();
                                                                         setTerminateModal({ show: true, app });
                                                                     }}
-                                                                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border shrink-0 bg-white text-slate-600 border-slate-300 hover:text-[#FF1E1E] hover:border-[#FF1E1E]"
+                                                                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all border shrink-0 bg-white text-slate-600 border-slate-300 hover:text-[#FF1E1E] hover:border-[#FF1E1E]"
                                                                 >
                                                                     <XCircle size={12} />
                                                                     Terminate
@@ -376,9 +394,9 @@ export default function OrgApplicants() {
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    handleDelete(app.id);
+                                                                    setDeleteModal({ show: true, app });
                                                                 }}
-                                                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border shrink-0 bg-white text-rose-600 border-rose-200 hover:bg-rose-50 hover:border-rose-400"
+                                                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all border shrink-0 bg-white text-rose-600 border-rose-200 hover:bg-rose-50 hover:border-rose-400"
                                                                 title="Delete Applicant"
                                                             >
                                                                 <Trash2 size={12} />
@@ -409,6 +427,30 @@ export default function OrgApplicants() {
                 onClose={() => setRenewModal({ show: false, app: null })}
                 onSend={handleRenewConfirm}
             />
+            <ConfirmDialog
+                isOpen={deleteModal.show}
+                variant="danger"
+                title="Delete application?"
+                message={
+                    deleteModal.app
+                        ? `This will permanently remove the application record of ${deleteModal.app.sfirst_name || ''} ${deleteModal.app.slast_name || ''}. This action cannot be undone.`
+                        : ''
+                }
+                confirmLabel="Delete"
+                loading={deleting}
+                onConfirm={handleDeleteConfirm}
+                onClose={() => setDeleteModal({ show: false, app: null })}
+            />
+            <ConfirmDialog
+                isOpen={errorModal.show}
+                variant="error"
+                title="Something went wrong"
+                message={errorModal.message}
+                confirmLabel="OK"
+                hideCancel
+                onConfirm={() => setErrorModal({ show: false, message: '' })}
+                onClose={() => setErrorModal({ show: false, message: '' })}
+            />
             <DisbursementModal
                 isOpen={disbursementModal.show}
                 app={disbursementModal.app}
@@ -416,6 +458,61 @@ export default function OrgApplicants() {
                 onClose={() => setDisbursementModal({ show: false, app: null })}
                 onSubmit={handleDisbursementSubmit}
             />
+        </div>
+    );
+}
+
+// Reusable confirmation / error dialog (replaces window.confirm and alert)
+function ConfirmDialog({ isOpen, title, message, confirmLabel = 'Confirm', variant = 'danger', loading = false, hideCancel = false, onConfirm, onClose }) {
+    useEffect(() => {
+        if (!isOpen) return;
+        const onKey = (e) => { if (e.key === 'Escape' && !loading) onClose(); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [isOpen, loading, onClose]);
+
+    if (!isOpen) return null;
+
+    const Icon = variant === 'danger' ? Trash2 : AlertTriangle;
+
+    return (
+        <div
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            onClick={() => { if (!loading) onClose(); }}
+        >
+            <div
+                role="dialog"
+                aria-modal="true"
+                className="w-full max-w-sm bg-white rounded-3xl p-7 text-center shadow-2xl border border-slate-200"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4">
+                    <Icon size={26} />
+                </div>
+                <h2 className="text-lg font-black text-black uppercase tracking-tight mb-2">{title}</h2>
+                <p className="text-[13px] font-medium text-slate-500 leading-relaxed mb-6">{message}</p>
+
+                <div className="flex items-center gap-3">
+                    {!hideCancel && (
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            disabled={loading}
+                            className="flex-1 py-3 rounded-xl border border-slate-300 bg-white text-[11px] font-black uppercase tracking-widest text-slate-600 hover:border-slate-400 hover:bg-slate-50 transition-all disabled:opacity-50"
+                        >
+                            Cancel
+                        </button>
+                    )}
+                    <button
+                        type="button"
+                        onClick={onConfirm}
+                        disabled={loading}
+                        className="flex-1 py-3 rounded-xl bg-rose-600 text-white text-[11px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all shadow-md shadow-rose-600/20 disabled:opacity-60"
+                    >
+                        {loading ? 'Deleting...' : confirmLabel}
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }
@@ -438,7 +535,7 @@ function StatusBadge({ status }) {
     const { label, cls } = map[status] || { label: status, cls: 'bg-slate-50 text-slate-600 border-slate-200' };
 
     return (
-        <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border inline-block ${cls}`}>
+        <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border inline-block ${cls}`}>
             {label}
         </span>
     );
