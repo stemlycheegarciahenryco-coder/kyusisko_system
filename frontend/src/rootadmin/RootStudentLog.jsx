@@ -9,6 +9,9 @@ export default function RootStudentLog() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [activeTab, setActiveTab] = useState('all');
+    const [snapshotIsVisible, setSnapshotVisible] = useState(false)
+    const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false)
+    const [snapShotLists, setSnapshotList] = useState([])
 
     useEffect(() => {
         fetchAllData();
@@ -101,7 +104,7 @@ export default function RootStudentLog() {
         }
     };
 
-    const onSnapshotsClick = async () => {};
+    const onSnapshotsClick = async () => {setSnapshotVisible(!snapshotIsVisible)};
 
     // Determine current dataset based on active tab
     const currentDataset = activeTab === 'archived' ? archivedStudents : students;

@@ -10,6 +10,9 @@ export default function RootReports() {
     const [actionLoading, setActionLoading] = useState(null);
     const [filter, setFilter] = useState('all');
     const [search, setSearch] = useState('');
+    const [snapshotIsVisible, setSnapshotVisible] = useState(false);
+    const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false)
+    const [snapShotLists, setSnapshotList] = useState([])
 
     const fetchReports = async () => {
         setLoading(true);
@@ -197,14 +200,13 @@ export default function RootReports() {
         }
     };
 
-    const onSnapshotsClick = async () => {};
+    const onSnapshotsClick = async () => { setSnapshotVisible(!snapshotIsVisible); };
 
     const statusConfig = {
         pending: { color: 'bg-amber-50 text-amber-600 border-amber-200 cursor-pointer', dot: 'bg-amber-400' },
         resolved: { color: 'bg-green-50 text-green-600 border-green-200 cursor-pointer', dot: 'bg-green-400' },
         dismissed: { color: 'bg-slate-100 text-slate-400 border-slate-200 cursor-pointer', dot: 'bg-slate-300' },
         archived: { color: 'bg-slate-100 text-yellow-400 border-slate-200 cursor-pointer', dot: 'bg-amber-300' },
-        deleted: { color: 'bg-slate-100 text-red-400 border-slate-200 cursor-pointer', dot: 'bg-red-300' },
     };
 
     const filtered = reports.filter(r => {
@@ -249,7 +251,7 @@ export default function RootReports() {
             <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex flex-wrap items-center gap-3">
                     <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl overflow-x-auto">
-                        {['all', 'pending', 'resolved', 'dismissed', 'archived', 'deleted'].map(f => (
+                        {['all', 'pending', 'resolved', 'dismissed', 'archived'].map(f => (
                             <button
                                 key={f}
                                 onClick={() => setFilter(f)}

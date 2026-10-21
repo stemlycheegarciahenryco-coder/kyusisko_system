@@ -3,7 +3,7 @@ import api from '../api';
 import { IconEye, IconUser, IconSearch, IconRefresh } from '@tabler/icons-react';
 import Swal from 'sweetalert2';
 import RootOrgView from './RootOrgView';
-import { ArchiveIcon, Trash2Icon } from 'lucide-react';
+import { ArchiveIcon, Clock1Icon, Trash2Icon } from 'lucide-react';
 
 // 'deleted' removed from the tabs list
 const TABS = ['all', 'pending', 'approved', 'rejected', 'blocked', 'archived'];
@@ -14,6 +14,9 @@ const RootOrganization = () => {
     const [selectedOrg, setSelectedOrg] = useState(null);
     const [search, setSearch] = useState('');
     const [activeTab, setActiveTab] = useState('all');
+    const [snapshotIsVisible, setSnapshotVisible] = useState(false)
+    const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false)
+    const [snapShotLists, setSnapshotList] = useState([])
 
     const colors = { red: '#FF1E1E', white: '#FFFCFB', blue: '#093fb4', green: '#16a34a' };
 
@@ -208,6 +211,8 @@ const RootOrganization = () => {
             </div>
         );
 
+    const onSnapshotsClick = () => { setSnapshotVisible(!snapshotIsVisible) }
+
     const tabLabels = {
         all: 'All',
         pending: 'Pending',
@@ -248,30 +253,44 @@ const RootOrganization = () => {
             </div>
 
             {/* Tabs */}
-            <div className="flex flex-wrap gap-2 mb-6">
-                {TABS.map((tab) => {
-                    const count = countByStatus(tab);
-                    const isActive = activeTab === tab;
-                    return (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all cursor-pointer ${isActive
-                                ? 'bg-[#093fb4] text-white border-[#093fb4] shadow-md shadow-blue-900/10'
-                                : 'bg-white text-slate-500 border-slate-200 hover:border-[#093fb4]/30'
-                                }`}
-                        >
-                            {tabLabels[tab]}
-                            <span
-                                className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                {/* Tabs Group (Left) */}
+                <div className="flex flex-wrap gap-2">
+                    {TABS.map((tab) => {
+                        const count = countByStatus(tab);
+                        const isActive = activeTab === tab;
+                        return (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab)}
+                                className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all cursor-pointer ${isActive
+                                    ? 'bg-[#093fb4] text-white border-[#093fb4] shadow-md shadow-blue-900/10'
+                                    : 'bg-white text-slate-500 border-slate-200 hover:border-[#093fb4]/30'
                                     }`}
                             >
-                                {count}
-                            </span>
-                        </button>
-                    );
-                })}
+                                {tabLabels[tab]}
+                                <span
+                                    className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                                        }`}
+                                >
+                                    {count}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* Snapshots Button (Right) */}
+                <button
+                    type="button"
+                    onClick={onSnapshotsClick}
+                    className="flex items-center gap-2 px-5 py-3.5 bg-blue-50 hover:bg-blue-100 text-[#093fb4] font-black text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer border border-blue-200 shadow-sm shrink-0"
+                >
+                    <Clock1Icon size={15} />
+                    Snapshots
+                </button>
             </div>
+
 
             {/* Table */}
             <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-blue-900/5 border border-slate-100 overflow-hidden">
@@ -283,7 +302,7 @@ const RootOrganization = () => {
                                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-black">Account</th>
                                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-black">Status</th>
                                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-black">Access</th>
-                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-right text-black"></th>
+                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-right text-black">Action</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[#093fb4]/5">

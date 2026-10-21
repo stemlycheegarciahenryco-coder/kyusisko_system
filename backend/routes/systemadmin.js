@@ -9,6 +9,7 @@ const { verifyToken } = require('../middleware/auth');
  * @desc    Create a new co-admin account using unique UID tracking values (Root Admin Only)
  */
 router.post('/create-co-admin', verifyToken, async (req, res) => {
+
     if (req.user.role !== 'root_admin') {
         return res.status(403).json({ success: false, message: 'Forbidden: Only the absolute System Admin can add administrators.' });
     }
@@ -41,6 +42,13 @@ router.post('/create-co-admin', verifyToken, async (req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 });
+
+// Get Snapshot Reports
+router.get('/get/Reports/snapshots/instance', verifyToken, async (req, res) => {
+})
+router.get('/get/Reports/snapshot_items/:id', verifyToken, async (req, res) => {
+})
+
 
 // Delete Reports
 router.delete('/reports/delete/:id', verifyToken, async (req, res) => {
@@ -79,12 +87,13 @@ router.patch('/reports/archive/:id', verifyToken, async (req, res) => {
 });
 
 
-// Delete Student
-router.delete('/delete/student/:id', verifyToken, async (req, res) => {
-    try {
-    }
-    catch (e) { }
+
+// Get Snapshot Student
+router.get('/get/Student/snapshots/instance', verifyToken, async (req, res) => {
 })
+router.get('/get/Student/snapshot_items/:id', verifyToken, async (req, res) => {
+})
+
 
 // Archive Student
 router.patch('/student/archive/:id', verifyToken, async (req, res) => {
@@ -144,35 +153,6 @@ router.get('/get/student/archive', verifyToken, async (req, res) => {
         res.status(500).json({ error: "Failed to fetch student logs" });
     }
 })
-
-router.get('/get/student/deleted', verifyToken, async (req, res) => {
-    try {
-        const query = `
-            SELECT 
-                id, 
-                student_email, 
-                sfirst_name, 
-                slast_name,
-                scontact_number,
-                sis_active,
-                is_archived,
-                CASE 
-                    WHEN is_profile_complete = true THEN 'Registered' 
-                    ELSE 'Pending' 
-                END as derived_status,
-                CONCAT(sstreet, ', ', sbarangay, ', ', sdistrict, ' ', szip_code) as full_address
-            FROM deleted_students WHERE is_archived = true
-            ORDER BY id DESC
-        `;
-        const result = await pool.query(query);
-        res.json(result.rows);
-    } catch (err) {
-        console.error("DATABASE ERROR:", err.message);
-        res.status(500).json({ error: "Failed to fetch student logs" });
-    }
-})
-
-
 
 // Delete CoAdmin
 router.delete('/delete/:id', verifyToken, async (req, res) => {
@@ -270,6 +250,12 @@ router.get('/co-admins', verifyToken, async (req, res) => {
     }
 });
 
+// Get Snapshot CoAdmin
+router.get('/get/CoAdmin/snapshots/instance', verifyToken, async (req, res) => {
+})
+router.get('/get/CoAdmins/snapshot_items/:id', verifyToken, async (req, res) => {
+})
+
 router.get('/get/co-admins/archive', verifyToken, async (req, res) => {
     if (req.user.role !== 'root_admin') {
         return res.status(403).json({ success: false, message: 'Forbidden access.' });
@@ -288,23 +274,33 @@ router.get('/get/co-admins/archive', verifyToken, async (req, res) => {
     }
 });
 
-router.get('/get/co-admins/deleted', verifyToken, async (req, res) => {
+router.delete('/co-admins/delete/:id', verifyToken, async (req, res) => {
     if (req.user.role !== 'root_admin') {
-        return res.status(403).json({ success: false, message: 'Forbidden access.' });
+        return res.status(403).json({ success: false, message: 'Forbidden: Access restricted to Root Admin.' });
     }
-
+    const { id } = req.params;
     try {
-        const result = await pool.query(
-            `SELECT id, email, uid, account_status, first_name, last_name, is_archived
-             FROM users 
-             WHERE role = 'co_admin' 
-             ORDER BY id DESC`
+        const checkTarget = await pool.query('SELECT role FROM users WHERE id = $1', [id]);
+
+        if (checkTarget.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Admin account not found.' });
+        }
+
+        if (checkTarget.rows[0].role === 'root_admin') {
+            return res.status(400).json({ success: false, message: 'Root Admin structural accounts cannot be blocked.' });
+        }
+
+        await pool.query(
+            'Delete FROM users WHERE id = $1 AND is_archived = true',
+            [id]
         );
-        res.json({ success: true, data: result.rows });
+
+        res.json({ success: true, message: `Account Is Deleted.` });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
 });
+
 
 
 module.exports = router;
