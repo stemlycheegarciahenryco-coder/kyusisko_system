@@ -18,15 +18,313 @@ const CHART_CONFIG = [
     { key: 'totalScholarships', name: 'Scholarships', color: '#10b981' },
 ];
 
+/**
+ * Separated Component for Co-Admin Management & Listing
+ */
+function CoAdminSection({
+    coAdmins = [],
+    loading,
+    onToggleStatus,
+    onArchive,
+    onDeleteCoAdmin,
+    onCreateCoAdmin,
+    formData,
+    setFormData
+}) {
+    const [activeTab, setActiveTab] = useState('all'); // 'all' | 'active' | 'blocked' | 'archived' | 'deleted'
+    const [searchQuery, setSearchQuery] = useState('');
+
+    // Handle Archive click with SweetAlert confirmation
+    const handleArchiveClick = async (admin) => {
+        const isArchived = Boolean(admin.is_archived);
+        const actionText = isArchived ? 'Unarchive' : 'Archive';
+
+        const result = await Swal.fire({
+            title: `${actionText} Student?`,
+            text: `Confirm you want to ${actionText.toLowerCase()} this student record.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d97706',
+            confirmButtonText: `Yes, ${actionText}!`,
+        }, '#d97706');
+
+        if (result.isConfirmed) {
+            onArchive(admin);
+        }
+    };
+
+    // Pre-calculate counts and filtered list for each tab based on the current searchQuery
+    const { filteredCoAdmins, tabCounts } = useMemo(() => {
+        const query = searchQuery.trim().toLowerCase();
+
+        let allCount = 0;
+        let activeCount = 0;
+        let blockedCount = 0;
+        let archivedCount = 0;
+        let deletedCount = 0;
+
+        const matchedList = [];
+
+        coAdmins.forEach(admin => {
+            const isArchived = Boolean(admin.is_archived);
+            const isDeleted = admin.account_status === 'deleted';
+            const isBlocked = admin.account_status === 'suspended';
+            const isActive = admin.account_status === 'active' && !isArchived;
+
+            const isAll = !isArchived && !isDeleted;
+            const isTabActive = isActive;
+            const isTabBlocked = isBlocked && !isArchived && !isDeleted;
+            const isTabArchived = isArchived && !isDeleted;
+            const isTabDeleted = isDeleted;
+
+            // Search filter check
+            const fullName = `${admin.first_name || ''} ${admin.last_name || ''}`.toLowerCase();
+            const email = (admin.email || '').toLowerCase();
+            const uid = (admin.uid || '').toLowerCase();
+            const matchesSearch = !query || fullName.includes(query) || email.includes(query) || uid.includes(query);
+
+            // Increment totals if they match search query (so tab counts reflect the active search)
+            if (matchesSearch) {
+                if (isAll) allCount++;
+                if (isTabActive) activeCount++;
+                if (isTabBlocked) blockedCount++;
+                if (isTabArchived) archivedCount++;
+                if (isTabDeleted) deletedCount++;
+            }
+
+            // Determine if it matches the currently selected active tab
+            let matchesTab = false;
+            if (activeTab === 'all') matchesTab = isAll;
+            else if (activeTab === 'active') matchesTab = isTabActive;
+            else if (activeTab === 'blocked') matchesTab = isTabBlocked;
+            else if (activeTab === 'archived') matchesTab = isTabArchived;
+            else if (activeTab === 'deleted') matchesTab = isTabDeleted;
+
+            if (matchesTab && matchesSearch) {
+                matchedList.push(admin);
+            }
+        });
+
+        return {
+            filteredCoAdmins: matchedList,
+            tabCounts: {
+                all: allCount,
+                active: activeCount,
+                blocked: blockedCount,
+                archived: archivedCount,
+                deleted: deletedCount,
+            }
+        };
+    }, [coAdmins, activeTab, searchQuery]);
+
+    return (
+        <section className="bg-white p-8 rounded-[2.5rem] border border-blue-200 shadow-sm">
+            <h2 className="text-base font-black text-slate-900 uppercase tracking-tight mb-6 flex items-center gap-2">
+                <UserPlus className="text-blue-600" size={18} /> Co-Admin Management
+            </h2>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                {/* Creation Form */}
+                <form onSubmit={onCreateCoAdmin} className="space-y-3 lg:col-span-1 border-b lg:border-b-0 lg:border-r border-slate-100 pb-6 lg:pb-0 lg:pr-8">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                        Register New Co-Admin
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                        <input
+                            type="text"
+                            placeholder="First Name"
+                            required
+                            value={formData.firstName}
+                            onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                            className="w-full p-2.5 text-xs font-semibold border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:border-blue-600 text-slate-800"
+                        />
+                        <input
+                            type="text"
+                            placeholder="Last Name"
+                            required
+                            value={formData.lastName}
+                            onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                            className="w-full p-2.5 text-xs font-semibold border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:border-blue-600 text-slate-800"
+                        />
+                    </div>
+                    <input
+                        type="email"
+                        placeholder="Email Address"
+                        required
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        className="w-full p-2.5 text-xs font-semibold border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:border-blue-600 text-slate-800"
+                    />
+                    <input
+                        type="password"
+                        placeholder="Password"
+                        required
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        className="w-full p-2.5 text-xs font-semibold border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:border-blue-600 text-slate-800"
+                    />
+
+                    <button
+                        type="submit"
+                        className="w-full py-2.5 bg-blue-600 hover:bg-blue-800 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer shadow-sm"
+                    >
+                        Create Co-Admin Account
+                    </button>
+                </form>
+
+                {/* Co-Admins Status & List Table View */}
+                <div className="lg:col-span-2 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">
+                            Co-Admins List
+                        </p>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                            {/* Search Bar Input */}
+                            <div className="relative flex-1 min-w-[180px] sm:w-48 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 flex items-center gap-2 focus-within:border-blue-600 focus-within:bg-white transition-all">
+                                <Search size={14} className="text-slate-400 shrink-0" />
+                                <input
+                                    type="text"
+                                    placeholder="Search co-admin..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full text-xs font-semibold text-slate-800 bg-transparent focus:outline-none placeholder:text-slate-400"
+                                />
+                                {searchQuery && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setSearchQuery('')}
+                                        className="text-slate-400 hover:text-slate-600 focus:outline-none"
+                                    >
+                                        <X size={12} />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Filter Tab Buttons with Counts */}
+                    <div className="flex flex-wrap items-center gap-2 pb-2 border-b border-slate-100">
+                        {['all', 'active', 'blocked', 'archived', 'deleted'].map((tab) => {
+                            const isActiveTab = activeTab === tab;
+                            const count = tabCounts[tab] || 0;
+
+                            return (
+                                <button
+                                    key={tab}
+                                    type="button"
+                                    onClick={() => setActiveTab(tab)}
+                                    className={`flex items-center gap-1.5 px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer border ${isActiveTab
+                                            ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                                        }`}
+                                >
+                                    <span>{tab}</span>
+                                    <span className={`px-1.5 py-0.5 rounded-md text-[9px] ${isActiveTab ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'
+                                        }`}>
+                                        {count}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Co-Admins List */}
+                    <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+                        {loading ? (
+                            <p className="text-xs font-medium text-slate-400 italic text-center py-4">Loading administrators...</p>
+                        ) : filteredCoAdmins.length === 0 ? (
+                            <p className="text-xs font-medium text-slate-400 italic py-4 text-center">
+                                {searchQuery
+                                    ? `No co-admins matching "${searchQuery}"`
+                                    : `No ${activeTab === 'all' ? '' : activeTab} co-admins found.`}
+                            </p>
+                        ) : (
+                            filteredCoAdmins.map((admin) => {
+                                const isArchived = Boolean(admin.is_archived);
+
+                                return (
+                                    <div key={admin.id} className="flex justify-between items-center p-5 bg-slate-50 rounded-2xl border border-slate-200/80 hover:border-slate-300 transition-colors gap-4 shadow-sm">
+                                        <div className="min-w-0 flex-1 space-y-1">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <p className="font-black text-slate-800 text-sm uppercase tracking-tight truncate">
+                                                    {admin.first_name} {admin.last_name}
+                                                </p>
+                                                <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md tracking-wider">
+                                                    {admin.uid}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-slate-500 font-medium truncate">
+                                                {admin.email}
+                                            </p>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            {admin.account_status === 'deleted' ? (
+                                                <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-xl bg-red-100 text-red-600">
+                                                    Deleted
+                                                </span>
+                                            ) : (
+                                                <>
+                                                    {/* Only show Block/Unblock button if NOT archived */}
+                                                    {!isArchived && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => onToggleStatus(admin.id, admin.account_status)}
+                                                            className={`flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer ${admin.account_status === 'active'
+                                                                    ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+                                                                    : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                                                }`}
+                                                        >
+                                                            {admin.account_status === 'active' ? (
+                                                                <IconLock size={12} />
+                                                            ) : (
+                                                                <UnlockIcon size={12} />
+                                                            )}
+                                                            {admin.account_status === 'active' ? 'Block' : 'Unblock'}
+                                                        </button>
+                                                    )}
+
+                                                    {/* Archive/Unarchive Button with Swal confirmation */}
+                                                    <button
+                                                        type="button"
+                                                        className="flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+                                                        onClick={() => handleArchiveClick(admin)}
+                                                    >
+                                                        <Archive size={12} />
+                                                        {isArchived ? 'Unarchive' : 'Archive'}
+                                                    </button>
+
+                                                    {/* Show delete button if archived OR suspended */}
+                                                    {(isArchived || admin.account_status === 'suspended') && (
+                                                        <button
+                                                            type="button"
+                                                            className="flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+                                                            onClick={() => onDeleteCoAdmin(admin.id)}
+                                                        >
+                                                            <Trash2 size={12} />
+                                                            Delete
+                                                        </button>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                </div>
+            </div>
+        </section>
+    );
+}
+
 export default function RootDashboard() {
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Co-Admin Feature Management States
     const [coAdmins, setCoAdmins] = useState([]);
-    const [filterStatus, setFilterStatus] = useState('all');
-    const [filterArchived, setFilterArchived] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
     const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', password: '' });
 
     const userRole = localStorage.getItem('userRole') || 'co_admin';
@@ -97,13 +395,13 @@ export default function RootDashboard() {
     const handleToggleStatus = async (id, currentStatus) => {
         const actionText = currentStatus === 'active' ? 'block' : 'unblock';
         const nextStatus = currentStatus === 'active' ? 'suspended' : 'active';
-
+        const confirmColor =  currentStatus === 'active' ? '#dc2626' : '#16a34a'
         const confirm = await Swal.fire({
             title: `Are you sure?`,
             text: `Do you want to ${actionText} this Co-Admin account?`,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: currentStatus === 'active' ? '#dc2626' : '#16a34a',
+            confirmButtonColor: confirmColor,
             cancelButtonColor: '#64748b',
             confirmButtonText: `Yes, ${actionText}`
         });
@@ -138,9 +436,9 @@ export default function RootDashboard() {
         const confirm = await Swal.fire({
             title: 'Delete Co-Admin Account?',
             text: 'This action cannot be undone. Are you sure you want to delete this account?',
-            icon: 'warning',
+            icon: 'error',
             showCancelButton: true,
-            confirmButtonColor: '#e11d48',
+            confirmButtonColor: '#FF1E1E',
             cancelButtonColor: '#64748b',
             confirmButtonText: 'Yes, Delete'
         });
@@ -183,27 +481,6 @@ export default function RootDashboard() {
             console.error(err);
         }
     };
-
-    // Filter and search logic for Co-Admins
-    const filteredCoAdmins = useMemo(() => {
-        return coAdmins.filter(admin => {
-            const isArchived = Boolean(admin.is_archived);
-            const matchesArchive = filterArchived ? isArchived : !isArchived;
-            const matchesStatus = filterStatus === 'all' 
-                ? admin.account_status !== 'deleted' 
-                : admin.account_status === filterStatus;
-
-            // Search Matching Logic (Name, Email, UID)
-            const query = searchQuery.trim().toLowerCase();
-            const fullName = `${admin.first_name || ''} ${admin.last_name || ''}`.toLowerCase();
-            const email = (admin.email || '').toLowerCase();
-            const uid = (admin.uid || '').toLowerCase();
-
-            const matchesSearch = !query || fullName.includes(query) || email.includes(query) || uid.includes(query);
-
-            return matchesStatus && matchesArchive && matchesSearch;
-        });
-    }, [coAdmins, filterStatus, filterArchived, searchQuery]);
 
     const pieChartData = useMemo(() => {
         if (!stats) return [];
@@ -341,202 +618,18 @@ export default function RootDashboard() {
                 </div>
             </div>
 
-            {/* Bottom Co-Admin Management Section */}
+            {/* Bottom Co-Admin Management Component */}
             {userRole === 'root_admin' && (
-                <section className="bg-white p-8 rounded-[2.5rem] border border-blue-200 shadow-sm">
-                    <h2 className="text-base font-black text-slate-900 uppercase tracking-tight mb-6 flex items-center gap-2">
-                        <UserPlus className="text-blue-600" size={18} /> Co-Admin Management
-                    </h2>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                        {/* Creation Form */}
-                        <form onSubmit={handleCreateCoAdmin} className="space-y-3 lg:col-span-1 border-b lg:border-b-0 lg:border-r border-slate-100 pb-6 lg:pb-0 lg:pr-8">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
-                                Register New Co-Admin
-                            </p>
-                            <div className="grid grid-cols-2 gap-2">
-                                <input
-                                    type="text"
-                                    placeholder="First Name"
-                                    required
-                                    value={formData.firstName}
-                                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                                    className="w-full p-2.5 text-xs font-semibold border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:border-blue-600 text-slate-800"
-                                />
-                                <input
-                                    type="text"
-                                    placeholder="Last Name"
-                                    required
-                                    value={formData.lastName}
-                                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                                    className="w-full p-2.5 text-xs font-semibold border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:border-blue-600 text-slate-800"
-                                />
-                            </div>
-                            <input
-                                type="email"
-                                placeholder="Email Address"
-                                required
-                                value={formData.email}
-                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                className="w-full p-2.5 text-xs font-semibold border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:border-blue-600 text-slate-800"
-                            />
-                            <input
-                                type="password"
-                                placeholder="Password"
-                                required
-                                value={formData.password}
-                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                className="w-full p-2.5 text-xs font-semibold border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:border-blue-600 text-slate-800"
-                            />
-
-                            <button
-                                type="submit"
-                                className="w-full py-2.5 bg-blue-600 hover:bg-blue-800 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer shadow-sm"
-                            >
-                                Create Co-Admin Account
-                            </button>
-                        </form>
-
-                        {/* Co-Admins Status & List Table View */}
-                        <div className="lg:col-span-2 space-y-4">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">
-                                    Co-Admins List
-                                </p>
-
-                                <div className="flex flex-wrap items-center gap-2">
-                                    {/* Search Bar Input */}
-                                    <div className="relative flex-1 min-w-[180px] sm:w-48 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 flex items-center gap-2 focus-within:border-blue-600 focus-within:bg-white transition-all">
-                                        <Search size={14} className="text-slate-400 shrink-0" />
-                                        <input
-                                            type="text"
-                                            placeholder="Search co-admin..."
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="w-full text-xs font-semibold text-slate-800 bg-transparent focus:outline-none placeholder:text-slate-400"
-                                        />
-                                        {searchQuery && (
-                                            <button
-                                                type="button"
-                                                onClick={() => setSearchQuery('')}
-                                                className="text-slate-400 hover:text-slate-600 focus:outline-none"
-                                            >
-                                                <X size={12} />
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    {/* Checkbox */}
-                                    <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
-                                        <input
-                                            type="checkbox"
-                                            id="filter-checkbox"
-                                            checked={filterArchived}
-                                            className="w-4 h-4 rounded border-slate-300 text-slate-600 focus:ring-0 cursor-pointer"
-                                            onChange={(e) => setFilterArchived(e.target.checked)}
-                                        />
-                                        <label htmlFor="filter-checkbox" className="cursor-pointer text-xs font-semibold uppercase select-none">
-                                            Archive
-                                        </label>
-                                    </div>
-
-                                    {/* Filter Dropdown */}
-                                    <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
-                                        <Filter size={14} className="text-slate-400" />
-                                        <select
-                                            value={filterStatus}
-                                            onChange={(e) => setFilterStatus(e.target.value)}
-                                            className="text-xs font-semibold text-slate-700 bg-transparent focus:outline-none cursor-pointer uppercase"
-                                        >
-                                            <option value="all">All</option>
-                                            <option value="active">Active</option>
-                                            <option value="suspended">Blocked</option>
-                                            <option value="deleted">Deleted</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Co-Admins List */}
-                            <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
-                                {loading ? (
-                                    <p className="text-xs font-medium text-slate-400 italic text-center py-4">Loading administrators...</p>
-                                ) : filteredCoAdmins.length === 0 ? (
-                                    <p className="text-xs font-medium text-slate-400 italic py-4 text-center">
-                                        {searchQuery 
-                                            ? `No co-admins matching "${searchQuery}"` 
-                                            : `No ${filterStatus === 'all' ? '' : filterStatus} co-admins found.`}
-                                    </p>
-                                ) : (
-                                    filteredCoAdmins.map((admin) => (
-                                        <div key={admin.id} className="flex justify-between items-center p-5 bg-slate-50 rounded-2xl border border-slate-200/80 hover:border-slate-300 transition-colors gap-4 shadow-sm">
-                                            <div className="min-w-0 flex-1 space-y-1">
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <p className="font-black text-slate-800 text-sm uppercase tracking-tight truncate">
-                                                        {admin.first_name} {admin.last_name}
-                                                    </p>
-                                                    <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md tracking-wider">
-                                                        {admin.uid}
-                                                    </span>
-                                                </div>
-                                                <p className="text-xs text-slate-500 font-medium truncate">
-                                                    {admin.email}
-                                                </p>
-                                            </div>
-
-                                            <div className="flex items-center gap-2 shrink-0">
-                                                {admin.account_status === 'deleted' ? (
-                                                    <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-xl bg-red-100 text-red-600">
-                                                        Deleted
-                                                    </span>
-                                                ) : (
-                                                    <>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleToggleStatus(admin.id, admin.account_status)}
-                                                            className={`flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer ${
-                                                                admin.account_status === 'active'
-                                                                    ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
-                                                                    : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                                            }`}
-                                                        >
-                                                            {admin.account_status === 'active' ? (
-                                                                <IconLock size={12} />
-                                                            ) : (
-                                                                <UnlockIcon size={12} />
-                                                            )}
-                                                            {admin.account_status === 'active' ? 'Block' : 'Unblock'}
-                                                        </button>
-
-                                                        <button
-                                                            type="button"
-                                                            className="flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
-                                                            onClick={() => handleArchive(admin)}
-                                                        >
-                                                            <Archive size={12} />
-                                                            {Boolean(admin.is_archived) ? 'Unarchive' : 'Archive'}
-                                                        </button>
-
-                                                        {admin.account_status === 'suspended' && (
-                                                            <button
-                                                                type="button"
-                                                                className="flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
-                                                                onClick={() => handleDeleteCoAdmin(admin.id)}
-                                                            >
-                                                                <Trash2 size={12} />
-                                                                Delete
-                                                            </button>
-                                                        )}
-                                                    </>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </section>
+                <CoAdminSection
+                    coAdmins={coAdmins}
+                    loading={loading}
+                    onToggleStatus={handleToggleStatus}
+                    onArchive={handleArchive}
+                    onDeleteCoAdmin={handleDeleteCoAdmin}
+                    onCreateCoAdmin={handleCreateCoAdmin}
+                    formData={formData}
+                    setFormData={setFormData}
+                />
             )}
         </div>
     );

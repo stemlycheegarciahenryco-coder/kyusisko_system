@@ -56,9 +56,9 @@ export default function RootStudentLog() {
             text: `Confirm you want to ${actionText.toLowerCase()} this student record.`,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#093fb4',
+            confirmButtonColor: '#d97706',
             confirmButtonText: `Yes, ${actionText}!`,
-        });
+        } );
 
         if (!result.isConfirmed) return;
 

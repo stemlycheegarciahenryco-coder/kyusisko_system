@@ -42,8 +42,88 @@ router.post('/create-co-admin', verifyToken, async (req, res) => {
     }
 });
 
+// Delete Reports
+router.delete('/reports/delete/:id', verifyToken, async (req, res) => {
+})
 
-// Archive
+//Report Archive
+router.patch('/reports/archive/:id', verifyToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query(
+            `UPDATE reports 
+             SET is_archived = NOT is_archived 
+             WHERE id = $1 
+             RETURNING id, is_archived`,
+            [id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Co-Admin not found" });
+        }
+
+        const reports = result.rows[0];
+        const statusText = reports.is_archived ? 'archived' : 'unarchived';
+
+        res.json({
+            message: `Report successfully ${statusText}.`,
+            data: {
+                id: reports.id,
+                isArchived: reports.is_archived
+            }
+        });
+    } catch (err) {
+        console.error("Archive error:", err);
+        res.status(500).json({ error: "Failed to update archive status" });
+    }
+});
+
+
+// Delete Student
+router.delete('/delete/student/:id', verifyToken, async (req, res) => {
+    try{
+    }
+    catch(e){}
+})
+
+// Archive Student
+router.patch('/student/archive/:id', verifyToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query(
+            `UPDATE students 
+             SET is_archived = NOT is_archived 
+             WHERE id = $1 
+             RETURNING id, is_archived`,
+            [id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Co-Admin not found" });
+        }
+
+        const student = result.rows[0];
+        const statusText = subAdmin.is_archived ? 'archived' : 'unarchived';
+
+        res.json({
+            message: `${student.name} successfully ${statusText}.`,
+            data: {
+                id: student.id,
+                isArchived: subAdmin.is_archived
+            }
+        });
+    } catch (err) {
+        console.error("Archive error:", err);
+        res.status(500).json({ error: "Failed to update archive status" });
+    }
+});
+
+
+// Delete CoAdmin
+router.delete('/delete/:id', verifyToken, async (req, res) => {
+})
+
+// Archive CoAdmin
 router.patch('/archive/:id', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;

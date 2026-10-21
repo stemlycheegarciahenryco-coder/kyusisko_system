@@ -3,7 +3,7 @@ import api from '../api';
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell } from "docx";
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
-import { Download, PieChart, ClipboardList, Trophy } from 'lucide-react';
+import { Download, PieChart, ClipboardList, Trophy, Eye, ChevronDown } from 'lucide-react';
 
 import OverallReportPanel from './OverallReportPanel';
 import ApplicationsReportPanel from './ApplicationsReportPanel';
@@ -35,9 +35,6 @@ const REPORT_TABS = [
 export default function OrgReports() {
     const [reportTab, setReportTab] = useState('overall');
 
-    // Data used by the Overall tab AND by the docx/pdf export (export always
-    // includes the financial + demographics snapshot, regardless of which
-    // tab is currently open).
     const [fundData, setFundData] = useState([]);
     const [demographics, setDemographics] = useState({
         byProgram: [], byCourse: [], byDistrict: [], byBarangay: []
@@ -116,10 +113,6 @@ export default function OrgReports() {
         fetchAnalyticsReports();
     }, []);
 
-    // ── Document export (Docx / PDF) — covers the Overall tab's data only. ──
-    // NOTE: Applications-overview and Successful-programs data aren't part
-    // of this export yet since they live in their own self-fetching panels.
-    // Say the word if you want those folded into the exported doc too.
     const createDocumentReport = () => {
         const baseDate = new Date();
         const generatedAt = baseDate.toLocaleString('en-PH', { dateStyle: 'long', timeStyle: 'short' });
@@ -364,6 +357,46 @@ export default function OrgReports() {
 
             {reportTab === 'successful' && <SuccessfulProgramsReportPanel />}
 
+        </div>
+    );
+}
+
+/**
+ * 💡 HELPER PATTERN: Expandable Item Card Component 
+ * You can copy this pattern inside your `OverallReportPanel`, `ApplicationsReportPanel`, 
+ * or `SuccessfulProgramsReportPanel` where you list items and use an eye button.
+ */
+export function ExpandableReportRowExample({ item }) {
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    return (
+        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-xs transition-all duration-200">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <span className="font-bold text-slate-800 text-sm">{item?.title || "Sample Report Item"}</span>
+                </div>
+                
+                {/* Eye Button with rotation & hover feedback */}
+                <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 text-xs font-bold transition-all cursor-pointer"
+                    aria-label="View details"
+                >
+                    <Eye size={14} />
+                    <span>View</span>
+                    <ChevronDown size={14} className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+                </button>
+            </div>
+
+            {/* Smooth Expanding Container Animation */}
+            <div className={`grid transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? 'grid-rows-[1fr] opacity-100 mt-4' : 'grid-rows-[0fr] opacity-0 mt-0'}`}>
+                <div className="overflow-hidden">
+                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 text-xs text-slate-600 space-y-2">
+                        <p className="font-semibold text-slate-700">Detailed Expanded Breakdown:</p>
+                        <p>Additional metrics, student rosters, or deep-dive details can be placed right here cleanly.</p>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }

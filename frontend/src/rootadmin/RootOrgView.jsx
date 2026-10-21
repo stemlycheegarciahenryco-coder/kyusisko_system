@@ -421,9 +421,9 @@ const RootOrgView = ({ org, onClose, onApprove, onReject, onBlock, colors, fetch
           {isApproved && (
             <button
               onClick={() => onBlock(org)}
-              className={`w-full py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.99] ${
+              className={`w-full py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.99] ${
                 org.is_active
-                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-800'
+                  ? 'bg-red-600 hover:bg-red-700 text-white'
                   : 'bg-[#093fb4] hover:bg-[#093fb4]/90 text-white shadow-md shadow-blue-900/10'
               }`}
             >
