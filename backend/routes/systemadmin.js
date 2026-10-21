@@ -161,7 +161,7 @@ router.get('/get/student/deleted', verifyToken, async (req, res) => {
                     ELSE 'Pending' 
                 END as derived_status,
                 CONCAT(sstreet, ', ', sbarangay, ', ', sdistrict, ' ', szip_code) as full_address
-            FROM students WHERE is_archived = true
+            FROM deleted_students WHERE is_archived = true
             ORDER BY id DESC
         `;
         const result = await pool.query(query);
