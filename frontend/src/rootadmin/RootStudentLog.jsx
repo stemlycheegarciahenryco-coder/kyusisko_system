@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
-import { Search, ShieldCheck, Lock, Phone, MapPin, Mail, Archive, Trash2 } from 'lucide-react';
+import { Search, ShieldCheck, Lock, Phone, MapPin, Mail, Archive, Trash2, RotateCcw } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 export default function RootStudentLog() {
     const [students, setStudents] = useState([]);
     const [archivedStudents, setArchivedStudents] = useState([]);
+    const [deletedStudents, setDeletedStudents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [activeTab, setActiveTab] = useState('all');
@@ -17,14 +18,16 @@ export default function RootStudentLog() {
     const fetchAllData = async () => {
         setLoading(true);
         try {
-            // Fetch both active/regular students and archived students concurrently
-            const [studentsRes, archivedRes] = await Promise.all([
+            // Fetch regular, archived, and deleted students concurrently
+            const [studentsRes, archivedRes, deletedRes] = await Promise.all([
                 api.get('/students'),
-                api.get('/system-admin/get/student/archive/')
+                api.get('/system-admin/get/student/archive/'),
+                api.get('/system-admin/get/student/deleted')
             ]);
             
             setStudents(studentsRes.data);
             setArchivedStudents(archivedRes.data);
+            setDeletedStudents(deletedRes.data);
         } catch (err) {
             console.error("Fetch Error:", err);
         } finally {
@@ -74,13 +77,32 @@ export default function RootStudentLog() {
 
         try {
             await api.patch(`/system-admin/student/archive/${id}`, { isArchived: newArchiveStatus });
-            
-            // Re-fetch data to properly sync both lists
             await fetchAllData();
-            
             Swal.fire({ title: 'Success!', icon: 'success', timer: 1500, showConfirmButton: false });
         } catch (err) {
             Swal.fire({ title: 'Error!', text: 'Failed to update archive status.', icon: 'error' });
+        }
+    };
+
+    const handleRecover = async (id) => {
+        const result = await Swal.fire({
+            title: 'Recover Student?',
+            text: 'Confirm you want to restore this deleted student record.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#093fb4',
+            confirmButtonText: 'Yes, Recover!',
+        });
+
+        if (!result.isConfirmed) return;
+
+        try {
+            // Adjust this endpoint based on your backend route for recovery
+            await api.patch(`/system-admin/student/recover/${id}`);
+            await fetchAllData();
+            Swal.fire({ title: 'Recovered!', text: 'Student record has been restored.', icon: 'success', timer: 1500, showConfirmButton: false });
+        } catch (err) {
+            Swal.fire({ title: 'Error!', text: 'Failed to recover student.', icon: 'error' });
         }
     };
 
@@ -105,7 +127,10 @@ export default function RootStudentLog() {
     };
 
     // Determine current dataset based on active tab
-    const currentDataset = activeTab === 'archived' ? archivedStudents : students;
+    const currentDataset = 
+        activeTab === 'archived' ? archivedStudents : 
+        activeTab === 'deleted' ? deletedStudents : 
+        students;
 
     // Calculate accurate preloaded counts across variables
     const counts = {
@@ -113,11 +138,13 @@ export default function RootStudentLog() {
         active: students.filter(s => s.sis_active && !s.is_archived).length,
         blocked: students.filter(s => !s.sis_active && !s.is_archived).length,
         archived: archivedStudents.length,
+        deleted: deletedStudents.length,
     };
 
     const filtered = currentDataset.filter(s => {
-        const fullName = `${s.sfirst_name} ${s.slast_name}`.toLowerCase();
-        const matchesSearch = fullName.includes(search.toLowerCase()) || s.student_email.toLowerCase().includes(search.toLowerCase());
+        const fullName = `${s.sfirst_name || ''} ${s.slast_name || ''}`.toLowerCase();
+        const email = (s.student_email || '').toLowerCase();
+        const matchesSearch = fullName.includes(search.toLowerCase()) || email.includes(search.toLowerCase());
 
         if (!matchesSearch) return false;
 
@@ -137,7 +164,7 @@ export default function RootStudentLog() {
                     </h2>
                 </div>
                 <div className="px-5 py-3 rounded-2xl border border-[#093fb4] bg-white shadow-sm">
-                    <p className="text-xl font-black leading-none text-[#093fb4]">{students.length + archivedStudents.length}</p>
+                    <p className="text-xl font-black leading-none text-[#093fb4]">{students.length + archivedStudents.length + deletedStudents.length}</p>
                     <p className="text-[9px] font-black uppercase tracking-widest text-black mt-1">Total Student in Registered</p>
                 </div>
             </div>
@@ -156,7 +183,7 @@ export default function RootStudentLog() {
 
                 {/* STATUS VIEW TABS */}
                 <div className="flex items-center gap-2 bg-white p-2 rounded-[1.5rem] border border-[#093fb4]/10 shadow-sm overflow-x-auto">
-                    {['all', 'active', 'blocked', 'archived'].map((tab) => (
+                    {['all', 'active', 'blocked', 'archived', 'deleted'].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -230,16 +257,16 @@ export default function RootStudentLog() {
                                     </td>
                                     <td className="px-6 py-6">
                                         <div className="flex items-center gap-2">
-                                            <div className={`w-1.5 h-1.5 rounded-full ${s.sis_active ? 'bg-green-500' : 'bg-red-500'}`} />
-                                            <span className={`text-[10px] font-black uppercase ${s.sis_active ? 'text-green-600' : 'text-red-600'}`}>
-                                                {s.sis_active ? 'Active' : 'Blocked'}
+                                            <div className={`w-1.5 h-1.5 rounded-full ${activeTab === 'deleted' ? 'bg-red-500' : s.sis_active ? 'bg-green-500' : 'bg-red-500'}`} />
+                                            <span className={`text-[10px] font-black uppercase ${activeTab === 'deleted' ? 'text-red-600' : s.sis_active ? 'text-green-600' : 'text-red-600'}`}>
+                                                {activeTab === 'deleted' ? 'Deleted' : s.sis_active ? 'Active' : 'Blocked'}
                                             </span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-6 text-right">
                                         <div className="flex items-center justify-end gap-3">
-                                            {/* Block / Unblock Button (Hidden in Archived Tab) */}
-                                            {activeTab !== 'archived' && (
+                                            {/* Block / Unblock Button (Hidden in Archived and Deleted Tabs) */}
+                                            {activeTab !== 'archived' && activeTab !== 'deleted' && (
                                                 <button
                                                     onClick={() => handleStatus(s.id, s.sis_active)}
                                                     title={s.sis_active ? 'Block Student' : 'Unblock Student'}
@@ -254,19 +281,33 @@ export default function RootStudentLog() {
                                                 </button>
                                             )}
 
-                                            {/* Archive / Unarchive Button */}
-                                            <button
-                                                onClick={() => handleArchive(s.id, s.is_archived)}
-                                                title={s.is_archived ? 'Unarchive Student' : 'Archive Student'}
-                                                className={`flex items-center gap-2 p-3 text-[10px] font-black uppercase rounded-2xl border shadow-md hover:scale-110 transition-all cursor-pointer ${
-                                                    s.is_archived
-                                                        ? 'bg-amber-600 text-white border-amber-600 hover:bg-amber-700'
-                                                        : 'bg-amber-600/10 text-amber-600 border-amber-600/20 hover:bg-amber-600 hover:text-white'
-                                                }`}
-                                            >
-                                                <Archive size={16} />
-                                                <span>{s.is_archived ? 'Unarchive' : 'Archive'}</span>
-                                            </button>
+                                            {/* Archive / Unarchive Button (Hidden in Deleted Tab) */}
+                                            {activeTab !== 'deleted' && (
+                                                <button
+                                                    onClick={() => handleArchive(s.id, s.is_archived)}
+                                                    title={s.is_archived ? 'Unarchive Student' : 'Archive Student'}
+                                                    className={`flex items-center gap-2 p-3 text-[10px] font-black uppercase rounded-2xl border shadow-md hover:scale-110 transition-all cursor-pointer ${
+                                                        s.is_archived
+                                                            ? 'bg-amber-600 text-white border-amber-600 hover:bg-amber-700'
+                                                            : 'bg-amber-600/10 text-amber-600 border-amber-600/20 hover:bg-amber-600 hover:text-white'
+                                                    }`}
+                                                >
+                                                    <Archive size={16} />
+                                                    <span>{s.is_archived ? 'Unarchive' : 'Archive'}</span>
+                                                </button>
+                                            )}
+
+                                            {/* Recover Button (Only shows in the deleted tab) */}
+                                            {activeTab === 'deleted' && (
+                                                <button
+                                                    onClick={() => handleRecover(s.id)}
+                                                    title="Recover Student"
+                                                    className="flex items-center gap-2 p-3 bg-blue-600/10 hover:bg-blue-600 text-[10px] font-black uppercase text-blue-600 hover:text-white border border-blue-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
+                                                >
+                                                    <RotateCcw size={16} />
+                                                    <span>Recover</span>
+                                                </button>
+                                            )}
 
                                             {/* Delete Button (Only shows in the archive tab) */}
                                             {activeTab === 'archived' && (

@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const pool = require('../config/db'); 
-const { verifyToken } = require('../middleware/auth'); 
+const pool = require('../config/db');
+const { verifyToken } = require('../middleware/auth');
 
 /**
  * @route   POST /api/system-admin/create-co-admin
@@ -21,10 +21,10 @@ router.post('/create-co-admin', verifyToken, async (req, res) => {
 
     try {
         const hashedPw = await bcrypt.hash(password, 10);
-        
+
         // 🚀 CRITICAL ALIGNMENT: Modified prefix token string to output 'SADM-' tracking keys 
         // This makes sure new Co-Admins match the frontend Login format rule
-        const customUid = `SADM-${Date.now().toString().slice(-4)}`; 
+        const customUid = `SADM-${Date.now().toString().slice(-4)}`;
 
         const newAdmin = await pool.query(
             `INSERT INTO users (email, password_hash, role, uid, account_status, first_name, last_name)
@@ -35,7 +35,7 @@ router.post('/create-co-admin', verifyToken, async (req, res) => {
 
         res.status(201).json({ success: true, data: newAdmin.rows[0] });
     } catch (err) {
-        if (err.code === '23505') { 
+        if (err.code === '23505') {
             return res.status(400).json({ success: false, message: 'Email address or System ID conflict detected.' });
         }
         res.status(500).json({ success: false, error: err.message });
@@ -81,9 +81,9 @@ router.patch('/reports/archive/:id', verifyToken, async (req, res) => {
 
 // Delete Student
 router.delete('/delete/student/:id', verifyToken, async (req, res) => {
-    try{
+    try {
     }
-    catch(e){}
+    catch (e) { }
 })
 
 // Archive Student
@@ -146,6 +146,31 @@ router.get('/get/student/archive', verifyToken, async (req, res) => {
 })
 
 router.get('/get/student/deleted', verifyToken, async (req, res) => {
+    try {
+        const query = `
+            SELECT 
+                id, 
+                student_email, 
+                sfirst_name, 
+                slast_name,
+                scontact_number,
+                sis_active,
+                is_archived,
+                CASE 
+                    WHEN is_profile_complete = true THEN 'Registered' 
+                    ELSE 'Pending' 
+                END as derived_status,
+                CONCAT(sstreet, ', ', sbarangay, ', ', sdistrict, ' ', szip_code) as full_address
+            FROM students WHERE is_archived = true
+            ORDER BY id DESC
+        `;
+        const result = await pool.query(query);
+        res.json(result.rows);
+    } catch (err) {
+        console.error("DATABASE ERROR:", err.message);
+        res.status(500).json({ error: "Failed to fetch student logs" });
+    }
+
 })
 
 
@@ -196,7 +221,7 @@ router.patch('/toggle-status/:id', verifyToken, async (req, res) => {
     }
 
     const { id } = req.params;
-    const { status } = req.body; 
+    const { status } = req.body;
 
     if (!['active', 'suspended'].includes(status)) {
         return res.status(400).json({ success: false, message: 'Invalid target status.' });
@@ -204,7 +229,7 @@ router.patch('/toggle-status/:id', verifyToken, async (req, res) => {
 
     try {
         const checkTarget = await pool.query('SELECT role FROM users WHERE id = $1', [id]);
-        
+
         if (checkTarget.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Admin account not found.' });
         }
