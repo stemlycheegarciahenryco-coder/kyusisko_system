@@ -164,8 +164,8 @@ const RootOrganization = () => {
     const handleDelete = async (org) => {
         const result = await Swal.fire(
             swalConfig(
-                'Delete Provider?',
-                `Are you sure you want to permanently delete ${org.org_name}? This action cannot be undone.`,
+                `Delete ${org.org_name}?`,
+                '',
                 'error',
                 colors.red
             )

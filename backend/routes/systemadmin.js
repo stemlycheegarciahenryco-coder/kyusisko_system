@@ -103,13 +103,13 @@ router.patch('/student/archive/:id', verifyToken, async (req, res) => {
         }
 
         const student = result.rows[0];
-        const statusText = subAdmin.is_archived ? 'archived' : 'unarchived';
+        const statusText = student.is_archived ? 'archived' : 'unarchived';
 
         res.json({
             message: `${student.name} successfully ${statusText}.`,
             data: {
                 id: student.id,
-                isArchived: subAdmin.is_archived
+                isArchived: student.is_archived
             }
         });
     } catch (err) {
@@ -117,6 +117,37 @@ router.patch('/student/archive/:id', verifyToken, async (req, res) => {
         res.status(500).json({ error: "Failed to update archive status" });
     }
 });
+
+router.get('/get/student/archive', verifyToken, async (req, res) => {
+    try {
+        const query = `
+            SELECT 
+                id, 
+                student_email, 
+                sfirst_name, 
+                slast_name,
+                scontact_number,
+                sis_active,
+                is_archived,
+                CASE 
+                    WHEN is_profile_complete = true THEN 'Registered' 
+                    ELSE 'Pending' 
+                END as derived_status,
+                CONCAT(sstreet, ', ', sbarangay, ', ', sdistrict, ' ', szip_code) as full_address
+            FROM students WHERE is_archived = true
+            ORDER BY id DESC
+        `;
+        const result = await pool.query(query);
+        res.json(result.rows);
+    } catch (err) {
+        console.error("DATABASE ERROR:", err.message);
+        res.status(500).json({ error: "Failed to fetch student logs" });
+    }
+})
+
+router.get('/get/student/deleted', verifyToken, async (req, res) => {
+})
+
 
 
 // Delete CoAdmin

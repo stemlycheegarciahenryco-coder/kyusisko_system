@@ -78,12 +78,13 @@ exports.getAllStudents = async (req, res) => {
                 slast_name,
                 scontact_number,
                 sis_active,
+                is_archived,
                 CASE 
                     WHEN is_profile_complete = true THEN 'Registered' 
                     ELSE 'Pending' 
                 END as derived_status,
                 CONCAT(sstreet, ', ', sbarangay, ', ', sdistrict, ' ', szip_code) as full_address
-            FROM students
+            FROM students WHERE is_archived = false
             ORDER BY id DESC
         `;
         const result = await pool.query(query);

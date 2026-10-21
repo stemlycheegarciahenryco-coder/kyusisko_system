@@ -168,9 +168,9 @@ export default function RootReports() {
 
     const handleDelete = async (reportId) => {
         const result = await Swal.fire({
-            title: 'Delete report permanently?',
-            text: 'This action cannot be undone.',
-            icon: 'warning',
+            title: 'Delete report?',
+            // text: 'Are you sure',
+            icon: 'error',
             showCancelButton: true,
             confirmButtonColor: '#dc2626',
             cancelButtonColor: '#64748b',
@@ -185,7 +185,7 @@ export default function RootReports() {
             Swal.fire({
                 icon: 'success',
                 title: 'Deleted!',
-                text: 'The report has been permanently deleted.',
+                text: 'The report has been deleted.',
                 timer: 1500,
                 showConfirmButton: false
             });

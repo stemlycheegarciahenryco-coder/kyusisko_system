@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { Users, ClipboardList, UserCog, GraduationCap, UserPlus, Building2, Trash2, Filter, Archive, UnlockIcon, Search, X } from 'lucide-react';
+import { Users, ClipboardList, UserCog, GraduationCap, UserPlus, Building2, Trash2, Filter, Archive, UnlockIcon, Search, X, ShieldCheck } from 'lucide-react';
 import api from '../api';
 import { IconLock } from '@tabler/icons-react';
 import Swal from 'sweetalert2';
@@ -18,9 +18,6 @@ const CHART_CONFIG = [
     { key: 'totalScholarships', name: 'Scholarships', color: '#10b981' },
 ];
 
-/**
- * Separated Component for Co-Admin Management & Listing
- */
 function CoAdminSection({
     coAdmins = [],
     loading,
@@ -215,8 +212,8 @@ function CoAdminSection({
                                     type="button"
                                     onClick={() => setActiveTab(tab)}
                                     className={`flex items-center gap-1.5 px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer border ${isActiveTab
-                                            ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-150'
                                         }`}
                                 >
                                     <span>{tab}</span>
@@ -271,15 +268,16 @@ function CoAdminSection({
                                                         <button
                                                             type="button"
                                                             onClick={() => onToggleStatus(admin.id, admin.account_status)}
-                                                            className={`flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer ${admin.account_status === 'active'
-                                                                    ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
-                                                                    : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                                                }`}
+                                                            className={`flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer ${
+                                                                admin.account_status === 'active'
+                                                                    ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                                                                    : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-sm'
+                                                            }`}
                                                         >
                                                             {admin.account_status === 'active' ? (
                                                                 <IconLock size={12} />
                                                             ) : (
-                                                                <UnlockIcon size={12} />
+                                                                <ShieldCheck size={12} />
                                                             )}
                                                             {admin.account_status === 'active' ? 'Block' : 'Unblock'}
                                                         </button>
@@ -295,8 +293,8 @@ function CoAdminSection({
                                                         {isArchived ? 'Unarchive' : 'Archive'}
                                                     </button>
 
-                                                    {/* Show delete button if archived OR suspended */}
-                                                    {(isArchived || admin.account_status === 'suspended') && (
+                                                    {/* Show delete button ONLY if archived */}
+                                                    {isArchived && (
                                                         <button
                                                             type="button"
                                                             className="flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
@@ -395,7 +393,7 @@ export default function RootDashboard() {
     const handleToggleStatus = async (id, currentStatus) => {
         const actionText = currentStatus === 'active' ? 'block' : 'unblock';
         const nextStatus = currentStatus === 'active' ? 'suspended' : 'active';
-        const confirmColor =  currentStatus === 'active' ? '#dc2626' : '#16a34a'
+        const confirmColor = currentStatus === 'active' ? '#dc2626' : '#2563eb'
         const confirm = await Swal.fire({
             title: `Are you sure?`,
             text: `Do you want to ${actionText} this Co-Admin account?`,
