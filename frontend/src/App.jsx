@@ -156,14 +156,6 @@ export default function App() {
         </Route>
         
       </Route>
-
-      
-
-
-      
-      
-
-      
       {/* CATCH-ALL: If someone gets lost, send them back to the Home Page */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

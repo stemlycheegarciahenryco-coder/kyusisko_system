@@ -5,8 +5,8 @@ import Swal from 'sweetalert2';
 import RootOrgView from './RootOrgView';
 import { ArchiveIcon, Trash2Icon } from 'lucide-react';
 
-// Added 'blocked' tab
-const TABS = ['all', 'pending', 'approved', 'rejected', 'blocked'];
+// Added 'deleted' into the tabs list
+const TABS = ['all', 'pending', 'approved', 'rejected', 'blocked', 'archived', 'deleted'];
 
 const RootOrganization = () => {
     const [orgs, setOrgs] = useState([]);
@@ -14,9 +14,8 @@ const RootOrganization = () => {
     const [selectedOrg, setSelectedOrg] = useState(null);
     const [search, setSearch] = useState('');
     const [activeTab, setActiveTab] = useState('all');
-    const [filterArchive, setFilterArchive] = useState(false);
 
-    const colors = { red: '#FF1E1E', white: '#FFFCFB', blue: '#093fb4' };
+    const colors = { red: '#FF1E1E', white: '#FFFCFB', blue: '#093fb4', green: '#16a34a' };
 
     const fetchOrgs = async () => {
         try {
@@ -32,38 +31,34 @@ const RootOrganization = () => {
 
     useEffect(() => { fetchOrgs(); }, []);
 
-    // Helper to evaluate tab status matching
+    // Helper to evaluate tab status and archive/delete matching
     const matchStatusOrAccess = (org, tab) => {
+        const isArchived = Boolean(org.is_archived);
+        const isDeleted = org.status === 'deleted' || org.account_status === 'deleted';
+
+        if (tab === 'deleted') return isDeleted;
+        if (tab === 'archived') return isArchived && !isDeleted;
+
+        // For standard tabs, exclude archived and deleted items
+        if (isArchived || isDeleted) return false;
+
         if (tab === 'all') return true;
         if (tab === 'blocked') return !org.is_active;
         return org.status === tab;
     };
 
-    // Count records matching the current archive state and tab status
+    // Count records matching the current tab status
     const countByStatus = (status) =>
-        orgs.filter((o) => {
-            const isArchived = Boolean(o.is_archived);
-            const matchArchive = filterArchive ? isArchived : !isArchived;
-            const matchTab = matchStatusOrAccess(o, status);
-            return matchArchive && matchTab;
-        }).length;
+        orgs.filter((o) => matchStatusOrAccess(o, status)).length;
 
-    // Filter organizations by archive state, tab status, and search query
+    // Filter organizations by tab status and search query
     const filteredOrgs = orgs.filter((org) => {
-        const isArchived = Boolean(org.is_archived);
-
-        // Show archived items only when filterArchive is true, otherwise show non-archived items
-        const matchArchive = filterArchive ? isArchived : !isArchived;
-
-        // Filter by tab (handles 'blocked' access flag vs status tabs)
         const matchTab = matchStatusOrAccess(org, activeTab);
-
-        // Filter by search query
         const matchSearch =
             org.org_name?.toLowerCase().includes(search.toLowerCase()) ||
             org.sub_email?.toLowerCase().includes(search.toLowerCase());
 
-        return matchArchive && matchTab && matchSearch;
+        return matchTab && matchSearch;
     });
 
     const swalConfig = (title, text, icon, confirmColor) => ({
@@ -96,17 +91,17 @@ const RootOrganization = () => {
                         confirmButtonColor: colors.blue,
                         confirmButtonText: 'Got it',
                         html: `
-              <div style="text-align:left; font-family:Inter, sans-serif; font-size:13px; line-height:1.6;">
-                <p style="margin-bottom:10px; font-weight:600; color:#475569;">
-                  Share these login credentials with <strong>${org.org_name}</strong>. This password will not be shown again.
-                </p>
-                <div style="background:#f1f5f9; border-radius:14px; padding:14px 16px; margin-top:8px;">
-                  <p style="margin:0 0 6px 0;"><strong>Provider ID:</strong> ${creds.provider_id}</p>
-                  <p style="margin:0 0 6px 0;"><strong>Email:</strong> ${creds.email}</p>
-                  <p style="margin:0;"><strong>Password:</strong> <code style="background:#e2e8f0; padding:2px 6px; border-radius:6px;">${creds.password}</code></p>
-                </div>
-              </div>
-            `
+                            <div style="text-align:left; font-family:Inter, sans-serif; font-size:13px; line-height:1.6;">
+                              <p style="margin-bottom:10px; font-weight:600; color:#475569;">
+                                Share these login credentials with <strong>${org.org_name}</strong>. This password will not be shown again.
+                              </p>
+                              <div style="background:#f1f5f9; border-radius:14px; padding:14px 16px; margin-top:8px;">
+                                <p style="margin:0 0 6px 0;"><strong>Provider ID:</strong> ${creds.provider_id}</p>
+                                <p style="margin:0 0 6px 0;"><strong>Email:</strong> ${creds.email}</p>
+                                <p style="margin:0;"><strong>Password:</strong> <code style="background:#e2e8f0; padding:2px 6px; border-radius:6px;">${creds.password}</code></p>
+                              </div>
+                            </div>
+                        `
                     });
                 } else {
                     Swal.fire({ title: 'Approved!', icon: 'success', timer: 1500, showConfirmButton: false });
@@ -128,7 +123,7 @@ const RootOrganization = () => {
 
     const handleBlockToggle = async (org) => {
         const action = org.is_active ? 'Block' : 'Unblock';
-        const result = await Swal.fire(swalConfig(`${action} Provider?`, `Update access for ${org.org_name}?`, 'warning', '#111827'));
+        const result = await Swal.fire(swalConfig(`${action} Provider?`, `Update access for ${org.org_name}?`, org.is_active ? 'error' : 'warning', org.is_active ? '#FF1E1E' : '#16a34a'));
         if (result.isConfirmed) {
             try {
                 await api.patch(`/onboarding-orgs/block/${org.id}`);
@@ -140,12 +135,30 @@ const RootOrganization = () => {
     };
 
     const handleArchive = async (org) => {
-        try {
-            await api.patch(`/onboarding-orgs/archive/${org.id}`);
-            Swal.fire({ title: 'Status Updated', icon: 'success', timer: 1500, showConfirmButton: false });
-            setSelectedOrg(null);
-            fetchOrgs();
-        } catch { Swal.fire('Error', 'Action failed.', 'error'); }
+        const isArchiving = !org.is_archived;
+        const actionText = isArchiving ? 'Archive' : 'Unarchive';
+
+        const result = await Swal.fire({
+            title: `${actionText} Provider`,
+            text: `Confirm you want to ${actionText.toLowerCase()} this Provider?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d97706',
+            confirmButtonText: `Yes, ${actionText}!`,
+        });
+
+
+
+        if (result.isConfirmed) {
+            try {
+                await api.patch(`/onboarding-orgs/archive/${org.id}`);
+                Swal.fire({ title: `${actionText}d!`, icon: 'success', timer: 1500, showConfirmButton: false });
+                setSelectedOrg(null);
+                fetchOrgs();
+            } catch {
+                Swal.fire('Error', 'Action failed.', 'error');
+            }
+        }
     };
 
     const handleDelete = async (org) => {
@@ -153,7 +166,7 @@ const RootOrganization = () => {
             swalConfig(
                 'Delete Provider?',
                 `Are you sure you want to permanently delete ${org.org_name}? This action cannot be undone.`,
-                'warning',
+                'error',
                 colors.red
             )
         );
@@ -204,6 +217,8 @@ const RootOrganization = () => {
         approved: 'Approved',
         rejected: 'Rejected',
         blocked: 'Blocked',
+        archived: 'Archived',
+        deleted: 'Deleted',
     };
 
     return (
@@ -217,12 +232,12 @@ const RootOrganization = () => {
                 <div className="px-5 py-3 rounded-2xl border border-[#093fb4] bg-white shadow-sm">
                     <p className="text-xl font-black leading-none text-[#093fb4]">{filteredOrgs.length}</p>
                     <p className="text-[9px] font-black uppercase tracking-widest text-black mt-1">
-                        {filterArchive ? 'Archived Providers' : 'Total Providers'}
+                        {activeTab === 'archived' ? 'Archived Providers' : activeTab === 'deleted' ? 'Deleted Providers' : 'Total Providers'}
                     </p>
                 </div>
             </div>
 
-            {/* Controls Bar: Search & Archive Checkbox */}
+            {/* Controls Bar: Search Only */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-6">
                 {/* Search */}
                 <div className="relative w-full md:max-w-md">
@@ -234,20 +249,6 @@ const RootOrganization = () => {
                         className="w-full pl-12 pr-6 py-3.5 bg-white border border-[#093fb4]/20 rounded-[1.5rem] outline-none focus:ring-4 focus:ring-[#093fb4]/10 text-black font-medium transition-all text-sm"
                     />
                 </div>
-
-                {/* Show Archived Checkbox UI */}
-                <label className="flex items-center gap-3 px-5 py-3 bg-white border border-[#093fb4]/20 rounded-[1.5rem] cursor-pointer hover:border-[#093fb4]/40 transition-all select-none shadow-sm shrink-0">
-                    <input
-                        type="checkbox"
-                        checked={filterArchive}
-                        onChange={(e) => setFilterArchive(e.target.checked)}
-                        className="w-4 h-4 text-[#093fb4] rounded border-slate-300 focus:ring-[#093fb4] accent-[#093fb4] cursor-pointer"
-                    />
-                    <span className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                        <ArchiveIcon size={16} className={filterArchive ? 'text-amber-600' : 'text-slate-400'} />
-                        Show Archived
-                    </span>
-                </label>
             </div>
 
             {/* Tabs */}
@@ -259,7 +260,7 @@ const RootOrganization = () => {
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
-                            className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all ${isActive
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all cursor-pointer ${isActive
                                 ? 'bg-[#093fb4] text-white border-[#093fb4] shadow-md shadow-blue-900/10'
                                 : 'bg-white text-slate-500 border-slate-200 hover:border-[#093fb4]/30'
                                 }`}
@@ -293,12 +294,14 @@ const RootOrganization = () => {
                             {filteredOrgs.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="px-8 py-12 text-center text-sm font-bold text-slate-400 italic">
-                                        No {filterArchive ? 'archived ' : ''}providers found.
+                                        No {activeTab === 'all' ? '' : activeTab} providers found.
                                     </td>
                                 </tr>
                             ) : (
                                 filteredOrgs.map((org) => {
                                     const isUpdatedResubmission = org.status === 'pending' && org.rejection_reason;
+                                    const isArchived = Boolean(org.is_archived);
+                                    const isDeleted = org.status === 'deleted' || org.account_status === 'deleted';
 
                                     return (
                                         <tr key={org.id} className="hover:bg-slate-50/50 transition-all group">
@@ -322,11 +325,12 @@ const RootOrganization = () => {
                                                 </div>
                                             </td>
                                             <td className="px-8 py-5">
-                                                <span className={`px-4 py-1 text-[10px] font-black rounded-lg border uppercase tracking-tighter ${org.status === 'pending' ? (isUpdatedResubmission ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-orange-50 text-orange-600 border-orange-100') :
-                                                    org.status === 'approved' ? 'bg-green-50 text-green-600 border-green-100' :
-                                                        'bg-red-50 text-red-600 border-red-100'
+                                                <span className={`px-4 py-1 text-[10px] font-black rounded-lg border uppercase tracking-tighter ${isDeleted ? 'bg-red-50 text-red-600 border-red-100' :
+                                                    org.status === 'pending' ? (isUpdatedResubmission ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-orange-50 text-orange-600 border-orange-100') :
+                                                        org.status === 'approved' ? 'bg-green-50 text-green-600 border-green-100' :
+                                                            'bg-red-50 text-red-600 border-red-100'
                                                     }`}>
-                                                    {isUpdatedResubmission ? 'Updated' : org.status}
+                                                    {isDeleted ? 'Deleted' : isUpdatedResubmission ? 'Updated' : org.status}
                                                 </span>
                                             </td>
                                             <td className="px-8 py-5">
@@ -345,24 +349,52 @@ const RootOrganization = () => {
                                                     <span>View</span>
                                                 </button>
 
-                                                <button
-                                                    onClick={() => handleArchive(org)}
-                                                    title="Archive"
-                                                    className="flex items-center gap-2 p-3 bg-amber-600/10 hover:bg-amber-600 text-[10px] font-black uppercase text-amber-500 hover:text-white border border-amber-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
-                                                >
-                                                    <ArchiveIcon size={20} />
-                                                    <span>{filterArchive ? 'Unarchive' : 'Archive'}</span>
-                                                </button>
+                                                {/* If archived, only show Unarchive and Delete */}
+                                                {isArchived ? (
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleArchive(org)}
+                                                            title="Unarchive"
+                                                            className="flex items-center gap-2 p-3 bg-amber-600/10 hover:bg-amber-600 text-[10px] font-black uppercase text-amber-500 hover:text-white border border-amber-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
+                                                        >
+                                                            <ArchiveIcon size={20} />
+                                                            <span>Unarchive</span>
+                                                        </button>
 
-                                                {!org.is_active && (
-                                                    <button
-                                                        onClick={() => handleDelete(org)}
-                                                        title="Delete"
-                                                        className="flex items-center gap-2 p-3 bg-red-600/20 hover:bg-red-600 text-[10px] font-black uppercase text-red-500 hover:text-white border border-red-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
-                                                    >
-                                                        <Trash2Icon size={20} />
-                                                        <span>Delete</span>
-                                                    </button>
+                                                        <button
+                                                            onClick={() => handleDelete(org)}
+                                                            title="Delete"
+                                                            className="flex items-center gap-2 p-3 bg-red-600/20 hover:bg-red-600 text-[10px] font-black uppercase text-red-500 hover:text-white border border-red-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
+                                                        >
+                                                            <Trash2Icon size={20} />
+                                                            <span>Delete</span>
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    /* For non-archived items */
+                                                    !isDeleted && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => handleArchive(org)}
+                                                                title="Archive"
+                                                                className="flex items-center gap-2 p-3 bg-amber-600/10 hover:bg-amber-600 text-[10px] font-black uppercase text-amber-500 hover:text-white border border-amber-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
+                                                            >
+                                                                <ArchiveIcon size={20} />
+                                                                <span>Archive</span>
+                                                            </button>
+
+                                                            {!org.is_active && (
+                                                                <button
+                                                                    onClick={() => handleDelete(org)}
+                                                                    title="Delete"
+                                                                    className="flex items-center gap-2 p-3 bg-red-600/20 hover:bg-red-600 text-[10px] font-black uppercase text-red-500 hover:text-white border border-red-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
+                                                                >
+                                                                    <Trash2Icon size={20} />
+                                                                    <span>Delete</span>
+                                                                </button>
+                                                            )}
+                                                        </>
+                                                    )
                                                 )}
                                             </td>
                                         </tr>
@@ -388,4 +420,3 @@ const RootOrganization = () => {
 };
 
 export default RootOrganization;
-
