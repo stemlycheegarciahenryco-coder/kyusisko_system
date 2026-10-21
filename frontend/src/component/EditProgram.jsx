@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { Loader2, X } from 'lucide-react';
@@ -6,18 +6,19 @@ import api from '../api';
 import ScholarshipRequirements from '../component/ScholarshipRequirements';
 import OrgCriteria from '../org/OrgCriteria';
 
+// Memoized so typing in the title / description doesn't re-render these heavier
+// sections on every keystroke (they only re-render when their own props change).
+const MemoRequirements = memo(ScholarshipRequirements);
+const MemoCriteria = memo(OrgCriteria);
+
+const parseInboundDate = (dateInput) => {
+  if (!dateInput) return new Date();
+  const parsedDate = new Date(dateInput);
+  if (isNaN(parsedDate.getTime())) return new Date();
+  return new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate());
+};
+
 const EditProgram = ({ scholarship, onUpdateSuccess, onCancel }) => {
-
-  const parseInboundDate = (dateInput) => {
-    if (!dateInput) return new Date();
-    const parsedDate = new Date(dateInput);
-    if (isNaN(parsedDate.getTime())) return new Date();
-    const year = parsedDate.getFullYear();
-    const month = parsedDate.getMonth();
-    const day = parsedDate.getDate();
-    return new Date(year, month, day);
-  };
-
   const [formData, setFormData] = useState({
     title: scholarship.title || '',
     description: scholarship.description || '',
@@ -36,6 +37,48 @@ const EditProgram = ({ scholarship, onUpdateSuccess, onCancel }) => {
   const [checkedReqs, setCheckedReqs] = useState(
     scholarship.requirements ? scholarship.requirements.map(r => r.label || r.field_label) : []
   );
+
+  // If the list didn't include requirements/criteria, load them first. Saving before
+  // they're loaded would send an empty list and could wipe the program's requirements.
+  const [detailsReady, setDetailsReady] = useState(!!scholarship.requirements);
+  const [detailsError, setDetailsError] = useState(false);
+
+  useEffect(() => {
+    if (scholarship.requirements) return;
+    let cancelled = false;
+    api.get(`/scholarships/view-details/${scholarship.id}`)
+      .then((res) => {
+        if (cancelled) return;
+        const d = res.data.data || {};
+        setFormData(prev => ({
+          ...prev,
+          requirements: d.requirements || [],
+          criteria: d.criteria || [],
+          slots: prev.slots || d.slots || '',
+          fund_type: prev.fund_type || d.fund_type || '',
+          amount_range: prev.amount_range || d.amount_range || '',
+          gwa_requirement: prev.gwa_requirement || d.gwa_requirement || '',
+        }));
+        setCheckedReqs((d.requirements || []).map(r => r.label || r.field_label));
+        setDetailsReady(true);
+      })
+      .catch((err) => {
+        console.error('Failed to load program details for editing:', err);
+        if (!cancelled) setDetailsError(true);
+      });
+    return () => { cancelled = true; };
+  }, [scholarship.id]);
+
+  // Stable callbacks so the memoized children don't re-render needlessly
+  const setReqs = useCallback(
+    (updatedReqs) => setFormData(prev => ({ ...prev, requirements: updatedReqs })),
+    []
+  );
+  const setCriteria = useCallback(
+    (c) => setFormData(prev => ({ ...prev, criteria: c })),
+    []
+  );
+  const today = useMemo(() => new Date(), []);
 
   const handleUpdate = async () => {
     setLoading(true);
@@ -83,7 +126,7 @@ const EditProgram = ({ scholarship, onUpdateSuccess, onCancel }) => {
   const sectionCls = "font-black mb-3 text-[11px] uppercase tracking-widest text-[#093fb4] ml-0.5";
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-white p-6 md:p-8 rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 custom-scrollbar">
 
         {/* Header */}
@@ -106,7 +149,7 @@ const EditProgram = ({ scholarship, onUpdateSuccess, onCancel }) => {
             <input
               className={inputCls}
               value={formData.title}
-              onChange={e => setFormData({ ...formData, title: e.target.value })}
+              onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))}
               placeholder="Enter scholarship title"
             />
           </div>
@@ -116,10 +159,10 @@ const EditProgram = ({ scholarship, onUpdateSuccess, onCancel }) => {
               <label className={labelCls}>Deadline Date</label>
               <DatePicker
                 selected={formData.deadline}
-                onChange={(date) => setFormData({ ...formData, deadline: date })}
+                onChange={(date) => setFormData(prev => ({ ...prev, deadline: date }))}
                 className={inputCls}
                 dateFormat="yyyy-MM-dd"
-                minDate={new Date()}
+                minDate={today}
                 wrapperClassName="w-full"
               />
             </div>
@@ -129,7 +172,7 @@ const EditProgram = ({ scholarship, onUpdateSuccess, onCancel }) => {
                 type="number"
                 className={inputCls}
                 value={formData.slots}
-                onChange={e => setFormData({ ...formData, slots: e.target.value })}
+                onChange={e => setFormData(prev => ({ ...prev, slots: e.target.value }))}
                 placeholder="e.g. 50"
               />
             </div>
@@ -141,7 +184,7 @@ const EditProgram = ({ scholarship, onUpdateSuccess, onCancel }) => {
               <input
                 className={inputCls}
                 value={formData.fund_type}
-                onChange={e => setFormData({ ...formData, fund_type: e.target.value })}
+                onChange={e => setFormData(prev => ({ ...prev, fund_type: e.target.value }))}
                 placeholder="e.g. Full tuition"
               />
             </div>
@@ -150,7 +193,7 @@ const EditProgram = ({ scholarship, onUpdateSuccess, onCancel }) => {
               <input
                 className={inputCls}
                 value={formData.amount_range}
-                onChange={e => setFormData({ ...formData, amount_range: e.target.value })}
+                onChange={e => setFormData(prev => ({ ...prev, amount_range: e.target.value }))}
                 placeholder="e.g. 5000-10000"
               />
             </div>
@@ -161,7 +204,7 @@ const EditProgram = ({ scholarship, onUpdateSuccess, onCancel }) => {
                 step="0.01"
                 className={inputCls}
                 value={formData.gwa_requirement}
-                onChange={e => setFormData({ ...formData, gwa_requirement: e.target.value })}
+                onChange={e => setFormData(prev => ({ ...prev, gwa_requirement: e.target.value }))}
                 placeholder="e.g. 1.75"
               />
             </div>
@@ -172,35 +215,45 @@ const EditProgram = ({ scholarship, onUpdateSuccess, onCancel }) => {
             <textarea
               className={`${inputCls} h-28 resize-none`}
               value={formData.description}
-              onChange={e => setFormData({ ...formData, description: e.target.value })}
+              onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
               placeholder="Write a clear description of the scholarship..."
             />
           </div>
 
           <div className="pt-5 border-t border-slate-200">
             <h3 className={sectionCls}>Requirements</h3>
-            <ScholarshipRequirements
-              reqs={formData.requirements || []}
-              setReqs={(updatedReqs) => setFormData(prev => ({ ...prev, requirements: updatedReqs }))}
-              newReq={newReq}
-              setNewReq={setNewReq}
-              checked={checkedReqs}
-              setChecked={setCheckedReqs}
-            />
+            {detailsReady ? (
+              <MemoRequirements
+                reqs={formData.requirements || []}
+                setReqs={setReqs}
+                newReq={newReq}
+                setNewReq={setNewReq}
+                checked={checkedReqs}
+                setChecked={setCheckedReqs}
+              />
+            ) : (
+              <div className="h-16 rounded-xl bg-slate-100 animate-pulse" />
+            )}
           </div>
 
           <div className="pt-5 border-t border-slate-200">
             <h3 className={sectionCls}>Target Criteria</h3>
-            <OrgCriteria
-              criteria={formData.criteria}
-              setCriteria={(c) => setFormData({ ...formData, criteria: c })}
-            />
+            {detailsReady ? (
+              <MemoCriteria
+                criteria={formData.criteria}
+                setCriteria={setCriteria}
+              />
+            ) : (
+              <div className="h-16 rounded-xl bg-slate-100 animate-pulse" />
+            )}
           </div>
         </div>
 
-        {errorMsg && (
+        {(errorMsg || detailsError) && (
           <div className="mt-6 px-4 py-3 rounded-xl bg-rose-50 border border-rose-200 text-[12px] font-bold text-rose-600">
-            {errorMsg}
+            {detailsError
+              ? 'Could not load the program requirements. Please close this window and try again.'
+              : errorMsg}
           </div>
         )}
 
@@ -215,8 +268,8 @@ const EditProgram = ({ scholarship, onUpdateSuccess, onCancel }) => {
           <button
             type="button"
             onClick={handleUpdate}
-            disabled={loading}
-            className="flex-1 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest bg-[#093fb4] text-white hover:bg-[#073496] flex justify-center items-center shadow-md shadow-[#093fb4]/20 transition-all active:scale-95 disabled:opacity-70"
+            disabled={loading || !detailsReady}
+            className="flex-1 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest bg-[#093fb4] text-white hover:bg-[#073496] flex justify-center items-center shadow-md shadow-[#093fb4]/20 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading ? <Loader2 className="animate-spin" size={18} strokeWidth={2.5} /> : "Update Program"}
           </button>

@@ -477,7 +477,7 @@ function ConfirmDialog({ isOpen, title, message, confirmLabel = 'Confirm', varia
 
     return (
         <div
-            className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50"
             onClick={() => { if (!loading) onClose(); }}
         >
             <div

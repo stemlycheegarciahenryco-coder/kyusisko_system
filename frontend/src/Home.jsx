@@ -18,9 +18,7 @@ import {
 import HomeNav from './HomeNav';
 import HomeProgram from './HomeProgram';
 
-alert(`WARNING: THIS IS A SCHOOL PROJECT! 
-\nThis platform is created solely for academic and educational purposes. We do not offer real scholarship programs, financial aid, or official grants. Do not submit sensitive personal data, financial information, or official credentials.
-`)
+
 
 /* ─── Scroll Reveal ─────────────────────────────────────────── */
 const ScrollReveal = ({ children, delay = 0 }) => {
@@ -56,7 +54,7 @@ const STUDENT_STEPS = [
     { icon: UserPlus, label: 'Create Account', desc: 'Sign up for free with your student email and basic personal information.' },
     { icon: BookOpen, label: 'Set Up Your Profile', desc: 'Complete your profile so you can be matched with scholarships that fit you.' },
     { icon: Search, label: 'Find the Best Scholarship for You', desc: 'Explore and browse scholarship programs.' },
-    { icon: FileCheck, label: 'Submit and Track Your Application', desc: 'Monitor you application status and comply with the provider requirements.' },
+    { icon: FileCheck, label: 'Submit and Track Your Application', desc: 'Monitor your application status and comply with the provider requirements.' },
 ];
 
 const PROVIDER_STEPS = [
@@ -125,6 +123,8 @@ export default function Home() {
     return (
         <div className="min-h-screen bg-[#FFFCFB]  text-slate-800 flex flex-col relative selection:bg-blue-100 selection:text-[#093FB4]">
 
+            <HomeNav />
+
             <main className="flex-grow relative z-10">
 
                 {/* ── SECTION 1: HERO ── */}
@@ -143,11 +143,8 @@ export default function Home() {
                         }}
                     />
 
-                    <div className="absolute inset-0 flex flex-col">
-                        <div className="w-full relative z-20 shrink-0">
-                            <HomeNav />
-                        </div>
-                            {/*section header second*/}
+                    <div className="absolute inset-0 flex flex-col pt-16 sm:pt-20">
+                        {/* Navbar is rendered once at the top of the page (fixed), so it stays while scrolling */}
                         <div className="flex-1 min-h-0 flex items-center overflow-hidden">
                             <div className="w-full max-w-6xl mx-auto px-6 sm:px-8">
                                 <ScrollReveal>
@@ -162,7 +159,7 @@ export default function Home() {
                                         </div>
 
                                         <h2 className="text-4xl sm:text-5xl lg:text-7xl font-black leading-[0.95] tracking-tighter text-white drop-shadow-2xl">
-                                            Kyus<span className="text-[#4d7fff]">IS</span><span className="text-[#4d7fff]">KO</span>
+                                            Kyus<span className="text-[#4d7fff]">IS</span><span className="text-[#FF1E1E]">KO</span>
                                             <br />
                                             <span className="text-white text-2xl sm:text-3xl lg:text-5xl uppercase font-black">for College Students</span>
                                         </h2>
@@ -233,74 +230,53 @@ export default function Home() {
                             </div>
                         </ScrollReveal>
 
-                        <div className="grid lg:grid-cols-2 gap-16">
-                            <div>
-                                <ScrollReveal>
-                                    <div className="flex items-center gap-3 mb-9">
-                                        <span className="px-5 py-2 bg-[#093FB4] text-white text-[12px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-[#093FB4]/20">
-                                            For Students
-                                        </span>
-                                    </div>
-                                </ScrollReveal>
-                                <div className="space-y-5">
-                                    {STUDENT_STEPS.map((step, i) => (
-                                        <ScrollReveal key={i} delay={i * 80}>
-                                            <div className="flex items-start gap-5 p-6 bg-white border border-slate-200 rounded-2xl hover:border-[#093FB4]/40 hover:shadow-lg transition-all duration-300 group">
-                                                <div className="flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-xl bg-[#093FB4]/10 text-[#093FB4] group-hover:bg-[#093FB4] group-hover:text-white transition-all">
-                                                    <step.icon size={22} strokeWidth={2.5} />
-                                                </div>
-                                                <div>
-                                                    <span className="text-[12px] font-black text-[#093FB4] uppercase tracking-widest">Step {i + 1}</span>
-                                                    <p className="text-[17px] font-black text-slate-900 mt-0.5">{step.label}</p>
-                                                    <p className="text-[15px] text-slate-500 mt-1 leading-relaxed font-medium">{step.desc}</p>
-                                                </div>
-                                            </div>
-                                        </ScrollReveal>
-                                    ))}
-                                </div>
-                                <ScrollReveal delay={400}>
-                                    <button
-                                        onClick={() => navigate('/student-register')}
-                                        className="mt-7 px-8 py-4 bg-[#093FB4] text-white text-[13px] font-black uppercase tracking-widest rounded-xl hover:bg-[#0731a8] transition-all flex items-center gap-2.5 group shadow-lg shadow-[#093FB4]/20"
-                                    >
-                                        Register as Student <ArrowRight size={17} strokeWidth={3} className="group-hover:translate-x-1 transition-transform" />
-                                    </button>
-                                </ScrollReveal>
-                            </div>
+                        <div className="grid lg:grid-cols-2 gap-x-10 gap-y-14 items-start">
+                            {[
+                                { key: 'student', label: 'For Students', steps: STUDENT_STEPS, color: '#093FB4', hover: '#0731a8', cta: 'Register as Student', path: '/student-register' },
+                                { key: 'provider', label: 'For Providers', steps: PROVIDER_STEPS, color: '#FF1E1E', hover: '#d91a1a', cta: 'Register as Provider', path: '/organization-register' },
+                            ].map(col => (
+                                <div key={col.key} className="flex flex-col">
+                                    <ScrollReveal>
+                                        <div className="flex justify-center lg:justify-start mb-8">
+                                            <span
+                                                className="px-5 py-2 text-white text-[12px] font-black uppercase tracking-widest rounded-xl shadow-lg"
+                                                style={{ backgroundColor: col.color }}
+                                            >
+                                                {col.label}
+                                            </span>
+                                        </div>
+                                    </ScrollReveal>
 
-                            <div>
-                                <ScrollReveal>
-                                    <div className="flex items-center gap-3 mb-9">
-                                        <span className="px-5 py-2 bg-[#FF1E1E] text-white text-[12px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-[#FF1E1E]/20">
-                                            For Providers
-                                        </span>
+                                    <div className="flex flex-col gap-5">
+                                        {col.steps.map((step, i) => (
+                                            <ScrollReveal key={i} delay={i * 80}>
+                                                <div className="flex items-center gap-5 px-6 py-5 min-h-[140px] bg-white border border-slate-200 rounded-2xl hover:border-[#093FB4] hover:shadow-lg transition-all duration-300 group">
+                                                    <div className="flex-shrink-0 flex items-center justify-center w-14 h-14 rounded-xl bg-blue-50 text-[#093FB4] group-hover:bg-[#093FB4] group-hover:text-white transition-all">
+                                                        <step.icon size={24} strokeWidth={2.5} />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <span className="text-[12px] font-black text-[#093FB4] uppercase tracking-widest">Step {i + 1}</span>
+                                                        <p className="text-[17px] font-black text-slate-900 mt-0.5 leading-snug">{step.label}</p>
+                                                        <p className="text-[15px] text-slate-500 mt-1 leading-relaxed font-medium">{step.desc}</p>
+                                                    </div>
+                                                </div>
+                                            </ScrollReveal>
+                                        ))}
                                     </div>
-                                </ScrollReveal>
-                                <div className="space-y-5">
-                                    {PROVIDER_STEPS.map((step, i) => (
-                                        <ScrollReveal key={i} delay={i * 80}>
-                                            <div className="flex items-start gap-5 p-6 bg-white border border-slate-200 rounded-2xl hover:border-[#093FB4]/40 hover:shadow-lg transition-all duration-300 group">
-                                                <div className="flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-xl bg-[#093FB4]/10 text-[#093FB4] group-hover:bg-[#093FB4] group-hover:text-white transition-all">
-                                                    <step.icon size={22} strokeWidth={2.5} />
-                                                </div>
-                                                <div>
-                                                    <span className="text-[12px] font-black text-[#093FB4] uppercase tracking-widest">Step {i + 1}</span>
-                                                    <p className="text-[17px] font-black text-slate-900 mt-0.5">{step.label}</p>
-                                                    <p className="text-[15px] text-slate-500 mt-1 leading-relaxed font-medium">{step.desc}</p>
-                                                </div>
-                                            </div>
-                                        </ScrollReveal>
-                                    ))}
+
+                                    <ScrollReveal delay={400}>
+                                        <button
+                                            onClick={() => navigate(col.path)}
+                                            style={{ backgroundColor: col.color }}
+                                            onMouseEnter={e => { e.currentTarget.style.backgroundColor = col.hover; }}
+                                            onMouseLeave={e => { e.currentTarget.style.backgroundColor = col.color; }}
+                                            className="mt-7 w-full px-8 py-4 text-white text-[13px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2.5 group shadow-lg"
+                                        >
+                                            {col.cta} <ArrowRight size={17} strokeWidth={3} className="group-hover:translate-x-1 transition-transform" />
+                                        </button>
+                                    </ScrollReveal>
                                 </div>
-                                <ScrollReveal delay={400}>
-                                    <button
-                                        onClick={() => navigate('/organization-register')}
-                                        className="mt-7 px-8 py-4 bg-[#FF1E1E] text-white text-[13px] font-black uppercase tracking-widest rounded-xl hover:bg-[#d91a1a] transition-all flex items-center gap-2.5 group shadow-lg shadow-[#FF1E1E]/20"
-                                    >
-                                        Register as Provider <ArrowRight size={17} strokeWidth={3} className="group-hover:translate-x-1 transition-transform" />
-                                    </button>
-                                </ScrollReveal>
-                            </div>
+                            ))}
                         </div>
                     </div>
                 </section>
@@ -383,7 +359,7 @@ export default function Home() {
                     <div className="grid md:grid-cols-3 gap-12 mb-10">
                         <div className="space-y-4">
                             {/* 1. Increased Logo Size */}
-                            <img src="/logo.png" alt="Logo" className="h-16 w-auto brightness-0 invert opacity-70" />
+                            <img src="/logo.png" alt="Logo" className="h-16 w-auto brightness-0 invert" />
                             <p className="text-[13px] text-slate-400 font-semibold uppercase tracking-widest leading-relaxed max-w-[200px]">
                                 Empowering QC students through scholarship access.
                             </p>
@@ -413,6 +389,11 @@ export default function Home() {
                                 <div className="flex items-center gap-3 text-[15px] font-semibold text-slate-400">
                                     <Mail size={16} className="text-[#4d7fff]" /> kyusisko.ph@gmail.com
                                 </div>
+                                {['09616360016', '09566594260', '09669430534'].map(num => (
+                                    <div key={num} className="flex items-center gap-3 text-[15px] font-semibold text-slate-400">
+                                        <Phone size={16} className="text-[#4d7fff]" /> {num}
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>

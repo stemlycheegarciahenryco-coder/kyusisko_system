@@ -83,10 +83,10 @@ const HomeNav = () => {
 
   return (
     <header
-      className={`sticky top-0 z-[60]  transition-all duration-500 ${
-        scrolled
-          ? 'bg-slate-900/90 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.2)] border-b border-slate-800'
-          : 'bg-transparent border-b border-white/10'
+      className={`fixed top-0 left-0 right-0 z-[60] transition-colors duration-300 ${
+        scrolled || mobileMenuOpen
+          ? 'bg-slate-900 shadow-[0_4px_30px_rgba(0,0,0,0.35)] border-b border-slate-800'
+          : 'bg-transparent border-b border-slate-700'
       }`}
     >
       <div className="w-full px-4 sm:px-6 lg:px-12 h-16 sm:h-20 flex items-center justify-between">
@@ -130,17 +130,17 @@ const HomeNav = () => {
             </button>
 
             {showPartnerMenu && (
-              <div className="absolute top-full left-0 mt-3 w-72 bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="absolute top-full left-0 mt-3 w-72 bg-slate-900 border border-slate-700 shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-2xl overflow-hidden">
                 <div className="p-2 flex flex-col gap-1">
                   <button 
                     onClick={() => goTo('/organization-register')} 
-                    className="flex items-center gap-3 px-3.5 py-3 text-white text-[13px] font-black tracking-[0.12em] uppercase hover:bg-white/10 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
+                    className="flex items-center gap-3 px-3.5 py-3 text-white text-[13px] font-black tracking-[0.12em] uppercase hover:bg-slate-800 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
                   >
                     <UserPlus size={16} strokeWidth={2.5} /> Create Provider Account
                   </button>
                   <button 
                     onClick={() => goTo('/provider-guidelines')} 
-                    className="flex items-center gap-3 px-3.5 py-3 text-white text-[13px] font-black tracking-[0.12em] uppercase hover:bg-white/10 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
+                    className="flex items-center gap-3 px-3.5 py-3 text-white text-[13px] font-black tracking-[0.12em] uppercase hover:bg-slate-800 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
                   >
                     <FileText size={16} strokeWidth={2.5} /> Provider Guidelines
                   </button>
@@ -160,17 +160,17 @@ const HomeNav = () => {
             </button>
 
             {showStudentMenu && (
-              <div className="absolute top-full left-0 mt-3 w-72 bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="absolute top-full left-0 mt-3 w-72 bg-slate-900 border border-slate-700 shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-2xl overflow-hidden">
                 <div className="p-2 flex flex-col gap-1">
                   <button 
                     onClick={() => goTo('/student-register')} 
-                    className="flex items-center gap-3 px-3.5 py-3 text-white text-[13px] font-black tracking-[0.12em] uppercase hover:bg-white/10 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
+                    className="flex items-center gap-3 px-3.5 py-3 text-white text-[13px] font-black tracking-[0.12em] uppercase hover:bg-slate-800 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
                   >
                     <UserPlus size={16} strokeWidth={2.5} /> Student Sign Up
                   </button>
                   <button 
                     onClick={() => goTo('/login')} 
-                    className="flex items-center gap-3 px-3.5 py-3 text-white text-[13px] font-black tracking-[0.12em] uppercase hover:bg-white/10 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
+                    className="flex items-center gap-3 px-3.5 py-3 text-white text-[13px] font-black tracking-[0.12em] uppercase hover:bg-slate-800 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
                   >
                     <UserCircle size={16} strokeWidth={2.5} /> Student Scholarship
                   </button>
@@ -195,7 +195,7 @@ const HomeNav = () => {
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={mobileMenuOpen}
-            className="lg:hidden flex items-center justify-center w-10 h-10 rounded-xl text-white hover:bg-white/10 transition-all cursor-pointer"
+            className="lg:hidden flex items-center justify-center w-10 h-10 rounded-xl text-white hover:bg-slate-800 transition-all cursor-pointer"
           >
             {mobileMenuOpen ? <X size={22} strokeWidth={2.5} /> : <Menu size={22} strokeWidth={2.5} />}
           </button>
@@ -204,37 +204,37 @@ const HomeNav = () => {
 
       {/* Mobile slide-down panel */}
       <div
-        className={`lg:hidden overflow-hidden transition-all duration-300 ease-in-out bg-slate-900/95 backdrop-blur-xl border-b border-white/10 ${
-          mobileMenuOpen ? 'max-h-[85vh] opacity-100' : 'max-h-0 opacity-0'
+        className={`lg:hidden overflow-hidden transition-all duration-300 ease-in-out bg-slate-900 ${
+          mobileMenuOpen ? 'max-h-[85vh]' : 'max-h-0'
         }`}
       >
         <div className="overflow-y-auto max-h-[85vh] px-4 sm:px-6 py-4 flex flex-col gap-1">
           <button 
             onClick={() => scrollToSection('about')} 
-            className="text-left text-white text-[13px] font-black tracking-[0.12em] uppercase py-3.5 px-2 rounded-xl hover:bg-white/10 hover:text-blue-400 transition-all cursor-pointer"
+            className="text-left text-white text-[13px] font-black tracking-[0.12em] uppercase py-3.5 px-2 rounded-xl hover:bg-slate-800 hover:text-blue-400 transition-all cursor-pointer"
           >
             About Us
           </button>
 
           <button 
             onClick={() => scrollToSection('contact')} 
-            className="text-left text-white text-[13px] font-black tracking-[0.12em] uppercase py-3.5 px-2 rounded-xl hover:bg-white/10 hover:text-blue-400 transition-all cursor-pointer"
+            className="text-left text-white text-[13px] font-black tracking-[0.12em] uppercase py-3.5 px-2 rounded-xl hover:bg-slate-800 hover:text-blue-400 transition-all cursor-pointer"
           >
             Contact Us
           </button>
 
           <button 
             onClick={() => scrollToSection('scholarships')} 
-            className="text-left text-white text-[13px] font-black tracking-[0.12em] uppercase py-3.5 px-2 rounded-xl hover:bg-white/10 hover:text-blue-400 transition-all cursor-pointer"
+            className="text-left text-white text-[13px] font-black tracking-[0.12em] uppercase py-3.5 px-2 rounded-xl hover:bg-slate-800 hover:text-blue-400 transition-all cursor-pointer"
           >
             Scholarships
           </button>
 
           {/* Provider accordion */}
-          <div className="border-t border-white/10 mt-1 pt-1">
+          <div className="border-t border-slate-700 mt-1 pt-1">
             <button
               onClick={() => setMobilePartnerOpen(!mobilePartnerOpen)}
-              className={`w-full flex items-center justify-between text-[13px] font-black tracking-[0.12em] uppercase py-3.5 px-2 rounded-xl hover:bg-white/10 transition-all cursor-pointer ${mobilePartnerOpen ? 'text-blue-400' : 'text-white hover:text-blue-400'}`}
+              className={`w-full flex items-center justify-between text-[13px] font-black tracking-[0.12em] uppercase py-3.5 px-2 rounded-xl hover:bg-slate-800 transition-all cursor-pointer ${mobilePartnerOpen ? 'text-blue-400' : 'text-white hover:text-blue-400'}`}
             >
               Provider
               <ChevronDown size={16} strokeWidth={2.5} className={`transition-transform duration-300 ${mobilePartnerOpen ? 'rotate-180' : ''}`} />
@@ -243,13 +243,13 @@ const HomeNav = () => {
               <div className="flex flex-col gap-1 pb-2 pl-2">
                 <button 
                   onClick={() => goTo('/organization-register')} 
-                  className="flex items-center gap-3 px-3.5 py-3 text-white/90 text-[12px] font-black tracking-[0.1em] uppercase hover:bg-white/10 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
+                  className="flex items-center gap-3 px-3.5 py-3 text-white text-[12px] font-black tracking-[0.1em] uppercase hover:bg-slate-800 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
                 >
                   <UserPlus size={16} strokeWidth={2.5} /> Create Provider Account
                 </button>
                 <button 
                   onClick={() => goTo('/provider-guidelines')} 
-                  className="flex items-center gap-3 px-3.5 py-3 text-white/90 text-[12px] font-black tracking-[0.1em] uppercase hover:bg-white/10 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
+                  className="flex items-center gap-3 px-3.5 py-3 text-white text-[12px] font-black tracking-[0.1em] uppercase hover:bg-slate-800 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
                 >
                   <FileText size={16} strokeWidth={2.5} /> Provider Guidelines
                 </button>
@@ -258,10 +258,10 @@ const HomeNav = () => {
           </div>
 
           {/* Students accordion */}
-          <div className="border-t border-white/10 pt-1">
+          <div className="border-t border-slate-700 pt-1">
             <button
               onClick={() => setMobileStudentOpen(!mobileStudentOpen)}
-              className={`w-full flex items-center justify-between text-[13px] font-black tracking-[0.12em] uppercase py-3.5 px-2 rounded-xl hover:bg-white/10 transition-all cursor-pointer ${mobileStudentOpen ? 'text-blue-400' : 'text-white hover:text-blue-400'}`}
+              className={`w-full flex items-center justify-between text-[13px] font-black tracking-[0.12em] uppercase py-3.5 px-2 rounded-xl hover:bg-slate-800 transition-all cursor-pointer ${mobileStudentOpen ? 'text-blue-400' : 'text-white hover:text-blue-400'}`}
             >
               Students
               <ChevronDown size={16} strokeWidth={2.5} className={`transition-transform duration-300 ${mobileStudentOpen ? 'rotate-180' : ''}`} />
@@ -270,13 +270,13 @@ const HomeNav = () => {
               <div className="flex flex-col gap-1 pb-2 pl-2">
                 <button 
                   onClick={() => goTo('/student-register')} 
-                  className="flex items-center gap-3 px-3.5 py-3 text-white/90 text-[12px] font-black tracking-[0.1em] uppercase hover:bg-white/10 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
+                  className="flex items-center gap-3 px-3.5 py-3 text-white text-[12px] font-black tracking-[0.1em] uppercase hover:bg-slate-800 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
                 >
                   <UserPlus size={16} strokeWidth={2.5} /> Student Sign Up
                 </button>
                 <button 
                   onClick={() => goTo('/login')} 
-                  className="flex items-center gap-3 px-3.5 py-3 text-white/90 text-[12px] font-black tracking-[0.1em] uppercase hover:bg-white/10 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
+                  className="flex items-center gap-3 px-3.5 py-3 text-white text-[12px] font-black tracking-[0.1em] uppercase hover:bg-slate-800 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
                 >
                   <UserCircle size={16} strokeWidth={2.5} /> Student Scholarship
                 </button>

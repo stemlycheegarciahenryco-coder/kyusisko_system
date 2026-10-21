@@ -474,7 +474,7 @@ export default function ScholarshipManager() {
         const onConfirm = isPublish ? handlePublishAction : isArchive ? handleArchiveAction : handleCloseAction;
 
         return (
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200" onClick={cancelAll}>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200" onClick={cancelAll}>
             <div
               className="bg-white rounded-3xl p-7 max-w-sm w-full border border-slate-200 shadow-2xl animate-in zoom-in-95 duration-200 text-center"
               onClick={(e) => e.stopPropagation()}
@@ -510,7 +510,7 @@ export default function ScholarshipManager() {
       {/* ── ERROR DIALOG (replaces alert) ── */}
       {errorModal.show && (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[110] p-4"
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-[110] p-4"
           onClick={() => setErrorModal({ show: false, message: '' })}
         >
           <div
