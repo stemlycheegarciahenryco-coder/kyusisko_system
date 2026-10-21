@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { Users, ClipboardList, UserCog, GraduationCap, UserPlus, Building2, Trash2, Filter, Archive, UnlockIcon, Search, X } from 'lucide-react';
+import { Users, ClipboardList, UserCog, GraduationCap, UserPlus, Building2, Trash2, Filter, Archive, UnlockIcon, Search, X, ShieldCheck, Camera, Clock1Icon } from 'lucide-react';
 import api from '../api';
 import { IconLock } from '@tabler/icons-react';
 import Swal from 'sweetalert2';
@@ -18,9 +18,6 @@ const CHART_CONFIG = [
     { key: 'totalScholarships', name: 'Scholarships', color: '#10b981' },
 ];
 
-/**
- * Separated Component for Co-Admin Management & Listing
- */
 function CoAdminSection({
     coAdmins = [],
     loading,
@@ -31,7 +28,7 @@ function CoAdminSection({
     formData,
     setFormData
 }) {
-    const [activeTab, setActiveTab] = useState('all'); // 'all' | 'active' | 'blocked' | 'archived' | 'deleted'
+    const [activeTab, setActiveTab] = useState('all'); // 'all' | 'active' | 'blocked' | 'archived'
     const [searchQuery, setSearchQuery] = useState('');
 
     // Handle Archive click with SweetAlert confirmation
@@ -40,8 +37,8 @@ function CoAdminSection({
         const actionText = isArchived ? 'Unarchive' : 'Archive';
 
         const result = await Swal.fire({
-            title: `${actionText} Student?`,
-            text: `Confirm you want to ${actionText.toLowerCase()} this student record.`,
+            title: `${actionText} Co-Admin?`,
+            text: `Confirm you want to ${actionText.toLowerCase()} this co-admin record.`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d97706',
@@ -53,6 +50,12 @@ function CoAdminSection({
         }
     };
 
+    const [snapshotIsVisible, setSnapshotVisible] = useState(false)
+    const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false)
+    const [snapShotLists, setSnapshotList] = useState([])
+
+    const onSnapshotsClick = async () => { setSnapshotVisible(!snapshotIsVisible) }
+
     // Pre-calculate counts and filtered list for each tab based on the current searchQuery
     const { filteredCoAdmins, tabCounts } = useMemo(() => {
         const query = searchQuery.trim().toLowerCase();
@@ -61,21 +64,23 @@ function CoAdminSection({
         let activeCount = 0;
         let blockedCount = 0;
         let archivedCount = 0;
-        let deletedCount = 0;
 
         const matchedList = [];
 
         coAdmins.forEach(admin => {
             const isArchived = Boolean(admin.is_archived);
             const isDeleted = admin.account_status === 'deleted';
+
+            // Skip entirely if deleted
+            if (isDeleted) return;
+
             const isBlocked = admin.account_status === 'suspended';
             const isActive = admin.account_status === 'active' && !isArchived;
 
-            const isAll = !isArchived && !isDeleted;
+            const isAll = !isArchived;
             const isTabActive = isActive;
-            const isTabBlocked = isBlocked && !isArchived && !isDeleted;
-            const isTabArchived = isArchived && !isDeleted;
-            const isTabDeleted = isDeleted;
+            const isTabBlocked = isBlocked && !isArchived;
+            const isTabArchived = isArchived;
 
             // Search filter check
             const fullName = `${admin.first_name || ''} ${admin.last_name || ''}`.toLowerCase();
@@ -89,7 +94,6 @@ function CoAdminSection({
                 if (isTabActive) activeCount++;
                 if (isTabBlocked) blockedCount++;
                 if (isTabArchived) archivedCount++;
-                if (isTabDeleted) deletedCount++;
             }
 
             // Determine if it matches the currently selected active tab
@@ -98,7 +102,6 @@ function CoAdminSection({
             else if (activeTab === 'active') matchesTab = isTabActive;
             else if (activeTab === 'blocked') matchesTab = isTabBlocked;
             else if (activeTab === 'archived') matchesTab = isTabArchived;
-            else if (activeTab === 'deleted') matchesTab = isTabDeleted;
 
             if (matchesTab && matchesSearch) {
                 matchedList.push(admin);
@@ -112,16 +115,18 @@ function CoAdminSection({
                 active: activeCount,
                 blocked: blockedCount,
                 archived: archivedCount,
-                deleted: deletedCount,
             }
         };
     }, [coAdmins, activeTab, searchQuery]);
 
     return (
         <section className="bg-white p-8 rounded-[2.5rem] border border-blue-200 shadow-sm">
-            <h2 className="text-base font-black text-slate-900 uppercase tracking-tight mb-6 flex items-center gap-2">
-                <UserPlus className="text-blue-600" size={18} /> Co-Admin Management
-            </h2>
+            {/* Section Header */}
+            <div className="flex items-center justify-between mb-6">
+                <h2 className="text-base font-black text-slate-900 uppercase tracking-tight flex items-center gap-2 m-0">
+                    <UserPlus className="text-blue-600" size={18} /> Co-Admin Management
+                </h2>
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                 {/* Creation Form */}
@@ -203,30 +208,41 @@ function CoAdminSection({
                         </div>
                     </div>
 
-                    {/* Filter Tab Buttons with Counts */}
-                    <div className="flex flex-wrap items-center gap-2 pb-2 border-b border-slate-100">
-                        {['all', 'active', 'blocked', 'archived', 'deleted'].map((tab) => {
-                            const isActiveTab = activeTab === tab;
-                            const count = tabCounts[tab] || 0;
+                    {/* Filter Tab Buttons with Counts & Snapshots Button */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                        <div className="flex flex-wrap items-center gap-2">
+                            {['all', 'active', 'blocked', 'archived'].map((tab) => {
+                                const isActiveTab = activeTab === tab;
+                                const count = tabCounts[tab] || 0;
 
-                            return (
-                                <button
-                                    key={tab}
-                                    type="button"
-                                    onClick={() => setActiveTab(tab)}
-                                    className={`flex items-center gap-1.5 px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer border ${isActiveTab
+                                return (
+                                    <button
+                                        key={tab}
+                                        type="button"
+                                        onClick={() => setActiveTab(tab)}
+                                        className={`flex items-center gap-1.5 px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer border ${isActiveTab
                                             ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                                        }`}
-                                >
-                                    <span>{tab}</span>
-                                    <span className={`px-1.5 py-0.5 rounded-md text-[9px] ${isActiveTab ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'
-                                        }`}>
-                                        {count}
-                                    </span>
-                                </button>
-                            );
-                        })}
+                                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-150'
+                                            }`}
+                                    >
+                                        <span>{tab}</span>
+                                        <span className={`px-1.5 py-0.5 rounded-md text-[9px] ${isActiveTab ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'
+                                            }`}>
+                                            {count}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={onSnapshotsClick}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-[#093fb4] font-black text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer border border-blue-200 shadow-sm"
+                        >
+                            <Clock1Icon size={14} className="text-slate-500" />
+                            Snapshots
+                        </button>
                     </div>
 
                     {/* Co-Admins List */}
@@ -260,53 +276,42 @@ function CoAdminSection({
                                         </div>
 
                                         <div className="flex items-center gap-2 shrink-0">
-                                            {admin.account_status === 'deleted' ? (
-                                                <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-xl bg-red-100 text-red-600">
-                                                    Deleted
-                                                </span>
-                                            ) : (
-                                                <>
-                                                    {/* Only show Block/Unblock button if NOT archived */}
-                                                    {!isArchived && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => onToggleStatus(admin.id, admin.account_status)}
-                                                            className={`flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer ${admin.account_status === 'active'
-                                                                    ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
-                                                                    : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                                                }`}
-                                                        >
-                                                            {admin.account_status === 'active' ? (
-                                                                <IconLock size={12} />
-                                                            ) : (
-                                                                <UnlockIcon size={12} />
-                                                            )}
-                                                            {admin.account_status === 'active' ? 'Block' : 'Unblock'}
-                                                        </button>
+                                            {!isArchived && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onToggleStatus(admin.id, admin.account_status)}
+                                                    className={`flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer ${admin.account_status === 'active'
+                                                        ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                                                        : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-sm'
+                                                        }`}
+                                                >
+                                                    {admin.account_status === 'active' ? (
+                                                        <IconLock size={12} />
+                                                    ) : (
+                                                        <ShieldCheck size={12} />
                                                     )}
+                                                    {admin.account_status === 'active' ? 'Block' : 'Unblock'}
+                                                </button>
+                                            )}
 
-                                                    {/* Archive/Unarchive Button with Swal confirmation */}
-                                                    <button
-                                                        type="button"
-                                                        className="flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
-                                                        onClick={() => handleArchiveClick(admin)}
-                                                    >
-                                                        <Archive size={12} />
-                                                        {isArchived ? 'Unarchive' : 'Archive'}
-                                                    </button>
+                                            <button
+                                                type="button"
+                                                className="flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+                                                onClick={() => handleArchiveClick(admin)}
+                                            >
+                                                <Archive size={12} />
+                                                {isArchived ? 'Unarchive' : 'Archive'}
+                                            </button>
 
-                                                    {/* Show delete button if archived OR suspended */}
-                                                    {(isArchived || admin.account_status === 'suspended') && (
-                                                        <button
-                                                            type="button"
-                                                            className="flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
-                                                            onClick={() => onDeleteCoAdmin(admin.id)}
-                                                        >
-                                                            <Trash2 size={12} />
-                                                            Delete
-                                                        </button>
-                                                    )}
-                                                </>
+                                            {isArchived && (
+                                                <button
+                                                    type="button"
+                                                    className="flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+                                                    onClick={() => onDeleteCoAdmin(admin.id)}
+                                                >
+                                                    <Trash2 size={12} />
+                                                    Delete
+                                                </button>
                                             )}
                                         </div>
                                     </div>
@@ -395,7 +400,7 @@ export default function RootDashboard() {
     const handleToggleStatus = async (id, currentStatus) => {
         const actionText = currentStatus === 'active' ? 'block' : 'unblock';
         const nextStatus = currentStatus === 'active' ? 'suspended' : 'active';
-        const confirmColor =  currentStatus === 'active' ? '#dc2626' : '#16a34a'
+        const confirmColor = currentStatus === 'active' ? '#dc2626' : '#2563eb'
         const confirm = await Swal.fire({
             title: `Are you sure?`,
             text: `Do you want to ${actionText} this Co-Admin account?`,
@@ -433,6 +438,7 @@ export default function RootDashboard() {
     };
 
     const handleDeleteCoAdmin = async (id) => {
+        // Step 1: Initial Delete Confirmation
         const confirm = await Swal.fire({
             title: 'Delete Co-Admin Account?',
             text: 'This action cannot be undone. Are you sure you want to delete this account?',
@@ -445,8 +451,32 @@ export default function RootDashboard() {
 
         if (!confirm.isConfirmed) return;
 
+        // Step 2: Prompt for Snapshot
+        const snapshotConfirm = await Swal.fire({
+            title: 'Create Snapshot?',
+            text: 'Would you like to create a snapshot of this account before deleting it?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#2563eb',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Yes, create snapshot',
+            cancelButtonText: 'No, skip'
+        });
+
+        // Step 3: Optional Snapshot API Call
+        if (snapshotConfirm.isConfirmed) {
+            try {
+                await api.post(`/system-admin/co-admins/snapshot/${id}`);
+                // Optional: add a success toast or alert for the snapshot if desired
+            } catch (snapshotErr) {
+                console.error("Failed to create snapshot:", snapshotErr);
+                // You can choose whether to abort deletion or just let it continue
+            }
+        }
+
+        // Step 4: Proceed with Deletion
         try {
-            const response = await api.delete(`/system-admin/co-admins/${id}`);
+            const response = await api.delete(`/system-admin/co-admins/delete/${id}`);
             if (response.data.success || response.status === 200) {
                 setCoAdmins(prev => prev.map(admin => admin.id === id ? { ...admin, account_status: 'deleted' } : admin));
 
