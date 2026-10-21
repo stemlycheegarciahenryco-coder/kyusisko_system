@@ -11,8 +11,8 @@ export default function RootReports() {
     const [filter, setFilter] = useState('all');
     const [search, setSearch] = useState('');
     const [snapshotIsVisible, setSnapshotVisible] = useState(false);
-    const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false)
-    const [snapShotLists, setSnapshotList] = useState([])
+    const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
+    const [snapShotLists, setSnapshotList] = useState([]);
 
     const fetchReports = async () => {
         setLoading(true);
@@ -210,6 +210,14 @@ export default function RootReports() {
     };
 
     const filtered = reports.filter(r => {
+        if (filter === 'archived') {
+            return r.is_archived === true;
+        }
+
+        if (r.is_archived) {
+            return false;
+        }
+
         const matchFilter = filter === 'all' ? true : r.status === filter;
         const matchSearch =
             r.student_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -219,8 +227,13 @@ export default function RootReports() {
     });
 
     const getCount = (f) => {
-        if (f === 'all') return reports.length;
-        return reports.filter(r => r.status === f).length;
+        if (f === 'archived') {
+            return reports.filter(r => r.is_archived === true).length;
+        }
+        if (f === 'all') {
+            return reports.filter(r => !r.is_archived).length;
+        }
+        return reports.filter(r => !r.is_archived && r.status === f).length;
     };
 
     return (
@@ -242,7 +255,7 @@ export default function RootReports() {
                 </div>
 
                 <div className="px-5 py-3 rounded-2xl border border-[#093fb4] bg-white shadow-sm self-start md:self-auto">
-                    <p className="text-xl font-black leading-none text-[#093fb4]">{reports.length}</p>
+                    <p className="text-xl font-black leading-none text-[#093fb4]">{reports.filter(r => !r.is_archived).length}</p>
                     <p className="text-[9px] font-black uppercase tracking-widest text-black mt-1">Total Reports</p>
                 </div>
             </div>
@@ -270,7 +283,6 @@ export default function RootReports() {
                             </button>
                         ))}
                     </div>
-
                 </div>
 
                 <div className="relative">

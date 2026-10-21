@@ -301,7 +301,7 @@ const getSavedScholarships = async (req, res) => {
       FROM saved_scholarships ss
       JOIN scholarships sch ON sch.id = ss.scholarship_id
       JOIN sub_admins sa ON sa.id = sch.sub_admin_id
-      WHERE ss.student_id = $1 AND sch.taken_down = FALSE AND sch.is_archived = false AND ss.is_archived = false
+      WHERE ss.student_id = $1 AND sch.taken_down = FALSE AND sch.is_archived = false AND sa.is_archived = false
     `, [studentId]);
     res.json({ success: true, data: result.rows });
   } catch (err) {

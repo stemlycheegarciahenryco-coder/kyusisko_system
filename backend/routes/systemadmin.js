@@ -43,13 +43,6 @@ router.post('/create-co-admin', verifyToken, async (req, res) => {
     }
 });
 
-// Get Snapshot Reports
-router.get('/get/Reports/snapshots/instance', verifyToken, async (req, res) => {
-})
-router.get('/get/Reports/snapshot_items/:id', verifyToken, async (req, res) => {
-})
-
-
 // Delete Reports
 router.delete('/reports/delete/:id', verifyToken, async (req, res) => {
 })
@@ -241,7 +234,25 @@ router.get('/co-admins', verifyToken, async (req, res) => {
         const result = await pool.query(
             `SELECT id, email, uid, account_status, first_name, last_name, is_archived
              FROM users 
-             WHERE role = 'co_admin' AND is_archived = false 
+             WHERE role = 'co_admin' 
+             ORDER BY id DESC`
+        );
+        res.json({ success: true, data: result.rows });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+router.get('/get/archive/co-admins', verifyToken, async (req, res) => {
+    if (req.user.role !== 'root_admin') {
+        return res.status(403).json({ success: false, message: 'Forbidden access.' });
+    }
+
+    try {
+        const result = await pool.query(
+            `SELECT id, email, uid, account_status, first_name, last_name, is_archived
+             FROM users 
+             WHERE role = 'co_admin' AND is_archived = true 
              ORDER BY id DESC`
         );
         res.json({ success: true, data: result.rows });
