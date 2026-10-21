@@ -184,6 +184,7 @@ const getPublicScholarships = async (req, res) => {
        LEFT JOIN sub_admins sa ON s.sub_admin_id = sa.id
        WHERE s.status IN ('open', 'active')
          AND s.is_archived IS NOT TRUE
+         AND sa.is_archived = false
        ORDER BY s.created_at DESC`
         );
 

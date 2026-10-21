@@ -833,7 +833,7 @@ const getCoAdmins = async (req, res) => {
         const result = await pool.query(
             `SELECT id, first_name, middle_name, last_name, sub_email, is_active, created_at
              FROM sub_admins
-             WHERE parent_org_id = $1 AND account_type = 'co_admin'
+             WHERE parent_org_id = $1 AND account_type = 'co_admin' AND is_archived = false
              ORDER BY created_at DESC`,
             [orgId]
         );

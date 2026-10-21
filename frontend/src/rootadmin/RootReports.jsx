@@ -271,14 +271,6 @@ export default function RootReports() {
                         ))}
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={onSnapshotsClick}
-                        className="flex items-center gap-2 px-5 py-3 bg-blue-50 hover:bg-blue-100 text-[#093fb4] font-black text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer border border-blue-200 shadow-sm shrink-0"
-                    >
-                        <Clock size={15} />
-                        Snapshots
-                    </button>
                 </div>
 
                 <div className="relative">
@@ -407,17 +399,6 @@ export default function RootReports() {
                                         >
                                             {isArchiving ? <Loader2 size={18} className="animate-spin" /> : <Archive size={18} />}
                                         </button>
-
-                                        {/* Delete Button */}
-                                        <button
-                                            onClick={() => handleDelete(r.report_id)}
-                                            disabled={isArchiving || isDeleting}
-                                            title="Delete Report"
-                                            className="p-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors disabled:opacity-50 flex items-center justify-center cursor-pointer shadow-xs"
-                                        >
-                                            {isDeleting ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
-                                        </button>
-
                                         {/* Expand/Collapse Button */}
                                         <button
                                             onClick={() => setExpandedId(isExpanded ? null : r.report_id)}

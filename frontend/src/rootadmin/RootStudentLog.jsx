@@ -178,15 +178,6 @@ export default function RootStudentLog() {
                             </button>
                         ))}
                     </div>
-
-                    <button
-                        type="button"
-                        onClick={onSnapshotsClick}
-                        className="flex items-center gap-2 px-5 py-3.5 bg-blue-50 hover:bg-blue-100 text-[#093fb4] font-black text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer border border-blue-200 shadow-sm shrink-0"
-                    >
-                        <Clock size={15} />
-                        Snapshots
-                    </button>
                 </div>
             </div>
 
@@ -279,18 +270,6 @@ export default function RootStudentLog() {
                                                     <Archive size={16} />
                                                     <span>{s.is_archived ? 'Unarchive' : 'Archive'}</span>
                                                 </button>
-
-                                                {/* Delete Button */}
-                                                {activeTab === 'archived' && (
-                                                    <button
-                                                        onClick={() => handleDelete(s.id)}
-                                                        title="Delete Student"
-                                                        className="flex items-center gap-2 p-3 bg-red-600/10 hover:bg-red-600 text-[10px] font-black uppercase text-red-500 hover:text-white border border-red-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                        <span>Delete</span>
-                                                    </button>
-                                                )}
                                             </div>
                                         </td>
                                     </tr>

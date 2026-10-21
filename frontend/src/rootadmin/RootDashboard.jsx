@@ -234,15 +234,6 @@ function CoAdminSection({
                                 );
                             })}
                         </div>
-
-                        <button
-                            type="button"
-                            onClick={onSnapshotsClick}
-                            className="flex items-center gap-1.5 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-[#093fb4] font-black text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer border border-blue-200 shadow-sm"
-                        >
-                            <Clock1Icon size={14} className="text-slate-500" />
-                            Snapshots
-                        </button>
                     </div>
 
                     {/* Co-Admins List */}
@@ -302,17 +293,6 @@ function CoAdminSection({
                                                 <Archive size={12} />
                                                 {isArchived ? 'Unarchive' : 'Archive'}
                                             </button>
-
-                                            {isArchived && (
-                                                <button
-                                                    type="button"
-                                                    className="flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
-                                                    onClick={() => onDeleteCoAdmin(admin.id)}
-                                                >
-                                                    <Trash2 size={12} />
-                                                    Delete
-                                                </button>
-                                            )}
                                         </div>
                                     </div>
                                 );

@@ -279,16 +279,6 @@ const RootOrganization = () => {
                         );
                     })}
                 </div>
-
-                {/* Snapshots Button (Right) */}
-                <button
-                    type="button"
-                    onClick={onSnapshotsClick}
-                    className="flex items-center gap-2 px-5 py-3.5 bg-blue-50 hover:bg-blue-100 text-[#093fb4] font-black text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer border border-blue-200 shadow-sm shrink-0"
-                >
-                    <Clock1Icon size={15} />
-                    Snapshots
-                </button>
             </div>
 
 
@@ -364,7 +354,7 @@ const RootOrganization = () => {
                                                     <span>View</span>
                                                 </button>
 
-                                                {/* If archived, only show Unarchive and Delete */}
+                                                {/* If archived, show Unarchive and Delete */}
                                                 {isArchived ? (
                                                     <>
                                                         <button
@@ -375,40 +365,18 @@ const RootOrganization = () => {
                                                             <ArchiveIcon size={20} />
                                                             <span>Unarchive</span>
                                                         </button>
-
-                                                        <button
-                                                            onClick={() => handleDelete(org)}
-                                                            title="Delete"
-                                                            className="flex items-center gap-2 p-3 bg-red-600/20 hover:bg-red-600 text-[10px] font-black uppercase text-red-500 hover:text-white border border-red-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
-                                                        >
-                                                            <Trash2Icon size={20} />
-                                                            <span>Delete</span>
-                                                        </button>
                                                     </>
                                                 ) : (
-                                                    /* For non-archived items */
+                                                    /* For non-archived items, show Archive only (Delete is hidden) */
                                                     !isDeleted && (
-                                                        <>
-                                                            <button
-                                                                onClick={() => handleArchive(org)}
-                                                                title="Archive"
-                                                                className="flex items-center gap-2 p-3 bg-amber-600/10 hover:bg-amber-600 text-[10px] font-black uppercase text-amber-500 hover:text-white border border-amber-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
-                                                            >
-                                                                <ArchiveIcon size={20} />
-                                                                <span>Archive</span>
-                                                            </button>
-
-                                                            {!org.is_active && (
-                                                                <button
-                                                                    onClick={() => handleDelete(org)}
-                                                                    title="Delete"
-                                                                    className="flex items-center gap-2 p-3 bg-red-600/20 hover:bg-red-600 text-[10px] font-black uppercase text-red-500 hover:text-white border border-red-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
-                                                                >
-                                                                    <Trash2Icon size={20} />
-                                                                    <span>Delete</span>
-                                                                </button>
-                                                            )}
-                                                        </>
+                                                        <button
+                                                            onClick={() => handleArchive(org)}
+                                                            title="Archive"
+                                                            className="flex items-center gap-2 p-3 bg-amber-600/10 hover:bg-amber-600 text-[10px] font-black uppercase text-amber-500 hover:text-white border border-amber-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
+                                                        >
+                                                            <ArchiveIcon size={20} />
+                                                            <span>Archive</span>
+                                                        </button>
                                                     )
                                                 )}
                                             </td>
