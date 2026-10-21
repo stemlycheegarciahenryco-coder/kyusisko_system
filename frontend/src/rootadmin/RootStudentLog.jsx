@@ -1,33 +1,30 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
-import { Search, ShieldCheck, Lock, Phone, MapPin, Mail, Archive, Trash2, RotateCcw } from 'lucide-react';
+import { Search, ShieldCheck, Lock, Phone, MapPin, Mail, Archive, Trash2, Clock } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 export default function RootStudentLog() {
     const [students, setStudents] = useState([]);
     const [archivedStudents, setArchivedStudents] = useState([]);
-    const [deletedStudents, setDeletedStudents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [activeTab, setActiveTab] = useState('all');
 
-    useEffect(() => { 
-        fetchAllData(); 
+    useEffect(() => {
+        fetchAllData();
     }, []);
 
     const fetchAllData = async () => {
         setLoading(true);
         try {
-            // Fetch regular, archived, and deleted students concurrently
-            const [studentsRes, archivedRes, deletedRes] = await Promise.all([
+            // Fetch regular and archived students concurrently
+            const [studentsRes, archivedRes] = await Promise.all([
                 api.get('/students'),
-                api.get('/system-admin/get/student/archive/'),
-                api.get('/system-admin/get/student/deleted')
+                api.get('/system-admin/get/student/archive/')
             ]);
-            
+
             setStudents(studentsRes.data);
             setArchivedStudents(archivedRes.data);
-            setDeletedStudents(deletedRes.data);
         } catch (err) {
             console.error("Fetch Error:", err);
         } finally {
@@ -84,28 +81,6 @@ export default function RootStudentLog() {
         }
     };
 
-    const handleRecover = async (id) => {
-        const result = await Swal.fire({
-            title: 'Recover Student?',
-            text: 'Confirm you want to restore this deleted student record.',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#093fb4',
-            confirmButtonText: 'Yes, Recover!',
-        });
-
-        if (!result.isConfirmed) return;
-
-        try {
-            // Adjust this endpoint based on your backend route for recovery
-            await api.patch(`/system-admin/student/recover/${id}`);
-            await fetchAllData();
-            Swal.fire({ title: 'Recovered!', text: 'Student record has been restored.', icon: 'success', timer: 1500, showConfirmButton: false });
-        } catch (err) {
-            Swal.fire({ title: 'Error!', text: 'Failed to recover student.', icon: 'error' });
-        }
-    };
-
     const handleDelete = async (id) => {
         const result = await Swal.fire({
             title: 'Delete Student?',
@@ -126,11 +101,10 @@ export default function RootStudentLog() {
         }
     };
 
+    const onSnapshotsClick = async () => {};
+
     // Determine current dataset based on active tab
-    const currentDataset = 
-        activeTab === 'archived' ? archivedStudents : 
-        activeTab === 'deleted' ? deletedStudents : 
-        students;
+    const currentDataset = activeTab === 'archived' ? archivedStudents : students;
 
     // Calculate accurate preloaded counts across variables
     const counts = {
@@ -138,7 +112,6 @@ export default function RootStudentLog() {
         active: students.filter(s => s.sis_active && !s.is_archived).length,
         blocked: students.filter(s => !s.sis_active && !s.is_archived).length,
         archived: archivedStudents.length,
-        deleted: deletedStudents.length,
     };
 
     const filtered = currentDataset.filter(s => {
@@ -150,29 +123,30 @@ export default function RootStudentLog() {
 
         if (activeTab === 'active') return s.sis_active;
         if (activeTab === 'blocked') return !s.sis_active;
-        
+
         return true;
     });
 
     return (
         <div className="space-y-6 max-w-7xl mx-auto pb-20 bg-[#FFFCFB] min-h-screen p-4">
-            {/* HEADER SECTION */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 bg-white p-8 rounded-[2.5rem] border border-[#093fb4]/10 shadow-sm">
+            {/* HEADER SECTION (Now cleaner with only the title and registration count) */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-8 rounded-[2.5rem] border border-[#093fb4]/10 shadow-sm">
                 <div>
                     <h2 className="text-4xl font-black text-black tracking-tighter uppercase italic">
                         Student Management
                     </h2>
                 </div>
-                <div className="px-5 py-3 rounded-2xl border border-[#093fb4] bg-white shadow-sm">
-                    <p className="text-xl font-black leading-none text-[#093fb4]">{students.length + archivedStudents.length + deletedStudents.length}</p>
-                    <p className="text-[9px] font-black uppercase tracking-widest text-black mt-1">Total Student in Registered</p>
+                
+                <div className="px-5 py-3 rounded-2xl border border-[#093fb4] bg-white shadow-sm self-start md:self-auto">
+                    <p className="text-xl font-black leading-none text-[#093fb4]">{students.length + archivedStudents.length}</p>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-black mt-1">Total Student Registered</p>
                 </div>
             </div>
 
-            {/* SEARCH AND VIEW BAR CONTAINER */}
-            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+            {/* SEARCH, STATUS TABS, AND SNAPSHOTS BUTTON CONTAINER */}
+            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
                 {/* SEARCH */}
-                <div className="relative w-full md:max-w-md">
+                <div className="relative w-full lg:max-w-md">
                     <Search size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-black/40" />
                     <input
                         placeholder="Search student identity..."
@@ -181,26 +155,35 @@ export default function RootStudentLog() {
                     />
                 </div>
 
-                {/* STATUS VIEW TABS */}
-                <div className="flex items-center gap-2 bg-white p-2 rounded-[1.5rem] border border-[#093fb4]/10 shadow-sm overflow-x-auto">
-                    {['all', 'active', 'blocked', 'archived', 'deleted'].map((tab) => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 ${
-                                activeTab === tab
+                {/* RIGHT SIDE: STATUS VIEW TABS + SNAPSHOTS BUTTON */}
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-[1.5rem] border border-[#093fb4]/10 shadow-sm overflow-x-auto">
+                        {['all', 'active', 'blocked', 'archived'].map((tab) => (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab)}
+                                className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 ${activeTab === tab
                                     ? 'bg-[#093fb4] text-white shadow-sm'
                                     : 'text-black/65 hover:text-black hover:bg-black/5'
-                            }`}
-                        >
-                            <span>{tab.charAt(0).toUpperCase() + tab.slice(1)}</span>
-                            <span className={`px-1.5 py-0.5 rounded-md text-[10px] ${
-                                activeTab === tab ? 'bg-white/20 text-white' : 'bg-black/5 text-black/70'
-                            }`}>
-                                {counts[tab]}
-                            </span>
-                        </button>
-                    ))}
+                                    }`}
+                            >
+                                <span>{tab.charAt(0).toUpperCase() + tab.slice(1)}</span>
+                                <span className={`px-1.5 py-0.5 rounded-md text-[10px] ${activeTab === tab ? 'bg-white/20 text-white' : 'bg-black/5 text-black/70'
+                                    }`}>
+                                    {counts[tab]}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={onSnapshotsClick}
+                        className="flex items-center gap-2 px-5 py-3.5 bg-blue-50 hover:bg-blue-100 text-[#093fb4] font-black text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer border border-blue-200 shadow-sm shrink-0"
+                    >
+                        <Clock size={15} />
+                        Snapshots
+                    </button>
                 </div>
             </div>
 
@@ -222,108 +205,94 @@ export default function RootStudentLog() {
                                 <tr><td colSpan={5} className="text-center py-20 text-black font-bold uppercase tracking-widest">Loading...</td></tr>
                             ) : filtered.length === 0 ? (
                                 <tr><td colSpan={5} className="text-center py-20 text-black/50 font-bold uppercase tracking-widest">No students found.</td></tr>
-                            ) : filtered.map(s => (
-                                <tr key={s.id} className="hover:bg-[#FFFCFB] transition-all group">
-                                    <td className="px-6 py-6">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-xl bg-[#093fb4] flex items-center justify-center text-white font-black text-xs">
-                                                {s.sfirst_name?.[0]}{s.slast_name?.[0]}
+                            ) : (
+                                filtered.map(s => (
+                                    <tr key={s.id} className="hover:bg-[#FFFCFB] transition-all group">
+                                        <td className="px-6 py-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-xl bg-[#093fb4] flex items-center justify-center text-white font-black text-xs">
+                                                    {s.sfirst_name?.[0]}{s.slast_name?.[0]}
+                                                </div>
+                                                <div>
+                                                    <p className="font-black text-black text-sm uppercase">{s.sfirst_name} {s.slast_name}</p>
+                                                    <p className="text-[10px] text-black/40 font-bold">ID: #{s.id}</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="font-black text-black text-sm uppercase">{s.sfirst_name} {s.slast_name}</p>
-                                                <p className="text-[10px] text-black/40 font-bold">ID: #{s.id}</p>
+                                        </td>
+                                        <td className="px-6 py-6">
+                                            <div className="space-y-1">
+                                                <div className="flex items-center gap-2 text-black/60">
+                                                    <Mail size={12} className="text-[#093fb4]" />
+                                                    <span className="text-[11px] font-bold">{s.student_email}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-black/60">
+                                                    <Phone size={12} className="text-[#093fb4]" />
+                                                    <span className="text-[11px] font-bold">{s.scontact_number}</span>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-6">
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-2 text-black/60">
-                                                <Mail size={12} className="text-[#093fb4]" />
-                                                <span className="text-[11px] font-bold">{s.student_email}</span>
+                                        </td>
+                                        <td className="px-6 py-6">
+                                            <div className="flex items-start gap-2 max-w-[200px]">
+                                                <MapPin size={12} className="text-[#FF1E1E] mt-1 shrink-0" />
+                                                <span className="text-[11px] font-medium text-black/70 leading-tight">
+                                                    {s.full_address || 'No Address Provided'}
+                                                </span>
                                             </div>
-                                            <div className="flex items-center gap-2 text-black/60">
-                                                <Phone size={12} className="text-[#093fb4]" />
-                                                <span className="text-[11px] font-bold">{s.scontact_number}</span>
+                                        </td>
+                                        <td className="px-6 py-6">
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-1.5 h-1.5 rounded-full ${s.sis_active ? 'bg-green-500' : 'bg-red-500'}`} />
+                                                <span className={`text-[10px] font-black uppercase ${s.sis_active ? 'text-green-600' : 'text-red-600'}`}>
+                                                    {s.sis_active ? 'Active' : 'Blocked'}
+                                                </span>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-6">
-                                        <div className="flex items-start gap-2 max-w-[200px]">
-                                            <MapPin size={12} className="text-[#FF1E1E] mt-1 shrink-0" />
-                                            <span className="text-[11px] font-medium text-black/70 leading-tight">
-                                                {s.full_address || 'No Address Provided'}
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-6">
-                                        <div className="flex items-center gap-2">
-                                            <div className={`w-1.5 h-1.5 rounded-full ${activeTab === 'deleted' ? 'bg-red-500' : s.sis_active ? 'bg-green-500' : 'bg-red-500'}`} />
-                                            <span className={`text-[10px] font-black uppercase ${activeTab === 'deleted' ? 'text-red-600' : s.sis_active ? 'text-green-600' : 'text-red-600'}`}>
-                                                {activeTab === 'deleted' ? 'Deleted' : s.sis_active ? 'Active' : 'Blocked'}
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-6 text-right">
-                                        <div className="flex items-center justify-end gap-3">
-                                            {/* Block / Unblock Button (Hidden in Archived and Deleted Tabs) */}
-                                            {activeTab !== 'archived' && activeTab !== 'deleted' && (
-                                                <button
-                                                    onClick={() => handleStatus(s.id, s.sis_active)}
-                                                    title={s.sis_active ? 'Block Student' : 'Unblock Student'}
-                                                    className={`flex items-center gap-2 p-3 text-[10px] font-black uppercase rounded-2xl border shadow-md hover:scale-110 transition-all cursor-pointer ${
-                                                        !s.sis_active
+                                        </td>
+                                        <td className="px-6 py-6 text-right">
+                                            <div className="flex items-center justify-end gap-3">
+                                                {/* Block / Unblock Button */}
+                                                {activeTab !== 'archived' && (
+                                                    <button
+                                                        onClick={() => handleStatus(s.id, s.sis_active)}
+                                                        title={s.sis_active ? 'Block Student' : 'Unblock Student'}
+                                                        className={`flex items-center gap-2 p-3 text-[10px] font-black uppercase rounded-2xl border shadow-md hover:scale-110 transition-all cursor-pointer ${!s.sis_active
                                                             ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
                                                             : 'bg-blue-600/10 text-blue-600 border-blue-600/20 hover:bg-blue-600 hover:text-white'
-                                                    }`}
-                                                >
-                                                    {!s.sis_active ? <ShieldCheck size={16} /> : <Lock size={16} />}
-                                                    <span>{s.sis_active ? 'Block' : 'Unblock'}</span>
-                                                </button>
-                                            )}
+                                                            }`}
+                                                    >
+                                                        {!s.sis_active ? <ShieldCheck size={16} /> : <Lock size={16} />}
+                                                        <span>{s.sis_active ? 'Block' : 'Unblock'}</span>
+                                                    </button>
+                                                )}
 
-                                            {/* Archive / Unarchive Button (Hidden in Deleted Tab) */}
-                                            {activeTab !== 'deleted' && (
+                                                {/* Archive / Unarchive Button */}
                                                 <button
                                                     onClick={() => handleArchive(s.id, s.is_archived)}
                                                     title={s.is_archived ? 'Unarchive Student' : 'Archive Student'}
-                                                    className={`flex items-center gap-2 p-3 text-[10px] font-black uppercase rounded-2xl border shadow-md hover:scale-110 transition-all cursor-pointer ${
-                                                        s.is_archived
-                                                            ? 'bg-amber-600 text-white border-amber-600 hover:bg-amber-700'
-                                                            : 'bg-amber-600/10 text-amber-600 border-amber-600/20 hover:bg-amber-600 hover:text-white'
-                                                    }`}
+                                                    className={`flex items-center gap-2 p-3 text-[10px] font-black uppercase rounded-2xl border shadow-md hover:scale-110 transition-all cursor-pointer ${s.is_archived
+                                                        ? 'bg-amber-600 text-white border-amber-600 hover:bg-amber-700'
+                                                        : 'bg-amber-600/10 text-amber-600 border-amber-600/20 hover:bg-amber-600 hover:text-white'
+                                                        }`}
                                                 >
                                                     <Archive size={16} />
                                                     <span>{s.is_archived ? 'Unarchive' : 'Archive'}</span>
                                                 </button>
-                                            )}
 
-                                            {/* Recover Button (Only shows in the deleted tab) */}
-                                            {activeTab === 'deleted' && (
-                                                <button
-                                                    onClick={() => handleRecover(s.id)}
-                                                    title="Recover Student"
-                                                    className="flex items-center gap-2 p-3 bg-blue-600/10 hover:bg-blue-600 text-[10px] font-black uppercase text-blue-600 hover:text-white border border-blue-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
-                                                >
-                                                    <RotateCcw size={16} />
-                                                    <span>Recover</span>
-                                                </button>
-                                            )}
-
-                                            {/* Delete Button (Only shows in the archive tab) */}
-                                            {activeTab === 'archived' && (
-                                                <button
-                                                    onClick={() => handleDelete(s.id)}
-                                                    title="Delete Student"
-                                                    className="flex items-center gap-2 p-3 bg-red-600/10 hover:bg-red-600 text-[10px] font-black uppercase text-red-500 hover:text-white border border-red-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
-                                                >
-                                                    <Trash2 size={16} />
-                                                    <span>Delete</span>
-                                                </button>
-                                            )}
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
+                                                {/* Delete Button */}
+                                                {activeTab === 'archived' && (
+                                                    <button
+                                                        onClick={() => handleDelete(s.id)}
+                                                        title="Delete Student"
+                                                        className="flex items-center gap-2 p-3 bg-red-600/10 hover:bg-red-600 text-[10px] font-black uppercase text-red-500 hover:text-white border border-red-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                        <span>Delete</span>
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>

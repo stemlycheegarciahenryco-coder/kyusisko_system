@@ -5,8 +5,8 @@ import Swal from 'sweetalert2';
 import RootOrgView from './RootOrgView';
 import { ArchiveIcon, Trash2Icon } from 'lucide-react';
 
-// Added 'deleted' into the tabs list
-const TABS = ['all', 'pending', 'approved', 'rejected', 'blocked', 'archived', 'deleted'];
+// 'deleted' removed from the tabs list
+const TABS = ['all', 'pending', 'approved', 'rejected', 'blocked', 'archived'];
 
 const RootOrganization = () => {
     const [orgs, setOrgs] = useState([]);
@@ -36,7 +36,6 @@ const RootOrganization = () => {
         const isArchived = Boolean(org.is_archived);
         const isDeleted = org.status === 'deleted' || org.account_status === 'deleted';
 
-        if (tab === 'deleted') return isDeleted;
         if (tab === 'archived') return isArchived && !isDeleted;
 
         // For standard tabs, exclude archived and deleted items
@@ -147,8 +146,6 @@ const RootOrganization = () => {
             confirmButtonText: `Yes, ${actionText}!`,
         });
 
-
-
         if (result.isConfirmed) {
             try {
                 await api.patch(`/onboarding-orgs/archive/${org.id}`);
@@ -218,7 +215,6 @@ const RootOrganization = () => {
         rejected: 'Rejected',
         blocked: 'Blocked',
         archived: 'Archived',
-        deleted: 'Deleted',
     };
 
     return (
@@ -232,7 +228,7 @@ const RootOrganization = () => {
                 <div className="px-5 py-3 rounded-2xl border border-[#093fb4] bg-white shadow-sm">
                     <p className="text-xl font-black leading-none text-[#093fb4]">{filteredOrgs.length}</p>
                     <p className="text-[9px] font-black uppercase tracking-widest text-black mt-1">
-                        {activeTab === 'archived' ? 'Archived Providers' : activeTab === 'deleted' ? 'Deleted Providers' : 'Total Providers'}
+                        {activeTab === 'archived' ? 'Archived Providers' : 'Total Providers'}
                     </p>
                 </div>
             </div>

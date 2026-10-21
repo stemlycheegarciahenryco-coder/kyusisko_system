@@ -170,7 +170,6 @@ router.get('/get/student/deleted', verifyToken, async (req, res) => {
         console.error("DATABASE ERROR:", err.message);
         res.status(500).json({ error: "Failed to fetch student logs" });
     }
-
 })
 
 
@@ -262,6 +261,42 @@ router.get('/co-admins', verifyToken, async (req, res) => {
         const result = await pool.query(
             `SELECT id, email, uid, account_status, first_name, last_name, is_archived
              FROM users 
+             WHERE role = 'co_admin' AND is_archived = false 
+             ORDER BY id DESC`
+        );
+        res.json({ success: true, data: result.rows });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+router.get('/get/co-admins/archive', verifyToken, async (req, res) => {
+    if (req.user.role !== 'root_admin') {
+        return res.status(403).json({ success: false, message: 'Forbidden access.' });
+    }
+
+    try {
+        const result = await pool.query(
+            `SELECT id, email, uid, account_status, first_name, last_name, is_archived
+             FROM users 
+             WHERE role = 'co_admin' AND is_archived = true 
+             ORDER BY id DESC`
+        );
+        res.json({ success: true, data: result.rows });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+router.get('/get/co-admins/deleted', verifyToken, async (req, res) => {
+    if (req.user.role !== 'root_admin') {
+        return res.status(403).json({ success: false, message: 'Forbidden access.' });
+    }
+
+    try {
+        const result = await pool.query(
+            `SELECT id, email, uid, account_status, first_name, last_name, is_archived
+             FROM users 
              WHERE role = 'co_admin' 
              ORDER BY id DESC`
         );
@@ -270,5 +305,6 @@ router.get('/co-admins', verifyToken, async (req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 });
+
 
 module.exports = router;

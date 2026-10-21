@@ -1,34 +1,19 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { Users, ClipboardList, UserCog, GraduationCap, UserPlus, Building2, Trash2, Filter, Archive, UnlockIcon, Search, X, ShieldCheck } from 'lucide-react';
-import api from '../api';
-import { IconLock } from '@tabler/icons-react';
+import { useState, useMemo } from 'react';
+import { UserPlus, Search, X, ShieldCheck, Lock as IconLock, Archive, Trash2, Clock } from 'lucide-react';
 import Swal from 'sweetalert2';
 
-const STAT_CARDS = [
-    { key: 'totalStudents', label: 'Total Students', icon: Users, color: 'bg-blue-50 text-blue-600' },
-    { key: 'totalSubAdmins', label: 'Active Orgs', icon: UserCog, color: 'bg-amber-50 text-amber-600' },
-    { key: 'totalScholarships', label: 'Scholarship Programs', icon: GraduationCap, color: 'bg-emerald-50 text-emerald-600' },
-    { key: 'totalApplications', label: 'Total Applications', icon: ClipboardList, color: 'bg-purple-50 text-purple-600' },
-];
-
-const CHART_CONFIG = [
-    { key: 'totalStudents', name: 'Students', color: '#2563eb' },
-    { key: 'totalSubAdmins', name: 'Organizations', color: '#f59e0b' },
-    { key: 'totalScholarships', name: 'Scholarships', color: '#10b981' },
-];
-
-function CoAdminSection({
+export default function CoAdminSection({
     coAdmins = [],
     loading,
     onToggleStatus,
     onArchive,
     onDeleteCoAdmin,
     onCreateCoAdmin,
+    onSnapshotsClick,
     formData,
     setFormData
 }) {
-    const [activeTab, setActiveTab] = useState('all'); // 'all' | 'active' | 'blocked' | 'archived' | 'deleted'
+    const [activeTab, setActiveTab] = useState('all'); // 'all' | 'active' | 'blocked' | 'archived'
     const [searchQuery, setSearchQuery] = useState('');
 
     // Handle Archive click with SweetAlert confirmation
@@ -37,13 +22,13 @@ function CoAdminSection({
         const actionText = isArchived ? 'Unarchive' : 'Archive';
 
         const result = await Swal.fire({
-            title: `${actionText} Student?`,
-            text: `Confirm you want to ${actionText.toLowerCase()} this student record.`,
+            title: `${actionText} Co-Admin?`,
+            text: `Confirm you want to ${actionText.toLowerCase()} this co-admin record.`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d97706',
             confirmButtonText: `Yes, ${actionText}!`,
-        }, '#d97706');
+        });
 
         if (result.isConfirmed) {
             onArchive(admin);
@@ -58,21 +43,23 @@ function CoAdminSection({
         let activeCount = 0;
         let blockedCount = 0;
         let archivedCount = 0;
-        let deletedCount = 0;
 
         const matchedList = [];
 
         coAdmins.forEach(admin => {
             const isArchived = Boolean(admin.is_archived);
             const isDeleted = admin.account_status === 'deleted';
+
+            // Skip entirely if deleted
+            if (isDeleted) return;
+
             const isBlocked = admin.account_status === 'suspended';
             const isActive = admin.account_status === 'active' && !isArchived;
 
-            const isAll = !isArchived && !isDeleted;
+            const isAll = !isArchived;
             const isTabActive = isActive;
-            const isTabBlocked = isBlocked && !isArchived && !isDeleted;
-            const isTabArchived = isArchived && !isDeleted;
-            const isTabDeleted = isDeleted;
+            const isTabBlocked = isBlocked && !isArchived;
+            const isTabArchived = isArchived;
 
             // Search filter check
             const fullName = `${admin.first_name || ''} ${admin.last_name || ''}`.toLowerCase();
@@ -86,7 +73,6 @@ function CoAdminSection({
                 if (isTabActive) activeCount++;
                 if (isTabBlocked) blockedCount++;
                 if (isTabArchived) archivedCount++;
-                if (isTabDeleted) deletedCount++;
             }
 
             // Determine if it matches the currently selected active tab
@@ -95,7 +81,6 @@ function CoAdminSection({
             else if (activeTab === 'active') matchesTab = isTabActive;
             else if (activeTab === 'blocked') matchesTab = isTabBlocked;
             else if (activeTab === 'archived') matchesTab = isTabArchived;
-            else if (activeTab === 'deleted') matchesTab = isTabDeleted;
 
             if (matchesTab && matchesSearch) {
                 matchedList.push(admin);
@@ -109,16 +94,27 @@ function CoAdminSection({
                 active: activeCount,
                 blocked: blockedCount,
                 archived: archivedCount,
-                deleted: deletedCount,
             }
         };
     }, [coAdmins, activeTab, searchQuery]);
 
     return (
-        <section className="bg-white p-8 rounded-[2.5rem] border border-blue-200 shadow-sm">
-            <h2 className="text-base font-black text-slate-900 uppercase tracking-tight mb-6 flex items-center gap-2">
-                <UserPlus className="text-blue-600" size={18} /> Co-Admin Management
-            </h2>
+        <section className="bg-white p-8 rounded-[2.5rem] border border-blue-200 shadow-sm space-y-6">
+            {/* Section Header with Title and Snapshots Button */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <h2 className="text-base font-black text-slate-900 uppercase tracking-tight flex items-center gap-2 m-0">
+                    <UserPlus className="text-blue-600" size={18} /> Co-Admin Management
+                </h2>
+                
+                <button
+                    type="button"
+                    onClick={onSnapshotsClick}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer border border-blue-200 shadow-sm"
+                >
+                    <Clock size={15} />
+                    Snapshots
+                </button>
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                 {/* Creation Form */}
@@ -202,7 +198,7 @@ function CoAdminSection({
 
                     {/* Filter Tab Buttons with Counts */}
                     <div className="flex flex-wrap items-center gap-2 pb-2 border-b border-slate-100">
-                        {['all', 'active', 'blocked', 'archived', 'deleted'].map((tab) => {
+                        {['all', 'active', 'blocked', 'archived'].map((tab) => {
                             const isActiveTab = activeTab === tab;
                             const count = tabCounts[tab] || 0;
 
@@ -211,14 +207,16 @@ function CoAdminSection({
                                     key={tab}
                                     type="button"
                                     onClick={() => setActiveTab(tab)}
-                                    className={`flex items-center gap-1.5 px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer border ${isActiveTab
-                                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-150'
-                                        }`}
+                                    className={`flex items-center gap-1.5 px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer border ${
+                                        isActiveTab
+                                            ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-150'
+                                    }`}
                                 >
                                     <span>{tab}</span>
-                                    <span className={`px-1.5 py-0.5 rounded-md text-[9px] ${isActiveTab ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'
-                                        }`}>
+                                    <span className={`px-1.5 py-0.5 rounded-md text-[9px] ${
+                                        isActiveTab ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'
+                                    }`}>
                                         {count}
                                     </span>
                                 </button>
@@ -257,54 +255,43 @@ function CoAdminSection({
                                         </div>
 
                                         <div className="flex items-center gap-2 shrink-0">
-                                            {admin.account_status === 'deleted' ? (
-                                                <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-xl bg-red-100 text-red-600">
-                                                    Deleted
-                                                </span>
-                                            ) : (
-                                                <>
-                                                    {/* Only show Block/Unblock button if NOT archived */}
-                                                    {!isArchived && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => onToggleStatus(admin.id, admin.account_status)}
-                                                            className={`flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer ${
-                                                                admin.account_status === 'active'
-                                                                    ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
-                                                                    : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-sm'
-                                                            }`}
-                                                        >
-                                                            {admin.account_status === 'active' ? (
-                                                                <IconLock size={12} />
-                                                            ) : (
-                                                                <ShieldCheck size={12} />
-                                                            )}
-                                                            {admin.account_status === 'active' ? 'Block' : 'Unblock'}
-                                                        </button>
+                                            {!isArchived && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onToggleStatus(admin.id, admin.account_status)}
+                                                    className={`flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer ${
+                                                        admin.account_status === 'active'
+                                                            ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                                                            : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-sm'
+                                                    }`}
+                                                >
+                                                    {admin.account_status === 'active' ? (
+                                                        <IconLock size={12} />
+                                                    ) : (
+                                                        <ShieldCheck size={12} />
                                                     )}
+                                                    {admin.account_status === 'active' ? 'Block' : 'Unblock'}
+                                                </button>
+                                            )}
 
-                                                    {/* Archive/Unarchive Button with Swal confirmation */}
-                                                    <button
-                                                        type="button"
-                                                        className="flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
-                                                        onClick={() => handleArchiveClick(admin)}
-                                                    >
-                                                        <Archive size={12} />
-                                                        {isArchived ? 'Unarchive' : 'Archive'}
-                                                    </button>
+                                            <button
+                                                type="button"
+                                                className="flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+                                                onClick={() => handleArchiveClick(admin)}
+                                            >
+                                                <Archive size={12} />
+                                                {isArchived ? 'Unarchive' : 'Archive'}
+                                            </button>
 
-                                                    {/* Show delete button ONLY if archived */}
-                                                    {isArchived && (
-                                                        <button
-                                                            type="button"
-                                                            className="flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
-                                                            onClick={() => onDeleteCoAdmin(admin.id)}
-                                                        >
-                                                            <Trash2 size={12} />
-                                                            Delete
-                                                        </button>
-                                                    )}
-                                                </>
+                                            {isArchived && (
+                                                <button
+                                                    type="button"
+                                                    className="flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+                                                    onClick={() => onDeleteCoAdmin(admin.id)}
+                                                >
+                                                    <Trash2 size={12} />
+                                                    Delete
+                                                </button>
                                             )}
                                         </div>
                                     </div>
@@ -315,320 +302,5 @@ function CoAdminSection({
                 </div>
             </div>
         </section>
-    );
-}
-
-export default function RootDashboard() {
-    const [stats, setStats] = useState(null);
-    const [loading, setLoading] = useState(true);
-
-    const [coAdmins, setCoAdmins] = useState([]);
-    const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', password: '' });
-
-    const userRole = localStorage.getItem('userRole') || 'co_admin';
-
-    const fetchDashboardData = useCallback(async () => {
-        try {
-            setLoading(true);
-            const promises = [api.get('/stats')];
-
-            if (userRole === 'root_admin') {
-                promises.push(api.get('/system-admin/co-admins'));
-            }
-
-            const [statsRes, adminsRes] = await Promise.all(promises);
-
-            if (statsRes?.data) setStats(statsRes.data);
-            if (adminsRes?.data?.success) setCoAdmins(adminsRes.data.data);
-        } catch (err) {
-            console.error("Failed to load dashboard data:", err);
-            Swal.fire({
-                icon: 'error',
-                title: 'Error Loading Data',
-                text: 'Failed to retrieve dashboard parameters. Please refresh or try again.',
-                confirmButtonColor: '#2563eb'
-            });
-        } finally {
-            setLoading(false);
-        }
-    }, [userRole]);
-
-    useEffect(() => {
-        fetchDashboardData();
-    }, [fetchDashboardData]);
-
-    const handleCreateCoAdmin = async (e) => {
-        e.preventDefault();
-        try {
-            const response = await api.post('/system-admin/create-co-admin', formData);
-            if (response.data.success) {
-                const createdAdmin = response.data.data;
-                const normalizedAdmin = {
-                    ...createdAdmin,
-                    first_name: createdAdmin.first_name || formData.firstName,
-                    last_name: createdAdmin.last_name || formData.lastName,
-                    account_status: createdAdmin.account_status || 'active'
-                };
-
-                setCoAdmins(prev => [normalizedAdmin, ...prev]);
-                setFormData({ firstName: '', lastName: '', email: '', password: '' });
-
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Co-Admin Created',
-                    text: `Account successfully registered! Generated ID: ${createdAdmin.uid || createdAdmin.id}`,
-                    confirmButtonColor: '#2563eb'
-                });
-            }
-        } catch (err) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Registration Failed',
-                text: err.response?.data?.message || 'Failed to register account.',
-                confirmButtonColor: '#2563eb'
-            });
-        }
-    };
-
-    const handleToggleStatus = async (id, currentStatus) => {
-        const actionText = currentStatus === 'active' ? 'block' : 'unblock';
-        const nextStatus = currentStatus === 'active' ? 'suspended' : 'active';
-        const confirmColor = currentStatus === 'active' ? '#dc2626' : '#2563eb'
-        const confirm = await Swal.fire({
-            title: `Are you sure?`,
-            text: `Do you want to ${actionText} this Co-Admin account?`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: confirmColor,
-            cancelButtonColor: '#64748b',
-            confirmButtonText: `Yes, ${actionText}`
-        });
-
-        if (!confirm.isConfirmed) return;
-
-        try {
-            const response = await api.patch(`/system-admin/toggle-status/${id}`, { status: nextStatus });
-            if (response.data.success) {
-                setCoAdmins(prev => prev.map(admin => admin.id === id ? { ...admin, account_status: nextStatus } : admin));
-
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Status Updated',
-                    text: `Account has been successfully ${nextStatus === 'suspended' ? 'blocked' : 'unblocked'}.`,
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-            }
-        } catch (err) {
-            console.error("Could not complete requested state transition:", err);
-            Swal.fire({
-                icon: 'error',
-                title: 'Action Failed',
-                text: err.response?.data?.message || 'Could not update account status.',
-                confirmButtonColor: '#2563eb'
-            });
-        }
-    };
-
-    const handleDeleteCoAdmin = async (id) => {
-        const confirm = await Swal.fire({
-            title: 'Delete Co-Admin Account?',
-            text: 'This action cannot be undone. Are you sure you want to delete this account?',
-            icon: 'error',
-            showCancelButton: true,
-            confirmButtonColor: '#FF1E1E',
-            cancelButtonColor: '#64748b',
-            confirmButtonText: 'Yes, Delete'
-        });
-
-        if (!confirm.isConfirmed) return;
-
-        try {
-            const response = await api.delete(`/system-admin/co-admins/${id}`);
-            if (response.data.success || response.status === 200) {
-                setCoAdmins(prev => prev.map(admin => admin.id === id ? { ...admin, account_status: 'deleted' } : admin));
-
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Deleted!',
-                    text: 'Co-Admin account has been deleted.',
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-            }
-        } catch (err) {
-            console.error("Failed to delete co-admin:", err);
-            Swal.fire({
-                icon: 'error',
-                title: 'Delete Failed',
-                text: err.response?.data?.message || 'Failed to delete account.',
-                confirmButtonColor: '#2563eb'
-            });
-        }
-    };
-
-    const handleArchive = async (admin) => {
-        try {
-            const response = await api.patch(`/system-admin/archive/${admin.id}`);
-            if (response.data.success || response.status === 200) {
-                setCoAdmins(prev => prev.map(item => item.id === admin.id ? { ...item, is_archived: !item.is_archived } : item));
-                Swal.fire({ title: 'Status Updated', icon: 'success', timer: 1500, showConfirmButton: false });
-            }
-        } catch (err) {
-            Swal.fire('Error', err.response?.data?.message || 'Action failed.', 'error');
-            console.error(err);
-        }
-    };
-
-    const pieChartData = useMemo(() => {
-        if (!stats) return [];
-        return CHART_CONFIG.map(cfg => ({
-            name: cfg.name,
-            value: stats[cfg.key] || 0,
-            color: cfg.color
-        }));
-    }, [stats]);
-
-    return (
-        <div className="p-8 space-y-8 max-w-7xl mx-auto bg-gray-50 min-h-screen font-['Inter']">
-            {/* Header */}
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-3xl font-black text-slate-800 tracking-tighter italic uppercase">
-                        System Admin<span className="text-blue-600"> Dashboard</span>
-                    </h1>
-                </div>
-            </div>
-
-            {/* Top Overview Workspace */}
-            <div className="space-y-6">
-                {/* Stat Cards Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {STAT_CARDS.map((card) => (
-                        <div key={card.key} className="bg-white p-6 rounded-[2rem] border border-blue-200 shadow-sm flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-2xl ${card.color} flex items-center justify-center`}>
-                                    <card.icon size={22} />
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{card.label}</p>
-                                    <p className="text-2xl font-black text-slate-800">{loading ? '...' : stats?.[card.key] ?? 0}</p>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Pie Chart & Analytics Section */}
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-stretch">
-                    {/* Pie Chart */}
-                    <div className="bg-white p-6 rounded-[2.5rem] border border-blue-400 shadow-sm flex flex-col justify-between min-h-[360px] xl:col-span-1">
-                        <div>
-                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 text-center">
-                                Data Distribution
-                            </h4>
-                        </div>
-                        <div className="flex-1 h-56 min-w-0">
-                            {!loading && stats ? (
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie
-                                            data={pieChartData}
-                                            cx="50%"
-                                            cy="45%"
-                                            innerRadius={55}
-                                            outerRadius={75}
-                                            paddingAngle={6}
-                                            dataKey="value"
-                                        >
-                                            {pieChartData.map((entry) => (
-                                                <Cell key={`cell-${entry.name}`} fill={entry.color} stroke="none" />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                                        <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '10px' }} />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            ) : (
-                                <div className="flex items-center justify-center h-full text-slate-300 italic text-xs">
-                                    {loading ? "Calculating Data..." : "No distribution data available"}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Recent Items Overview Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 xl:col-span-2">
-                        {/* Recent Students */}
-                        <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col justify-between min-h-[360px]">
-                            <div>
-                                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                    <Users size={14} className="text-blue-600" /> Recent Students Overview
-                                </h3>
-                                <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
-                                    {loading ? (
-                                        <p className="text-xs text-slate-400 italic py-2">Loading registrations...</p>
-                                    ) : !stats?.recentStudents || stats.recentStudents.length === 0 ? (
-                                        <p className="text-xs text-slate-400 italic py-2">No students listed.</p>
-                                    ) : (
-                                        stats.recentStudents.map((student) => (
-                                            <div key={student.id} className="flex justify-between items-center p-3 bg-slate-50 border border-slate-100 rounded-xl">
-                                                <span className="text-xs font-bold text-slate-800 uppercase truncate max-w-[130px]">
-                                                    {student.first_name} {student.last_name}
-                                                </span>
-                                                <span className="text-[9px] font-black px-2 py-0.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-md tracking-wider">
-                                                    {student.uid || `ID-${student.id}`}
-                                                </span>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Recent Providers */}
-                        <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col justify-between min-h-[360px]">
-                            <div>
-                                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                    <Building2 size={14} className="text-amber-600" /> Recent Providers Overview
-                                </h3>
-                                <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
-                                    {loading ? (
-                                        <p className="text-xs text-slate-400 italic py-2">Loading providers...</p>
-                                    ) : !stats?.recentProviders || stats.recentProviders.length === 0 ? (
-                                        <p className="text-xs text-slate-400 italic py-2">No providers active.</p>
-                                    ) : (
-                                        stats.recentProviders.map((provider) => (
-                                            <div key={provider.id} className="flex flex-col p-3 bg-slate-50 border border-slate-100 rounded-xl">
-                                                <span className="text-xs font-black text-slate-800 uppercase tracking-tight truncate">
-                                                    {provider.name}
-                                                </span>
-                                                <span className="text-[10px] text-slate-400 font-medium truncate mt-0.5">
-                                                    {provider.email}
-                                                </span>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Bottom Co-Admin Management Component */}
-            {userRole === 'root_admin' && (
-                <CoAdminSection
-                    coAdmins={coAdmins}
-                    loading={loading}
-                    onToggleStatus={handleToggleStatus}
-                    onArchive={handleArchive}
-                    onDeleteCoAdmin={handleDeleteCoAdmin}
-                    onCreateCoAdmin={handleCreateCoAdmin}
-                    formData={formData}
-                    setFormData={setFormData}
-                />
-            )}
-        </div>
     );
 }
