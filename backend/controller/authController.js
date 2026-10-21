@@ -60,7 +60,7 @@ exports.portalLogin = async (req, res) => {
 
         if (isSystemAdmin) {
             // --- SYSTEM ADMIN PROFILE ROUTE ---
-            const userResult = await pool.query('SELECT * FROM users WHERE uid = $1', [input.toUpperCase()]);
+            const userResult = await pool.query('SELECT * FROM users WHERE uid = $1 AND is_archived = false', [input.toUpperCase()]);
             if (userResult.rows.length === 0) {
                 await logAttempt(input, ip, false);
                 return res.status(401).json({ error: "Invalid Credentials" });
@@ -115,7 +115,7 @@ exports.portalLogin = async (req, res) => {
 
         // --- EMAIL ROUTING ENTRY STRATEGIES ---
         const subResult = await pool.query(
-            'SELECT * FROM sub_admins WHERE UPPER(provider_code) = UPPER($1) OR sub_email = $1',
+            'SELECT * FROM sub_admins WHERE UPPER(provider_code) = UPPER($1) OR sub_email = $1 AND is_archived = false',
             [input]
         );
         
@@ -178,7 +178,7 @@ exports.portalLogin = async (req, res) => {
         }
 
         // Strategy B: Fallback and check if input matches a Student account registration
-        const studentResult = await pool.query('SELECT * FROM students WHERE student_email = $1', [input]);
+        const studentResult = await pool.query('SELECT * FROM students WHERE student_email = $1 AND is_archived = false', [input]);
         
         if (studentResult.rows.length > 0) {
             const student = studentResult.rows[0];
