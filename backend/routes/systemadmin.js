@@ -291,6 +291,18 @@ router.put('/co-admins/update/:id', verifyToken, async (req, res) => {
         const { id } = req.params;
         const { firstName, lastName, email, password } = req.body;
 
+        const emailCheck = await pool.query(
+            ` 
+             SELECT student_email FROM students WHERE student_email = $1 
+             UNION 
+             SELECT sub_email FROM sub_admins WHERE sub_email = $1`,
+            [email.trim()]
+        );
+
+        if (emailCheck.rows.length > 0) {
+            return res.status(400).json({ success: false, message: 'Email address is already in use by another account.' });
+        }
+
         let query;
         let values;
 
@@ -406,8 +418,16 @@ router.post('/create-co-admin', verifyToken, async (req, res) => {
     const trimmedEmail = email.trim().toLowerCase();
 
     try {
-        // Check if email already exists in the main users table first for a cleaner custom error message
-        const emailCheck = await pool.query('SELECT id FROM users WHERE email = $1', [trimmedEmail]);
+        // Check if email already exists in users, students, or sub_admins tables
+        const emailCheck = await pool.query(
+            `SELECT email FROM users WHERE email = $1 
+             UNION 
+             SELECT student_email FROM students WHERE student_email = $1 
+             UNION 
+             SELECT sub_email FROM sub_admins WHERE sub_email = $1`,
+            [trimmedEmail]
+        );
+
         if (emailCheck.rows.length > 0) {
             return res.status(400).json({ success: false, message: 'Email address is already in use by another account.' });
         }

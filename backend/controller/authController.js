@@ -11,7 +11,6 @@ const qrcode = require('qrcode');
 const MAX_ATTEMPTS = 5;
 const WINDOW_MINUTES = 10;
 
-// ✅ Dynamic Cookie Configuration based on environment
 const isProduction = process.env.NODE_ENV === 'production';
 const cookieOptions = {
     httpOnly: true,

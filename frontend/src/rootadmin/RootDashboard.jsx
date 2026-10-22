@@ -339,8 +339,8 @@ function CoAdminSection({
                                                     type="button"
                                                     onClick={() => onToggleStatus(admin.id, admin.account_status)}
                                                     className={`flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer ${admin.account_status === 'active'
-                                                        ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
-                                                        : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-sm'
+                                                            ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                                                            : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-sm'
                                                         }`}
                                                 >
                                                     {admin.account_status === 'active' ? (
@@ -352,17 +352,20 @@ function CoAdminSection({
                                                 </button>
                                             )}
 
-                                            <button
-                                                type="button"
-                                                className={`flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer ${isCurrentlyEditing
-                                                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                                                    : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                                    }`}
-                                                onClick={() => handleStartEdit(admin)}
-                                            >
-                                                <Edit size={12} />
-                                                {isCurrentlyEditing ? 'Editing' : 'Edit'}
-                                            </button>
+                                            {/* Edit button is now hidden if the co-admin is archived */}
+                                            {!isArchived && (
+                                                <button
+                                                    type="button"
+                                                    className={`flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer ${isCurrentlyEditing
+                                                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                                                            : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                                        }`}
+                                                    onClick={() => handleStartEdit(admin)}
+                                                >
+                                                    <Edit size={12} />
+                                                    {isCurrentlyEditing ? 'Editing' : 'Edit'}
+                                                </button>
+                                            )}
 
                                             <button
                                                 type="button"
