@@ -3,7 +3,7 @@ import api from '../api';
 import { IconEye, IconUser, IconSearch, IconRefresh } from '@tabler/icons-react';
 import Swal from 'sweetalert2';
 import RootOrgView from './RootOrgView';
-import { ArchiveIcon, Clock1Icon, Trash2Icon } from 'lucide-react';
+import { ArchiveIcon, Clock1Icon } from 'lucide-react';
 
 // Removed 'deleted' from the tabs list
 const TABS = ['all', 'pending', 'approved', 'rejected', 'blocked', 'archived'];
@@ -164,82 +164,6 @@ const RootOrganization = () => {
         }
     };
 
-    const handleDelete = async (org) => {
-        const { value: formValues } = await Swal.fire({
-            title: `Delete ${org.org_name}?`,
-            text: `Please type the provider name ("${org.org_name}") and enter your admin password to confirm permanent deletion.`,
-            html: `
-                <div style="text-align: left; margin-top: 10px;">
-                    <label style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; display: block; margin-bottom: 4px;">
-                        Confirm Provider Name
-                    </label>
-                    <input id="swal-input-name" class="swal2-input" placeholder="Enter provider name" style="margin: 0 0 15px 0; width: 100%; box-sizing: border-box; font-size: 14px;" />
-                    
-                    <label style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; display: block; margin-bottom: 4px;">
-                        Admin Password
-                    </label>
-                    <input id="swal-input-password" type="password" class="swal2-input" placeholder="Enter admin password" style="margin: 0; width: 100%; box-sizing: border-box; font-size: 14px;" />
-                </div>
-            `,
-            focusConfirm: false,
-            showCancelButton: true,
-            confirmButtonColor: colors.red,
-            cancelButtonColor: '#94a3b8',
-            confirmButtonText: 'Delete Permanently',
-            background: colors.white,
-            color: '#0f172a',
-            preConfirm: () => {
-                const enteredName = document.getElementById('swal-input-name').value;
-                const password = document.getElementById('swal-input-password').value;
-
-                if (enteredName !== org.org_name) {
-                    Swal.showValidationMessage('The provider name you entered does not match.');
-                    return false;
-                }
-                if (!password) {
-                    Swal.showValidationMessage('Please enter your admin password.');
-                    return false;
-                }
-                return { password };
-            }
-        });
-
-        if (formValues) {
-            try {
-                // Pass the password in the request body if your backend requires verification
-                await api.delete(`/onboarding-orgs/delete/${org.id}`, {
-                    data: { password: formValues.password }
-                });
-
-                Swal.fire({
-                    title: 'Deleted!',
-                    text: `${org.org_name} has been removed.`,
-                    icon: 'success',
-                    timer: 1500,
-                    showConfirmButton: false,
-                    background: colors.white,
-                    color: '#0f172a',
-                    borderRadius: '24px',
-                });
-
-                if (selectedOrg?.id === org.id) {
-                    setSelectedOrg(null);
-                }
-                fetchOrgs();
-            } catch (err) {
-                Swal.fire({
-                    title: 'Error',
-                    text: err.response?.data?.error || 'Failed to delete provider. Incorrect password or action failed.',
-                    icon: 'error',
-                    background: colors.white,
-                    color: '#0f172a',
-                    borderRadius: '24px',
-                    confirmButtonColor: colors.blue,
-                });
-            }
-        }
-    };
-
     if (loading)
         return (
             <div className="p-10 text-slate-500 font-bold italic animate-pulse text-center">
@@ -363,8 +287,8 @@ const RootOrganization = () => {
                                             </td>
                                             <td className="px-8 py-5">
                                                 <span className={`px-4 py-1 text-[10px] font-black rounded-lg border uppercase tracking-tighter ${org.status === 'pending' ? (isUpdatedResubmission ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-orange-50 text-orange-600 border-orange-100') :
-                                                        org.status === 'approved' ? 'bg-green-50 text-green-600 border-green-100' :
-                                                            'bg-red-50 text-red-600 border-red-100'
+                                                    org.status === 'approved' ? 'bg-green-50 text-green-600 border-green-100' :
+                                                        'bg-red-50 text-red-600 border-red-100'
                                                     }`}>
                                                     {isUpdatedResubmission ? 'Updated' : org.status}
                                                 </span>
@@ -385,29 +309,16 @@ const RootOrganization = () => {
                                                     <span>View</span>
                                                 </button>
 
-                                                {/* If archived, show Unarchive and Delete (Delete shows only when viewing the Archive tab) */}
+                                                {/* If archived, show Unarchive only */}
                                                 {isArchived ? (
-                                                    <>
-                                                        <button
-                                                            onClick={() => handleArchive(org)}
-                                                            title="Unarchive"
-                                                            className="flex items-center gap-2 p-3 bg-amber-600/10 hover:bg-amber-600 text-[10px] font-black uppercase text-amber-500 hover:text-white border border-amber-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
-                                                        >
-                                                            <ArchiveIcon size={20} />
-                                                            <span>Unarchive</span>
-                                                        </button>
-
-                                                        {activeTab === 'archived' && (
-                                                            <button
-                                                                onClick={() => handleDelete(org)}
-                                                                title="Delete"
-                                                                className="flex items-center gap-2 p-3 bg-rose-600/10 hover:bg-rose-600 text-[10px] font-black uppercase text-rose-500 hover:text-white border border-rose-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
-                                                            >
-                                                                <Trash2Icon size={20} />
-                                                                <span>Delete</span>
-                                                            </button>
-                                                        )}
-                                                    </>
+                                                    <button
+                                                        onClick={() => handleArchive(org)}
+                                                        title="Unarchive"
+                                                        className="flex items-center gap-2 p-3 bg-amber-600/10 hover:bg-amber-600 text-[10px] font-black uppercase text-amber-500 hover:text-white border border-amber-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
+                                                    >
+                                                        <ArchiveIcon size={20} />
+                                                        <span>Unarchive</span>
+                                                    </button>
                                                 ) : (
                                                     /* For non-archived items, show Archive only */
                                                     <button

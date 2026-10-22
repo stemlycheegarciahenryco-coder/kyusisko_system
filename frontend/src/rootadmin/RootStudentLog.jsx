@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
-import { Search, ShieldCheck, Lock, Phone, MapPin, Mail, Archive, Trash2, Clock } from 'lucide-react';
+import { Search, ShieldCheck, Lock, Phone, MapPin, Mail, Archive } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 export default function RootStudentLog() {
@@ -84,85 +84,12 @@ export default function RootStudentLog() {
         }
     };
 
-    const handleDelete = async (student) => {
-        const studentFullName = `${student.sfirst_name || ''} ${student.slast_name || ''}`.trim();
-
-        const { value: formValues } = await Swal.fire({
-            title: `Delete ${studentFullName}?`,
-            text: `Please type the student's name ("${studentFullName}") and enter your admin password to confirm permanent deletion.`,
-            html: `
-                <div style="text-align: left; margin-top: 10px;">
-                    <label style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; display: block; margin-bottom: 4px;">
-                        Confirm Student Name
-                    </label>
-                    <input id="swal-input-name" class="swal2-input" placeholder="Enter student name" style="margin: 0 0 15px 0; width: 100%; box-sizing: border-box; font-size: 14px;" />
-                    
-                    <label style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; display: block; margin-bottom: 4px;">
-                        Admin Password
-                    </label>
-                    <input id="swal-input-password" type="password" class="swal2-input" placeholder="Enter admin password" style="margin: 0; width: 100%; box-sizing: border-box; font-size: 14px;" />
-                </div>
-            `,
-            focusConfirm: false,
-            showCancelButton: true,
-            confirmButtonColor: '#FF1E1E',
-            cancelButtonColor: '#94a3b8',
-            confirmButtonText: 'Delete Permanently',
-            background: '#ffffff',
-            color: '#0f172a',
-            preConfirm: () => {
-                const enteredName = document.getElementById('swal-input-name').value;
-                const password = document.getElementById('swal-input-password').value;
-
-                if (enteredName !== studentFullName) {
-                    Swal.showValidationMessage('The student name you entered does not match.');
-                    return false;
-                }
-                if (!password) {
-                    Swal.showValidationMessage('Please enter your admin password.');
-                    return false;
-                }
-                return { password };
-            }
-        });
-
-        if (formValues) {
-            try {
-                await api.delete(`/students/${student.id}`, {
-                    data: { password: formValues.password }
-                });
-
-                setArchivedStudents(prev => prev.filter(s => s.id !== student.id));
-                await fetchAllData();
-                
-                Swal.fire({
-                    title: 'Deleted!',
-                    text: 'Student record has been removed.',
-                    icon: 'success',
-                    timer: 1500,
-                    showConfirmButton: false,
-                    background: '#ffffff',
-                    color: '#0f172a',
-                });
-            } catch (err) {
-                Swal.fire({
-                    title: 'Error!',
-                    text: err.response?.data?.error || 'Failed to delete student. Incorrect password or action failed.',
-                    icon: 'error',
-                    background: '#ffffff',
-                    color: '#0f172a',
-                    confirmButtonColor: '#093fb4',
-                });
-            }
-        }
-    };
-
     const onSnapshotsClick = async () => { setSnapshotVisible(!snapshotIsVisible) };
 
     // Determine current dataset based on active tab
-    const currentDataset = 
-        activeTab === 'archived' ? archivedStudents : 
-        students;
+    const currentDataset =
+        activeTab === 'archived' ? archivedStudents :
+            students;
 
     // Calculate accurate preloaded counts across variables
     const counts = {
@@ -194,7 +121,7 @@ export default function RootStudentLog() {
                         Student Management
                     </h2>
                 </div>
-                
+
                 <div className="px-5 py-3 rounded-2xl border border-[#093fb4] bg-white shadow-sm self-start md:self-auto">
                     <p className="text-xl font-black leading-none text-[#093fb4]">{students.length + archivedStudents.length}</p>
                     <p className="text-[9px] font-black uppercase tracking-widest text-black mt-1">Total Student Registered</p>
@@ -325,18 +252,6 @@ export default function RootStudentLog() {
                                                     <Archive size={16} />
                                                     <span>{s.is_archived ? 'Unarchive' : 'Archive'}</span>
                                                 </button>
-
-                                                {/* Delete Button (Only shows in Archived Tab) */}
-                                                {activeTab === 'archived' && (
-                                                    <button
-                                                        onClick={() => handleDelete(s)}
-                                                        title="Delete Student Permanently"
-                                                        className="flex items-center gap-2 p-3 text-[10px] font-black uppercase rounded-2xl border shadow-md hover:scale-110 transition-all cursor-pointer bg-red-600/10 text-red-600 border-red-600/20 hover:bg-red-600 hover:text-white"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                        <span>Delete</span>
-                                                    </button>
-                                                )}
                                             </div>
                                         </td>
                                     </tr>

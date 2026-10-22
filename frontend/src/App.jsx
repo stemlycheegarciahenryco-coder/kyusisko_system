@@ -1,4 +1,4 @@
-import {useEffect} from 'react';
+import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import api from './api';
 
@@ -48,13 +48,13 @@ import OrgLogs from './org/OrgLogs';
 import OrgArchive from './org/OrgArchive';
 import CreateScholarship from './component/CreateScholarship';
 import DisbursementLedger from './component/DisbursementLedger';
-import {CompliancePage} from './CompliancePage';
+import { CompliancePage } from './CompliancePage';
 
 import ApplicationForm from './ApplicationForm';
 
 
 
-import  VerifyReset from  './VerifyReset';
+import VerifyReset from './VerifyReset';
 
 import ApproveLogin from './ApproveLogin'
 
@@ -72,92 +72,92 @@ import ForgotPassword from './ForgotPassword';
 import Home from './Home';
 
 export default function App() {
-  useEffect(() => {
-    api.get('/health').catch(() => {
-      // Silently catches connection errors while the server is still booting up
-    });
-  }, []);
-  return (
-    <Routes>
-      {/* 1. THE FRONT DOOR: Home Page is the first thing everyone sees */}
-      <Route path="/" element={<Home />} />
-      <Route path="/organization-register" element= {<OrganizationRegisterPage/>}/>
-      <Route path="/provider-guidelines" element={<ProviderGuidelines />} />
-     
+    useEffect(() => {
+        api.get('/health').catch(() => {
+            // Silently catches connection errors while the server is still booting up
+        });
+    }, []);
+    return (
+        <Routes>
+            {/* 1. THE FRONT DOOR: Home Page is the first thing everyone sees */}
+            <Route path="/" element={<Home />} />
+            <Route path="/organization-register" element={<OrganizationRegisterPage />} />
+            <Route path="/provider-guidelines" element={<ProviderGuidelines />} />
 
-      {/* 2. STUDENT FLOW: Publicly accessible scholarship routes */}
 
-      <Route path="/student-register" element={<StudentRegister />} />
-      {/* 3. ADMIN AUTH: Entry point for Root and Org admins */}
-      <Route path="/login" element={<LogIn />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/verify-reset" element={<VerifyReset />} />
-      <Route path="/approve-login" element={<ApproveLogin />} />
-      <Route path="/compliance/:id" element={<CompliancePage />} />
+            {/* 2. STUDENT FLOW: Publicly accessible scholarship routes */}
 
-          
-
-      {/* 4. ORG (SUB-ADMIN) LAYOUT: Wrapped in OrgLayout */}
-     <Route element={<ProtectedRoutes allowedRoles={['sub_admin']} />}>
-     <Route element={<OrgLayout />}>
-       <Route path="/OrgDashboard" element={<OrgDashboard />} />
-        {/*MIGHT DELETE LATERRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR*/ }
-        <Route path="/scholarship-applications/:id/applicants/:appId" element={<ApplicationDetails />} />
+            <Route path="/student-register" element={<StudentRegister />} />
+            {/* 3. ADMIN AUTH: Entry point for Root and Org admins */}
+            <Route path="/login" element={<LogIn />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/verify-reset" element={<VerifyReset />} />
+            <Route path="/approve-login" element={<ApproveLogin />} />
+            <Route path="/compliance/:id" element={<CompliancePage />} />
 
 
 
-        {/* The Specific Pages (Triggered after selection) ORG */}
-        
-       <Route path="/OrgApplicantPrograms" element={<OrgApplicantPrograms />} />
-      
-      <Route path="/scholarship-applications/:id/applicants" element={<OrgApplicants />} />
-        <Route path="/ProgramView" element={<ProgramView />} />
-          <Route path="/scholarship-applications/:id/disbursements" element={<DisbursementLedger />} />
-        <Route path="/OrgReports" element={<OrgReports />} />
-        <Route path="/OrgProfile" element={<OrgProfile />} />
-        <Route path="/OrgArchive" element={<OrgArchive />} />
-        <Route path="/OrgLogs" element={<OrgLogs />} />
-        <Route path="/OrgSettings" element={<OrgSettings />} />
-        <Route path="/create-scholarship" element={<CreateScholarship />} />
-       
-      </Route>
-</Route>
+            {/* 4. ORG (SUB-ADMIN) LAYOUT: Wrapped in OrgLayout */}
+            <Route element={<ProtectedRoutes allowedRoles={['sub_admin']} />}>
+                <Route element={<OrgLayout />}>
+                    <Route path="/OrgDashboard" element={<OrgDashboard />} />
+                    {/*MIGHT DELETE LATERRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR*/}
+                    <Route path="/scholarship-applications/:id/applicants/:appId" element={<ApplicationDetails />} />
 
 
-      {/* 5. ROOT ADMIN LAYOUT: Wrapped in RootLayout */}
-     <Route element={<ProtectedRoutes allowedRoles={['root_admin']} />}>
-     <Route element={<RootLayout />}>
-        <Route path="/RootDashboard" element={<Dashboard />} />
-        <Route path="/RootReports" element={<Reports />} />
-        <Route path="/RootOrganization" element={<RootOrganization />} />
-        <Route path="/RootStudLog" element={<StudentLog />} />
-        <Route path="/RootNotifications" element={<Notifications />} />
-        <Route path="/RootAudit" element={<RootAudit />} />
-        </Route>
-      </Route>
+
+                    {/* The Specific Pages (Triggered after selection) ORG */}
+
+                    <Route path="/OrgApplicantPrograms" element={<OrgApplicantPrograms />} />
+
+                    <Route path="/scholarship-applications/:id/applicants" element={<OrgApplicants />} />
+                    <Route path="/ProgramView" element={<ProgramView />} />
+                    <Route path="/scholarship-applications/:id/disbursements" element={<DisbursementLedger />} />
+                    <Route path="/OrgReports" element={<OrgReports />} />
+                    <Route path="/OrgProfile" element={<OrgProfile />} />
+                    <Route path="/OrgArchive" element={<OrgArchive />} />
+                    <Route path="/OrgLogs" element={<OrgLogs />} />
+                    <Route path="/OrgSettings" element={<OrgSettings />} />
+                    <Route path="/create-scholarship" element={<CreateScholarship />} />
+
+                </Route>
+            </Route>
 
 
-      
+            {/* 5. ROOT ADMIN LAYOUT: Wrapped in RootLayout */}
+            <Route element={<ProtectedRoutes allowedRoles={['root_admin']} />}>
+                <Route element={<RootLayout />}>
+                    <Route path="/RootDashboard" element={<Dashboard />} />
+                    <Route path="/RootReports" element={<Reports />} />
+                    <Route path="/RootOrganization" element={<RootOrganization />} />
+                    <Route path="/RootStudLog" element={<StudentLog />} />
+                    <Route path="/RootNotifications" element={<Notifications />} />
+                    <Route path="/RootAudit" element={<RootAudit />} />
+                </Route>
+            </Route>
 
-      {/* 6. Student LAYOUT: Wrapped in StudentLayout */}
-      
-      <Route element={<ProtectedRoutes allowedRoles={['student']} />}>
-      <Route path="/student-onboard" element= {<StudentOnboarding/>}/>
-        <Route element={<StudentLayout />}>
-          <Route path="/scholarships" element={<ScholarList />} />
-          
-        <Route path="/StudentProfile" element={<StudentProfile />} />
-        <Route path="/MyScholarships" element={<MyScholarships />} />
-        <Route path="/my-scholarships/:applicationId" element={<ProgramDetailPage />} />
-        <Route path="/StudentSettings" element={<StudentSettings />} />
-        <Route path="/apply/:id" element={<ApplicationForm />} />
-        <Route path="/student-onboard" element={<StudentOnboarding />} />
-        
-        </Route>
-        
-      </Route>
-      {/* CATCH-ALL: If someone gets lost, send them back to the Home Page */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-  );
+
+
+
+            {/* 6. Student LAYOUT: Wrapped in StudentLayout */}
+
+            <Route element={<ProtectedRoutes allowedRoles={['student']} />}>
+                <Route path="/student-onboard" element={<StudentOnboarding />} />
+                <Route element={<StudentLayout />}>
+                    <Route path="/scholarships" element={<ScholarList />} />
+
+                    <Route path="/StudentProfile" element={<StudentProfile />} />
+                    <Route path="/MyScholarships" element={<MyScholarships />} />
+                    <Route path="/my-scholarships/:applicationId" element={<ProgramDetailPage />} />
+                    <Route path="/StudentSettings" element={<StudentSettings />} />
+                    <Route path="/apply/:id" element={<ApplicationForm />} />
+                    <Route path="/student-onboard" element={<StudentOnboarding />} />
+
+                </Route>
+
+            </Route>
+            {/* CATCH-ALL: If someone gets lost, send them back to the Home Page */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+    );
 }

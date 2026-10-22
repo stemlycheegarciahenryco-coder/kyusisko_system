@@ -42,31 +42,9 @@ export default function RootReports() {
 
         if (!confirmResult.isConfirmed) return;
 
-        const { value: reasonText, isConfirmed } = await Swal.fire({
-            title: 'Provide Takedown Reason',
-            input: 'textarea',
-            inputPlaceholder: 'Please provide a reason for taking down this scholarship...',
-            inputAttributes: {
-                'aria-label': 'Provide a reason for taking down this scholarship'
-            },
-            showCancelButton: true,
-            confirmButtonColor: '#dc2626',
-            cancelButtonColor: '#64748b',
-            confirmButtonText: 'Submit',
-            inputValidator: (value) => {
-                if (!value || !value.trim()) {
-                    return 'A reason is required to take down a scholarship program.';
-                }
-            }
-        });
-
-        if (!isConfirmed || !reasonText) return;
-
         setActionLoading(`takedown-${scholarshipId}`);
         try {
-            await api.put(`/reports/takedown/${scholarshipId}`, {
-                reason: reasonText.trim()
-            });
+            await api.put(`/reports/takedown/${scholarshipId}`);
             Swal.fire({
                 icon: 'success',
                 title: 'Taken Down',

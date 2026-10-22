@@ -23,7 +23,6 @@ function CoAdminSection({
     loading,
     onToggleStatus,
     onArchive,
-    onDeleteCoAdmin,
     onEditCoAdmin,
     onCreateCoAdmin,
     formData,
@@ -93,55 +92,6 @@ function CoAdminSection({
 
         if (result.isConfirmed) {
             onArchive(admin);
-        }
-    };
-
-    // Handle Delete click with SweetAlert confirmation requiring name and admin password
-    const handleDeleteClick = async (admin) => {
-        const adminFullName = `${admin.first_name || ''} ${admin.last_name || ''}`.trim();
-
-        const { value: formValues } = await Swal.fire({
-            title: `Delete ${adminFullName}?`,
-            text: `Please type the co-admin's name ("${adminFullName}") and enter your admin password to confirm permanent deletion.`,
-            html: `
-                <div style="text-align: left; margin-top: 10px;">
-                    <label style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; display: block; margin-bottom: 4px;">
-                        Confirm Co-Admin Name
-                    </label>
-                    <input id="swal-input-name" class="swal2-input" placeholder="Enter co-admin name" style="margin: 0 0 15px 0; width: 100%; box-sizing: border-box; font-size: 14px;" />
-                    
-                    <label style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; display: block; margin-bottom: 4px;">
-                        Admin Password
-                    </label>
-                    <input id="swal-input-password" type="password" class="swal2-input" placeholder="Enter admin password" style="margin: 0; width: 100%; box-sizing: border-box; font-size: 14px;" />
-                </div>
-            `,
-            focusConfirm: false,
-            showCancelButton: true,
-            confirmButtonColor: '#e11d48',
-            cancelButtonColor: '#94a3b8',
-            confirmButtonText: 'Delete Permanently',
-            background: '#ffffff',
-            color: '#0f172a',
-            preConfirm: () => {
-                const enteredName = document.getElementById('swal-input-name').value;
-                const password = document.getElementById('swal-input-password').value;
-
-                if (enteredName !== adminFullName) {
-                    Swal.showValidationMessage('The co-admin name you entered does not match.');
-                    return false;
-                }
-                if (!password) {
-                    Swal.showValidationMessage('Please enter your admin password.');
-                    return false;
-                }
-                return { password };
-            }
-        });
-
-        if (formValues) {
-            // Pass both the admin object and the password object/value to your handler
-            onDeleteCoAdmin(admin, formValues.password);
         }
     };
 
@@ -215,9 +165,9 @@ function CoAdminSection({
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                 {/* Consistent Form Design: Register New vs. Edit Co-Admin */}
-                <form 
+                <form
                     ref={formRef}
-                    onSubmit={handleSubmitForm} 
+                    onSubmit={handleSubmitForm}
                     className="space-y-3 lg:col-span-1 border-b lg:border-b-0 lg:border-r border-slate-100 pb-6 lg:pb-0 lg:pr-8"
                 >
                     <div className="flex items-center justify-between mb-2">
@@ -237,9 +187,8 @@ function CoAdminSection({
                             required
                             value={formData.firstName}
                             onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                            className={`w-full p-2.5 text-xs font-semibold border rounded-xl bg-slate-50 focus:outline-none text-slate-800 ${
-                                editingAdmin ? 'border-emerald-200 focus:border-emerald-600' : 'border-slate-200 focus:border-blue-600'
-                            }`}
+                            className={`w-full p-2.5 text-xs font-semibold border rounded-xl bg-slate-50 focus:outline-none text-slate-800 ${editingAdmin ? 'border-emerald-200 focus:border-emerald-600' : 'border-slate-200 focus:border-blue-600'
+                                }`}
                         />
                         <input
                             type="text"
@@ -247,9 +196,8 @@ function CoAdminSection({
                             required
                             value={formData.lastName}
                             onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                            className={`w-full p-2.5 text-xs font-semibold border rounded-xl bg-slate-50 focus:outline-none text-slate-800 ${
-                                editingAdmin ? 'border-emerald-200 focus:border-emerald-600' : 'border-slate-200 focus:border-blue-600'
-                            }`}
+                            className={`w-full p-2.5 text-xs font-semibold border rounded-xl bg-slate-50 focus:outline-none text-slate-800 ${editingAdmin ? 'border-emerald-200 focus:border-emerald-600' : 'border-slate-200 focus:border-blue-600'
+                                }`}
                         />
                     </div>
                     <input
@@ -258,9 +206,8 @@ function CoAdminSection({
                         required
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className={`w-full p-2.5 text-xs font-semibold border rounded-xl bg-slate-50 focus:outline-none text-slate-800 ${
-                            editingAdmin ? 'border-emerald-200 focus:border-emerald-600' : 'border-slate-200 focus:border-blue-600'
-                        }`}
+                        className={`w-full p-2.5 text-xs font-semibold border rounded-xl bg-slate-50 focus:outline-none text-slate-800 ${editingAdmin ? 'border-emerald-200 focus:border-emerald-600' : 'border-slate-200 focus:border-blue-600'
+                            }`}
                     />
                     <div>
                         <input
@@ -269,9 +216,8 @@ function CoAdminSection({
                             required={!editingAdmin}
                             value={formData.password}
                             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                            className={`w-full p-2.5 text-xs font-semibold border rounded-xl bg-slate-50 focus:outline-none text-slate-800 ${
-                                editingAdmin ? 'border-emerald-200 focus:border-emerald-600' : 'border-slate-200 focus:border-blue-600'
-                            }`}
+                            className={`w-full p-2.5 text-xs font-semibold border rounded-xl bg-slate-50 focus:outline-none text-slate-800 ${editingAdmin ? 'border-emerald-200 focus:border-emerald-600' : 'border-slate-200 focus:border-blue-600'
+                                }`}
                         />
                         {editingAdmin && (
                             <p className="text-[10px] text-slate-400 mt-1 pl-1 font-medium italic">Leave blank to retain current password.</p>
@@ -280,9 +226,8 @@ function CoAdminSection({
 
                     <button
                         type="submit"
-                        className={`w-full py-2.5 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer shadow-sm ${
-                            editingAdmin ? 'bg-emerald-600 hover:bg-emerald-800' : 'bg-blue-600 hover:bg-blue-800'
-                        }`}
+                        className={`w-full py-2.5 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer shadow-sm ${editingAdmin ? 'bg-emerald-600 hover:bg-emerald-800' : 'bg-blue-600 hover:bg-blue-800'
+                            }`}
                     >
                         {editingAdmin ? 'Update Co-Admin Account' : 'Create Co-Admin Account'}
                     </button>
@@ -330,16 +275,14 @@ function CoAdminSection({
                                         key={tab}
                                         type="button"
                                         onClick={() => setActiveTab(tab)}
-                                        className={`flex items-center gap-1.5 px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer border ${
-                                            isActiveTab
-                                                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-150'
-                                        }`}
+                                        className={`flex items-center gap-1.5 px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer border ${isActiveTab
+                                            ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-150'
+                                            }`}
                                     >
                                         <span>{tab}</span>
-                                        <span className={`px-1.5 py-0.5 rounded-md text-[9px] ${
-                                            isActiveTab ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'
-                                        }`}>
+                                        <span className={`px-1.5 py-0.5 rounded-md text-[9px] ${isActiveTab ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'
+                                            }`}>
                                             {count}
                                         </span>
                                     </button>
@@ -364,13 +307,12 @@ function CoAdminSection({
                                 const isCurrentlyEditing = editingAdmin?.id === admin.id;
 
                                 return (
-                                    <div 
-                                        key={admin.id} 
-                                        className={`flex justify-between items-center p-5 rounded-2xl border transition-all gap-4 shadow-sm ${
-                                            isCurrentlyEditing 
-                                                ? 'bg-emerald-50/50 border-emerald-400 ring-2 ring-emerald-400/20 shadow-md' 
-                                                : 'bg-slate-50 border-slate-200/80 hover:border-slate-300'
-                                        }`}
+                                    <div
+                                        key={admin.id}
+                                        className={`flex justify-between items-center p-5 rounded-2xl border transition-all gap-4 shadow-sm ${isCurrentlyEditing
+                                            ? 'bg-emerald-50/50 border-emerald-400 ring-2 ring-emerald-400/20 shadow-md'
+                                            : 'bg-slate-50 border-slate-200/80 hover:border-slate-300'
+                                            }`}
                                     >
                                         <div className="min-w-0 flex-1 space-y-1">
                                             <div className="flex items-center gap-2 flex-wrap">
@@ -396,11 +338,10 @@ function CoAdminSection({
                                                 <button
                                                     type="button"
                                                     onClick={() => onToggleStatus(admin.id, admin.account_status)}
-                                                    className={`flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer ${
-                                                        admin.account_status === 'active'
-                                                            ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
-                                                            : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-sm'
-                                                    }`}
+                                                    className={`flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer ${admin.account_status === 'active'
+                                                        ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                                                        : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-sm'
+                                                        }`}
                                                 >
                                                     {admin.account_status === 'active' ? (
                                                         <IconLock size={12} />
@@ -413,11 +354,10 @@ function CoAdminSection({
 
                                             <button
                                                 type="button"
-                                                className={`flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer ${
-                                                    isCurrentlyEditing 
-                                                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' 
-                                                        : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                                }`}
+                                                className={`flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer ${isCurrentlyEditing
+                                                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                                                    : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                                    }`}
                                                 onClick={() => handleStartEdit(admin)}
                                             >
                                                 <Edit size={12} />
@@ -432,17 +372,6 @@ function CoAdminSection({
                                                 <Archive size={12} />
                                                 {isArchived ? 'Unarchive' : 'Archive'}
                                             </button>
-
-                                            {activeTab === 'archived' && (
-                                                <button
-                                                    type="button"
-                                                    className="flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
-                                                    onClick={() => handleDeleteClick(admin)}
-                                                >
-                                                    <Trash2 size={12} />
-                                                    Delete
-                                                </button>
-                                            )}
                                         </div>
                                     </div>
                                 );
@@ -536,7 +465,7 @@ export default function RootDashboard() {
             }
 
             const response = await api.put(`/system-admin/co-admins/update/${id}`, payload);
-            
+
             if (response.data.success || response.status === 200) {
                 setCoAdmins(prev => prev.map(admin => admin.id === id ? {
                     ...admin,
@@ -571,7 +500,7 @@ export default function RootDashboard() {
         const actionText = currentStatus === 'active' ? 'block' : 'unblock';
         const nextStatus = currentStatus === 'active' ? 'suspended' : 'active';
         const confirmColor = currentStatus === 'active' ? '#dc2626' : '#2563eb';
-        
+
         const confirm = await Swal.fire({
             title: `Are you sure?`,
             text: `Do you want to ${actionText} this Co-Admin account?`,
@@ -610,37 +539,6 @@ export default function RootDashboard() {
 
     const handleDeleteCoAdmin = async (adminObj) => {
         const id = adminObj.id;
-        const confirm = await Swal.fire({
-            title: 'Delete Co-Admin Account?',
-            text: 'This action cannot be undone. Are you sure you want to delete this account?',
-            icon: 'error',
-            showCancelButton: true,
-            confirmButtonColor: '#FF1E1E',
-            cancelButtonColor: '#64748b',
-            confirmButtonText: 'Yes, Delete'
-        });
-
-        if (!confirm.isConfirmed) return;
-
-        const snapshotConfirm = await Swal.fire({
-            title: 'Create Snapshot?',
-            text: 'Would you like to create a snapshot of this account before deleting it?',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#2563eb',
-            cancelButtonColor: '#64748b',
-            confirmButtonText: 'Yes, create snapshot',
-            cancelButtonText: 'No, skip'
-        });
-
-        if (snapshotConfirm.isConfirmed) {
-            try {
-                await api.post(`/system-admin/co-admins/snapshot/${id}`);
-            } catch (snapshotErr) {
-                console.error("Failed to create snapshot:", snapshotErr);
-            }
-        }
-
         try {
             const response = await api.delete(`/system-admin/co-admins/delete/${id}`);
             if (response.data.success || response.status === 200) {

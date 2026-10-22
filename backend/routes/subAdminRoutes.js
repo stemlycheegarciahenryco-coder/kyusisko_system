@@ -520,6 +520,23 @@ router.post('/verify-otp', otpVerifyLimiter, async (req, res) => {
     }
 });
 
+router.post('/authenticate/delete', verifyToken, async (req, res) => {
+    const { password } = req.body;
+    try {
+        const result = await pool.query(
+            ``,
+            [password]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(400).json({ error: "Invalid or expired code." });
+        }
+        res.json({ message: "Verified!" });
+    } catch (err) {
+        res.status(500).json({ error: "Verification failed." });
+    }
+});
+
 // router.get('/doc', (req, res) => {
 //     try {
 //         const templatePath = path.resolve(__dirname, '../../rust_functions/StudentRecordsTemplate.docx');

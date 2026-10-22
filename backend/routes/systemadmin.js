@@ -123,7 +123,7 @@ router.delete('/student/delete/:id', verifyToken, async (req, res) => {
 
 // Get Deleted Student
 router.get('/get/student/delete', verifyToken, async (req, res) => {
- try {
+    try {
         const query = `
             SELECT 
                 id, 
@@ -314,6 +314,12 @@ router.get('/get/co-admins/archive', verifyToken, async (req, res) => {
     }
 });
 
+router.post('/co-admins/update/:id', verifyToken, async (req, res) => {
+    if (req.user.role !== 'root_admin') {
+        return res.status(403).json({ success: false, message: 'Forbidden access.' });
+    }
+})
+
 router.put('/co-admins/update/:id', verifyToken, async (req, res) => {
     if (req.user.role !== 'root_admin') {
         return res.status(403).json({ success: false, message: 'Forbidden access.' });
@@ -390,6 +396,37 @@ router.delete('/co-admins/delete/:id', verifyToken, async (req, res) => {
     }
 });
 
+router.delete('/provider/delete/:id', verifyToken, async (req, res) => {
+    if (req.user.role !== 'root_admin') {
+        return res.status(403).json({ success: false, message: 'Forbidden: Access restricted to Root Admin.' });
+    }
+    const { id } = req.params;
+    try {
+        await pool.query(
+            'Delete FROM sub_admins WHERE id = $1 AND is_archived = true',
+            [id]
+        );
+        res.json({ success: true, message: `Account Is Deleted.` });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
 
 
+router.delete('/student/delete/:id', verifyToken, async (req, res) => {
+    if (req.user.role !== 'root_admin') {
+        return res.status(403).json({ success: false, message: 'Forbidden: Access restricted to Root Admin.' });
+    }
+    const { id } = req.params;
+    try {
+        await pool.query(
+            'Delete FROM students WHERE id = $1 AND is_archived = true',
+            [id]
+        );
+
+        res.json({ success: true, message: `Account Is Deleted.` });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
 module.exports = router;
