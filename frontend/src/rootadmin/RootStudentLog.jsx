@@ -84,25 +84,76 @@ export default function RootStudentLog() {
         }
     };
 
-    const handleDelete = async (id) => {
-        const result = await Swal.fire({
-            title: 'Delete Student?',
-            text: 'This action cannot be undone.',
-            icon: 'error',
+    const handleDelete = async (student) => {
+        const studentFullName = `${student.sfirst_name || ''} ${student.slast_name || ''}`.trim();
+
+        const { value: formValues } = await Swal.fire({
+            title: `Delete ${studentFullName}?`,
+            text: `Please type the student's name ("${studentFullName}") and enter your admin password to confirm permanent deletion.`,
+            html: `
+                <div style="text-align: left; margin-top: 10px;">
+                    <label style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; display: block; margin-bottom: 4px;">
+                        Confirm Student Name
+                    </label>
+                    <input id="swal-input-name" class="swal2-input" placeholder="Enter student name" style="margin: 0 0 15px 0; width: 100%; box-sizing: border-box; font-size: 14px;" />
+                    
+                    <label style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; display: block; margin-bottom: 4px;">
+                        Admin Password
+                    </label>
+                    <input id="swal-input-password" type="password" class="swal2-input" placeholder="Enter admin password" style="margin: 0; width: 100%; box-sizing: border-box; font-size: 14px;" />
+                </div>
+            `,
+            focusConfirm: false,
             showCancelButton: true,
             confirmButtonColor: '#FF1E1E',
-            confirmButtonText: 'Yes, Delete!',
+            cancelButtonColor: '#94a3b8',
+            confirmButtonText: 'Delete Permanently',
+            background: '#ffffff',
+            color: '#0f172a',
+            preConfirm: () => {
+                const enteredName = document.getElementById('swal-input-name').value;
+                const password = document.getElementById('swal-input-password').value;
+
+                if (enteredName !== studentFullName) {
+                    Swal.showValidationMessage('The student name you entered does not match.');
+                    return false;
+                }
+                if (!password) {
+                    Swal.showValidationMessage('Please enter your admin password.');
+                    return false;
+                }
+                return { password };
+            }
         });
 
-        if (!result.isConfirmed) return;
+        if (formValues) {
+            try {
+                await api.delete(`/students/${student.id}`, {
+                    data: { password: formValues.password }
+                });
 
-        try {
-            await api.delete(`/students/${id}`);
-            setArchivedStudents(prev => prev.filter(s => s.id !== id));
-            await fetchAllData();
-            Swal.fire({ title: 'Deleted!', text: 'Student record has been removed.', icon: 'success', timer: 1500, showConfirmButton: false });
-        } catch (err) {
-            Swal.fire({ title: 'Error!', text: 'Failed to delete student.', icon: 'error' });
+                setArchivedStudents(prev => prev.filter(s => s.id !== student.id));
+                await fetchAllData();
+                
+                Swal.fire({
+                    title: 'Deleted!',
+                    text: 'Student record has been removed.',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false,
+                    background: '#ffffff',
+                    color: '#0f172a',
+                });
+            } catch (err) {
+                Swal.fire({
+                    title: 'Error!',
+                    text: err.response?.data?.error || 'Failed to delete student. Incorrect password or action failed.',
+                    icon: 'error',
+                    background: '#ffffff',
+                    color: '#0f172a',
+                    confirmButtonColor: '#093fb4',
+                });
+            }
         }
     };
 
@@ -278,7 +329,7 @@ export default function RootStudentLog() {
                                                 {/* Delete Button (Only shows in Archived Tab) */}
                                                 {activeTab === 'archived' && (
                                                     <button
-                                                        onClick={() => handleDelete(s.id)}
+                                                        onClick={() => handleDelete(s)}
                                                         title="Delete Student Permanently"
                                                         className="flex items-center gap-2 p-3 text-[10px] font-black uppercase rounded-2xl border shadow-md hover:scale-110 transition-all cursor-pointer bg-red-600/10 text-red-600 border-red-600/20 hover:bg-red-600 hover:text-white"
                                                     >

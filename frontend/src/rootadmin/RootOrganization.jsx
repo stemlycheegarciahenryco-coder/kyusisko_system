@@ -165,18 +165,51 @@ const RootOrganization = () => {
     };
 
     const handleDelete = async (org) => {
-        const result = await Swal.fire(
-            swalConfig(
-                `Delete ${org.org_name}?`,
-                'Confirm you want to permanently delete this provider record.',
-                'error',
-                colors.red
-            )
-        );
+        const { value: formValues } = await Swal.fire({
+            title: `Delete ${org.org_name}?`,
+            text: `Please type the provider name ("${org.org_name}") and enter your admin password to confirm permanent deletion.`,
+            html: `
+                <div style="text-align: left; margin-top: 10px;">
+                    <label style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; display: block; margin-bottom: 4px;">
+                        Confirm Provider Name
+                    </label>
+                    <input id="swal-input-name" class="swal2-input" placeholder="Enter provider name" style="margin: 0 0 15px 0; width: 100%; box-sizing: border-box; font-size: 14px;" />
+                    
+                    <label style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; display: block; margin-bottom: 4px;">
+                        Admin Password
+                    </label>
+                    <input id="swal-input-password" type="password" class="swal2-input" placeholder="Enter admin password" style="margin: 0; width: 100%; box-sizing: border-box; font-size: 14px;" />
+                </div>
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonColor: colors.red,
+            cancelButtonColor: '#94a3b8',
+            confirmButtonText: 'Delete Permanently',
+            background: colors.white,
+            color: '#0f172a',
+            preConfirm: () => {
+                const enteredName = document.getElementById('swal-input-name').value;
+                const password = document.getElementById('swal-input-password').value;
 
-        if (result.isConfirmed) {
+                if (enteredName !== org.org_name) {
+                    Swal.showValidationMessage('The provider name you entered does not match.');
+                    return false;
+                }
+                if (!password) {
+                    Swal.showValidationMessage('Please enter your admin password.');
+                    return false;
+                }
+                return { password };
+            }
+        });
+
+        if (formValues) {
             try {
-                await api.delete(`/onboarding-orgs/delete/${org.id}`);
+                // Pass the password in the request body if your backend requires verification
+                await api.delete(`/onboarding-orgs/delete/${org.id}`, {
+                    data: { password: formValues.password }
+                });
 
                 Swal.fire({
                     title: 'Deleted!',
@@ -196,7 +229,7 @@ const RootOrganization = () => {
             } catch (err) {
                 Swal.fire({
                     title: 'Error',
-                    text: err.response?.data?.error || 'Failed to delete provider.',
+                    text: err.response?.data?.error || 'Failed to delete provider. Incorrect password or action failed.',
                     icon: 'error',
                     background: colors.white,
                     color: '#0f172a',
@@ -329,11 +362,10 @@ const RootOrganization = () => {
                                                 </div>
                                             </td>
                                             <td className="px-8 py-5">
-                                                <span className={`px-4 py-1 text-[10px] font-black rounded-lg border uppercase tracking-tighter ${
-                                                    org.status === 'pending' ? (isUpdatedResubmission ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-orange-50 text-orange-600 border-orange-100') :
+                                                <span className={`px-4 py-1 text-[10px] font-black rounded-lg border uppercase tracking-tighter ${org.status === 'pending' ? (isUpdatedResubmission ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-orange-50 text-orange-600 border-orange-100') :
                                                         org.status === 'approved' ? 'bg-green-50 text-green-600 border-green-100' :
                                                             'bg-red-50 text-red-600 border-red-100'
-                                                }`}>
+                                                    }`}>
                                                     {isUpdatedResubmission ? 'Updated' : org.status}
                                                 </span>
                                             </td>

@@ -96,19 +96,52 @@ function CoAdminSection({
         }
     };
 
-    // Handle Delete click with SweetAlert confirmation
+    // Handle Delete click with SweetAlert confirmation requiring name and admin password
     const handleDeleteClick = async (admin) => {
-        const result = await Swal.fire({
-            title: 'Delete Co-Admin?',
-            text: `Confirm you want to permanently delete ${admin.first_name} ${admin.last_name}'s record.`,
-            icon: 'error',
+        const adminFullName = `${admin.first_name || ''} ${admin.last_name || ''}`.trim();
+
+        const { value: formValues } = await Swal.fire({
+            title: `Delete ${adminFullName}?`,
+            text: `Please type the co-admin's name ("${adminFullName}") and enter your admin password to confirm permanent deletion.`,
+            html: `
+                <div style="text-align: left; margin-top: 10px;">
+                    <label style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; display: block; margin-bottom: 4px;">
+                        Confirm Co-Admin Name
+                    </label>
+                    <input id="swal-input-name" class="swal2-input" placeholder="Enter co-admin name" style="margin: 0 0 15px 0; width: 100%; box-sizing: border-box; font-size: 14px;" />
+                    
+                    <label style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; display: block; margin-bottom: 4px;">
+                        Admin Password
+                    </label>
+                    <input id="swal-input-password" type="password" class="swal2-input" placeholder="Enter admin password" style="margin: 0; width: 100%; box-sizing: border-box; font-size: 14px;" />
+                </div>
+            `,
+            focusConfirm: false,
             showCancelButton: true,
             confirmButtonColor: '#e11d48',
-            confirmButtonText: 'Yes, Delete!',
+            cancelButtonColor: '#94a3b8',
+            confirmButtonText: 'Delete Permanently',
+            background: '#ffffff',
+            color: '#0f172a',
+            preConfirm: () => {
+                const enteredName = document.getElementById('swal-input-name').value;
+                const password = document.getElementById('swal-input-password').value;
+
+                if (enteredName !== adminFullName) {
+                    Swal.showValidationMessage('The co-admin name you entered does not match.');
+                    return false;
+                }
+                if (!password) {
+                    Swal.showValidationMessage('Please enter your admin password.');
+                    return false;
+                }
+                return { password };
+            }
         });
 
-        if (result.isConfirmed) {
-            onDeleteCoAdmin(admin);
+        if (formValues) {
+            // Pass both the admin object and the password object/value to your handler
+            onDeleteCoAdmin(admin, formValues.password);
         }
     };
 
