@@ -9,9 +9,9 @@ export default function RootStudentLog() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [activeTab, setActiveTab] = useState('all');
-    const [snapshotIsVisible, setSnapshotVisible] = useState(false)
-    const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false)
-    const [snapShotLists, setSnapshotList] = useState([])
+    const [snapshotIsVisible, setSnapshotVisible] = useState(false);
+    const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
+    const [snapShotLists, setSnapshotList] = useState([]);
 
     useEffect(() => {
         fetchAllData();
@@ -87,6 +87,7 @@ export default function RootStudentLog() {
     const handleDelete = async (id) => {
         const result = await Swal.fire({
             title: 'Delete Student?',
+            text: 'This action cannot be undone.',
             icon: 'error',
             showCancelButton: true,
             confirmButtonColor: '#FF1E1E',
@@ -98,16 +99,19 @@ export default function RootStudentLog() {
         try {
             await api.delete(`/students/${id}`);
             setArchivedStudents(prev => prev.filter(s => s.id !== id));
+            await fetchAllData();
             Swal.fire({ title: 'Deleted!', text: 'Student record has been removed.', icon: 'success', timer: 1500, showConfirmButton: false });
         } catch (err) {
             Swal.fire({ title: 'Error!', text: 'Failed to delete student.', icon: 'error' });
         }
     };
 
-    const onSnapshotsClick = async () => {setSnapshotVisible(!snapshotIsVisible)};
+    const onSnapshotsClick = async () => { setSnapshotVisible(!snapshotIsVisible) };
 
     // Determine current dataset based on active tab
-    const currentDataset = activeTab === 'archived' ? archivedStudents : students;
+    const currentDataset = 
+        activeTab === 'archived' ? archivedStudents : 
+        students;
 
     // Calculate accurate preloaded counts across variables
     const counts = {
@@ -132,7 +136,7 @@ export default function RootStudentLog() {
 
     return (
         <div className="space-y-6 max-w-7xl mx-auto pb-20 bg-[#FFFCFB] min-h-screen p-4">
-            {/* HEADER SECTION (Now cleaner with only the title and registration count) */}
+            {/* HEADER SECTION */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-8 rounded-[2.5rem] border border-[#093fb4]/10 shadow-sm">
                 <div>
                     <h2 className="text-4xl font-black text-black tracking-tighter uppercase italic">
@@ -158,7 +162,7 @@ export default function RootStudentLog() {
                     />
                 </div>
 
-                {/* RIGHT SIDE: STATUS VIEW TABS + SNAPSHOTS BUTTON */}
+                {/* RIGHT SIDE: STATUS VIEW TABS */}
                 <div className="flex flex-wrap items-center gap-3">
                     <div className="flex items-center gap-2 bg-white p-2 rounded-[1.5rem] border border-[#093fb4]/10 shadow-sm overflow-x-auto">
                         {['all', 'active', 'blocked', 'archived'].map((tab) => (
@@ -270,6 +274,18 @@ export default function RootStudentLog() {
                                                     <Archive size={16} />
                                                     <span>{s.is_archived ? 'Unarchive' : 'Archive'}</span>
                                                 </button>
+
+                                                {/* Delete Button (Only shows in Archived Tab) */}
+                                                {activeTab === 'archived' && (
+                                                    <button
+                                                        onClick={() => handleDelete(s.id)}
+                                                        title="Delete Student Permanently"
+                                                        className="flex items-center gap-2 p-3 text-[10px] font-black uppercase rounded-2xl border shadow-md hover:scale-110 transition-all cursor-pointer bg-red-600/10 text-red-600 border-red-600/20 hover:bg-red-600 hover:text-white"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                        <span>Delete</span>
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>

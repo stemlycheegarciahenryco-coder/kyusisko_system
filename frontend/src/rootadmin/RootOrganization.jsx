@@ -5,7 +5,7 @@ import Swal from 'sweetalert2';
 import RootOrgView from './RootOrgView';
 import { ArchiveIcon, Clock1Icon, Trash2Icon } from 'lucide-react';
 
-// 'deleted' removed from the tabs list
+// Removed 'deleted' from the tabs list
 const TABS = ['all', 'pending', 'approved', 'rejected', 'blocked', 'archived'];
 
 const RootOrganization = () => {
@@ -14,17 +14,17 @@ const RootOrganization = () => {
     const [selectedOrg, setSelectedOrg] = useState(null);
     const [search, setSearch] = useState('');
     const [activeTab, setActiveTab] = useState('all');
-    const [snapshotIsVisible, setSnapshotVisible] = useState(false)
-    const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false)
-    const [snapShotLists, setSnapshotList] = useState([])
+    const [snapshotIsVisible, setSnapshotVisible] = useState(false);
+    const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
+    const [snapShotLists, setSnapshotList] = useState([]);
 
     const colors = { red: '#FF1E1E', white: '#FFFCFB', blue: '#093fb4', green: '#16a34a' };
 
     const fetchOrgs = async () => {
         try {
             setLoading(true);
-            const res = await api.get('/onboarding-orgs/list');
-            setOrgs(res.data);
+            const resOrgs = await api.get('/onboarding-orgs/list');
+            setOrgs(resOrgs.data);
         } catch (err) {
             console.error('Failed to fetch organizations');
         } finally {
@@ -34,15 +34,17 @@ const RootOrganization = () => {
 
     useEffect(() => { fetchOrgs(); }, []);
 
-    // Helper to evaluate tab status and archive/delete matching
+    // Helper to evaluate tab status and archive matching
     const matchStatusOrAccess = (org, tab) => {
         const isArchived = Boolean(org.is_archived);
         const isDeleted = org.status === 'deleted' || org.account_status === 'deleted';
 
-        if (tab === 'archived') return isArchived && !isDeleted;
+        // Exclude deleted items globally since the delete tab is removed
+        if (isDeleted) return false;
+        if (tab === 'archived') return isArchived;
 
-        // For standard tabs, exclude archived and deleted items
-        if (isArchived || isDeleted) return false;
+        // For standard tabs, exclude archived items
+        if (isArchived) return false;
 
         if (tab === 'all') return true;
         if (tab === 'blocked') return !org.is_active;
@@ -50,8 +52,9 @@ const RootOrganization = () => {
     };
 
     // Count records matching the current tab status
-    const countByStatus = (status) =>
-        orgs.filter((o) => matchStatusOrAccess(o, status)).length;
+    const countByStatus = (status) => {
+        return orgs.filter((o) => matchStatusOrAccess(o, status)).length;
+    };
 
     // Filter organizations by tab status and search query
     const filteredOrgs = orgs.filter((org) => {
@@ -165,7 +168,7 @@ const RootOrganization = () => {
         const result = await Swal.fire(
             swalConfig(
                 `Delete ${org.org_name}?`,
-                '',
+                'Confirm you want to permanently delete this provider record.',
                 'error',
                 colors.red
             )
@@ -211,8 +214,6 @@ const RootOrganization = () => {
             </div>
         );
 
-    const onSnapshotsClick = () => { setSnapshotVisible(!snapshotIsVisible) }
-
     const tabLabels = {
         all: 'All',
         pending: 'Pending',
@@ -223,7 +224,7 @@ const RootOrganization = () => {
     };
 
     return (
-        <div className="p-8 min-h-screen" style={{ backgroundColor: colors.white }}>
+        <div className="p-10 min-h-screen" style={{ backgroundColor: colors.white }}>
 
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 bg-white p-8 rounded-[2.5rem] border border-[#093fb4]/10 shadow-sm mb-6">
@@ -281,7 +282,6 @@ const RootOrganization = () => {
                 </div>
             </div>
 
-
             {/* Table */}
             <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-blue-900/5 border border-slate-100 overflow-hidden">
                 <div className="overflow-x-auto">
@@ -306,7 +306,6 @@ const RootOrganization = () => {
                                 filteredOrgs.map((org) => {
                                     const isUpdatedResubmission = org.status === 'pending' && org.rejection_reason;
                                     const isArchived = Boolean(org.is_archived);
-                                    const isDeleted = org.status === 'deleted' || org.account_status === 'deleted';
 
                                     return (
                                         <tr key={org.id} className="hover:bg-slate-50/50 transition-all group">
@@ -330,12 +329,12 @@ const RootOrganization = () => {
                                                 </div>
                                             </td>
                                             <td className="px-8 py-5">
-                                                <span className={`px-4 py-1 text-[10px] font-black rounded-lg border uppercase tracking-tighter ${isDeleted ? 'bg-red-50 text-red-600 border-red-100' :
+                                                <span className={`px-4 py-1 text-[10px] font-black rounded-lg border uppercase tracking-tighter ${
                                                     org.status === 'pending' ? (isUpdatedResubmission ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-orange-50 text-orange-600 border-orange-100') :
                                                         org.status === 'approved' ? 'bg-green-50 text-green-600 border-green-100' :
                                                             'bg-red-50 text-red-600 border-red-100'
-                                                    }`}>
-                                                    {isDeleted ? 'Deleted' : isUpdatedResubmission ? 'Updated' : org.status}
+                                                }`}>
+                                                    {isUpdatedResubmission ? 'Updated' : org.status}
                                                 </span>
                                             </td>
                                             <td className="px-8 py-5">
@@ -354,7 +353,7 @@ const RootOrganization = () => {
                                                     <span>View</span>
                                                 </button>
 
-                                                {/* If archived, show Unarchive and Delete */}
+                                                {/* If archived, show Unarchive and Delete (Delete shows only when viewing the Archive tab) */}
                                                 {isArchived ? (
                                                     <>
                                                         <button
@@ -365,19 +364,28 @@ const RootOrganization = () => {
                                                             <ArchiveIcon size={20} />
                                                             <span>Unarchive</span>
                                                         </button>
+
+                                                        {activeTab === 'archived' && (
+                                                            <button
+                                                                onClick={() => handleDelete(org)}
+                                                                title="Delete"
+                                                                className="flex items-center gap-2 p-3 bg-rose-600/10 hover:bg-rose-600 text-[10px] font-black uppercase text-rose-500 hover:text-white border border-rose-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
+                                                            >
+                                                                <Trash2Icon size={20} />
+                                                                <span>Delete</span>
+                                                            </button>
+                                                        )}
                                                     </>
                                                 ) : (
-                                                    /* For non-archived items, show Archive only (Delete is hidden) */
-                                                    !isDeleted && (
-                                                        <button
-                                                            onClick={() => handleArchive(org)}
-                                                            title="Archive"
-                                                            className="flex items-center gap-2 p-3 bg-amber-600/10 hover:bg-amber-600 text-[10px] font-black uppercase text-amber-500 hover:text-white border border-amber-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
-                                                        >
-                                                            <ArchiveIcon size={20} />
-                                                            <span>Archive</span>
-                                                        </button>
-                                                    )
+                                                    /* For non-archived items, show Archive only */
+                                                    <button
+                                                        onClick={() => handleArchive(org)}
+                                                        title="Archive"
+                                                        className="flex items-center gap-2 p-3 bg-amber-600/10 hover:bg-amber-600 text-[10px] font-black uppercase text-amber-500 hover:text-white border border-amber-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
+                                                    >
+                                                        <ArchiveIcon size={20} />
+                                                        <span>Archive</span>
+                                                    </button>
                                                 )}
                                             </td>
                                         </tr>

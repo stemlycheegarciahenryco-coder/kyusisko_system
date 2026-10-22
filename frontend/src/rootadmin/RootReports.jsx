@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, CheckCircle2, XCircle, ChevronDown, ChevronUp, Flag, Search, Archive, Trash2, Loader2, EyeOff, EyeIcon, Clock } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, XCircle, ChevronDown, ChevronUp, Flag, Search, Trash2, Loader2, EyeOff, EyeIcon, Clock } from 'lucide-react';
 import Swal from 'sweetalert2';
 import api from '../api';
 
@@ -137,38 +137,6 @@ export default function RootReports() {
         }
     };
 
-    const handleArchive = async (reportId) => {
-        const result = await Swal.fire({
-            title: 'Archive this report?',
-            text: 'This report will be moved to archives.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d97706',
-            cancelButtonColor: '#64748b',
-            confirmButtonText: 'Yes, archive'
-        });
-
-        if (!result.isConfirmed) return;
-
-        setActionLoading(`archive-${reportId}`);
-        try {
-            await api.patch(`/system-admin/reports/archive/${reportId}`);
-            Swal.fire({
-                icon: 'success',
-                title: 'Archived!',
-                text: 'The report has been successfully archived.',
-                timer: 1500,
-                showConfirmButton: false
-            });
-            fetchReports();
-        } catch (err) {
-            console.error("Archive failed:", err);
-            Swal.fire('Error', 'Failed to archive the report.', 'error');
-        } finally {
-            setActionLoading(null);
-        }
-    };
-
     const handleDelete = async (reportId) => {
         const result = await Swal.fire({
             title: 'Delete report?',
@@ -206,18 +174,9 @@ export default function RootReports() {
         pending: { color: 'bg-amber-50 text-amber-600 border-amber-200 cursor-pointer', dot: 'bg-amber-400' },
         resolved: { color: 'bg-green-50 text-green-600 border-green-200 cursor-pointer', dot: 'bg-green-400' },
         dismissed: { color: 'bg-slate-100 text-slate-400 border-slate-200 cursor-pointer', dot: 'bg-slate-300' },
-        archived: { color: 'bg-slate-100 text-yellow-400 border-slate-200 cursor-pointer', dot: 'bg-amber-300' },
     };
 
     const filtered = reports.filter(r => {
-        if (filter === 'archived') {
-            return r.is_archived === true;
-        }
-
-        if (r.is_archived) {
-            return false;
-        }
-
         const matchFilter = filter === 'all' ? true : r.status === filter;
         const matchSearch =
             r.student_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -227,13 +186,10 @@ export default function RootReports() {
     });
 
     const getCount = (f) => {
-        if (f === 'archived') {
-            return reports.filter(r => r.is_archived === true).length;
-        }
         if (f === 'all') {
-            return reports.filter(r => !r.is_archived).length;
+            return reports.length;
         }
-        return reports.filter(r => !r.is_archived && r.status === f).length;
+        return reports.filter(r => r.status === f).length;
     };
 
     return (
@@ -255,7 +211,7 @@ export default function RootReports() {
                 </div>
 
                 <div className="px-5 py-3 rounded-2xl border border-[#093fb4] bg-white shadow-sm self-start md:self-auto">
-                    <p className="text-xl font-black leading-none text-[#093fb4]">{reports.filter(r => !r.is_archived).length}</p>
+                    <p className="text-xl font-black leading-none text-[#093fb4]">{reports.length}</p>
                     <p className="text-[9px] font-black uppercase tracking-widest text-black mt-1">Total Reports</p>
                 </div>
             </div>
@@ -264,7 +220,7 @@ export default function RootReports() {
             <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex flex-wrap items-center gap-3">
                     <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl overflow-x-auto">
-                        {['all', 'pending', 'resolved', 'dismissed', 'archived'].map(f => (
+                        {['all', 'pending', 'resolved', 'dismissed'].map(f => (
                             <button
                                 key={f}
                                 onClick={() => setFilter(f)}
@@ -331,7 +287,6 @@ export default function RootReports() {
                         const isTakenDown = r.taken_down;
                         const cfg = statusConfig[r.status] || statusConfig.pending;
 
-                        const isArchiving = actionLoading === `archive-${r.report_id}`;
                         const isDeleting = actionLoading === `delete-${r.report_id}`;
 
                         return (
@@ -339,7 +294,7 @@ export default function RootReports() {
                                 key={r.report_id}
                                 className={`bg-white rounded-2xl border transition-all shadow-xs ${
                                     isPending ? 'border-amber-100' : 'border-slate-100'
-                                } ${isArchiving || isDeleting ? 'opacity-50 pointer-events-none' : ''}`}
+                                } ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}
                             >
                                 {/* Main Row */}
                                 <div className="p-4 flex items-start gap-3">
@@ -402,15 +357,6 @@ export default function RootReports() {
 
                                     {/* Actions / Buttons Group */}
                                     <div className="flex items-center gap-2 shrink-0 mt-0.5">
-                                        {/* Archive Button */}
-                                        <button
-                                            onClick={() => handleArchive(r.report_id)}
-                                            disabled={isArchiving || isDeleting}
-                                            title="Archive Report"
-                                            className="p-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-600 transition-colors disabled:opacity-50 flex items-center justify-center cursor-pointer shadow-xs"
-                                        >
-                                            {isArchiving ? <Loader2 size={18} className="animate-spin" /> : <Archive size={18} />}
-                                        </button>
                                         {/* Expand/Collapse Button */}
                                         <button
                                             onClick={() => setExpandedId(isExpanded ? null : r.report_id)}

@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const pool = require('../config/db');
 const { verifyToken } = require('../middleware/auth');
+const { has } = require('lodash');
 
 /**
  * @route   POST /api/system-admin/create-co-admin
@@ -42,10 +43,6 @@ router.post('/create-co-admin', verifyToken, async (req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 });
-
-// Delete Reports
-router.delete('/reports/delete/:id', verifyToken, async (req, res) => {
-})
 
 //Report Archive
 router.patch('/reports/archive/:id', verifyToken, async (req, res) => {
@@ -119,6 +116,38 @@ router.patch('/student/archive/:id', verifyToken, async (req, res) => {
         res.status(500).json({ error: "Failed to update archive status" });
     }
 });
+
+// Delete CoAdmin
+router.delete('/student/delete/:id', verifyToken, async (req, res) => {
+})
+
+// Get Deleted Student
+router.get('/get/student/delete', verifyToken, async (req, res) => {
+ try {
+        const query = `
+            SELECT 
+                id, 
+                student_email, 
+                sfirst_name, 
+                slast_name,
+                scontact_number,
+                sis_active,
+                is_archived,
+                CASE 
+                    WHEN is_profile_complete = true THEN 'Registered' 
+                    ELSE 'Pending' 
+                END as derived_status,
+                CONCAT(sstreet, ', ', sbarangay, ', ', sdistrict, ' ', szip_code) as full_address
+            FROM students WHERE is_archived = true
+            ORDER BY id DESC
+        `;
+        const result = await pool.query(query);
+        res.json(result.rows);
+    } catch (err) {
+        console.error("DATABASE ERROR:", err.message);
+        res.status(500).json({ error: "Failed to fetch student logs" });
+    }
+})
 
 router.get('/get/student/archive', verifyToken, async (req, res) => {
     try {
@@ -261,11 +290,11 @@ router.get('/get/archive/co-admins', verifyToken, async (req, res) => {
     }
 });
 
-// Get Snapshot CoAdmin
-router.get('/get/CoAdmin/snapshots/instance', verifyToken, async (req, res) => {
-})
-router.get('/get/CoAdmins/snapshot_items/:id', verifyToken, async (req, res) => {
-})
+// // Get Snapshot CoAdmin
+// router.get('/get/CoAdmin/snapshots/instance', verifyToken, async (req, res) => {
+// })
+// router.get('/get/CoAdmins/snapshot_items/:id', verifyToken, async (req, res) => {
+// })
 
 router.get('/get/co-admins/archive', verifyToken, async (req, res) => {
     if (req.user.role !== 'root_admin') {
@@ -280,6 +309,55 @@ router.get('/get/co-admins/archive', verifyToken, async (req, res) => {
              ORDER BY id DESC`
         );
         res.json({ success: true, data: result.rows });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+router.put('/co-admins/update/:id', verifyToken, async (req, res) => {
+    if (req.user.role !== 'root_admin') {
+        return res.status(403).json({ success: false, message: 'Forbidden access.' });
+    }
+
+    try {
+        const { id } = req.params;
+        const { firstName, lastName, email, password } = req.body;
+
+        let query;
+        let values;
+
+        if (password && password.trim() !== '') {
+            const hashedPassword = await bcrypt.hash(password, 10);
+            query = `
+                UPDATE users 
+                SET first_name = $1, 
+                    last_name = $2, 
+                    email = $3, 
+                    password_hash = $4 
+                WHERE id = $5 
+                RETURNING id, first_name, last_name, email, account_status, is_archived, uid;
+            `;
+            values = [firstName, lastName, email, hashedPassword, id]; // Use hashedPassword instead of password in production
+        } else {
+            // If no password is provided, leave the existing password untouched
+            query = `
+                UPDATE users 
+                SET first_name = $1, 
+                    last_name = $2, 
+                    email = $3 
+                WHERE id = $4 
+                RETURNING id, first_name, last_name, email, account_status, is_archived, uid;
+            `;
+            values = [firstName, lastName, email, id];
+        }
+
+        const result = await pool.query(query, values);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Co-admin not found.' });
+        }
+
+        res.json({ success: true, data: result.rows[0] });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }

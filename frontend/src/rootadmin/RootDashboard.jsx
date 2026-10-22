@@ -1,6 +1,6 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { Users, ClipboardList, UserCog, GraduationCap, UserPlus, Building2, Trash2, Filter, Archive, UnlockIcon, Search, X, ShieldCheck, Camera, Clock1Icon } from 'lucide-react';
+import { Users, ClipboardList, UserCog, GraduationCap, UserPlus, Building2, Trash2, Filter, Archive, UnlockIcon, Search, X, ShieldCheck, Camera, Clock1Icon, Edit } from 'lucide-react';
 import api from '../api';
 import { IconLock } from '@tabler/icons-react';
 import Swal from 'sweetalert2';
@@ -24,12 +24,58 @@ function CoAdminSection({
     onToggleStatus,
     onArchive,
     onDeleteCoAdmin,
+    onEditCoAdmin,
     onCreateCoAdmin,
     formData,
-    setFormData
+    setFormData,
+    editingAdmin,
+    setEditingAdmin
 }) {
     const [activeTab, setActiveTab] = useState('all'); // 'all' | 'active' | 'blocked' | 'archived'
     const [searchQuery, setSearchQuery] = useState('');
+    const formRef = useRef(null);
+    const firstNameInputRef = useRef(null);
+
+    // Handle clicking the Edit button on a co-admin row (Toggles off if clicked again)
+    const handleStartEdit = (admin) => {
+        if (editingAdmin?.id === admin.id) {
+            handleCancelEdit();
+            return;
+        }
+
+        setEditingAdmin(admin);
+        setFormData({
+            firstName: admin.first_name || '',
+            lastName: admin.last_name || '',
+            email: admin.email || '',
+            password: '' // Left blank to keep current password
+        });
+
+        // Smooth scroll to form and focus input for better UX on mobile/desktop
+        formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setTimeout(() => firstNameInputRef.current?.focus(), 200);
+    };
+
+    // Cancel edit mode and reset form
+    const handleCancelEdit = () => {
+        setEditingAdmin(null);
+        setFormData({
+            firstName: '',
+            lastName: '',
+            email: '',
+            password: ''
+        });
+    };
+
+    // Form submission handler that routes to create or update
+    const handleSubmitForm = (e) => {
+        e.preventDefault();
+        if (editingAdmin) {
+            onEditCoAdmin(editingAdmin.id, formData);
+        } else {
+            onCreateCoAdmin(e);
+        }
+    };
 
     // Handle Archive click with SweetAlert confirmation
     const handleArchiveClick = async (admin) => {
@@ -43,18 +89,28 @@ function CoAdminSection({
             showCancelButton: true,
             confirmButtonColor: '#d97706',
             confirmButtonText: `Yes, ${actionText}!`,
-        }, '#d97706');
+        });
 
         if (result.isConfirmed) {
             onArchive(admin);
         }
     };
 
-    const [snapshotIsVisible, setSnapshotVisible] = useState(false)
-    const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false)
-    const [snapShotLists, setSnapshotList] = useState([])
+    // Handle Delete click with SweetAlert confirmation
+    const handleDeleteClick = async (admin) => {
+        const result = await Swal.fire({
+            title: 'Delete Co-Admin?',
+            text: `Confirm you want to permanently delete ${admin.first_name} ${admin.last_name}'s record.`,
+            icon: 'error',
+            showCancelButton: true,
+            confirmButtonColor: '#e11d48',
+            confirmButtonText: 'Yes, Delete!',
+        });
 
-    const onSnapshotsClick = async () => { setSnapshotVisible(!snapshotIsVisible) }
+        if (result.isConfirmed) {
+            onDeleteCoAdmin(admin);
+        }
+    };
 
     // Pre-calculate counts and filtered list for each tab based on the current searchQuery
     const { filteredCoAdmins, tabCounts } = useMemo(() => {
@@ -71,7 +127,6 @@ function CoAdminSection({
             const isArchived = Boolean(admin.is_archived);
             const isDeleted = admin.account_status === 'deleted';
 
-            // Skip entirely if deleted
             if (isDeleted) return;
 
             const isBlocked = admin.account_status === 'suspended';
@@ -82,13 +137,11 @@ function CoAdminSection({
             const isTabBlocked = isBlocked && !isArchived;
             const isTabArchived = isArchived;
 
-            // Search filter check
             const fullName = `${admin.first_name || ''} ${admin.last_name || ''}`.toLowerCase();
             const email = (admin.email || '').toLowerCase();
             const uid = (admin.uid || '').toLowerCase();
             const matchesSearch = !query || fullName.includes(query) || email.includes(query) || uid.includes(query);
 
-            // Increment totals if they match search query (so tab counts reflect the active search)
             if (matchesSearch) {
                 if (isAll) allCount++;
                 if (isTabActive) activeCount++;
@@ -96,7 +149,6 @@ function CoAdminSection({
                 if (isTabArchived) archivedCount++;
             }
 
-            // Determine if it matches the currently selected active tab
             let matchesTab = false;
             if (activeTab === 'all') matchesTab = isAll;
             else if (activeTab === 'active') matchesTab = isTabActive;
@@ -129,19 +181,32 @@ function CoAdminSection({
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                {/* Creation Form */}
-                <form onSubmit={onCreateCoAdmin} className="space-y-3 lg:col-span-1 border-b lg:border-b-0 lg:border-r border-slate-100 pb-6 lg:pb-0 lg:pr-8">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
-                        Register New Co-Admin
-                    </p>
+                {/* Consistent Form Design: Register New vs. Edit Co-Admin */}
+                <form 
+                    ref={formRef}
+                    onSubmit={handleSubmitForm} 
+                    className="space-y-3 lg:col-span-1 border-b lg:border-b-0 lg:border-r border-slate-100 pb-6 lg:pb-0 lg:pr-8"
+                >
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-1.5">
+                            <Edit size={13} className={editingAdmin ? "text-emerald-600" : "text-blue-600"} />
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 truncate max-w-[240px]">
+                                {editingAdmin ? `Editing: ${editingAdmin.first_name} ${editingAdmin.last_name}` : 'Register New Co-Admin'}
+                            </p>
+                        </div>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-2">
                         <input
+                            ref={firstNameInputRef}
                             type="text"
                             placeholder="First Name"
                             required
                             value={formData.firstName}
                             onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                            className="w-full p-2.5 text-xs font-semibold border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:border-blue-600 text-slate-800"
+                            className={`w-full p-2.5 text-xs font-semibold border rounded-xl bg-slate-50 focus:outline-none text-slate-800 ${
+                                editingAdmin ? 'border-emerald-200 focus:border-emerald-600' : 'border-slate-200 focus:border-blue-600'
+                            }`}
                         />
                         <input
                             type="text"
@@ -149,7 +214,9 @@ function CoAdminSection({
                             required
                             value={formData.lastName}
                             onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                            className="w-full p-2.5 text-xs font-semibold border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:border-blue-600 text-slate-800"
+                            className={`w-full p-2.5 text-xs font-semibold border rounded-xl bg-slate-50 focus:outline-none text-slate-800 ${
+                                editingAdmin ? 'border-emerald-200 focus:border-emerald-600' : 'border-slate-200 focus:border-blue-600'
+                            }`}
                         />
                     </div>
                     <input
@@ -158,22 +225,33 @@ function CoAdminSection({
                         required
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className="w-full p-2.5 text-xs font-semibold border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:border-blue-600 text-slate-800"
+                        className={`w-full p-2.5 text-xs font-semibold border rounded-xl bg-slate-50 focus:outline-none text-slate-800 ${
+                            editingAdmin ? 'border-emerald-200 focus:border-emerald-600' : 'border-slate-200 focus:border-blue-600'
+                        }`}
                     />
-                    <input
-                        type="password"
-                        placeholder="Password"
-                        required
-                        value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        className="w-full p-2.5 text-xs font-semibold border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:border-blue-600 text-slate-800"
-                    />
+                    <div>
+                        <input
+                            type="password"
+                            placeholder={editingAdmin ? "New Password (leave blank to keep current)" : "Password"}
+                            required={!editingAdmin}
+                            value={formData.password}
+                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                            className={`w-full p-2.5 text-xs font-semibold border rounded-xl bg-slate-50 focus:outline-none text-slate-800 ${
+                                editingAdmin ? 'border-emerald-200 focus:border-emerald-600' : 'border-slate-200 focus:border-blue-600'
+                            }`}
+                        />
+                        {editingAdmin && (
+                            <p className="text-[10px] text-slate-400 mt-1 pl-1 font-medium italic">Leave blank to retain current password.</p>
+                        )}
+                    </div>
 
                     <button
                         type="submit"
-                        className="w-full py-2.5 bg-blue-600 hover:bg-blue-800 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer shadow-sm"
+                        className={`w-full py-2.5 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer shadow-sm ${
+                            editingAdmin ? 'bg-emerald-600 hover:bg-emerald-800' : 'bg-blue-600 hover:bg-blue-800'
+                        }`}
                     >
-                        Create Co-Admin Account
+                        {editingAdmin ? 'Update Co-Admin Account' : 'Create Co-Admin Account'}
                     </button>
                 </form>
 
@@ -185,7 +263,6 @@ function CoAdminSection({
                         </p>
 
                         <div className="flex flex-wrap items-center gap-2">
-                            {/* Search Bar Input */}
                             <div className="relative flex-1 min-w-[180px] sm:w-48 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 flex items-center gap-2 focus-within:border-blue-600 focus-within:bg-white transition-all">
                                 <Search size={14} className="text-slate-400 shrink-0" />
                                 <input
@@ -208,7 +285,7 @@ function CoAdminSection({
                         </div>
                     </div>
 
-                    {/* Filter Tab Buttons with Counts & Snapshots Button */}
+                    {/* Filter Tab Buttons with Counts */}
                     <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100">
                         <div className="flex flex-wrap items-center gap-2">
                             {['all', 'active', 'blocked', 'archived'].map((tab) => {
@@ -220,14 +297,16 @@ function CoAdminSection({
                                         key={tab}
                                         type="button"
                                         onClick={() => setActiveTab(tab)}
-                                        className={`flex items-center gap-1.5 px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer border ${isActiveTab
-                                            ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-150'
-                                            }`}
+                                        className={`flex items-center gap-1.5 px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer border ${
+                                            isActiveTab
+                                                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-150'
+                                        }`}
                                     >
                                         <span>{tab}</span>
-                                        <span className={`px-1.5 py-0.5 rounded-md text-[9px] ${isActiveTab ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'
-                                            }`}>
+                                        <span className={`px-1.5 py-0.5 rounded-md text-[9px] ${
+                                            isActiveTab ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'
+                                        }`}>
                                             {count}
                                         </span>
                                     </button>
@@ -249,9 +328,17 @@ function CoAdminSection({
                         ) : (
                             filteredCoAdmins.map((admin) => {
                                 const isArchived = Boolean(admin.is_archived);
+                                const isCurrentlyEditing = editingAdmin?.id === admin.id;
 
                                 return (
-                                    <div key={admin.id} className="flex justify-between items-center p-5 bg-slate-50 rounded-2xl border border-slate-200/80 hover:border-slate-300 transition-colors gap-4 shadow-sm">
+                                    <div 
+                                        key={admin.id} 
+                                        className={`flex justify-between items-center p-5 rounded-2xl border transition-all gap-4 shadow-sm ${
+                                            isCurrentlyEditing 
+                                                ? 'bg-emerald-50/50 border-emerald-400 ring-2 ring-emerald-400/20 shadow-md' 
+                                                : 'bg-slate-50 border-slate-200/80 hover:border-slate-300'
+                                        }`}
+                                    >
                                         <div className="min-w-0 flex-1 space-y-1">
                                             <div className="flex items-center gap-2 flex-wrap">
                                                 <p className="font-black text-slate-800 text-sm uppercase tracking-tight truncate">
@@ -260,6 +347,11 @@ function CoAdminSection({
                                                 <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md tracking-wider">
                                                     {admin.uid}
                                                 </span>
+                                                {isCurrentlyEditing && (
+                                                    <span className="text-[9px] font-extrabold px-2 py-0.5 bg-emerald-600 text-white rounded-md tracking-wider uppercase animate-pulse">
+                                                        Editing Now
+                                                    </span>
+                                                )}
                                             </div>
                                             <p className="text-xs text-slate-500 font-medium truncate">
                                                 {admin.email}
@@ -271,10 +363,11 @@ function CoAdminSection({
                                                 <button
                                                     type="button"
                                                     onClick={() => onToggleStatus(admin.id, admin.account_status)}
-                                                    className={`flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer ${admin.account_status === 'active'
-                                                        ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
-                                                        : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-sm'
-                                                        }`}
+                                                    className={`flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer ${
+                                                        admin.account_status === 'active'
+                                                            ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                                                            : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-sm'
+                                                    }`}
                                                 >
                                                     {admin.account_status === 'active' ? (
                                                         <IconLock size={12} />
@@ -287,6 +380,19 @@ function CoAdminSection({
 
                                             <button
                                                 type="button"
+                                                className={`flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer ${
+                                                    isCurrentlyEditing 
+                                                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' 
+                                                        : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                                }`}
+                                                onClick={() => handleStartEdit(admin)}
+                                            >
+                                                <Edit size={12} />
+                                                {isCurrentlyEditing ? 'Editing' : 'Edit'}
+                                            </button>
+
+                                            <button
+                                                type="button"
                                                 className="flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
                                                 onClick={() => handleArchiveClick(admin)}
                                             >
@@ -294,6 +400,16 @@ function CoAdminSection({
                                                 {isArchived ? 'Unarchive' : 'Archive'}
                                             </button>
 
+                                            {activeTab === 'archived' && (
+                                                <button
+                                                    type="button"
+                                                    className="flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
+                                                    onClick={() => handleDeleteClick(admin)}
+                                                >
+                                                    <Trash2 size={12} />
+                                                    Delete
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 );
@@ -312,6 +428,7 @@ export default function RootDashboard() {
 
     const [coAdmins, setCoAdmins] = useState([]);
     const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', password: '' });
+    const [editingAdmin, setEditingAdmin] = useState(null);
 
     const userRole = localStorage.getItem('userRole') || 'co_admin';
 
@@ -378,10 +495,50 @@ export default function RootDashboard() {
         }
     };
 
+    const handleUpdateCoAdmin = async (id, updatedData) => {
+        try {
+            const payload = { ...updatedData };
+            if (!payload.password) {
+                delete payload.password;
+            }
+
+            const response = await api.put(`/system-admin/co-admins/update/${id}`, payload);
+            
+            if (response.data.success || response.status === 200) {
+                setCoAdmins(prev => prev.map(admin => admin.id === id ? {
+                    ...admin,
+                    first_name: updatedData.firstName,
+                    last_name: updatedData.lastName,
+                    email: updatedData.email
+                } : admin));
+
+                setEditingAdmin(null);
+                setFormData({ firstName: '', lastName: '', email: '', password: '' });
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Co-Admin Updated',
+                    text: 'Account details have been updated successfully.',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            }
+        } catch (err) {
+            console.error("Failed to update co-admin:", err);
+            Swal.fire({
+                icon: 'error',
+                title: 'Update Failed',
+                text: err.response?.data?.message || 'Failed to update account.',
+                confirmButtonColor: '#2563eb'
+            });
+        }
+    };
+
     const handleToggleStatus = async (id, currentStatus) => {
         const actionText = currentStatus === 'active' ? 'block' : 'unblock';
         const nextStatus = currentStatus === 'active' ? 'suspended' : 'active';
-        const confirmColor = currentStatus === 'active' ? '#dc2626' : '#2563eb'
+        const confirmColor = currentStatus === 'active' ? '#dc2626' : '#2563eb';
+        
         const confirm = await Swal.fire({
             title: `Are you sure?`,
             text: `Do you want to ${actionText} this Co-Admin account?`,
@@ -418,8 +575,8 @@ export default function RootDashboard() {
         }
     };
 
-    const handleDeleteCoAdmin = async (id) => {
-        // Step 1: Initial Delete Confirmation
+    const handleDeleteCoAdmin = async (adminObj) => {
+        const id = adminObj.id;
         const confirm = await Swal.fire({
             title: 'Delete Co-Admin Account?',
             text: 'This action cannot be undone. Are you sure you want to delete this account?',
@@ -432,7 +589,6 @@ export default function RootDashboard() {
 
         if (!confirm.isConfirmed) return;
 
-        // Step 2: Prompt for Snapshot
         const snapshotConfirm = await Swal.fire({
             title: 'Create Snapshot?',
             text: 'Would you like to create a snapshot of this account before deleting it?',
@@ -444,21 +600,22 @@ export default function RootDashboard() {
             cancelButtonText: 'No, skip'
         });
 
-        // Step 3: Optional Snapshot API Call
         if (snapshotConfirm.isConfirmed) {
             try {
                 await api.post(`/system-admin/co-admins/snapshot/${id}`);
-                // Optional: add a success toast or alert for the snapshot if desired
             } catch (snapshotErr) {
                 console.error("Failed to create snapshot:", snapshotErr);
-                // You can choose whether to abort deletion or just let it continue
             }
         }
 
-        // Step 4: Proceed with Deletion
         try {
             const response = await api.delete(`/system-admin/co-admins/delete/${id}`);
             if (response.data.success || response.status === 200) {
+                if (editingAdmin?.id === id) {
+                    setEditingAdmin(null);
+                    setFormData({ firstName: '', lastName: '', email: '', password: '' });
+                }
+
                 setCoAdmins(prev => prev.map(admin => admin.id === id ? { ...admin, account_status: 'deleted' } : admin));
 
                 Swal.fire({
@@ -638,8 +795,11 @@ export default function RootDashboard() {
                     onArchive={handleArchive}
                     onDeleteCoAdmin={handleDeleteCoAdmin}
                     onCreateCoAdmin={handleCreateCoAdmin}
+                    onEditCoAdmin={handleUpdateCoAdmin}
                     formData={formData}
                     setFormData={setFormData}
+                    editingAdmin={editingAdmin}
+                    setEditingAdmin={setEditingAdmin}
                 />
             )}
         </div>
