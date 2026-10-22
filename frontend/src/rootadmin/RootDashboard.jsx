@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { Users, ClipboardList, UserCog, GraduationCap, UserPlus, Building2, Trash2, Filter, Archive, UnlockIcon, Search, X, ShieldCheck, Camera, Clock1Icon, Edit } from 'lucide-react';
@@ -639,6 +638,84 @@ export default function RootDashboard() {
         }
     };
 
+    // Handler to open the password update modal
+    const handleOpenPasswordModal = async () => {
+        const { value: formValues } = await Swal.fire({
+            title: 'Update Password',
+            html: `
+                <div style="text-align: left; display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+                    <div>
+                        <label style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; display: block; margin-bottom: 4px;">
+                            Current Password
+                        </label>
+                        <input id="swal-current-password" type="password" class="swal2-input" placeholder="Enter current password" style="margin: 0; width: 100%; box-sizing: border-box; font-size: 14px;" />
+                    </div>
+                    <div>
+                        <label style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; display: block; margin-bottom: 4px;">
+                            New Password
+                        </label>
+                        <input id="swal-new-password" type="password" class="swal2-input" placeholder="Enter new password" style="margin: 0; width: 100%; box-sizing: border-box; font-size: 14px;" />
+                    </div>
+                    <div>
+                        <label style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; display: block; margin-bottom: 4px;">
+                            Retry Password
+                        </label>
+                        <input id="swal-retry-password" type="password" class="swal2-input" placeholder="Retype new password" style="margin: 0; width: 100%; box-sizing: border-box; font-size: 14px;" />
+                    </div>
+                </div>
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonColor: '#2563eb',
+            cancelButtonColor: '#94a3b8',
+            confirmButtonText: 'Update Password',
+            preConfirm: () => {
+                const current_password = document.getElementById('swal-current-password').value;
+                const new_password = document.getElementById('swal-new-password').value;
+                const retry_password = document.getElementById('swal-retry-password').value;
+
+                if (!current_password || !new_password || !retry_password) {
+                    Swal.showValidationMessage('Please fill in all password fields.');
+                    return false;
+                }
+
+                if (new_password !== retry_password) {
+                    Swal.showValidationMessage('New password and retry password do not match.');
+                    return false;
+                }
+
+                return { current_password, new_password };
+            }
+        });
+
+        if (formValues) {
+            try {
+                const response = await api.put('/system-admin/update/password', {
+                    current_password: formValues.current_password,
+                    new_password: formValues.new_password
+                });
+
+                if (response.data.success || response.status === 200) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Password Updated',
+                        text: 'Your password has been successfully changed.',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to update password:", err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Update Failed',
+                    text: err.response?.data?.message || 'Failed to update password. Please check your current password.',
+                    confirmButtonColor: '#2563eb'
+                });
+            }
+        }
+    };
+
     const pieChartData = useMemo(() => {
         if (!stats) return [];
         return CHART_CONFIG.map(cfg => ({
@@ -657,6 +734,13 @@ export default function RootDashboard() {
                         System Admin<span className="text-blue-600"> Dashboard</span>
                     </h1>
                 </div>
+                <button
+                    type="button"
+                    onClick={handleOpenPasswordModal}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-sm"
+                >
+                    <IconLock size={14} /> Update Password
+                </button>
             </div>
 
             {/* Top Overview Workspace */}

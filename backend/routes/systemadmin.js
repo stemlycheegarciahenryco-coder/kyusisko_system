@@ -5,6 +5,7 @@ const pool = require('../config/db');
 const { verifyToken } = require('../middleware/auth');
 const { has } = require('lodash');
 const crypto = require('crypto');
+const { re } = require('mathjs');
 
 
 //Report Archive
@@ -273,11 +274,70 @@ router.get('/get/co-admins/archive', verifyToken, async (req, res) => {
     }
 });
 
-router.post('/co-admins/update/:id', verifyToken, async (req, res) => {
-    if (req.user.role !== 'root_admin') {
-        return res.status(403).json({ success: false, message: 'Forbidden access.' });
+router.put('/update/password', verifyToken, async (req, res) => {
+    try {
+        // 1. Authorization check
+        if (req.user.role !== 'root_admin') {
+            return res.status(403).json({ success: false, message: 'Forbidden access.' });
+        }
+
+        const {current_password, new_password } = req.body;
+
+        // 2. Input validation
+        if (!req.user.email || !current_password || !new_password) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Email, current password, and new password are required.' 
+            });
+        }
+
+        if (new_password.length < 8) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'New password must be at least 8 characters long.' 
+            });
+        }
+
+        // 3. Fetch the target user to get their stored password hash
+        const userQuery = 'SELECT id, password_hash FROM users WHERE email = $1';
+        const userResult = await pool.query(userQuery, [req.user.email]);
+
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Co-admin not found.' });
+        }
+
+        const targetUser = userResult.rows[0];
+
+        // 4. Securely verify the current password using bcrypt.compare
+        const isMatch = await bcrypt.compare(current_password, targetUser.password_hash);
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: 'Invalid current password.' });
+        }
+
+        // 5. Hash the new password (increased salt rounds to 12 for better security)
+        const saltRounds = 10;
+        const hashedNewPassword = await bcrypt.hash(new_password, saltRounds);
+
+        // 6. Update the database
+        const updateQuery = `
+            UPDATE users 
+            SET password_hash = $1 
+            WHERE email = $2 
+            RETURNING id, email;
+        `;
+        const updateResult = await pool.query(updateQuery, [hashedNewPassword, req.user.email]);
+
+        return res.status(200).json({ 
+            success: true, 
+            message: 'Password updated successfully.',
+            data: updateResult.rows[0] 
+        });
+
+    } catch (err) {
+        console.error('Password update error:', err);
+        return res.status(500).json({ success: false, message: 'Internal server error.' });
     }
-})
+});
 
 router.put('/co-admins/update/:id', verifyToken, async (req, res) => {
     if (req.user.role !== 'root_admin') {
