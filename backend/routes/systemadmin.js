@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const pool = require('../config/db');
 const { verifyToken } = require('../middleware/auth');
 const { has } = require('lodash');
+const crypto = require('crypto');
 
 
 //Report Archive
@@ -405,9 +406,10 @@ router.post('/create-co-admin', verifyToken, async (req, res) => {
         return res.status(403).json({ success: false, message: 'Forbidden: Only the absolute System Admin can add administrators.' });
     }
 
-    const { email, password, firstName, lastName } = req.body;
+    // Password field removed from req.body destructuring
+    const { email, firstName, lastName } = req.body;
 
-    if (!email || !password || !firstName || !lastName) {
+    if (!email || !firstName || !lastName) {
         return res.status(400).json({ success: false, message: 'All fields are required.' });
     }
 
@@ -428,7 +430,9 @@ router.post('/create-co-admin', verifyToken, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Email address is already in use by another account.' });
         }
 
-        const hashedPw = await bcrypt.hash(password, 10);
+        // Generate a secure random plain-text password automatically
+        const generatedPassword = crypto.randomBytes(4).toString('hex') + '@' + Math.floor(100 + Math.random() * 900);
+        const hashedPw = await bcrypt.hash(generatedPassword, 10);
 
         // 🚀 CRITICAL ALIGNMENT: Modified prefix token string to output 'SADM-' tracking keys 
         const customUid = `SADM-${Date.now().toString().slice(-4)}`;
@@ -440,7 +444,12 @@ router.post('/create-co-admin', verifyToken, async (req, res) => {
             [trimmedEmail, hashedPw, 'co_admin', customUid, 'active', firstName.trim(), lastName.trim()]
         );
 
-        res.status(201).json({ success: true, data: newAdmin.rows[0] });
+        // Return the plain-text generatedPassword so the frontend can display it in Swal
+        res.status(201).json({
+            success: true,
+            data: newAdmin.rows[0],
+            generatedPassword
+        });
     } catch (err) {
         if (err.code === '23505') {
             return res.status(400).json({ success: false, message: 'Email address or System ID conflict detected.' });

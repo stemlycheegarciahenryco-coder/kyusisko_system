@@ -1,9 +1,11 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { Users, ClipboardList, UserCog, GraduationCap, UserPlus, Building2, Archive, Search, X, ShieldCheck, Edit } from 'lucide-react';
+import { Users, ClipboardList, UserCog, GraduationCap, UserPlus, Building2, Archive, Search, X, ShieldCheck, Edit, Trash2 } from 'lucide-react';
 import { IconLock } from '@tabler/icons-react';
+import Swal from 'sweetalert2';
 import api from '../api';
 import { useDialog } from './DialogModal';
+
 
 const STAT_CARDS = [
     { key: 'totalStudents', label: 'Total Students', icon: Users, color: 'bg-blue-50 text-blue-600' },
@@ -65,6 +67,7 @@ function CoAdminSection({
         setTimeout(() => firstNameInputRef.current?.focus(), 200);
     };
 
+    // Form submission handler that routes to create or update
     const handleSubmitForm = (e) => {
         e.preventDefault();
         if (editingAdmin) {
@@ -90,6 +93,44 @@ function CoAdminSection({
 
         if (result.isConfirmed) {
             onArchive(admin);
+        }
+    };
+
+    // Handle Delete click with SweetAlert confirmation
+    const handleDeleteClick = async (admin) => {
+        const adminFullName = `${admin.first_name || ''} ${admin.last_name || ''}`.trim();
+
+        const { isConfirmed } = await Swal.fire({
+            title: `Delete ${adminFullName}?`,
+            text: `Please type the co-admin's name ("${adminFullName}") to confirm permanent deletion.`,
+            html: `
+                <div style="text-align: left; margin-top: 10px;">
+                    <label style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; display: block; margin-bottom: 4px;">
+                        Confirm Co-Admin Name
+                    </label>
+                    <input id="swal-input-name" class="swal2-input" placeholder="Enter co-admin name" style="margin: 0; width: 100%; box-sizing: border-box; font-size: 14px;" />
+                </div>
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonColor: '#e11d48',
+            cancelButtonColor: '#94a3b8',
+            confirmButtonText: 'Delete Permanently',
+            background: '#ffffff',
+            color: '#0f172a',
+            preConfirm: () => {
+                const enteredName = document.getElementById('swal-input-name').value;
+
+                if (enteredName !== adminFullName) {
+                    Swal.showValidationMessage('The co-admin name you entered does not match.');
+                    return false;
+                }
+                return true;
+            }
+        });
+
+        if (isConfirmed) {
+            onDeleteCoAdmin(admin);
         }
     };
 
@@ -200,7 +241,7 @@ function CoAdminSection({
                                 Cancel
                             </button>
                         )}
-                        <button type="submit" className="ui-btn-primary flex-1">
+                        <button type="submit" className={`flex-1 py-2.5 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer shadow-sm ${editingAdmin ? 'bg-emerald-600 hover:bg-emerald-800' : 'bg-blue-600 hover:bg-blue-800'}`}>
                             {editingAdmin ? 'Update Account' : 'Create Account'}
                         </button>
                     </div>
@@ -328,7 +369,7 @@ function CoAdminSection({
 
                                             <button
                                                 type="button"
-                                                onClick={() => onArchive(admin)}
+                                                onClick={() => handleArchiveClick(admin)}
                                                 className={`${ROW_BTN} bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100`}
                                             >
                                                 <Archive size={12} />
@@ -406,6 +447,8 @@ export default function RootDashboard() {
             const response = await api.post('/system-admin/create-co-admin', formData);
             if (response.data.success) {
                 const createdAdmin = response.data.data;
+                const generatedPassword = response.data.generatedPassword || createdAdmin.temp_password || createdAdmin.password;
+                
                 const normalizedAdmin = {
                     ...createdAdmin,
                     first_name: createdAdmin.first_name || formData.firstName,
@@ -416,18 +459,24 @@ export default function RootDashboard() {
                 setCoAdmins((prev) => [normalizedAdmin, ...prev]);
                 setFormData(EMPTY_FORM);
 
-                notify({
-                    variant: 'success',
+                Swal.fire({
+                    icon: 'success',
                     title: 'Co-Admin Created',
-                    body: `Account successfully registered! Generated ID: ${createdAdmin.uid || createdAdmin.id}`,
-                    confirmText: 'Done',
+                    html: `
+                        <p>Account successfully registered! Generated ID: <b>${createdAdmin.uid || createdAdmin.id}</b></p>
+                        ${generatedPassword ? `<div style="margin-top: 12px; padding: 10px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px;">
+                            <span style="display: block; font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Generated Password:</span>
+                            <code style="font-size: 15px; font-weight: bold; color: #2563eb; user-select: all;">${generatedPassword}</code>
+                        </div>` : ''}
+                    `,
+                    confirmButtonColor: '#2563eb'
                 });
             }
         } catch (err) {
             notify({
                 variant: 'error',
                 title: 'Registration Failed',
-                body: err.response?.data?.message || 'Invalid Credentials',
+                body: err.response?.data?.message || err.data?.message || 'Invalid Credentials',
                 confirmText: 'Close',
             });
         }
@@ -441,6 +490,9 @@ export default function RootDashboard() {
             const response = await api.put(`/system-admin/co-admins/update/${id}`, payload);
 
             if (response.data.success || response.status === 200) {
+                const responseData = response.data.data || response.data;
+                const generatedPassword = response.data.generatedPassword || responseData?.temp_password || responseData?.password;
+
                 setCoAdmins((prev) =>
                     prev.map((admin) =>
                         admin.id === id
@@ -452,7 +504,18 @@ export default function RootDashboard() {
                 setEditingAdmin(null);
                 setFormData(EMPTY_FORM);
 
-                notify({ variant: 'success', title: 'Co-Admin Updated', body: 'Account details have been updated successfully.', timer: 1800 });
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Co-Admin Updated',
+                    html: `
+                        <p>Account details have been updated successfully.</p>
+                        ${generatedPassword ? `<div style="margin-top: 12px; padding: 10px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px;">
+                            <span style="display: block; font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">New Generated Password:</span>
+                            <code style="font-size: 15px; font-weight: bold; color: #2563eb; user-select: all;">${generatedPassword}</code>
+                        </div>` : ''}
+                    `,
+                    confirmButtonColor: '#2563eb'
+                });
             }
         } catch (err) {
             console.error('Failed to update co-admin:', err);
@@ -496,6 +559,37 @@ export default function RootDashboard() {
                 title: 'Action Failed',
                 body: err.response?.data?.message || 'Could not update account status.',
                 confirmText: 'Close',
+            });
+        }
+    };
+
+    const handleDeleteCoAdmin = async (adminObj) => {
+        const id = adminObj.id;
+        try {
+            const response = await api.delete(`/system-admin/co-admins/delete/${id}`);
+            if (response.data.success || response.status === 200) {
+                if (editingAdmin?.id === id) {
+                    setEditingAdmin(null);
+                    setFormData(EMPTY_FORM);
+                }
+
+                setCoAdmins((prev) => prev.map((admin) => (admin.id === id ? { ...admin, account_status: 'deleted' } : admin)));
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Deleted!',
+                    text: 'Co-Admin account has been deleted.',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            }
+        } catch (err) {
+            console.error("Failed to delete co-admin:", err);
+            Swal.fire({
+                icon: 'error',
+                title: 'Delete Failed',
+                text: err.response?.data?.message || 'Failed to delete account.',
+                confirmButtonColor: '#2563eb'
             });
         }
     };
@@ -645,6 +739,7 @@ export default function RootDashboard() {
                     loading={loading}
                     onToggleStatus={handleToggleStatus}
                     onArchive={handleArchive}
+                    onDeleteCoAdmin={handleDeleteCoAdmin}
                     onCreateCoAdmin={handleCreateCoAdmin}
                     onEditCoAdmin={handleUpdateCoAdmin}
                     formData={formData}
