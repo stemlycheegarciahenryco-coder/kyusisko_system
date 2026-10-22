@@ -130,15 +130,18 @@ async function calculateRuleMatch(studentProfile, scholarship) {
   let isEligible = true;
 
   // 1. HARD RULE: GWA Threshold Check (json-rules-engine)
-  if (scholarship.gwa_requirement) {
+  // GWA is a PERCENTAGE (e.g. 85). Higher is better, so the student's GWA
+  // must be >= the scholarship's minimum.
+  if (scholarship.gwa_requirement != null) {
+    const minGwa = parseFloat(scholarship.gwa_requirement);
     const engine = new Engine();
-    
+
     engine.addRule({
       conditions: {
         all: [{
           fact: 'gwa',
-          operator: 'lessThanInclusive',
-          value: parseFloat(scholarship.gwa_requirement)
+          operator: 'greaterThanInclusive',
+          value: minGwa
         }]
       },
       event: { type: 'gwa-passed' }
@@ -150,11 +153,11 @@ async function calculateRuleMatch(studentProfile, scholarship) {
     if (!passedGwa) isEligible = false;
 
     criteriaResults.push({
-      criterion: `GWA Requirement (≤ ${scholarship.gwa_requirement})`,
+      criterion: `GWA Requirement (≥ ${minGwa}%)`,
       passed: passedGwa,
-      details: passedGwa 
-        ? `Student GWA (${studentProfile.gwa}) meets requirement.` 
-        : `Student GWA (${studentProfile.gwa}) exceeds maximum allowable threshold (${scholarship.gwa_requirement}).`
+      details: passedGwa
+        ? `Student GWA (${studentProfile.gwa}%) meets the minimum of ${minGwa}%.`
+        : `Student GWA (${studentProfile.gwa || 'not set'}%) is below the minimum required (${minGwa}%).`
     });
   }
 

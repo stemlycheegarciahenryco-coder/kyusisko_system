@@ -177,9 +177,7 @@ export default function ScholarshipList() {
                     return (
                         <div
                             key={s.id}
-                            className={`bg-white/80 backdrop-blur-xl rounded-[2.5rem] border-2 shadow-xl p-8 md:p-10 transition-all hover:shadow-2xl relative overflow-hidden ${
-                                s.is_best_match ? 'border-[#093fb4] shadow-blue-900/10' : 'border-white/80'
-                            }`}
+                            className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] border-2 border-white/80 shadow-xl p-8 md:p-10 transition-all hover:shadow-2xl hover:shadow-[#093fb4]/25 relative overflow-hidden"
                         >
                             <div className="flex flex-col gap-4">
 

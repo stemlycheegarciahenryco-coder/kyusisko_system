@@ -78,13 +78,12 @@ exports.getAllStudents = async (req, res) => {
                 slast_name,
                 scontact_number,
                 sis_active,
-                is_archived,
                 CASE 
                     WHEN is_profile_complete = true THEN 'Registered' 
                     ELSE 'Pending' 
                 END as derived_status,
                 CONCAT(sstreet, ', ', sbarangay, ', ', sdistrict, ' ', szip_code) as full_address
-            FROM students WHERE is_archived = false
+            FROM students
             ORDER BY id DESC
         `;
         const result = await pool.query(query);
@@ -138,7 +137,10 @@ exports.updatePortfolio = async (req, res) => {
     const finalCourseId = course_id && course_id !== 'Others' && course_id !== '' ? parseInt(course_id) : null;
     const finalOtherSchool = other_school && other_school.trim() !== '' ? other_school.trim() : null;
     const finalOtherDegree = other_degree_program && other_degree_program.trim() !== '' ? other_degree_program.trim() : null;
-    const parsedGwa = gwa && gwa.trim() !== '' ? parseFloat(gwa) : null;
+    const parsedGwa = gwa !== undefined && gwa !== null && String(gwa).trim() !== '' ? parseFloat(gwa) : null;
+    if (parsedGwa !== null && (isNaN(parsedGwa) || parsedGwa < 0 || parsedGwa > 100)) {
+      return res.status(400).json({ message: 'GWA must be a percentage between 0 and 100.' });
+    }
     await pool.query(
       `UPDATE students 
        SET bio = COALESCE($1, bio),

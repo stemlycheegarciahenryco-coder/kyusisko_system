@@ -315,10 +315,6 @@ function CoAdminSection({
                                             {!isArchived && (
                                                 <button
                                                     type="button"
-                                                    className={`flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer ${isCurrentlyEditing
-                                                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                                                            : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                                        }`}
                                                     onClick={() => handleStartEdit(admin)}
                                                     className={`${ROW_BTN} ${isEditing
                                                         ? 'bg-brand text-white border-brand shadow-sm'

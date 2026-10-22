@@ -4,7 +4,7 @@ import api from '../api';
 
 const QC_CITY_CODE = '137404000';
 
-const RELIGIONS = ['Roman Catholic', 'Iglesia ni Cristo', 'Islam', 'Christianity'];
+const RELIGIONS = ['Roman Catholic', 'Iglesia ni Cristo', 'Muslim', 'Christian'];
 const POPULAR_SPORTS = ['Basketball', 'Volleyball', 'Football', 'Taekwondo', 'Swimming', 'Badminton', 'Table Tennis', 'Chess'];
 const PROGRAM_TYPES = [
   'AICS (Assistance to Individuals in Crisis Situations)',
@@ -744,8 +744,8 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
                       <option value="">Select Religion</option>
                       <option value="Roman Catholic">Roman Catholic</option>
                       <option value="Iglesia ni Cristo">Iglesia ni Cristo</option>
-                      <option value="Islam">Islam</option>
-                      <option value="Christianity">Christianity</option>
+                      <option value="Muslim">Muslim</option>
+                      <option value="Christian">Christian</option>
                       <option value="Others">Others</option>
                     </select>
                   </Field>

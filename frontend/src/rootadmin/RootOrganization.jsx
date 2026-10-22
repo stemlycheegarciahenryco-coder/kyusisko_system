@@ -3,7 +3,7 @@ import { IconEye, IconUser, IconSearch, IconRefresh } from '@tabler/icons-react'
 import { ArchiveIcon } from 'lucide-react';
 import api from '../api';
 import RootOrgView from './RootOrgView';
-import { ArchiveIcon, Clock1Icon } from 'lucide-react';
+import { useDialog } from './DialogModal'; // FIX: Imported the missing hook
 
 const TABS = ['all', 'pending', 'approved', 'rejected', 'blocked', 'archived'];
 
@@ -16,10 +16,7 @@ const TAB_LABELS = {
     archived: 'Archived',
 };
 
-// Still passed down to RootOrgView, which expects a `colors` prop
 const colors = { red: '#FF1E1E', white: '#FFFCFB', blue: '#093fb4', green: '#16a34a' };
-
-// Small action button used in table rows
 const ROW_BTN = 'ui-btn !px-4 !py-2.5 !text-micro border';
 
 const RootOrganization = () => {
@@ -45,12 +42,10 @@ const RootOrganization = () => {
 
     useEffect(() => { fetchOrgs(); }, []);
 
-    // Does an org belong to a tab?
     const matchStatusOrAccess = (org, tab) => {
         const isArchived = Boolean(org.is_archived);
         const isDeleted = org.status === 'deleted' || org.account_status === 'deleted';
 
-        // Exclude deleted items globally since the delete tab is removed
         if (isDeleted) return false;
         if (tab === 'archived') return isArchived;
         if (isArchived) return false;
@@ -172,40 +167,6 @@ const RootOrganization = () => {
         }
     };
 
-    const handleDelete = async (org) => {
-        const { value: enteredName } = await Swal.fire({
-            title: `Delete ${org.org_name}?`,
-            text: `Please type the provider name ("${org.org_name}") to confirm permanent deletion.`,
-            input: 'text',
-            inputPlaceholder: 'Enter provider name',
-            inputAttributes: {
-                style: 'font-size: 14px; border-radius: 12px;'
-            },
-            showCancelButton: true,
-            confirmButtonColor: colors.red,
-            cancelButtonColor: '#94a3b8',
-            confirmButtonText: 'Delete Permanently',
-            background: colors.white,
-            color: '#0f172a',
-            inputValidator: (value) => {
-                if (value !== org.org_name) {
-                    return 'The provider name you entered does not match.';
-                }
-            }
-        });
-
-        if (enteredName) {
-            try {
-                await api.delete(`/system-admin/provider/delete/${org.id}`);
-                Swal.fire({ title: 'Deleted!', icon: 'success', timer: 1500, showConfirmButton: false });
-                setSelectedOrg(null);
-                fetchOrgs();
-            } catch (err) {
-                Swal.fire('Error', err.response?.data?.error || 'Deletion failed.', 'error');
-            }
-        }
-    };
-
     if (loading) {
         return (
             <div className="p-10 text-center">
@@ -215,78 +176,72 @@ const RootOrganization = () => {
     }
 
     return (
-        <div className="p-10 min-h-screen bg-slate-50 space-y-6">
-            {/* Header */}
-            <div className="ui-card p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <h2 className="ui-page-title !text-4xl italic">Providers Management</h2>
-                <div className="ui-card !border-brand px-5 py-3">
-                    <p className="text-xl font-black leading-none text-brand">{filteredOrgs.length}</p>
-                    <p className="text-micro font-black uppercase tracking-widest text-slate-700 mt-1">
-                        {activeTab === 'archived' ? 'Archived Providers' : 'Total Providers'}
-                    </p>
+        <>
+            <div className="p-10 min-h-screen bg-slate-50 space-y-6">
+                <div className="ui-card p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <h2 className="ui-page-title !text-4xl italic">Providers Management</h2>
+                    <div className="ui-card !border-brand px-5 py-3">
+                        <p className="text-xl font-black leading-none text-brand">{filteredOrgs.length}</p>
+                        <p className="text-micro font-black uppercase tracking-widest text-slate-700 mt-1">
+                            {activeTab === 'archived' ? 'Archived Providers' : 'Total Providers'}
+                        </p>
+                    </div>
                 </div>
-            </div>
 
-            {/* Search */}
-            <div className="relative w-full md:max-w-md">
-                <IconSearch size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                    placeholder="Search by name or email..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="ui-input !pl-11 !py-3"
-                />
-            </div>
+                <div className="relative w-full md:max-w-md">
+                    <IconSearch size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                        placeholder="Search by name or email..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="ui-input !pl-11 !py-3" />
+                </div>
 
-            {/* Tabs */}
-            <div className="flex flex-wrap gap-2">
-                {TABS.map((tab) => {
-                    const isActive = activeTab === tab;
-                    return (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`ui-btn !px-5 !py-2.5 border ${isActive
-                                ? 'bg-brand text-white border-brand shadow-md shadow-brand/10'
-                                : 'bg-white text-slate-500 border-slate-300 hover:border-brand/40'
-                                }`}
-                        >
-                            {TAB_LABELS[tab]}
-                            <span className={`text-micro font-black px-2 py-0.5 rounded-lg ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                                {countByStatus(tab)}
-                            </span>
-                        </button>
-                    );
-                })}
-            </div>
+                <div className="flex flex-wrap gap-2">
+                    {TABS.map((tab) => {
+                        const isActive = activeTab === tab;
+                        return (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab)}
+                                className={`ui-btn !px-5 !py-2.5 border ${isActive
+                                    ? 'bg-brand text-white border-brand shadow-md shadow-brand/10'
+                                    : 'bg-white text-slate-500 border-slate-300 hover:border-brand/40'}`}
+                            >
+                                {TAB_LABELS[tab]}
+                                <span className={`text-micro font-black px-2 py-0.5 rounded-lg ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                    {countByStatus(tab)}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
 
-            {/* Table */}
-            <div className="ui-card overflow-hidden">
-                <div className="overflow-x-auto custom-scrollbar">
-                    <table className="w-full text-left">
-                        <thead className="bg-brand-soft border-b border-brand/10">
-                            <tr>
-                                <th className="ui-label !text-slate-800 px-6 py-5">Provider Name</th>
-                                <th className="ui-label !text-slate-800 px-6 py-5">Account</th>
-                                <th className="ui-label !text-slate-800 px-6 py-5">Status</th>
-                                <th className="ui-label !text-slate-800 px-6 py-5">Access</th>
-                                <th className="ui-label !text-slate-800 px-6 py-5 text-right">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {filteredOrgs.length === 0 ? (
+                <div className="ui-card overflow-hidden">
+                    <div className="overflow-x-auto custom-scrollbar">
+                        <table className="w-full text-left">
+                            <thead className="bg-brand-soft border-b border-brand/10">
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-12 text-center text-body font-bold text-slate-400 italic">
-                                        No {activeTab === 'all' ? '' : activeTab} providers found.
-                                    </td>
+                                    <th className="ui-label !text-slate-800 px-6 py-5">Provider Name</th>
+                                    <th className="ui-label !text-slate-800 px-6 py-5">Account</th>
+                                    <th className="ui-label !text-slate-800 px-6 py-5">Status</th>
+                                    <th className="ui-label !text-slate-800 px-6 py-5">Access</th>
+                                    <th className="ui-label !text-slate-800 px-6 py-5 text-right">Action</th>
                                 </tr>
-                            ) : (
-                                filteredOrgs.map((org) => {
-                                    const isUpdatedResubmission = org.status === 'pending' && org.rejection_reason;
-                                    const isArchived = Boolean(org.is_archived);
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {filteredOrgs.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={5} className="px-6 py-12 text-center text-body font-bold text-slate-400 italic">
+                                            No {activeTab === 'all' ? '' : activeTab} providers found.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filteredOrgs.map((org) => {
+                                        const isUpdatedResubmission = org.status === 'pending' && org.rejection_reason;
+                                        const isArchived = Boolean(org.is_archived);
 
-                                    const statusStyle =
-                                        org.status === 'pending'
+                                        const statusStyle = org.status === 'pending'
                                             ? isUpdatedResubmission
                                                 ? 'bg-amber-50 text-amber-600 border-amber-200'
                                                 : 'bg-orange-50 text-orange-600 border-orange-100'
@@ -294,83 +249,79 @@ const RootOrganization = () => {
                                                 ? 'bg-green-50 text-green-600 border-green-100'
                                                 : 'bg-red-50 text-red-600 border-red-100';
 
-                                    return (
-                                        <tr key={org.id} className="hover:bg-slate-50/60 transition-all">
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="font-black text-slate-900 text-body uppercase tracking-tight">{org.org_name}</div>
-                                                    {isUpdatedResubmission && (
-                                                        <span className="bg-amber-500 text-white text-micro font-black uppercase px-1.5 py-0.5 rounded flex items-center gap-0.5 tracking-wider shrink-0">
-                                                            <IconRefresh size={8} strokeWidth={3} /> Updated
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="text-micro text-slate-400 font-bold uppercase tracking-wide">
-                                                    {org.city || 'Unknown City'}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-slate-900 shrink-0">
-                                                        <IconUser size={14} />
+                                        return (
+                                            <tr key={org.id} className="hover:bg-slate-50/60 transition-all">
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="font-black text-slate-900 text-body uppercase tracking-tight">{org.org_name}</div>
+                                                        {isUpdatedResubmission && (
+                                                            <span className="bg-amber-500 text-white text-micro font-black uppercase px-1.5 py-0.5 rounded flex items-center gap-0.5 tracking-wider shrink-0">
+                                                                <IconRefresh size={8} strokeWidth={3} /> Updated
+                                                            </span>
+                                                        )}
                                                     </div>
-                                                    <div className="text-caption font-bold text-slate-700">{org.sub_email}</div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`px-3 py-1 text-micro font-black rounded-lg border uppercase tracking-wider ${statusStyle}`}>
-                                                    {isUpdatedResubmission ? 'Updated' : org.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`px-3 py-1 text-micro font-black rounded-lg border uppercase tracking-wider ${org.is_active
-                                                    ? 'bg-brand-soft text-brand border-brand/10'
-                                                    : 'bg-red-50 text-red-600 border-red-100'
-                                                    }`}>
-                                                    {org.is_active ? 'Active' : 'Blocked'}
-                                                </span>
-                                            </td>
-                                            <td className="px-8 py-5 text-right flex justify-end items-center gap-4">
-                                                <button
-                                                    onClick={() => setSelectedOrg(org)}
-                                                    title="View Details"
-                                                    className="flex items-center gap-2 p-3 bg-blue-600/10 hover:bg-blue-600 text-[10px] font-black uppercase text-blue-500 hover:text-white border border-blue-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
-                                                >
-                                                    <IconEye size={20} />
-                                                    <span>View</span>
-                                                </button>
+                                                    <div className="text-micro text-slate-400 font-bold uppercase tracking-wide">
+                                                        {org.city || 'Unknown City'}
+                                                    </div></td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-slate-900 shrink-0">
+                                                            <IconUser size={14} />
+                                                        </div>
+                                                        <div className="text-caption font-bold text-slate-700">{org.sub_email}</div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`px-3 py-1 text-micro font-black rounded-lg border uppercase tracking-wider ${statusStyle}`}>
+                                                        {isUpdatedResubmission ? 'Updated' : org.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`px-3 py-1 text-micro font-black rounded-lg border uppercase tracking-wider ${org.is_active
+                                                        ? 'bg-brand-soft text-brand border-brand/10'
+                                                        : 'bg-red-50 text-red-600 border-red-100'}`}>
+                                                        {org.is_active ? 'Active' : 'Blocked'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-8 py-5 text-right flex justify-end items-center gap-4">
+                                                    <button
+                                                        onClick={() => setSelectedOrg(org)}
+                                                        title="View Details"
+                                                        className="flex items-center gap-2 p-3 bg-blue-600/10 hover:bg-blue-600 text-[10px] font-black uppercase text-blue-500 hover:text-white border border-blue-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
+                                                    >
+                                                        <IconEye size={20} />
+                                                        <span>View</span>
+                                                    </button>
 
-                                                {/* If archived, show Unarchive only */}
-                                                {isArchived ? (
-                                                    <button
-                                                        onClick={() => handleArchive(org)}
-                                                        title="Unarchive"
-                                                        className="flex items-center gap-2 p-3 bg-amber-600/10 hover:bg-amber-600 text-[10px] font-black uppercase text-amber-500 hover:text-white border border-amber-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
-                                                    >
-                                                        <ArchiveIcon size={20} />
-                                                        <span>Unarchive</span>
-                                                    </button>
-                                                ) : (
-                                                    /* For non-archived items, show Archive only */
-                                                    <button
-                                                        onClick={() => handleArchive(org)}
-                                                        title={isArchived ? 'Unarchive' : 'Archive'}
-                                                        className={`${ROW_BTN} bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-600 hover:text-white`}
-                                                    >
-                                                        <ArchiveIcon size={16} />
-                                                        <span>{isArchived ? 'Unarchive' : 'Archive'}</span>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })
-                            )}
-                        </tbody>
-                    </table>
+                                                    {isArchived ? (
+                                                        <button
+                                                            onClick={() => handleArchive(org)}
+                                                            title="Unarchive"
+                                                            className="flex items-center gap-2 p-3 bg-amber-600/10 hover:bg-amber-600 text-[10px] font-black uppercase text-amber-500 hover:text-white border border-amber-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
+                                                        >
+                                                            <ArchiveIcon size={20} />
+                                                            <span>Unarchive</span>
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => handleArchive(org)}
+                                                            title={isArchived ? 'Unarchive' : 'Archive'}
+                                                            className={`${ROW_BTN} bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-600 hover:text-white`}
+                                                        >
+                                                            <ArchiveIcon size={16} />
+                                                            <span>{isArchived ? 'Unarchive' : 'Archive'}</span>
+                                                        </button>)}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-
+            
             <RootOrgView
                 org={selectedOrg}
                 onClose={() => setSelectedOrg(null)}
@@ -378,11 +329,10 @@ const RootOrganization = () => {
                 onReject={handleReject}
                 onBlock={handleBlockToggle}
                 colors={colors}
-                fetchOrgs={fetchOrgs}
-            />
+                fetchOrgs={fetchOrgs} />
 
             {dialogElement}
-        </div>
+        </>
     );
 };
 

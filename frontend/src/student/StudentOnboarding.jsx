@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Check, X, Plus, Loader2 } from 'lucide-react';
 import api from '../api';
 
-const RELIGIONS = ["Roman Catholic", "Islam", "Iglesia ni Cristo", "Christianity"].sort();
+const RELIGIONS = ["Roman Catholic", "Muslim", "Iglesia ni Cristo", "Christian"].sort();
 const POPULAR_SPORTS = ["Basketball", "Volleyball", "Football", "Taekwondo", "Swimming", "Badminton", "Table Tennis", "Chess"];
 
 const StudentOnboarding = () => {

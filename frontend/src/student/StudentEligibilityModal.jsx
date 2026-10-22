@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Check, Plus, Loader2, ClipboardList } from 'lucide-react';
 import api from '../api';
 
-const RELIGIONS = ["Roman Catholic", "Islam", "Iglesia ni Cristo", "Christianity"].sort();
+const RELIGIONS = ["Roman Catholic", "Muslim", "Iglesia ni Cristo", "Christian"].sort();
 const POPULAR_SPORTS = ["Basketball", "Volleyball", "Football", "Taekwondo", "Swimming", "Badminton", "Table Tennis", "Chess"];
 const PROGRAM_TYPES = [
   'AICS (Assistance to Individuals in Crisis Situations)',
