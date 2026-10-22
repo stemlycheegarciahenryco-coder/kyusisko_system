@@ -67,6 +67,9 @@
 /* ─────────────────────────────────────────────────────────────
    3. REUSABLE UI CLASSES  (optional shortcuts for new code)
    ───────────────────────────────────────────────────────────── */
+   @utility ui-btn {
+  @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-label font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed;
+}
 @layer components {
   .ui-page-title {
     @apply text-2xl font-black text-black uppercase tracking-tight;
