@@ -3,9 +3,8 @@ import api from '../api';
 import { IconEye, IconUser, IconSearch, IconRefresh } from '@tabler/icons-react';
 import Swal from 'sweetalert2';
 import RootOrgView from './RootOrgView';
-import { ArchiveIcon, Clock1Icon } from 'lucide-react';
+import { ArchiveIcon, Trash2 } from 'lucide-react';
 
-// Removed 'deleted' from the tabs list
 const TABS = ['all', 'pending', 'approved', 'rejected', 'blocked', 'archived'];
 
 const RootOrganization = () => {
@@ -14,9 +13,6 @@ const RootOrganization = () => {
     const [selectedOrg, setSelectedOrg] = useState(null);
     const [search, setSearch] = useState('');
     const [activeTab, setActiveTab] = useState('all');
-    const [snapshotIsVisible, setSnapshotVisible] = useState(false);
-    const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
-    const [snapShotLists, setSnapshotList] = useState([]);
 
     const colors = { red: '#FF1E1E', white: '#FFFCFB', blue: '#093fb4', green: '#16a34a' };
 
@@ -39,7 +35,7 @@ const RootOrganization = () => {
         const isArchived = Boolean(org.is_archived);
         const isDeleted = org.status === 'deleted' || org.account_status === 'deleted';
 
-        // Exclude deleted items globally since the delete tab is removed
+        // Exclude deleted items globally unless needed, but here we keep standard flow
         if (isDeleted) return false;
         if (tab === 'archived') return isArchived;
 
@@ -160,6 +156,40 @@ const RootOrganization = () => {
                 fetchOrgs();
             } catch {
                 Swal.fire('Error', 'Action failed.', 'error');
+            }
+        }
+    };
+
+    const handleDelete = async (org) => {
+        const { value: enteredName } = await Swal.fire({
+            title: `Delete ${org.org_name}?`,
+            text: `Please type the provider name ("${org.org_name}") to confirm permanent deletion.`,
+            input: 'text',
+            inputPlaceholder: 'Enter provider name',
+            inputAttributes: {
+                style: 'font-size: 14px; border-radius: 12px;'
+            },
+            showCancelButton: true,
+            confirmButtonColor: colors.red,
+            cancelButtonColor: '#94a3b8',
+            confirmButtonText: 'Delete Permanently',
+            background: colors.white,
+            color: '#0f172a',
+            inputValidator: (value) => {
+                if (value !== org.org_name) {
+                    return 'The provider name you entered does not match.';
+                }
+            }
+        });
+
+        if (enteredName) {
+            try {
+                await api.delete(`/system-admin/provider/delete/${org.id}`);
+                Swal.fire({ title: 'Deleted!', icon: 'success', timer: 1500, showConfirmButton: false });
+                setSelectedOrg(null);
+                fetchOrgs();
+            } catch (err) {
+                Swal.fire('Error', err.response?.data?.error || 'Deletion failed.', 'error');
             }
         }
     };
@@ -309,16 +339,26 @@ const RootOrganization = () => {
                                                     <span>View</span>
                                                 </button>
 
-                                                {/* If archived, show Unarchive only */}
+                                                {/* If archived, show Unarchive and Delete buttons */}
                                                 {isArchived ? (
-                                                    <button
-                                                        onClick={() => handleArchive(org)}
-                                                        title="Unarchive"
-                                                        className="flex items-center gap-2 p-3 bg-amber-600/10 hover:bg-amber-600 text-[10px] font-black uppercase text-amber-500 hover:text-white border border-amber-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
-                                                    >
-                                                        <ArchiveIcon size={20} />
-                                                        <span>Unarchive</span>
-                                                    </button>
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleArchive(org)}
+                                                            title="Unarchive"
+                                                            className="flex items-center gap-2 p-3 bg-amber-600/10 hover:bg-amber-600 text-[10px] font-black uppercase text-amber-500 hover:text-white border border-amber-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
+                                                        >
+                                                            <ArchiveIcon size={20} />
+                                                            <span>Unarchive</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(org)}
+                                                            title="Delete Permanently"
+                                                            className="flex items-center gap-2 p-3 bg-red-600/10 hover:bg-red-600 text-[10px] font-black uppercase text-red-500 hover:text-white border border-red-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
+                                                        >
+                                                            <Trash2 size={20} />
+                                                            <span>Delete</span>
+                                                        </button>
+                                                    </>
                                                 ) : (
                                                     /* For non-archived items, show Archive only */
                                                     <button

@@ -79,10 +79,6 @@ router.patch('/student/archive/:id', verifyToken, async (req, res) => {
     }
 });
 
-// Delete CoAdmin
-router.delete('/student/delete/:id', verifyToken, async (req, res) => {
-})
-
 // Get Deleted Student
 router.get('/get/student/delete', verifyToken, async (req, res) => {
     try {

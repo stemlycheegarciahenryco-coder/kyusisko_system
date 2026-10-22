@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
-import { Search, ShieldCheck, Lock, Phone, MapPin, Mail, Archive } from 'lucide-react';
+import { Search, ShieldCheck, Lock, Phone, MapPin, Mail, Archive, Trash2 } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 export default function RootStudentLog() {
@@ -81,6 +81,68 @@ export default function RootStudentLog() {
             Swal.fire({ title: 'Success!', icon: 'success', timer: 1500, showConfirmButton: false });
         } catch (err) {
             Swal.fire({ title: 'Error!', text: 'Failed to update archive status.', icon: 'error' });
+        }
+    };
+
+    const handleDelete = async (student) => {
+        const studentFullName = `${student.sfirst_name || ''} ${student.slast_name || ''}`.trim();
+
+        const { isConfirmed } = await Swal.fire({
+            title: `Delete ${studentFullName}?`,
+            text: `Please type the student's name ("${studentFullName}") to confirm permanent deletion.`,
+            html: `
+                <div style="text-align: left; margin-top: 10px;">
+                    <label style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; display: block; margin-bottom: 4px;">
+                        Confirm Student Name
+                    </label>
+                    <input id="swal-input-name" class="swal2-input" placeholder="Enter student name" style="margin: 0; width: 100%; box-sizing: border-box; font-size: 14px;" />
+                </div>
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonColor: '#FF1E1E',
+            cancelButtonColor: '#94a3b8',
+            confirmButtonText: 'Delete Permanently',
+            background: '#ffffff',
+            color: '#0f172a',
+            preConfirm: () => {
+                const enteredName = document.getElementById('swal-input-name').value;
+
+                if (enteredName.trim() !== studentFullName.trim()) {
+                    Swal.showValidationMessage('The student name you entered does not match.');
+                    return false;
+                }
+                return true;
+            }
+        });
+
+        if (isConfirmed) {
+            try {
+                // Fixed: Removed the stray single quote before ${student.id}
+                await api.delete(`/system-admin/student/delete/${student.id}`);
+
+                setArchivedStudents(prev => prev.filter(s => s.id !== student.id));
+                await fetchAllData();
+
+                Swal.fire({
+                    title: 'Deleted!',
+                    text: 'Student record has been removed.',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false,
+                    background: '#ffffff',
+                    color: '#0f172a',
+                });
+            } catch (err) {
+                Swal.fire({
+                    title: 'Error!',
+                    text: err.response?.data?.error || 'Failed to delete student.',
+                    icon: 'error',
+                    background: '#ffffff',
+                    color: '#0f172a',
+                    confirmButtonColor: '#093fb4',
+                });
+            }
         }
     };
 
@@ -252,6 +314,18 @@ export default function RootStudentLog() {
                                                     <Archive size={16} />
                                                     <span>{s.is_archived ? 'Unarchive' : 'Archive'}</span>
                                                 </button>
+
+                                                {/* Delete Button (Visible only on Archived Tab) */}
+                                                {activeTab === 'archived' && (
+                                                    <button
+                                                        onClick={() => handleDelete(s)}
+                                                        title="Delete Student Permanently"
+                                                        className="flex items-center gap-2 p-3 text-[10px] font-black uppercase rounded-2xl border shadow-md hover:scale-110 transition-all cursor-pointer bg-red-600/10 text-red-600 border-red-600/20 hover:bg-red-600 hover:text-white"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                        <span>Delete</span>
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>

@@ -23,6 +23,7 @@ function CoAdminSection({
     loading,
     onToggleStatus,
     onArchive,
+    onDeleteCoAdmin,
     onEditCoAdmin,
     onCreateCoAdmin,
     formData,
@@ -92,6 +93,44 @@ function CoAdminSection({
 
         if (result.isConfirmed) {
             onArchive(admin);
+        }
+    };
+
+    // Handle Delete click with SweetAlert confirmation (Password removed)
+    const handleDeleteClick = async (admin) => {
+        const adminFullName = `${admin.first_name || ''} ${admin.last_name || ''}`.trim();
+
+        const { isConfirmed } = await Swal.fire({
+            title: `Delete ${adminFullName}?`,
+            text: `Please type the co-admin's name ("${adminFullName}") to confirm permanent deletion.`,
+            html: `
+                <div style="text-align: left; margin-top: 10px;">
+                    <label style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; display: block; margin-bottom: 4px;">
+                        Confirm Co-Admin Name
+                    </label>
+                    <input id="swal-input-name" class="swal2-input" placeholder="Enter co-admin name" style="margin: 0; width: 100%; box-sizing: border-box; font-size: 14px;" />
+                </div>
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonColor: '#e11d48',
+            cancelButtonColor: '#94a3b8',
+            confirmButtonText: 'Delete Permanently',
+            background: '#ffffff',
+            color: '#0f172a',
+            preConfirm: () => {
+                const enteredName = document.getElementById('swal-input-name').value;
+
+                if (enteredName !== adminFullName) {
+                    Swal.showValidationMessage('The co-admin name you entered does not match.');
+                    return false;
+                }
+                return true;
+            }
+        });
+
+        if (isConfirmed) {
+            onDeleteCoAdmin(admin);
         }
     };
 
@@ -339,8 +378,8 @@ function CoAdminSection({
                                                     type="button"
                                                     onClick={() => onToggleStatus(admin.id, admin.account_status)}
                                                     className={`flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer ${admin.account_status === 'active'
-                                                            ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
-                                                            : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-sm'
+                                                        ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                                                        : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-sm'
                                                         }`}
                                                 >
                                                     {admin.account_status === 'active' ? (
@@ -352,13 +391,12 @@ function CoAdminSection({
                                                 </button>
                                             )}
 
-                                            {/* Edit button is now hidden if the co-admin is archived */}
                                             {!isArchived && (
                                                 <button
                                                     type="button"
                                                     className={`flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer ${isCurrentlyEditing
-                                                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                                                            : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                                                        : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
                                                         }`}
                                                     onClick={() => handleStartEdit(admin)}
                                                 >
@@ -375,6 +413,17 @@ function CoAdminSection({
                                                 <Archive size={12} />
                                                 {isArchived ? 'Unarchive' : 'Archive'}
                                             </button>
+
+                                            {activeTab === 'archived' && (
+                                                <button
+                                                    type="button"
+                                                    className="flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
+                                                    onClick={() => handleDeleteClick(admin)}
+                                                >
+                                                    <Trash2 size={12} />
+                                                    Delete
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 );
