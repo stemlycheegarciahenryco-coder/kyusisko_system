@@ -42,9 +42,26 @@ export default function RootReports() {
 
         if (!confirmResult.isConfirmed) return;
 
+        const { value: reasonText, dismiss } = await Swal.fire({
+            title: 'Provide Additional Takedown Reason',
+            input: 'textarea',
+            inputPlaceholder: 'Please provide a reason for taking down this scholarship (optional)...',
+            inputAttributes: {
+                'aria-label': 'Provide a reason for taking down this scholarship'
+            },
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Submit'
+        });
+
+        if (dismiss) return;
+
         setActionLoading(`takedown-${scholarshipId}`);
         try {
-            await api.put(`/reports/takedown/${scholarshipId}`);
+            await api.put(`/reports/takedown/${scholarshipId}`, {
+                reason: reasonText ? reasonText.trim() : 'No additional reason provided'
+            });
             Swal.fire({
                 icon: 'success',
                 title: 'Taken Down',
@@ -148,14 +165,17 @@ export default function RootReports() {
 
     const onSnapshotsClick = async () => { setSnapshotVisible(!snapshotIsVisible); };
 
+    // 🔄 Updated status config mapping for "taken down"
     const statusConfig = {
         pending: { color: 'bg-amber-50 text-amber-600 border-amber-200 cursor-pointer', dot: 'bg-amber-400' },
-        resolved: { color: 'bg-green-50 text-green-600 border-green-200 cursor-pointer', dot: 'bg-green-400' },
+        'taken down': { color: 'bg-red-50 text-red-600 border-red-200 cursor-pointer', dot: 'bg-red-400' },
         dismissed: { color: 'bg-slate-100 text-slate-400 border-slate-200 cursor-pointer', dot: 'bg-slate-300' },
     };
 
     const filtered = reports.filter(r => {
-        const matchFilter = filter === 'all' ? true : r.status === filter;
+        // Map filter value check if your backend uses 'resolved' vs 'taken down'
+        const targetStatus = filter === 'taken down' ? 'resolved' : filter;
+        const matchFilter = filter === 'all' ? true : r.status === targetStatus;
         const matchSearch =
             r.student_name?.toLowerCase().includes(search.toLowerCase()) ||
             r.scholarship_title?.toLowerCase().includes(search.toLowerCase()) ||
@@ -167,7 +187,8 @@ export default function RootReports() {
         if (f === 'all') {
             return reports.length;
         }
-        return reports.filter(r => r.status === f).length;
+        const targetStatus = f === 'taken down' ? 'resolved' : f;
+        return reports.filter(r => r.status === targetStatus).length;
     };
 
     return (
@@ -198,19 +219,18 @@ export default function RootReports() {
             <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex flex-wrap items-center gap-3">
                     <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl overflow-x-auto">
-                        {['all', 'pending', 'resolved', 'dismissed'].map(f => (
+                        {/* 🔄 Updated filter list from 'resolved' to 'taken down' */}
+                        {['all', 'pending', 'taken down', 'dismissed'].map(f => (
                             <button
                                 key={f}
                                 onClick={() => setFilter(f)}
-                                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
-                                    filter === f
-                                        ? 'bg-[#093fb4] text-white shadow-md shadow-blue-900/20'
-                                        : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'
+                                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${filter === f
+                                    ? 'bg-[#093fb4] text-white shadow-md shadow-blue-900/20'
+                                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'
                                 }`}
                             >
                                 <span>{f}</span>
-                                <span className={`px-2 py-0.5 rounded-lg text-[10px] ${
-                                    filter === f ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
+                                <span className={`px-2 py-0.5 rounded-lg text-[10px] ${filter === f ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
                                 }`}>
                                     {getCount(f)}
                                 </span>
@@ -263,22 +283,23 @@ export default function RootReports() {
                         const isExpanded = expandedId === r.report_id;
                         const isPending = r.status === 'pending';
                         const isTakenDown = r.taken_down;
-                        const cfg = statusConfig[r.status] || statusConfig.pending;
+                        
+                        // Map internal status string for UI label display
+                        const displayStatus = r.status === 'resolved' ? 'taken down' : r.status;
+                        const cfg = statusConfig[displayStatus] || statusConfig.pending;
 
                         const isDeleting = actionLoading === `delete-${r.report_id}`;
 
                         return (
                             <div
                                 key={r.report_id}
-                                className={`bg-white rounded-2xl border transition-all shadow-xs ${
-                                    isPending ? 'border-amber-100' : 'border-slate-100'
+                                className={`bg-white rounded-2xl border transition-all shadow-xs ${isPending ? 'border-amber-100' : 'border-slate-100'
                                 } ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}
                             >
                                 {/* Main Row */}
                                 <div className="p-4 flex items-start gap-3">
                                     {/* Icon */}
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-                                        isPending ? 'bg-amber-50' : 'bg-slate-50'
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${isPending ? 'bg-amber-50' : 'bg-slate-50'
                                     }`}>
                                         <AlertTriangle size={15} className={isPending ? 'text-amber-500' : 'text-slate-300'} />
                                     </div>
@@ -297,7 +318,7 @@ export default function RootReports() {
                                             <div className="flex items-center gap-2 shrink-0">
                                                 <span className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border flex items-center gap-1.5 ${cfg.color}`}>
                                                     <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                                                    {r.status}
+                                                    {displayStatus}
                                                 </span>
                                             </div>
                                         </div>
@@ -335,7 +356,6 @@ export default function RootReports() {
 
                                     {/* Actions / Buttons Group */}
                                     <div className="flex items-center gap-2 shrink-0 mt-0.5">
-                                        {/* Expand/Collapse Button */}
                                         <button
                                             onClick={() => setExpandedId(isExpanded ? null : r.report_id)}
                                             title={isExpanded ? "Close Report" : "Open Report"}
@@ -405,6 +425,18 @@ export default function RootReports() {
                                                 {r.reason}
                                             </p>
                                         </div>
+
+                                        {(r.take_down_reason || r.dismisal_reason) && (
+                                            <div className="bg-amber-50/60 border border-amber-200/60 rounded-xl p-3">
+                                                <p className="text-[9px] font-black text-amber-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                                                    <Clock size={11} />
+                                                    Admin Remarks ({r.take_down_reason ? 'Taken Down' : 'Dismissed'})
+                                                </p>
+                                                <p className="text-xs text-slate-700 font-medium leading-relaxed">
+                                                    "{r.take_down_reason || r.dismisal_reason}"
+                                                </p>
+                                            </div>
+                                        )}
 
                                         {isPending && !isTakenDown ? (
                                             <div className="flex gap-2">

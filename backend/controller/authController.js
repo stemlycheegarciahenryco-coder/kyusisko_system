@@ -35,8 +35,6 @@ exports.portalLogin = async (req, res) => {
     const { identifier, password, otp, mfaMethod } = req.body;
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     const input = identifier ? identifier.trim() : '';
-    console.log('Logging In')
-
     try {
         // 1. Universal Rate-Limiting Check
         const attemptCheck = await pool.query(
