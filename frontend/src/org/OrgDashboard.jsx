@@ -15,19 +15,27 @@ import OrgRightBar from '../component/OrgRightBar';
 import ForcePasswordChange from '../component/ForcePasswordChange'; 
 
 // ─── SVG Donut Chart Component ───────────────────────────────────────────────
-// Reusable donut: `data` = [{ label, count, color }], center shows the sum.
-function DonutChart({ title, centerLabel, data }) {
-  const total = data.reduce((sum, item) => sum + item.count, 0);
+function ProgramOverviewChart({ active = 0, apps = 0, drafts = 0, pending = 0 }) {
+  const total = active + apps + drafts + pending;
+
+  const data = [
+    { label: 'Active Programs', count: active, color: '#A855F7' },
+    { label: 'Total Applications', count: apps, color: '#3B82F6' },
+    { label: 'Draft Programs', count: drafts, color: '#22C55E' },
+    { label: 'Pending Review', count: pending, color: '#F97316' },
+  ];
 
   let cumulativePercent = 0;
 
   return (
-    <div className="flex flex-col min-w-0">
-      <h3 className="text-sm md:text-base font-black text-slate-900 tracking-tight mb-5">{title}</h3>
+    <div className="bg-white p-6 md:p-8 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-base md:text-lg font-black text-slate-900 tracking-tight">Program Overview</h2>
+      </div>
 
-      <div className="flex flex-col items-center gap-6 my-auto">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-8 my-auto">
         {/* Donut Graphic */}
-        <div className="relative w-40 h-40 shrink-0 flex items-center justify-center">
+        <div className="relative w-48 h-48 shrink-0 flex items-center justify-center">
           <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
             {total > 0 ? (
               data.map((item, index) => {
@@ -64,22 +72,22 @@ function DonutChart({ title, centerLabel, data }) {
             )}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-            <span className="text-2xl font-black text-slate-900 leading-none">{total}</span>
-            <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-normal mt-1 max-w-[70px] leading-tight">{centerLabel}</span>
+            <span className="text-3xl font-black text-slate-900 leading-none">{total}</span>
+            <span className="text-xs font-extrabold text-slate-400 uppercase tracking-wider mt-1.5">Total Programs</span>
           </div>
         </div>
 
         {/* Dynamic Legend */}
-        <div className="flex-1 space-y-3 w-full min-w-0">
+        <div className="flex-1 space-y-3.5 w-full">
           {data.map((item, idx) => {
             const percentage = total > 0 ? ((item.count / total) * 100).toFixed(1) : "0.0";
             return (
               <div key={idx} className="flex items-center justify-between text-xs md:text-sm font-semibold">
-                <div className="flex items-center gap-2.5 min-w-0">
+                <div className="flex items-center gap-2.5">
                   <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                  <span className="text-slate-800 font-bold whitespace-nowrap">{item.label}</span>
+                  <span className="text-slate-800 font-bold">{item.label}</span>
                 </div>
-                <div className="text-right shrink-0 whitespace-nowrap pl-3">
+                <div className="text-right shrink-0">
                   <span className="font-extrabold text-slate-900 mr-1.5">{item.count}</span>
                   <span className="text-xs text-slate-400 font-bold">({percentage}%)</span>
                 </div>
@@ -87,49 +95,6 @@ function DonutChart({ title, centerLabel, data }) {
             );
           })}
         </div>
-      </div>
-    </div>
-  );
-}
-
-// Programs only — applications are shown in the Application Overview next to it.
-function ProgramOverviewChart({ active = 0, drafts = 0 }) {
-  return (
-    <DonutChart
-      title="Programs"
-      centerLabel="Programs"
-      data={[
-        { label: 'Active Programs', count: active, color: '#A855F7' },
-        { label: 'Draft Programs', count: drafts, color: '#22C55E' },
-      ]}
-    />
-  );
-}
-
-// Applications only. Slices never overlap, so the center = total applicants.
-function ApplicationOverviewChart({ total = 0, pending = 0, scholars = 0 }) {
-  const other = Math.max(0, total - pending - scholars); // rejected / withdrawn / etc.
-  return (
-    <DonutChart
-      title="Applications"
-      centerLabel="Applicants"
-      data={[
-        { label: 'Pending Review', count: pending, color: '#F97316' },
-        { label: 'Active Scholars', count: scholars, color: '#3B82F6' },
-        { label: 'Rejected / Other', count: other, color: '#94A3B8' },
-      ]}
-    />
-  );
-}
-
-// One card holding both charts, split by a divider (stacks on small screens).
-function OverviewCard({ programs, applications }) {
-  return (
-    <div className="bg-white p-6 md:p-8 rounded-2xl border border-slate-200/80 shadow-xs">
-      <h2 className="text-base md:text-lg font-black text-slate-900 tracking-tight mb-6">Overview</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-0">
-        <div className="md:pr-8 min-w-0">{programs}</div>
-        <div className="min-w-0 md:pl-8 md:border-l border-slate-200/80 pt-8 md:pt-0 border-t md:border-t-0">{applications}</div>
       </div>
     </div>
   );
@@ -146,8 +111,7 @@ export default function OrgDashboard() {
     pendingApps: 0, 
     draftPrograms: 0, 
     activePrograms: 0, 
-    totalActiveApps: 0,
-    acceptedStudents: 0
+    totalActiveApps: 0 
   });
   const [recentApplications, setRecentApplications] = useState([]);
   const [programs, setPrograms] = useState([]);
@@ -259,21 +223,12 @@ export default function OrgDashboard() {
               />
             </div>
 
-            {/* Overview: Programs + Applications in one card */}
-            <OverviewCard
-              programs={
-                <ProgramOverviewChart
-                  active={stats.activePrograms ?? 0}
-                  drafts={stats.draftPrograms ?? 0}
-                />
-              }
-              applications={
-                <ApplicationOverviewChart
-                  total={stats.totalActiveApps ?? 0}
-                  pending={stats.pendingApps ?? 0}
-                  scholars={stats.acceptedStudents ?? 0}
-                />
-              }
+            {/* Program Overview Donut Chart */}
+            <ProgramOverviewChart 
+              active={stats.activePrograms ?? 0} 
+              apps={stats.totalActiveApps ?? 0} 
+              drafts={stats.draftPrograms ?? 0} 
+              pending={stats.pendingApps ?? 0} 
             />
 
             {/* Program Status & Applicants Table */}
