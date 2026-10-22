@@ -97,7 +97,7 @@ const FAQItem = ({ q, a, index }) => {
                     onClick={() => setOpen(!open)}
                     className="w-full flex items-center justify-between px-7 py-5 text-left bg-white group"
                 >
-                    <span className={`text-[17px] font-black tracking-tight transition-colors ${open ? 'text-[#093FB4]' : 'text-slate-900 group-hover:text-[#093FB4]'}`}>
+                    <span className={`text-base font-black tracking-tight transition-colors ${open ? 'text-[#093FB4]' : 'text-slate-900 group-hover:text-[#093FB4]'}`}>
                         {q}
                     </span>
                     <ChevronDown
@@ -107,7 +107,7 @@ const FAQItem = ({ q, a, index }) => {
                     />
                 </button>
                 <div className={`overflow-hidden transition-all duration-300 ease-in-out ${open ? 'max-h-64' : 'max-h-0'}`}>
-                    <p className="px-7 pb-6 text-base text-slate-600 leading-relaxed font-medium bg-white">
+                    <p className="home-body px-7 pb-6 bg-white">
                         {a}
                     </p>
                 </div>
@@ -150,10 +150,10 @@ export default function Home() {
                                 <ScrollReveal>
                                     <div className="space-y-5 max-w-2xl">
                                         <div className="flex flex-wrap gap-2">
-                                            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/15 backdrop-blur-sm text-white rounded-lg text-[12px] font-black tracking-[0.2em] uppercase border border-white/30">
+                                            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/15 backdrop-blur-sm text-white rounded-lg home-eyebrow border border-white/30">
                                                 <CheckCircle2 size={15} strokeWidth={3} /> 100% Free
                                             </div>
-                                            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#093FB4]/80 backdrop-blur-sm text-white rounded-lg text-[12px] font-black tracking-[0.2em] uppercase border border-[#093FB4]">
+                                            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#093FB4]/80 backdrop-blur-sm text-white rounded-lg home-eyebrow border border-[#093FB4]">
                                                 <Sparkles size={15} strokeWidth={3} className="text-blue-200" /> Vetted Scholarship Providers
                                             </div>
                                         </div>
@@ -172,13 +172,13 @@ export default function Home() {
                                         <div className="flex flex-wrap gap-3 sm:gap-4 pt-1">
                                             <button
                                                 onClick={() => navigate('/student-register')}
-                                                className="px-6 sm:px-10 py-3 sm:py-5 bg-[#093FB4] text-white font-black rounded-xl shadow-2xl hover:bg-[#0731a8] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 group text-[13px] uppercase tracking-[0.2em]"
+                                                className="px-6 sm:px-10 py-3 sm:py-5 bg-[#093FB4] text-white font-black rounded-xl shadow-2xl hover:bg-[#0731a8] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 group home-btn"
                                             >
                                                 Get Started <ArrowRight size={18} strokeWidth={3} className="group-hover:translate-x-1 transition-transform" />
                                             </button>
                                             <button
                                                 onClick={() => document.getElementById('scholarships')?.scrollIntoView({ behavior: 'smooth' })}
-                                                className="px-6 sm:px-10 py-3 sm:py-5 bg-white/15 backdrop-blur-sm text-white font-black rounded-xl border border-white/40 hover:bg-white/25 transition-all text-[13px] uppercase tracking-[0.2em]"
+                                                className="px-6 sm:px-10 py-3 sm:py-5 bg-white/15 backdrop-blur-sm text-white font-black rounded-xl border border-white/40 hover:bg-white/25 transition-all home-btn"
                                             >
                                                 Browse Scholarships
                                             </button>
@@ -195,11 +195,11 @@ export default function Home() {
                     <div className="max-w-6xl mx-auto">
                         <ScrollReveal>
                             <div className="text-center mb-16 space-y-4">
-                                <span className="text-[#093FB4] text-[12px] font-black uppercase tracking-[0.5em]">Active Openings</span>
-                                <h3 className="text-4xl lg:text-6xl font-black text-slate-900 tracking-tighter uppercase">
+                                <span className="text-[#093FB4] home-eyebrow">Active Openings</span>
+                                <h3 className="home-section-title">
                                     Featured <span className="text-[#093FB4]">Scholarships</span>
                                 </h3>
-                                <p className="text-slate-500 font-semibold text-base max-w-xl mx-auto leading-relaxed">
+                                <p className="home-lead max-w-xl mx-auto">
                                     Apply directly to open programs with verified coverage details and deadlines.
                                 </p>
                             </div>
@@ -221,10 +221,10 @@ export default function Home() {
                         <ScrollReveal>
                             <div className="text-center mb-16 space-y-4">
                                 
-                                <h3 className="text-4xl lg:text-6xl font-black text-slate-900 tracking-tighter uppercase">
+                                <h3 className="home-section-title">
                                     How to <span className="text-[#093FB4]">Get Started</span>
                                 </h3>
-                                <p className="text-slate-500 font-semibold text-base max-w-xl mx-auto leading-relaxed">
+                                <p className="home-lead max-w-xl mx-auto">
                                     Whether you're a student looking for funding or an organization wanting to give back — it only takes a few steps.
                                 </p>
                             </div>
@@ -239,7 +239,7 @@ export default function Home() {
                                     <ScrollReveal>
                                         <div className="flex justify-center lg:justify-start mb-8">
                                             <span
-                                                className="px-5 py-2 text-white text-[12px] font-black uppercase tracking-widest rounded-xl shadow-lg"
+                                                className="px-5 py-2 text-white home-badge rounded-xl shadow-lg"
                                                 style={{ backgroundColor: col.color }}
                                             >
                                                 {col.label}
@@ -255,9 +255,9 @@ export default function Home() {
                                                         <step.icon size={24} strokeWidth={2.5} />
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <span className="text-[12px] font-black text-[#093FB4] uppercase tracking-widest">Step {i + 1}</span>
-                                                        <p className="text-[17px] font-black text-slate-900 mt-0.5 leading-snug">{step.label}</p>
-                                                        <p className="text-[15px] text-slate-500 mt-1 leading-relaxed font-medium">{step.desc}</p>
+                                                        <span className="home-badge text-[#093FB4]">Step {i + 1}</span>
+                                                        <p className="text-base font-black text-slate-900 mt-0.5 leading-snug">{step.label}</p>
+                                                        <p className="text-sm text-slate-500 mt-1 leading-relaxed font-medium">{step.desc}</p>
                                                     </div>
                                                 </div>
                                             </ScrollReveal>
@@ -270,7 +270,7 @@ export default function Home() {
                                             style={{ backgroundColor: col.color }}
                                             onMouseEnter={e => { e.currentTarget.style.backgroundColor = col.hover; }}
                                             onMouseLeave={e => { e.currentTarget.style.backgroundColor = col.color; }}
-                                            className="mt-7 w-full px-8 py-4 text-white text-[13px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2.5 group shadow-lg"
+                                            className="mt-7 w-full px-8 py-4 text-white home-btn rounded-xl transition-all flex items-center justify-center gap-2.5 group shadow-lg"
                                         >
                                             {col.cta} <ArrowRight size={17} strokeWidth={3} className="group-hover:translate-x-1 transition-transform" />
                                         </button>
@@ -286,11 +286,11 @@ export default function Home() {
                     <div className="max-w-4xl mx-auto">
                         <ScrollReveal>
                             <div className="text-center mb-16 space-y-4">
-                                <span className="text-[#093FB4] text-[12px] font-black uppercase tracking-[0.5em]">Got Questions?</span>
-                                <h3 className="text-4xl lg:text-6xl font-black text-slate-900 tracking-tighter uppercase">
+                                <span className="text-[#093FB4] home-eyebrow">Got Questions?</span>
+                                <h3 className="home-section-title">
                                     Frequently Asked <span className="text-[#093FB4]">Questions</span>
                                 </h3>
-                                <p className="text-slate-500 font-semibold text-base max-w-xl mx-auto leading-relaxed">
+                                <p className="home-lead max-w-xl mx-auto">
                                     Everything you need to know about KyusISKO, scholarships, and how to get started.
                                 </p>
                             </div>
@@ -304,10 +304,10 @@ export default function Home() {
 
                         <ScrollReveal delay={400}>
                             <div className="text-center mt-14">
-                                <p className="text-slate-500 text-[15px] font-semibold mb-5">Still have questions?</p>
+                                <p className="text-slate-500 text-sm font-semibold mb-5">Still have questions?</p>
                                 <button
                                     onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}
-                                    className="px-9 py-4 border-2 border-[#093FB4] text-[#093FB4] text-[13px] font-black uppercase tracking-widest rounded-xl hover:bg-[#093FB4] hover:text-white transition-all"
+                                    className="px-9 py-4 border-2 border-[#093FB4] text-[#093FB4] home-btn rounded-xl hover:bg-[#093FB4] hover:text-white transition-all"
                                 >
                                     Contact Us
                                 </button>
@@ -322,15 +322,15 @@ export default function Home() {
                         <div className="grid lg:grid-cols-2 gap-16 items-center">
                             <ScrollReveal>
                                 <div className="space-y-7">
-                                    <span className="text-[#093FB4] text-[12px] font-black uppercase tracking-[0.5em]">The Mission</span>
-                                    <h4 className="text-4xl lg:text-6xl font-black text-slate-900 tracking-tighter uppercase">
+                                    <span className="text-[#093FB4] home-eyebrow">The Mission</span>
+                                    <h4 className="home-section-title">
                                         About Kyus<span className="text-[#093FB4]">ISKO</span>
                                     </h4>
-                                    <p className="text-[17px] text-slate-600 leading-relaxed font-medium">
+                                    <p className="home-body">
                                         KyusISKO is a platform that helps students find seamlessly and discover College Scholarships across Quezon City.
                                         Our mission is to bridge the gap between financial constraints and educational dreams through technology.
                                     </p>
-                                    <p className="text-[17px] text-slate-600 leading-relaxed font-medium">
+                                    <p className="home-body">
                                         We partner with government agencies, private corporations, and foundations to ensure every deserving student
                                         has access to funding opportunities — all in one place, completely free.
                                     </p>
@@ -366,16 +366,16 @@ export default function Home() {
                         </div>
 
                         <div>
-                            <p className="text-[12px] font-black text-white uppercase tracking-[0.3em] mb-5">Quick Links</p>
+                            <p className="home-eyebrow text-white mb-5">Quick Links</p>
                             <div className="space-y-3">
                                 {/* 2. Active Routing/Scrolling for Quick Links */}
-                                <p onClick={() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })} className="text-[15px] text-slate-400 hover:text-white transition-colors cursor-pointer font-semibold">
+                                <p onClick={() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm text-slate-400 hover:text-white transition-colors cursor-pointer font-semibold">
                                     About Us
                                 </p>
-                                <p onClick={() => navigate('/scholarships')} className="text-[15px] text-slate-400 hover:text-white transition-colors cursor-pointer font-semibold">
+                                <p onClick={() => navigate('/scholarships')} className="text-sm text-slate-400 hover:text-white transition-colors cursor-pointer font-semibold">
                                     Scholarships
                                 </p>
-                                <p onClick={() => navigate('/provider-guidelines')} className="text-[15px] text-slate-400 hover:text-white transition-colors cursor-pointer font-semibold">
+                                <p onClick={() => navigate('/provider-guidelines')} className="text-sm text-slate-400 hover:text-white transition-colors cursor-pointer font-semibold">
                                     Provider Guidelines
                                 </p>
                                
@@ -383,14 +383,14 @@ export default function Home() {
                         </div>
 
                         <div>
-                            <p className="text-[12px] font-black text-white uppercase tracking-[0.3em] mb-5">Contact Us</p>
+                            <p className="home-eyebrow text-white mb-5">Contact Us</p>
                             <div className="space-y-4">
                                 {/* 3. Removed click/hover events from email */}
-                                <div className="flex items-center gap-3 text-[15px] font-semibold text-slate-400">
+                                <div className="flex items-center gap-3 text-sm font-semibold text-slate-400">
                                     <Mail size={16} className="text-[#4d7fff]" /> kyusisko.ph@gmail.com
                                 </div>
                                 {['09616360016', '09566594260', '09669430534'].map(num => (
-                                    <div key={num} className="flex items-center gap-3 text-[15px] font-semibold text-slate-400">
+                                    <div key={num} className="flex items-center gap-3 text-sm font-semibold text-slate-400">
                                         <Phone size={16} className="text-[#4d7fff]" /> {num}
                                     </div>
                                 ))}
@@ -400,7 +400,7 @@ export default function Home() {
 
                     <div className="border-t border-slate-800 pt-7 flex flex-col md:flex-row justify-center items-center gap-3">
                         {/* 4. Removed "Made with <3" and centered copyright */}
-                        <p className="text-[12px] text-slate-500 font-black uppercase tracking-widest text-center">© 2026 KyusISKO Platform. All rights reserved.</p>
+                        <p className="home-badge text-slate-500 text-center">© 2026 KyusISKO Platform. All rights reserved.</p>
                     </div>
                 </div>
             </footer>

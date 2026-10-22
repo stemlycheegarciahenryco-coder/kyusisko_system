@@ -100,16 +100,16 @@ export default function ApplicationTimeline({
 
   return (
     <div
-      className="bg-[#FFFCFB] border-2 border-black/5 rounded-3xl shadow-sm flex flex-col w-full overflow-hidden"
+      className="bg-white border border-blue-100 rounded-3xl shadow-sm flex flex-col w-full overflow-hidden"
       style={cappedHeight ? { maxHeight: typeof cappedHeight === 'number' ? `${cappedHeight}px` : cappedHeight } : undefined}
     >
       {/* Header */}
-      <div className="px-5 py-4 border-b border-black/5 flex items-center justify-between gap-3 shrink-0 bg-white">
+      <div className="px-5 py-4 border-b border-blue-100 flex items-center justify-between gap-3 shrink-0 bg-white">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-xl bg-[#093fb4]/10 text-[#093fb4] flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-xl bg-white border border-[#093fb4] text-[#093fb4] flex items-center justify-center shrink-0">
             <StickyNote size={16} strokeWidth={2.5} />
           </div>
-          <h4 className="text-base font-black uppercase tracking-wider text-slate-800">Notes</h4>
+          <h4 className="text-[14px] font-black uppercase tracking-widest text-black">Notes</h4>
           {comments.length > 0 && (
             <span className="text-[10px] font-black text-white bg-[#093fb4] px-2 py-0.5 rounded-full">
               {comments.length}
@@ -121,7 +121,7 @@ export default function ApplicationTimeline({
           <button
             onClick={() => setComposerOpen(true)}
             disabled={!applicationId}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#093fb4] hover:bg-[#072e82] text-white text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-md shadow-[#093fb4]/20 disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#093fb4] hover:bg-[#073496] text-white text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:bg-blue-300 disabled:cursor-not-allowed"
           >
             <Plus size={14} strokeWidth={3} /> Add Note
           </button>
@@ -135,12 +135,12 @@ export default function ApplicationTimeline({
         {composerOpen && (
           <form
             onSubmit={handlePostNote}
-            className="relative bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 shadow-sm"
+            className="note-card relative bg-white border border-[#093fb4] rounded-2xl p-4 shadow-sm"
           >
-            <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-amber-300">
-              <Pin size={16} className="fill-amber-100" />
+            <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-black">
+              <Pin size={16} className="fill-white" />
             </div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-amber-700 mb-2">New note</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[#093fb4] mb-2">New note</p>
             <textarea
               ref={inputRef}
               value={newComment}
@@ -151,22 +151,22 @@ export default function ApplicationTimeline({
               }}
               placeholder="Write your note here..."
               rows={4}
-              className="w-full px-3 py-2.5 bg-white/70 border border-amber-200 rounded-xl outline-none text-[13px] text-black font-medium placeholder-amber-700/40 focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-200/50 transition-all resize-none"
+              className="w-full px-3 py-2.5 bg-white border border-blue-100 rounded-xl outline-none text-[13px] text-black font-medium placeholder:text-blue-300 focus:border-[#093fb4] transition-all resize-none"
             />
             <div className="flex items-center justify-between gap-2 mt-3">
-              <p className="text-[10px] font-bold text-amber-700/60">Ctrl + Enter to post</p>
+              <p className="text-[10px] font-bold text-black">Ctrl + Enter to post</p>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={closeComposer}
-                  className="flex items-center gap-1 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-black/50 hover:bg-black/5 transition-colors"
+                  className="flex items-center gap-1 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-black border border-blue-100 hover:border-[#093fb4] transition-colors"
                 >
                   <X size={13} strokeWidth={2.5} /> Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!newComment.trim() || sending}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#093fb4] hover:bg-[#072e82] text-white text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-40"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#093fb4] hover:bg-[#073496] text-white text-[10px] font-black uppercase tracking-widest transition-all disabled:bg-blue-300 disabled:cursor-not-allowed"
                 >
                   {sending ? <Loader2 size={13} className="animate-spin" /> : <Pin size={13} strokeWidth={2.5} />}
                   Pin Note
@@ -179,7 +179,7 @@ export default function ApplicationTimeline({
         {initialLoading ? (
           <div className="py-10 flex flex-col items-center justify-center gap-3">
             <Loader2 size={20} className="text-[#093fb4] animate-spin" />
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Loading Notes...</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-black">Loading Notes...</p>
           </div>
         ) : notes.length > 0 ? (
           notes.map((comment) => {
@@ -198,22 +198,22 @@ export default function ApplicationTimeline({
                 : comment.admin_username || 'Portal Operations';
 
             const noteTheme = isAdmin
-              ? 'bg-blue-50/80 border-blue-100 shadow-blue-900/5 text-blue-900'
-              : 'bg-emerald-50/80 border-emerald-100 shadow-emerald-900/5 text-emerald-900';
-            const headerTheme = isAdmin ? 'text-blue-700' : 'text-emerald-700';
-            const avatarTheme = isAdmin ? 'bg-blue-200 text-blue-700' : 'bg-emerald-200 text-emerald-700';
+              ? 'bg-white border-[#093fb4] text-black'
+              : 'bg-white border-green-600 text-black';
+            const headerTheme = isAdmin ? 'text-[#093fb4]' : 'text-green-700';
+            const avatarTheme = isAdmin ? 'bg-white border border-[#093fb4] text-[#093fb4]' : 'bg-white border border-green-600 text-green-700';
 
             return (
-              <div key={comment.id} className="relative group pt-2">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 text-slate-300 group-hover:text-slate-400 transition-colors z-10">
-                  <Pin size={16} className="fill-slate-100" />
+              <div key={comment.id} className="note-card relative group pt-2">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 text-black z-10">
+                  <Pin size={16} className="fill-white" />
                 </div>
 
                 <div className={`relative p-4 rounded-xl rounded-br-2xl border shadow-sm transition-all hover:shadow-md ${noteTheme}`}>
                   {/* Folded corner */}
-                  <div className={`absolute bottom-0 right-0 w-4 h-4 rounded-tl-xl border-t border-l ${isAdmin ? 'bg-blue-100 border-blue-200' : 'bg-emerald-100 border-emerald-200'}`} />
+                  <div className={`absolute bottom-0 right-0 w-4 h-4 rounded-tl-xl border-t border-l ${isAdmin ? 'bg-white border-[#093fb4]' : 'bg-white border-green-600'}`} />
 
-                  <div className="flex items-center gap-2.5 mb-3 border-b border-black/5 pb-2">
+                  <div className="flex items-center gap-2.5 mb-3 border-b border-blue-100 pb-2">
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black uppercase shrink-0 ${avatarTheme}`}>
                       {isMe ? 'ME' : name.substring(0, 2)}
                     </div>
@@ -221,7 +221,7 @@ export default function ApplicationTimeline({
                       <p className={`text-[12px] font-black leading-none truncate ${headerTheme}`}>
                         {isMe ? 'You' : name}
                       </p>
-                      <p className="text-[10px] font-bold text-black/40 mt-1 uppercase tracking-wider">
+                      <p className="text-[10px] font-bold text-black mt-1 uppercase tracking-widest">
                         {formatDateLabel(comment.created_at)} · {formatTime(comment.created_at)}
                       </p>
                     </div>
@@ -237,11 +237,11 @@ export default function ApplicationTimeline({
         ) : (
           !composerOpen && (
             <div className="py-8 flex flex-col items-center justify-center text-center">
-              <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mb-3">
-                <StickyNote size={24} className="text-slate-300" />
+              <div className="w-14 h-14 bg-white border border-blue-100 rounded-2xl flex items-center justify-center mb-3">
+                <StickyNote size={24} className="text-black" />
               </div>
-              <p className="text-[11px] text-slate-400 font-black uppercase tracking-widest">No notes yet</p>
-              <p className="text-[12px] text-slate-400 font-medium mt-1 max-w-[220px]">
+              <p className="text-[11px] text-black font-black uppercase tracking-widest">No notes yet</p>
+              <p className="text-[12px] text-black font-medium mt-1 max-w-[220px]">
                 Tap “Add Note” to pin a message about this application.
               </p>
             </div>
@@ -252,8 +252,14 @@ export default function ApplicationTimeline({
       <style>{`
         .timeline-scroll::-webkit-scrollbar { width: 6px; }
         .timeline-scroll::-webkit-scrollbar-track { background: transparent; }
-        .timeline-scroll::-webkit-scrollbar-thumb { background: rgba(9,63,180,0.1); border-radius: 999px; }
-        .timeline-scroll::-webkit-scrollbar-thumb:hover { background: rgba(9,63,180,0.25); }
+        .timeline-scroll::-webkit-scrollbar-thumb { background: #dbeafe; border-radius: 999px; }
+        .timeline-scroll::-webkit-scrollbar-thumb:hover { background: #093fb4; }
+        @keyframes noteIn {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .note-card { animation: noteIn 0.4s ease-out backwards; }
+        @media (prefers-reduced-motion: reduce) { .note-card { animation: none; } }
       `}</style>
     </div>
   );

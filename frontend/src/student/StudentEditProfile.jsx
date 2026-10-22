@@ -1,8 +1,52 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, School, User, Users, Loader2, Pencil, Check, AlertCircle } from 'lucide-react';
+import { CheckCircle2, School, User, Users, Loader2, Pencil, Check, AlertCircle, ClipboardList, Plus, X } from 'lucide-react';
 import api from '../api';
 
 const QC_CITY_CODE = '137404000';
+
+const RELIGIONS = ['Roman Catholic', 'Iglesia ni Cristo', 'Islam', 'Christianity'];
+const POPULAR_SPORTS = ['Basketball', 'Volleyball', 'Football', 'Taekwondo', 'Swimming', 'Badminton', 'Table Tennis', 'Chess'];
+const PROGRAM_TYPES = [
+  'AICS (Assistance to Individuals in Crisis Situations)',
+  'SLP (Sustainable Livelihood Program)',
+  'MaPa Program (Masayang Pamilya Para sa Batang Pilipino)',
+  'Others'
+];
+
+// Saved eligibility row (same table the scholarship matcher reads) -> this form's shape
+const mapOnboardingToForm = (p, fb) => {
+  const notEnrolled = (v) => v === 'Currently not enrolled';
+  const religion = p.religion || '';
+  const religionInList = RELIGIONS.includes(religion);
+  return {
+    college_id: p.college_id ? p.college_id : notEnrolled(p.other_school) ? 'NOT_ENROLLED' : p.other_school ? 'Others' : fb.college_id,
+    other_school: p.college_id || notEnrolled(p.other_school) ? '' : (p.other_school || ''),
+    course_id: p.course_id ? p.course_id : notEnrolled(p.other_degree_program) ? 'NOT_ENROLLED' : p.other_degree_program ? 'Others' : fb.course_id,
+    other_degree_program: p.course_id || notEnrolled(p.other_degree_program) ? '' : (p.other_degree_program || ''),
+    ...(religion ? { religion: religionInList ? religion : 'Others', other_religion: religionInList ? '' : religion } : {}),
+    is_athlete: p.is_athlete ? 'Yes' : 'No',
+    sports: Array.isArray(p.sports_interests) ? p.sports_interests : [],
+    other_sport: p.other_sport || '',
+    is_indigenous: p.is_indigenous ? 'Yes' : 'No',
+    indigenous_group: p.indigenous_group || '',
+    is_pwd: p.is_pwd ? 'Yes' : 'No',
+    is_working_student: p.is_working_student ? 'Yes' : 'No',
+    is_poverty_program: p.is_poverty_program ? 'Yes' : 'No',
+    program_type: p.program_type || '',
+    other_program: p.other_program || ''
+  };
+};
+
+const isEligibilityComplete = (f) =>
+  f.is_athlete !== '' &&
+  !(f.is_athlete === 'Yes' && f.sports.length === 0) &&
+  !(f.is_athlete === 'Yes' && f.sports.includes('Others') && !f.other_sport.trim()) &&
+  f.is_indigenous !== '' &&
+  !(f.is_indigenous === 'Yes' && !f.indigenous_group.trim()) &&
+  f.is_pwd !== '' &&
+  f.is_working_student !== '' &&
+  f.is_poverty_program !== '' &&
+  !(f.is_poverty_program === 'Yes' && (!f.program_type || (f.program_type === 'Others' && !f.other_program.trim())));
 
 // Enabled = white, disabled (not in edit mode) = gray
 const inputCls =
@@ -55,6 +99,28 @@ function Field({ label, children, className = '' }) {
   );
 }
 
+function YesNo({ value, onChange, disabled }) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {['Yes', 'No'].map((opt) => (
+        <button
+          key={opt}
+          type="button"
+          disabled={disabled}
+          onClick={() => onChange(opt)}
+          className={`py-2.5 rounded-xl border-2 text-xs font-black uppercase tracking-wider transition-all disabled:cursor-not-allowed ${
+            value === opt
+              ? (disabled ? 'bg-gray-300 text-black/50 border-gray-300' : 'bg-[#093fb4] text-white border-[#093fb4]')
+              : (disabled ? 'bg-gray-100 text-black/40 border-gray-200' : 'bg-white text-black/60 border-black/20 hover:border-[#093fb4]/60')
+          }`}
+        >
+          {opt}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function ContactField({ label, value, onChange, disabled, error }) {
   return (
     <div className="space-y-1 min-w-0">
@@ -96,7 +162,17 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
     course_id: '',
     other_school: studentData?.other_school || '',
     other_degree_program: studentData?.other_degree_program || '',
-    sports_interests: Array.isArray(studentData?.sports_interests) ? studentData.sports_interests.join(', ') : studentData?.sports_interests || '',
+    // Eligibility (saved in the same row the scholarship matcher reads)
+    is_athlete: '',
+    sports: Array.isArray(studentData?.sports_interests) ? studentData.sports_interests : [],
+    other_sport: '',
+    is_indigenous: '',
+    indigenous_group: '',
+    is_pwd: '',
+    is_working_student: '',
+    is_poverty_program: '',
+    program_type: '',
+    other_program: '',
     student_id: studentData?.student_id || '',
     year_level: studentData?.year_level || '',
     gwa: studentData?.gwa || '',
@@ -120,7 +196,8 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
     house_address: studentData?.house_address || ''
   });
 
-  const [editMode, setEditMode] = useState({ academic: false, personal: false, family: false });
+  const [editMode, setEditMode] = useState({ academic: false, eligibility: false, personal: false, family: false });
+  const [hasOnboardingRow, setHasOnboardingRow] = useState(false);
   const [hasEdited, setHasEdited] = useState(false);
   const [colleges, setColleges] = useState([]);
   const [courses, setCourses] = useState([]);
@@ -142,7 +219,9 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
         setCourses(courseRes.data);
 
         let matchedCollegeId = '';
-        if (studentData?.other_school && studentData.other_school !== 'Currently not enrolled') {
+        if (studentData?.other_school === 'Currently not enrolled') {
+          matchedCollegeId = 'NOT_ENROLLED';
+        } else if (studentData?.other_school) {
           matchedCollegeId = 'Others';
         } else if (studentData?.college_name) {
           const found = collegeRes.data.find(c => c.name === studentData.college_name);
@@ -150,14 +229,27 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
         }
 
         let matchedCourseId = '';
-        if (studentData?.other_degree_program && studentData.other_degree_program !== 'Currently not enrolled') {
+        if (studentData?.other_degree_program === 'Currently not enrolled') {
+          matchedCourseId = 'NOT_ENROLLED';
+        } else if (studentData?.other_degree_program) {
           matchedCourseId = 'Others';
         } else if (studentData?.course_name) {
           const found = courseRes.data.find(c => c.name === studentData.course_name);
           if (found) matchedCourseId = found.id;
         }
 
-        setForm(prev => ({ ...prev, college_id: matchedCollegeId, course_id: matchedCourseId }));
+        let patch = { college_id: matchedCollegeId, course_id: matchedCourseId };
+
+        // One source of truth: the saved eligibility row (404 = never saved)
+        try {
+          const profileRes = await api.get('/student-onboarding-profile');
+          if (profileRes.data?.profile) {
+            setHasOnboardingRow(true);
+            patch = { ...patch, ...mapOnboardingToForm(profileRes.data.profile, patch) };
+          }
+        } catch (e) { }
+
+        setForm(prev => ({ ...prev, ...patch }));
       } catch (err) { }
     };
     fetchLookups();
@@ -180,6 +272,9 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
       if (form.scontact_number && form.scontact_number.length !== 10) errors.scontact_number = phoneError;
       if (form.szip_code && !/^\d{4}$/.test(form.szip_code)) errors.szip_code = 'Postal code must be exactly 4 digits';
     }
+    if (section === 'eligibility') {
+      if (!isEligibilityComplete(form)) errors.eligibility = 'Answer every question (and pick at least one sport if you are an athlete).';
+    }
     if (section === 'family') {
       ['mother_contact', 'father_contact', 'guardian_contact'].forEach(key => {
         if (form[key] && form[key].length !== 10) errors[key] = phoneError;
@@ -190,6 +285,7 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
 
   const sectionFields = {
     academic: [],
+    eligibility: ['eligibility'],
     personal: ['scontact_number', 'szip_code'],
     family: ['mother_contact', 'father_contact', 'guardian_contact']
   };
@@ -213,6 +309,12 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
       setHasEdited(true);
     }
   };
+
+  const toggleSport = (sport) =>
+    setForm(prev => ({
+      ...prev,
+      sports: prev.sports.includes(sport) ? prev.sports.filter(s => s !== sport) : [...prev.sports, sport]
+    }));
 
   const clearError = (field) => setFieldErrors(prev => (prev[field] ? { ...prev, [field]: '' } : prev));
 
@@ -242,11 +344,17 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
     try {
       const formData = new FormData();
       formData.append('bio', form.bio);
-      formData.append('college_id', form.college_id);
-      formData.append('course_id', form.course_id);
-      formData.append('other_school', form.other_school);
-      formData.append('other_degree_program', form.other_degree_program);
-      formData.append('sports_interests', form.sports_interests);
+      const schoolNotEnrolled = form.college_id === 'NOT_ENROLLED';
+      const courseNotEnrolled = form.course_id === 'NOT_ENROLLED';
+      const sportsList = form.is_athlete === 'Yes'
+        ? form.sports.map(s => (s === 'Others' && form.other_sport.trim() ? form.other_sport.trim() : s))
+        : [];
+
+      formData.append('college_id', schoolNotEnrolled ? '' : form.college_id);
+      formData.append('course_id', courseNotEnrolled ? '' : form.course_id);
+      formData.append('other_school', schoolNotEnrolled ? 'Currently not enrolled' : form.other_school);
+      formData.append('other_degree_program', courseNotEnrolled ? 'Currently not enrolled' : form.other_degree_program);
+      formData.append('sports_interests', sportsList.join(', '));
       formData.append('academic_student_id', form.student_id);
       formData.append('year_level', form.year_level);
       formData.append('gwa', form.gwa);
@@ -279,9 +387,31 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
         });
       }
 
+      // Keep the eligibility row (used for scholarship matching) in sync with everything edited here
+      if (hasOnboardingRow || isEligibilityComplete(form)) {
+        await api.post('/student-onboarding-profile', {
+          college_id: (schoolNotEnrolled || form.college_id === 'Others' || form.college_id === '') ? null : parseInt(form.college_id, 10),
+          other_school: form.college_id === 'Others' ? form.other_school : (schoolNotEnrolled ? 'Currently not enrolled' : null),
+          course_id: (courseNotEnrolled || form.course_id === 'Others' || form.course_id === '') ? null : parseInt(form.course_id, 10),
+          other_degree_program: form.course_id === 'Others' ? form.other_degree_program : (courseNotEnrolled ? 'Currently not enrolled' : null),
+          religion: form.religion === 'Others' ? form.other_religion : form.religion,
+          is_athlete: form.is_athlete === 'Yes',
+          sports_interests: form.is_athlete === 'Yes' ? form.sports : [],
+          other_sport: form.is_athlete === 'Yes' && form.sports.includes('Others') ? form.other_sport : null,
+          is_indigenous: form.is_indigenous === 'Yes',
+          indigenous_group: form.is_indigenous === 'Yes' ? form.indigenous_group : null,
+          is_pwd: form.is_pwd === 'Yes',
+          is_working_student: form.is_working_student === 'Yes',
+          is_poverty_program: form.is_poverty_program === 'Yes',
+          program_type: form.is_poverty_program === 'Yes' ? form.program_type : null,
+          other_program: form.is_poverty_program === 'Yes' && form.program_type === 'Others' ? form.other_program : null
+        });
+        setHasOnboardingRow(true);
+      }
+
       const selectedCollege = colleges.find(c => String(c.id) === String(form.college_id));
       const selectedCourse = courses.find(c => String(c.id) === String(form.course_id));
-      const optimisticPatch = { ...form, college_name: selectedCollege?.name || '', course_name: selectedCourse?.name || '' };
+      const optimisticPatch = { ...form, sports_interests: sportsList, college_name: selectedCollege?.name || '', course_name: selectedCourse?.name || '' };
 
       if (onRefresh) await onRefresh(optimisticPatch);
       setShowSuccess(true);
@@ -313,7 +443,7 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
             </div>
             <h3 className="text-lg font-black text-black uppercase tracking-tight mb-2">Profile Updated!</h3>
             <p className="text-xs text-black/60 font-bold leading-relaxed mb-6">
-              Your academic, personal, and family information has been saved.
+              Your academic, eligibility, personal, and family information has been saved.
             </p>
             <button
               onClick={() => { setShowSuccess(false); onClose(); }}
@@ -411,6 +541,7 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
                     <option value="">Select your school</option>
                     {colleges.map(col => <option key={col.id} value={col.id}>{col.name}</option>)}
                     <option value="Others">Others (Specify below)</option>
+                    <option value="NOT_ENROLLED">Currently not enrolled</option>
                   </select>
                   {form.college_id === 'Others' && (
                     <input
@@ -434,6 +565,7 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
                     <option value="">Select your course</option>
                     {courses.map(course => <option key={course.id} value={course.id}>{course.name}</option>)}
                     <option value="Others">Others (Specify below)</option>
+                    <option value="NOT_ENROLLED">Currently not enrolled</option>
                   </select>
                   {form.course_id === 'Others' && (
                     <input
@@ -458,7 +590,120 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
                 </Field>
               </div>
 
-              {/* ================= 2. PERSONAL ================= */}
+              {/* ================= 2. ELIGIBILITY ================= */}
+              <SectionTitle
+                icon={ClipboardList}
+                title="Eligibility Details"
+                description="Athletics and background used to match scholarships"
+                isEditing={editMode.eligibility}
+                onToggleEdit={() => handleToggleEdit('eligibility')}
+              />
+              <div className="space-y-4 mb-7">
+                <Field label="Student Athlete">
+                  <YesNo
+                    value={form.is_athlete}
+                    disabled={!editMode.eligibility}
+                    onChange={(v) => { setForm(prev => ({ ...prev, is_athlete: v, sports: v === 'No' ? [] : prev.sports, other_sport: v === 'No' ? '' : prev.other_sport })); clearError('eligibility'); }}
+                  />
+                </Field>
+
+                {form.is_athlete === 'Yes' && (
+                  <Field label="Sports">
+                    <div className="flex flex-wrap gap-2">
+                      {[...POPULAR_SPORTS, 'Others'].map((sport) => {
+                        const on = form.sports.includes(sport);
+                        return (
+                          <button
+                            key={sport}
+                            type="button"
+                            disabled={!editMode.eligibility}
+                            onClick={() => { toggleSport(sport); clearError('eligibility'); }}
+                            className={`px-3 py-2 rounded-xl border-2 text-[11px] font-black uppercase tracking-wide flex items-center gap-1.5 transition-all disabled:cursor-not-allowed ${
+                              on
+                                ? (editMode.eligibility ? 'bg-[#093fb4] text-white border-[#093fb4]' : 'bg-gray-300 text-black/50 border-gray-300')
+                                : (editMode.eligibility ? 'bg-white text-black/60 border-black/20 hover:border-[#093fb4]/60' : 'bg-gray-100 text-black/40 border-gray-200')
+                            }`}
+                          >
+                            {sport} {editMode.eligibility && (on ? <X size={12} strokeWidth={3} /> : <Plus size={12} strokeWidth={3} />)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {form.sports.includes('Others') && (
+                      <input
+                        type="text"
+                        disabled={!editMode.eligibility}
+                        placeholder="Enter other sports..."
+                        className={`${inputCls} mt-2`}
+                        value={form.other_sport}
+                        onChange={e => setForm(prev => ({ ...prev, other_sport: e.target.value }))}
+                      />
+                    )}
+                  </Field>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Field label="Indigenous Person">
+                    <YesNo value={form.is_indigenous} disabled={!editMode.eligibility}
+                      onChange={(v) => { setForm(prev => ({ ...prev, is_indigenous: v, indigenous_group: v === 'No' ? '' : prev.indigenous_group })); clearError('eligibility'); }} />
+                  </Field>
+                  <Field label="Person with Disability (PWD)">
+                    <YesNo value={form.is_pwd} disabled={!editMode.eligibility}
+                      onChange={(v) => { setForm(prev => ({ ...prev, is_pwd: v })); clearError('eligibility'); }} />
+                  </Field>
+                  <Field label="Working Student">
+                    <YesNo value={form.is_working_student} disabled={!editMode.eligibility}
+                      onChange={(v) => { setForm(prev => ({ ...prev, is_working_student: v })); clearError('eligibility'); }} />
+                  </Field>
+                  <Field label="Poverty Reduction Program">
+                    <YesNo value={form.is_poverty_program} disabled={!editMode.eligibility}
+                      onChange={(v) => { setForm(prev => ({ ...prev, is_poverty_program: v, program_type: '', other_program: '' })); clearError('eligibility'); }} />
+                  </Field>
+                </div>
+
+                {form.is_indigenous === 'Yes' && (
+                  <Field label="Indigenous Group / Tribe">
+                    <input
+                      type="text"
+                      disabled={!editMode.eligibility}
+                      placeholder="Enter your indigenous group..."
+                      className={inputCls}
+                      value={form.indigenous_group}
+                      onChange={e => setForm(prev => ({ ...prev, indigenous_group: e.target.value }))}
+                    />
+                  </Field>
+                )}
+
+                {form.is_poverty_program === 'Yes' && (
+                  <Field label="Program Type">
+                    <select
+                      disabled={!editMode.eligibility}
+                      className={inputCls}
+                      value={form.program_type}
+                      onChange={e => setForm(prev => ({ ...prev, program_type: e.target.value, other_program: '' }))}
+                    >
+                      <option value="">Select program</option>
+                      {PROGRAM_TYPES.map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                    {form.program_type === 'Others' && (
+                      <input
+                        type="text"
+                        disabled={!editMode.eligibility}
+                        placeholder="Specify the program..."
+                        className={`${inputCls} mt-2`}
+                        value={form.other_program}
+                        onChange={e => setForm(prev => ({ ...prev, other_program: e.target.value }))}
+                      />
+                    )}
+                  </Field>
+                )}
+
+                {fieldErrors.eligibility && (
+                  <p className="text-[10px] font-black text-red-600 uppercase tracking-wider ml-1">{fieldErrors.eligibility}</p>
+                )}
+              </div>
+
+              {/* ================= 3. PERSONAL ================= */}
               <SectionTitle
                 icon={User}
                 title="Personal Details"
@@ -500,6 +745,7 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
                       <option value="Roman Catholic">Roman Catholic</option>
                       <option value="Iglesia ni Cristo">Iglesia ni Cristo</option>
                       <option value="Islam">Islam</option>
+                      <option value="Christianity">Christianity</option>
                       <option value="Others">Others</option>
                     </select>
                   </Field>
@@ -577,7 +823,7 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
                 </div>
               </div>
 
-              {/* ================= 3. FAMILY ================= */}
+              {/* ================= 4. FAMILY ================= */}
               <SectionTitle
                 icon={Users}
                 title="Family Information"

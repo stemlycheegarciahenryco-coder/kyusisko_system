@@ -170,6 +170,9 @@ const createScholarship = async (req, res) => {
 
 // GET /api/scholarships/public
 // No auth — used on the homepage for anonymous visitors.
+// Only programs that are open/active, not archived, AND whose deadline has not
+// passed are returned. A program with status 'active' but a past deadline counts
+// as closed, same as the org-side status logic.
 const getPublicScholarships = async (req, res) => {
   try {
     const result = await pool.query(
@@ -182,6 +185,7 @@ const getPublicScholarships = async (req, res) => {
        LEFT JOIN sub_admins sa ON s.sub_admin_id = sa.id
        WHERE s.status IN ('open', 'active')
          AND s.is_archived IS NOT TRUE
+         AND (s.deadline IS NULL OR s.deadline::date >= (NOW() AT TIME ZONE 'Asia/Manila')::date)
        ORDER BY s.created_at DESC`
     );
 

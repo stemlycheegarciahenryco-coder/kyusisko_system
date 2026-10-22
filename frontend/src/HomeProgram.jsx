@@ -45,6 +45,16 @@ const getCriteriaIcon = (label = '') => {
     return CheckCircle2;
 };
 
+/* Safety net: never show a program whose deadline has already passed,
+   even if the backend still returns it. The deadline day itself is still open. */
+const isStillOpen = (raw) => {
+    if (!raw.deadline) return true;
+    const end = new Date(raw.deadline);
+    if (isNaN(end.getTime())) return true;
+    end.setHours(23, 59, 59, 999);
+    return end >= new Date();
+};
+
 /* Normalizes a raw scholarship record from the API into the shape
    this component renders. Falls back across a few likely field
    names so it keeps working even if the backend naming differs
@@ -166,7 +176,7 @@ const RequirementsModal = ({ program, onClose, onApply }) => {
                     </p>
                 </div>
 
-                <h3 className="text-white text-[28px] font-black leading-tight tracking-tight break-words">
+                <h3 className="home-title text-white break-words">
                     {program.title}
                 </h3>
 
@@ -186,17 +196,17 @@ const RequirementsModal = ({ program, onClose, onApply }) => {
             <div className="flex-1 min-h-0 p-6 space-y-6 overflow-y-auto overscroll-contain scrollbar-thin">
                 {program.description && (
                     <div>
-                        <p className="text-sm font-black text-slate-400 uppercase tracking-widest mb-2.5">
+                        <p className="home-label mb-2.5">
                             Program Overview
                         </p>
-                        <p className="text-[19px] text-slate-700 leading-relaxed font-medium break-words whitespace-pre-wrap">
+                        <p className="home-body-lg break-words whitespace-pre-wrap">
                             {program.description}
                         </p>
                     </div>
                 )}
 
                 <div>
-                    <p className="text-sm font-black text-slate-400 uppercase tracking-widest mb-3.5">
+                    <p className="home-label mb-3.5">
                         Eligibility &amp; Requirements
                     </p>
                     {program.criteria.length > 0 ? (
@@ -212,7 +222,7 @@ const RequirementsModal = ({ program, onClose, onApply }) => {
                                         <div className="w-11 h-11 rounded-xl bg-blue-50 text-[#093FB4] flex items-center justify-center flex-shrink-0">
                                             <Icon size={21} strokeWidth={2.5} />
                                         </div>
-                                        <span className="text-[17px] font-bold text-slate-800 leading-snug break-words">{c}</span>
+                                        <span className="text-base font-bold text-slate-800 leading-snug break-words">{c}</span>
                                     </div>
                                 );
                             })}
@@ -276,7 +286,7 @@ export default function HomeProgram() {
         const loadPrograms = async () => {
             try {
                 const res = await api.get(PROGRAMS_ENDPOINT);
-                const list = (res.data?.data || res.data || []).map(normalizeProgram);
+                const list = (res.data?.data || res.data || []).filter(isStillOpen).map(normalizeProgram);
                 if (cancelled) return;
                 if (list.length > 0) {
                     setPrograms(list);
@@ -418,7 +428,7 @@ export default function HomeProgram() {
                                     </span>
                                 </div>
 
-                                <h4 className="text-2xl font-black text-slate-900 leading-snug line-clamp-2 group-hover:text-[#093FB4] transition-colors mb-2">
+                                <h4 className="home-heading line-clamp-2 group-hover:text-[#093FB4] transition-colors mb-2">
                                     {program.title}
                                 </h4>
 

@@ -6,6 +6,7 @@ const bcrypt = require('bcrypt');
 const path = require('path');
 
 const {verifyToken} = require('../middleware/auth');
+const { addJob } = require('../queues/queueManager'); // background matching queue
 
 const { 
     otpSendLimiter, 
@@ -255,6 +256,25 @@ router.post('/verify-registration-otp', otpVerifyLimiter, async (req, res) => {
 });
 
 
+// Fetch the logged-in student's saved onboarding answers (used to pre-fill the edit form)
+router.get('/student-onboarding-profile', verifyToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM public.student_onboarding_profiles WHERE student_id = $1',
+      [req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'No onboarding profile found' });
+    }
+
+    return res.status(200).json({ profile: result.rows[0] });
+  } catch (error) {
+    console.error('Error fetching onboarding profile:', error);
+    return res.status(500).json({ message: 'Internal server error while loading profile' });
+  }
+});
+
 router.post('/student-onboarding-profile', verifyToken, async (req, res) => {
   const student_id = req.user.id; // Extracted from JWT token or session
   
@@ -355,6 +375,26 @@ router.post('/student-onboarding-profile', verifyToken, async (req, res) => {
       'UPDATE public.students SET is_profile_complete = TRUE WHERE id = $1',
       [student_id]
     );
+
+    // The student's answers changed (first save OR an edit), so re-run matching
+    // against every open scholarship. Fire-and-forget: a queue failure must
+    // never fail the save itself.
+    try {
+      const openScholarships = await pool.query(
+        `SELECT id FROM scholarships
+         WHERE status IN ('open', 'active') AND is_archived IS NOT TRUE`
+      );
+      await Promise.all(
+        openScholarships.rows.map((s) =>
+          addJob('engineMatching', 'computeMatch', {
+            studentId: student_id,
+            scholarshipId: s.id
+          })
+        )
+      );
+    } catch (queueErr) {
+      console.error('Failed to queue re-matching after onboarding save:', queueErr.message);
+    }
     
     return res.status(200).json({
       message: 'Onboarding profile updated successfully',

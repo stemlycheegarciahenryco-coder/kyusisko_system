@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useStudent } from './StudentContext';
-import { Camera, User, MapPin, Plus, Award, FileText, GraduationCap, School, Pencil, ExternalLink, Users } from 'lucide-react';
+import { Camera, User, MapPin, Plus, Award, FileText, GraduationCap, School, Pencil, ExternalLink, Users, Trophy } from 'lucide-react';
 import api from '../api';
 import AddPortfolioModal from './AddPortfolioModal'; 
 import StudentEditProfile from './StudentEditProfile';
@@ -43,6 +43,18 @@ export default function StudentProfile() {
 
   useEffect(() => () => { if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current); }, []);
 
+  // Saved eligibility answers (athlete / sports / etc.)
+  const [eligibility, setEligibility] = useState(null);
+  const fetchEligibility = async () => {
+    try {
+      const res = await api.get('/student-onboarding-profile');
+      setEligibility(res.data?.profile || null);
+    } catch (err) {
+      setEligibility(null); // 404 = not answered yet
+    }
+  };
+  useEffect(() => { fetchEligibility(); }, []);
+
   const handleProfileSaved = async (patch) => {
     if (patch) {
       updateStudent(patch);
@@ -51,6 +63,7 @@ export default function StudentProfile() {
     try {
       await refreshProfile();
     } catch (err) {}
+    fetchEligibility();
   };
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false); 
@@ -209,6 +222,45 @@ export default function StudentProfile() {
           <div className="bg-white/60 border-2 border-white/80 rounded-2xl p-6 shadow-sm">
             <ProfileInfoRow label="Campus / Institution" value={schoolName} />
             <ProfileInfoRow label="Degree Track" value={degreeName} />
+          </div>
+        </div>
+
+        {/* SECTION: ATHLETICS & ELIGIBILITY */}
+        <div className="space-y-4">
+          <SectionHeader icon={Trophy} title="Athletics & Eligibility" />
+          <div className="bg-white/60 border-2 border-white/80 rounded-2xl p-6 shadow-sm">
+            {eligibility ? (
+              <>
+                <ProfileInfoRow label="Student Athlete" value={eligibility.is_athlete ? 'Yes' : 'No'} />
+                {eligibility.is_athlete && (
+                  <div className="py-4 border-b-2 border-black/5 flex flex-col sm:flex-row justify-between items-start gap-2 sm:gap-4">
+                    <span className="text-black/50 font-black uppercase tracking-wider text-xs">Sports</span>
+                    <div className="flex flex-wrap gap-2 sm:justify-end">
+                      {(Array.isArray(eligibility.sports_interests) ? eligibility.sports_interests : []).length > 0 ? (
+                        eligibility.sports_interests.map((sport) => (
+                          <span key={sport} className="px-3 py-1.5 rounded-xl bg-[#093fb4]/10 text-[#093fb4] text-xs font-black uppercase tracking-wider">
+                            {sport === 'Others' && eligibility.other_sport ? eligibility.other_sport : sport}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-black font-extrabold text-base">—</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+                <ProfileInfoRow label="Indigenous Person" value={eligibility.is_indigenous ? (eligibility.indigenous_group ? `Yes — ${eligibility.indigenous_group}` : 'Yes') : 'No'} />
+                <ProfileInfoRow label="Person with Disability" value={eligibility.is_pwd ? 'Yes' : 'No'} />
+                <ProfileInfoRow label="Working Student" value={eligibility.is_working_student ? 'Yes' : 'No'} />
+                <ProfileInfoRow
+                  label="Poverty Reduction Program"
+                  value={eligibility.is_poverty_program ? (eligibility.program_type === 'Others' ? (eligibility.other_program || 'Yes') : (eligibility.program_type || 'Yes')) : 'No'}
+                />
+              </>
+            ) : (
+              <p className="text-sm font-bold text-black/50 py-2">
+                Not set yet. Click <strong className="text-black">Edit Profile</strong> and fill in Eligibility Details.
+              </p>
+            )}
           </div>
         </div>
 

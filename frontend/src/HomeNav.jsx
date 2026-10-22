@@ -79,7 +79,7 @@ const HomeNav = () => {
   };
 
   // Shared navbar text & layout styles for perfect consistency
-  const navItemClass = "text-[13px] font-black tracking-[0.12em] uppercase transition-colors flex items-center gap-1.5 cursor-pointer";
+  const navItemClass = "home-nav-link transition-colors flex items-center gap-1.5 cursor-pointer";
 
   return (
     <header
@@ -134,13 +134,13 @@ const HomeNav = () => {
                 <div className="p-2 flex flex-col gap-1">
                   <button 
                     onClick={() => goTo('/organization-register')} 
-                    className="flex items-center gap-3 px-3.5 py-3 text-white text-[13px] font-black tracking-[0.12em] uppercase hover:bg-slate-800 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
+                    className="flex items-center gap-3 px-3.5 py-3 text-white home-nav-link hover:bg-slate-800 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
                   >
                     <UserPlus size={16} strokeWidth={2.5} /> Create Provider Account
                   </button>
                   <button 
                     onClick={() => goTo('/provider-guidelines')} 
-                    className="flex items-center gap-3 px-3.5 py-3 text-white text-[13px] font-black tracking-[0.12em] uppercase hover:bg-slate-800 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
+                    className="flex items-center gap-3 px-3.5 py-3 text-white home-nav-link hover:bg-slate-800 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
                   >
                     <FileText size={16} strokeWidth={2.5} /> Provider Guidelines
                   </button>
@@ -164,13 +164,13 @@ const HomeNav = () => {
                 <div className="p-2 flex flex-col gap-1">
                   <button 
                     onClick={() => goTo('/student-register')} 
-                    className="flex items-center gap-3 px-3.5 py-3 text-white text-[13px] font-black tracking-[0.12em] uppercase hover:bg-slate-800 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
+                    className="flex items-center gap-3 px-3.5 py-3 text-white home-nav-link hover:bg-slate-800 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
                   >
                     <UserPlus size={16} strokeWidth={2.5} /> Student Sign Up
                   </button>
                   <button 
                     onClick={() => goTo('/login')} 
-                    className="flex items-center gap-3 px-3.5 py-3 text-white text-[13px] font-black tracking-[0.12em] uppercase hover:bg-slate-800 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
+                    className="flex items-center gap-3 px-3.5 py-3 text-white home-nav-link hover:bg-slate-800 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
                   >
                     <UserCircle size={16} strokeWidth={2.5} /> Student Scholarship
                   </button>
@@ -211,21 +211,21 @@ const HomeNav = () => {
         <div className="overflow-y-auto max-h-[85vh] px-4 sm:px-6 py-4 flex flex-col gap-1">
           <button 
             onClick={() => scrollToSection('about')} 
-            className="text-left text-white text-[13px] font-black tracking-[0.12em] uppercase py-3.5 px-2 rounded-xl hover:bg-slate-800 hover:text-blue-400 transition-all cursor-pointer"
+            className="text-left text-white home-nav-link py-3.5 px-2 rounded-xl hover:bg-slate-800 hover:text-blue-400 transition-all cursor-pointer"
           >
             About Us
           </button>
 
           <button 
             onClick={() => scrollToSection('contact')} 
-            className="text-left text-white text-[13px] font-black tracking-[0.12em] uppercase py-3.5 px-2 rounded-xl hover:bg-slate-800 hover:text-blue-400 transition-all cursor-pointer"
+            className="text-left text-white home-nav-link py-3.5 px-2 rounded-xl hover:bg-slate-800 hover:text-blue-400 transition-all cursor-pointer"
           >
             Contact Us
           </button>
 
           <button 
             onClick={() => scrollToSection('scholarships')} 
-            className="text-left text-white text-[13px] font-black tracking-[0.12em] uppercase py-3.5 px-2 rounded-xl hover:bg-slate-800 hover:text-blue-400 transition-all cursor-pointer"
+            className="text-left text-white home-nav-link py-3.5 px-2 rounded-xl hover:bg-slate-800 hover:text-blue-400 transition-all cursor-pointer"
           >
             Scholarships
           </button>
@@ -234,7 +234,7 @@ const HomeNav = () => {
           <div className="border-t border-slate-700 mt-1 pt-1">
             <button
               onClick={() => setMobilePartnerOpen(!mobilePartnerOpen)}
-              className={`w-full flex items-center justify-between text-[13px] font-black tracking-[0.12em] uppercase py-3.5 px-2 rounded-xl hover:bg-slate-800 transition-all cursor-pointer ${mobilePartnerOpen ? 'text-blue-400' : 'text-white hover:text-blue-400'}`}
+              className={`w-full flex items-center justify-between home-nav-link py-3.5 px-2 rounded-xl hover:bg-slate-800 transition-all cursor-pointer ${mobilePartnerOpen ? 'text-blue-400' : 'text-white hover:text-blue-400'}`}
             >
               Provider
               <ChevronDown size={16} strokeWidth={2.5} className={`transition-transform duration-300 ${mobilePartnerOpen ? 'rotate-180' : ''}`} />
@@ -243,13 +243,13 @@ const HomeNav = () => {
               <div className="flex flex-col gap-1 pb-2 pl-2">
                 <button 
                   onClick={() => goTo('/organization-register')} 
-                  className="flex items-center gap-3 px-3.5 py-3 text-white text-[12px] font-black tracking-[0.1em] uppercase hover:bg-slate-800 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
+                  className="flex items-center gap-3 px-3.5 py-3 text-white home-nav-link hover:bg-slate-800 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
                 >
                   <UserPlus size={16} strokeWidth={2.5} /> Create Provider Account
                 </button>
                 <button 
                   onClick={() => goTo('/provider-guidelines')} 
-                  className="flex items-center gap-3 px-3.5 py-3 text-white text-[12px] font-black tracking-[0.1em] uppercase hover:bg-slate-800 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
+                  className="flex items-center gap-3 px-3.5 py-3 text-white home-nav-link hover:bg-slate-800 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
                 >
                   <FileText size={16} strokeWidth={2.5} /> Provider Guidelines
                 </button>
@@ -261,7 +261,7 @@ const HomeNav = () => {
           <div className="border-t border-slate-700 pt-1">
             <button
               onClick={() => setMobileStudentOpen(!mobileStudentOpen)}
-              className={`w-full flex items-center justify-between text-[13px] font-black tracking-[0.12em] uppercase py-3.5 px-2 rounded-xl hover:bg-slate-800 transition-all cursor-pointer ${mobileStudentOpen ? 'text-blue-400' : 'text-white hover:text-blue-400'}`}
+              className={`w-full flex items-center justify-between home-nav-link py-3.5 px-2 rounded-xl hover:bg-slate-800 transition-all cursor-pointer ${mobileStudentOpen ? 'text-blue-400' : 'text-white hover:text-blue-400'}`}
             >
               Students
               <ChevronDown size={16} strokeWidth={2.5} className={`transition-transform duration-300 ${mobileStudentOpen ? 'rotate-180' : ''}`} />
@@ -270,13 +270,13 @@ const HomeNav = () => {
               <div className="flex flex-col gap-1 pb-2 pl-2">
                 <button 
                   onClick={() => goTo('/student-register')} 
-                  className="flex items-center gap-3 px-3.5 py-3 text-white text-[12px] font-black tracking-[0.1em] uppercase hover:bg-slate-800 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
+                  className="flex items-center gap-3 px-3.5 py-3 text-white home-nav-link hover:bg-slate-800 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
                 >
                   <UserPlus size={16} strokeWidth={2.5} /> Student Sign Up
                 </button>
                 <button 
                   onClick={() => goTo('/login')} 
-                  className="flex items-center gap-3 px-3.5 py-3 text-white text-[12px] font-black tracking-[0.1em] uppercase hover:bg-slate-800 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
+                  className="flex items-center gap-3 px-3.5 py-3 text-white home-nav-link hover:bg-slate-800 hover:text-blue-400 rounded-xl transition-all text-left cursor-pointer"
                 >
                   <UserCircle size={16} strokeWidth={2.5} /> Student Scholarship
                 </button>
