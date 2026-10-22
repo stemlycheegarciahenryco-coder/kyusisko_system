@@ -3,7 +3,7 @@ import { IconEye, IconUser, IconSearch, IconRefresh } from '@tabler/icons-react'
 import { ArchiveIcon } from 'lucide-react';
 import api from '../api';
 import RootOrgView from './RootOrgView';
-import { useDialog } from './DialogModal';
+import { ArchiveIcon, Clock1Icon } from 'lucide-react';
 
 const TABS = ['all', 'pending', 'approved', 'rejected', 'blocked', 'archived'];
 
@@ -50,6 +50,7 @@ const RootOrganization = () => {
         const isArchived = Boolean(org.is_archived);
         const isDeleted = org.status === 'deleted' || org.account_status === 'deleted';
 
+        // Exclude deleted items globally since the delete tab is removed
         if (isDeleted) return false;
         if (tab === 'archived') return isArchived;
         if (isArchived) return false;
@@ -168,6 +169,40 @@ const RootOrganization = () => {
             notify({ variant: 'success', title: `${actionText}d!`, timer: 1500 });
         } catch {
             notify({ variant: 'error', title: 'Error', body: 'Action failed.', confirmText: 'Close' });
+        }
+    };
+
+    const handleDelete = async (org) => {
+        const { value: enteredName } = await Swal.fire({
+            title: `Delete ${org.org_name}?`,
+            text: `Please type the provider name ("${org.org_name}") to confirm permanent deletion.`,
+            input: 'text',
+            inputPlaceholder: 'Enter provider name',
+            inputAttributes: {
+                style: 'font-size: 14px; border-radius: 12px;'
+            },
+            showCancelButton: true,
+            confirmButtonColor: colors.red,
+            cancelButtonColor: '#94a3b8',
+            confirmButtonText: 'Delete Permanently',
+            background: colors.white,
+            color: '#0f172a',
+            inputValidator: (value) => {
+                if (value !== org.org_name) {
+                    return 'The provider name you entered does not match.';
+                }
+            }
+        });
+
+        if (enteredName) {
+            try {
+                await api.delete(`/system-admin/provider/delete/${org.id}`);
+                Swal.fire({ title: 'Deleted!', icon: 'success', timer: 1500, showConfirmButton: false });
+                setSelectedOrg(null);
+                fetchOrgs();
+            } catch (err) {
+                Swal.fire('Error', err.response?.data?.error || 'Deletion failed.', 'error');
+            }
         }
     };
 
@@ -295,17 +330,28 @@ const RootOrganization = () => {
                                                     {org.is_active ? 'Active' : 'Blocked'}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex justify-end items-center gap-2">
-                                                    <button
-                                                        onClick={() => setSelectedOrg(org)}
-                                                        title="View Details"
-                                                        className={`${ROW_BTN} bg-brand-soft text-brand border-brand/20 hover:bg-brand hover:text-white`}
-                                                    >
-                                                        <IconEye size={16} />
-                                                        <span>View</span>
-                                                    </button>
+                                            <td className="px-8 py-5 text-right flex justify-end items-center gap-4">
+                                                <button
+                                                    onClick={() => setSelectedOrg(org)}
+                                                    title="View Details"
+                                                    className="flex items-center gap-2 p-3 bg-blue-600/10 hover:bg-blue-600 text-[10px] font-black uppercase text-blue-500 hover:text-white border border-blue-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
+                                                >
+                                                    <IconEye size={20} />
+                                                    <span>View</span>
+                                                </button>
 
+                                                {/* If archived, show Unarchive only */}
+                                                {isArchived ? (
+                                                    <button
+                                                        onClick={() => handleArchive(org)}
+                                                        title="Unarchive"
+                                                        className="flex items-center gap-2 p-3 bg-amber-600/10 hover:bg-amber-600 text-[10px] font-black uppercase text-amber-500 hover:text-white border border-amber-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
+                                                    >
+                                                        <ArchiveIcon size={20} />
+                                                        <span>Unarchive</span>
+                                                    </button>
+                                                ) : (
+                                                    /* For non-archived items, show Archive only */
                                                     <button
                                                         onClick={() => handleArchive(org)}
                                                         title={isArchived ? 'Unarchive' : 'Archive'}

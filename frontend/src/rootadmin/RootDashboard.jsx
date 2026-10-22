@@ -28,6 +28,7 @@ function CoAdminSection({
     loading,
     onToggleStatus,
     onArchive,
+    onDeleteCoAdmin,
     onEditCoAdmin,
     onCreateCoAdmin,
     formData,
@@ -73,6 +74,26 @@ function CoAdminSection({
         }
     };
 
+    // Handle Archive click with SweetAlert confirmation
+    const handleArchiveClick = async (admin) => {
+        const isArchived = Boolean(admin.is_archived);
+        const actionText = isArchived ? 'Unarchive' : 'Archive';
+
+        const result = await Swal.fire({
+            title: `${actionText} Co-Admin?`,
+            text: `Confirm you want to ${actionText.toLowerCase()} this co-admin record.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d97706',
+            confirmButtonText: `Yes, ${actionText}!`,
+        });
+
+        if (result.isConfirmed) {
+            onArchive(admin);
+        }
+    };
+
+    // Pre-calculate counts and filtered list for each tab based on the current searchQuery
     const { filteredCoAdmins, tabCounts } = useMemo(() => {
         const query = searchQuery.trim().toLowerCase();
         const counts = { all: 0, active: 0, blocked: 0, archived: 0 };
@@ -281,9 +302,9 @@ function CoAdminSection({
                                                 <button
                                                     type="button"
                                                     onClick={() => onToggleStatus(admin.id, admin.account_status)}
-                                                    className={`${ROW_BTN} ${isActive
-                                                        ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
-                                                        : 'bg-brand text-white border-brand hover:bg-brand-dark shadow-sm'
+                                                    className={`flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer ${admin.account_status === 'active'
+                                                            ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                                                            : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-sm'
                                                         }`}
                                                 >
                                                     {isActive ? <IconLock size={12} /> : <ShieldCheck size={12} />}
@@ -294,6 +315,10 @@ function CoAdminSection({
                                             {!isArchived && (
                                                 <button
                                                     type="button"
+                                                    className={`flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer ${isCurrentlyEditing
+                                                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                                                            : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                                        }`}
                                                     onClick={() => handleStartEdit(admin)}
                                                     className={`${ROW_BTN} ${isEditing
                                                         ? 'bg-brand text-white border-brand shadow-sm'
@@ -313,6 +338,17 @@ function CoAdminSection({
                                                 <Archive size={12} />
                                                 {isArchived ? 'Unarchive' : 'Archive'}
                                             </button>
+
+                                            {activeTab === 'archived' && (
+                                                <button
+                                                    type="button"
+                                                    className="flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
+                                                    onClick={() => handleDeleteClick(admin)}
+                                                >
+                                                    <Trash2 size={12} />
+                                                    Delete
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 );
