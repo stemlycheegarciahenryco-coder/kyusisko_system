@@ -165,8 +165,8 @@ export default function Home() {
                                         </h2>
 
                                         <p className="text-sm sm:text-base text-white/80 font-semibold max-w-lg leading-relaxed">
-                                            The premier scholarship discovery platform for Quezon City college students.
-                                            Find, apply, and get funded — all in one place.
+                                            The scholarship discovery platform for Quezon City college students.
+                                            Find, apply, and get funded — all in one platform.
                                         </p>
 
                                         <div className="flex flex-wrap gap-3 sm:gap-4 pt-1">
