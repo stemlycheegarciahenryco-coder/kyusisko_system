@@ -454,7 +454,7 @@ export default function RootDashboard() {
             Swal.fire({
                 icon: 'error',
                 title: 'Registration Failed',
-                text: err.data?.message || 'Invalide Credentials',
+                text: err.data?.message || 'Invalid Credentials',
                 confirmButtonColor: '#2563eb'
             });
         }
