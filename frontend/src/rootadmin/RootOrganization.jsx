@@ -1,12 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import api from '../api';
 import { IconEye, IconUser, IconSearch, IconRefresh } from '@tabler/icons-react';
-import Swal from 'sweetalert2';
+import { ArchiveIcon } from 'lucide-react';
+import api from '../api';
 import RootOrgView from './RootOrgView';
-import { ArchiveIcon, Clock1Icon } from 'lucide-react';
+import { useDialog } from './DialogModal';
 
-// Removed 'deleted' from the tabs list
 const TABS = ['all', 'pending', 'approved', 'rejected', 'blocked', 'archived'];
+
+const TAB_LABELS = {
+    all: 'All',
+    pending: 'Pending',
+    approved: 'Approved',
+    rejected: 'Rejected',
+    blocked: 'Blocked',
+    archived: 'Archived',
+};
+
+// Still passed down to RootOrgView, which expects a `colors` prop
+const colors = { red: '#FF1E1E', white: '#FFFCFB', blue: '#093fb4', green: '#16a34a' };
+
+// Small action button used in table rows
+const ROW_BTN = 'ui-btn !px-4 !py-2.5 !text-micro border';
 
 const RootOrganization = () => {
     const [orgs, setOrgs] = useState([]);
@@ -14,11 +28,8 @@ const RootOrganization = () => {
     const [selectedOrg, setSelectedOrg] = useState(null);
     const [search, setSearch] = useState('');
     const [activeTab, setActiveTab] = useState('all');
-    const [snapshotIsVisible, setSnapshotVisible] = useState(false);
-    const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
-    const [snapShotLists, setSnapshotList] = useState([]);
 
-    const colors = { red: '#FF1E1E', white: '#FFFCFB', blue: '#093fb4', green: '#16a34a' };
+    const { confirm, notify, dialogElement } = useDialog();
 
     const fetchOrgs = async () => {
         try {
@@ -34,16 +45,13 @@ const RootOrganization = () => {
 
     useEffect(() => { fetchOrgs(); }, []);
 
-    // Helper to evaluate tab status and archive matching
+    // Does an org belong to a tab?
     const matchStatusOrAccess = (org, tab) => {
         const isArchived = Boolean(org.is_archived);
         const isDeleted = org.status === 'deleted' || org.account_status === 'deleted';
 
-        // Exclude deleted items globally since the delete tab is removed
         if (isDeleted) return false;
         if (tab === 'archived') return isArchived;
-
-        // For standard tabs, exclude archived items
         if (isArchived) return false;
 
         if (tab === 'all') return true;
@@ -51,211 +59,189 @@ const RootOrganization = () => {
         return org.status === tab;
     };
 
-    // Count records matching the current tab status
-    const countByStatus = (status) => {
-        return orgs.filter((o) => matchStatusOrAccess(o, status)).length;
-    };
+    const countByStatus = (status) => orgs.filter((o) => matchStatusOrAccess(o, status)).length;
 
-    // Filter organizations by tab status and search query
     const filteredOrgs = orgs.filter((org) => {
-        const matchTab = matchStatusOrAccess(org, activeTab);
+        const q = search.toLowerCase();
         const matchSearch =
-            org.org_name?.toLowerCase().includes(search.toLowerCase()) ||
-            org.sub_email?.toLowerCase().includes(search.toLowerCase());
-
-        return matchTab && matchSearch;
-    });
-
-    const swalConfig = (title, text, icon, confirmColor) => ({
-        title, text, icon,
-        showCancelButton: true,
-        confirmButtonColor: confirmColor,
-        cancelButtonColor: '#94a3b8',
-        background: colors.white,
-        color: '#0f172a',
-        borderRadius: '24px',
+            org.org_name?.toLowerCase().includes(q) ||
+            org.sub_email?.toLowerCase().includes(q);
+        return matchStatusOrAccess(org, activeTab) && matchSearch;
     });
 
     const handleApprove = async (org) => {
-        const result = await Swal.fire(swalConfig('Approve?', `Verify ${org.org_name}?`, 'question', colors.blue));
-        if (result.isConfirmed) {
-            try {
-                const res = await api.patch(`/onboarding-orgs/approve/${org.id}`);
-                const creds = res.data?.credentials;
+        const ok = await confirm({
+            variant: 'info',
+            title: 'Approve?',
+            body: `Verify ${org.org_name}?`,
+            confirmText: 'Yes, Approve',
+        });
+        if (!ok) return;
 
-                setSelectedOrg(null);
-                fetchOrgs();
+        try {
+            const res = await api.patch(`/onboarding-orgs/approve/${org.id}`);
+            const creds = res.data?.credentials;
 
-                if (creds) {
-                    await Swal.fire({
-                        title: 'Provider Approved!',
-                        icon: 'success',
-                        background: colors.white,
-                        color: '#0f172a',
-                        borderRadius: '24px',
-                        confirmButtonColor: colors.blue,
-                        confirmButtonText: 'Got it',
-                        html: `
-                            <div style="text-align:left; font-family:Inter, sans-serif; font-size:13px; line-height:1.6;">
-                              <p style="margin-bottom:10px; font-weight:600; color:#475569;">
-                                Share these login credentials with <strong>${org.org_name}</strong>. This password will not be shown again.
-                              </p>
-                              <div style="background:#f1f5f9; border-radius:14px; padding:14px 16px; margin-top:8px;">
-                                <p style="margin:0 0 6px 0;"><strong>Provider ID:</strong> ${creds.provider_id}</p>
-                                <p style="margin:0 0 6px 0;"><strong>Email:</strong> ${creds.email}</p>
-                                <p style="margin:0;"><strong>Password:</strong> <code style="background:#e2e8f0; padding:2px 6px; border-radius:6px;">${creds.password}</code></p>
-                              </div>
+            setSelectedOrg(null);
+            fetchOrgs();
+
+            if (creds) {
+                await notify({
+                    variant: 'success',
+                    title: 'Provider Approved!',
+                    confirmText: 'Got it',
+                    body: (
+                        <div className="text-left">
+                            <p className="ui-body mb-3">
+                                Share these login credentials with <strong>{org.org_name}</strong>. This password will not be shown again.
+                            </p>
+                            <div className="bg-slate-100 rounded-2xl p-4 space-y-1.5 text-body text-slate-700 break-all">
+                                <p><strong>Provider ID:</strong> {creds.provider_id}</p>
+                                <p><strong>Email:</strong> {creds.email}</p>
+                                <p>
+                                    <strong>Password:</strong>{' '}
+                                    <code className="bg-slate-200 px-1.5 py-0.5 rounded-md">{creds.password}</code>
+                                </p>
                             </div>
-                        `
-                    });
-                } else {
-                    Swal.fire({ title: 'Approved!', icon: 'success', timer: 1500, showConfirmButton: false });
-                }
-            } catch { Swal.fire('Error', 'Action failed.', 'error'); }
+                        </div>
+                    ),
+                });
+            } else {
+                notify({ variant: 'success', title: 'Approved!', timer: 1500 });
+            }
+        } catch {
+            notify({ variant: 'error', title: 'Error', body: 'Action failed.', confirmText: 'Close' });
         }
     };
 
     const handleReject = async (org, reasons, note) => {
         try {
             await api.post(`/onboarding-orgs/reject/${org.id}`, { reasons, note });
-            Swal.fire({ title: 'Rejected', icon: 'info', timer: 1500, showConfirmButton: false });
             setSelectedOrg(null);
             fetchOrgs();
+            notify({ variant: 'info', title: 'Rejected', timer: 1500 });
         } catch (err) {
-            Swal.fire('Error', err.response?.data?.error || 'Action failed.', 'error');
+            notify({
+                variant: 'error',
+                title: 'Error',
+                body: err.response?.data?.error || 'Action failed.',
+                confirmText: 'Close',
+            });
         }
     };
 
     const handleBlockToggle = async (org) => {
         const action = org.is_active ? 'Block' : 'Unblock';
-        const result = await Swal.fire(swalConfig(`${action} Provider?`, `Update access for ${org.org_name}?`, org.is_active ? 'error' : 'warning', org.is_active ? '#FF1E1E' : '#16a34a'));
-        if (result.isConfirmed) {
-            try {
-                await api.patch(`/onboarding-orgs/block/${org.id}`);
-                Swal.fire({ title: 'Status Updated', icon: 'success', timer: 1500, showConfirmButton: false });
-                setSelectedOrg(null);
-                fetchOrgs();
-            } catch { Swal.fire('Error', 'Action failed.', 'error'); }
+        const ok = await confirm({
+            title: `${action} Provider?`,
+            body: `Update access for ${org.org_name}?`,
+            tone: org.is_active ? 'danger' : 'brand',
+            confirmText: `Yes, ${action}`,
+        });
+        if (!ok) return;
+
+        try {
+            await api.patch(`/onboarding-orgs/block/${org.id}`);
+            setSelectedOrg(null);
+            fetchOrgs();
+            notify({ variant: 'success', title: 'Status Updated', timer: 1500 });
+        } catch {
+            notify({ variant: 'error', title: 'Error', body: 'Action failed.', confirmText: 'Close' });
         }
     };
 
     const handleArchive = async (org) => {
-        const isArchiving = !org.is_archived;
-        const actionText = isArchiving ? 'Archive' : 'Unarchive';
+        const actionText = org.is_archived ? 'Unarchive' : 'Archive';
 
-        const result = await Swal.fire({
-            title: `${actionText} Provider`,
-            text: `Confirm you want to ${actionText.toLowerCase()} this Provider?`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d97706',
-            confirmButtonText: `Yes, ${actionText}!`,
+        const ok = await confirm({
+            title: `${actionText} Provider?`,
+            body: `Confirm you want to ${actionText.toLowerCase()} this Provider?`,
+            tone: 'warning',
+            confirmText: `Yes, ${actionText}`,
         });
+        if (!ok) return;
 
-        if (result.isConfirmed) {
-            try {
-                await api.patch(`/onboarding-orgs/archive/${org.id}`);
-                Swal.fire({ title: `${actionText}d!`, icon: 'success', timer: 1500, showConfirmButton: false });
-                setSelectedOrg(null);
-                fetchOrgs();
-            } catch {
-                Swal.fire('Error', 'Action failed.', 'error');
-            }
+        try {
+            await api.patch(`/onboarding-orgs/archive/${org.id}`);
+            setSelectedOrg(null);
+            fetchOrgs();
+            notify({ variant: 'success', title: `${actionText}d!`, timer: 1500 });
+        } catch {
+            notify({ variant: 'error', title: 'Error', body: 'Action failed.', confirmText: 'Close' });
         }
     };
 
-    if (loading)
+    if (loading) {
         return (
-            <div className="p-10 text-slate-500 font-bold italic animate-pulse text-center">
-                Syncing Providers...
+            <div className="p-10 text-center">
+                <p className="ui-subtitle animate-pulse">Syncing Providers...</p>
             </div>
         );
-
-    const tabLabels = {
-        all: 'All',
-        pending: 'Pending',
-        approved: 'Approved',
-        rejected: 'Rejected',
-        blocked: 'Blocked',
-        archived: 'Archived',
-    };
+    }
 
     return (
-        <div className="p-10 min-h-screen" style={{ backgroundColor: colors.white }}>
-
+        <div className="p-10 min-h-screen bg-slate-50 space-y-6">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 bg-white p-8 rounded-[2.5rem] border border-[#093fb4]/10 shadow-sm mb-6">
-                <h2 className="text-4xl font-black text-black tracking-tighter uppercase italic">
-                    Providers Management
-                </h2>
-                <div className="px-5 py-3 rounded-2xl border border-[#093fb4] bg-white shadow-sm">
-                    <p className="text-xl font-black leading-none text-[#093fb4]">{filteredOrgs.length}</p>
-                    <p className="text-[9px] font-black uppercase tracking-widest text-black mt-1">
+            <div className="ui-card p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <h2 className="ui-page-title !text-4xl italic">Providers Management</h2>
+                <div className="ui-card !border-brand px-5 py-3">
+                    <p className="text-xl font-black leading-none text-brand">{filteredOrgs.length}</p>
+                    <p className="text-micro font-black uppercase tracking-widest text-slate-700 mt-1">
                         {activeTab === 'archived' ? 'Archived Providers' : 'Total Providers'}
                     </p>
                 </div>
             </div>
 
-            {/* Controls Bar: Search Only */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-6">
-                {/* Search */}
-                <div className="relative w-full md:max-w-md">
-                    <IconSearch size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-black/40" />
-                    <input
-                        placeholder="Search by name or email..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="w-full pl-12 pr-6 py-3.5 bg-white border border-[#093fb4]/20 rounded-[1.5rem] outline-none focus:ring-4 focus:ring-[#093fb4]/10 text-black font-medium transition-all text-sm"
-                    />
-                </div>
+            {/* Search */}
+            <div className="relative w-full md:max-w-md">
+                <IconSearch size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                    placeholder="Search by name or email..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="ui-input !pl-11 !py-3"
+                />
             </div>
 
             {/* Tabs */}
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-                {/* Tabs Group (Left) */}
-                <div className="flex flex-wrap gap-2">
-                    {TABS.map((tab) => {
-                        const count = countByStatus(tab);
-                        const isActive = activeTab === tab;
-                        return (
-                            <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab)}
-                                className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all cursor-pointer ${isActive
-                                    ? 'bg-[#093fb4] text-white border-[#093fb4] shadow-md shadow-blue-900/10'
-                                    : 'bg-white text-slate-500 border-slate-200 hover:border-[#093fb4]/30'
-                                    }`}
-                            >
-                                {tabLabels[tab]}
-                                <span
-                                    className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
-                                        }`}
-                                >
-                                    {count}
-                                </span>
-                            </button>
-                        );
-                    })}
-                </div>
+            <div className="flex flex-wrap gap-2">
+                {TABS.map((tab) => {
+                    const isActive = activeTab === tab;
+                    return (
+                        <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab)}
+                            className={`ui-btn !px-5 !py-2.5 border ${isActive
+                                ? 'bg-brand text-white border-brand shadow-md shadow-brand/10'
+                                : 'bg-white text-slate-500 border-slate-300 hover:border-brand/40'
+                                }`}
+                        >
+                            {TAB_LABELS[tab]}
+                            <span className={`text-micro font-black px-2 py-0.5 rounded-lg ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                {countByStatus(tab)}
+                            </span>
+                        </button>
+                    );
+                })}
             </div>
 
             {/* Table */}
-            <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-blue-900/5 border border-slate-100 overflow-hidden">
-                <div className="overflow-x-auto">
+            <div className="ui-card overflow-hidden">
+                <div className="overflow-x-auto custom-scrollbar">
                     <table className="w-full text-left">
-                        <thead className="bg-[#093fb4]/5 border-b border-[#093fb4]/10">
+                        <thead className="bg-brand-soft border-b border-brand/10">
                             <tr>
-                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-black">Provider Name</th>
-                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-black">Account</th>
-                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-black">Status</th>
-                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-black">Access</th>
-                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-right text-black">Action</th>
+                                <th className="ui-label !text-slate-800 px-6 py-5">Provider Name</th>
+                                <th className="ui-label !text-slate-800 px-6 py-5">Account</th>
+                                <th className="ui-label !text-slate-800 px-6 py-5">Status</th>
+                                <th className="ui-label !text-slate-800 px-6 py-5">Access</th>
+                                <th className="ui-label !text-slate-800 px-6 py-5 text-right">Action</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#093fb4]/5">
+                        <tbody className="divide-y divide-slate-100">
                             {filteredOrgs.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="px-8 py-12 text-center text-sm font-bold text-slate-400 italic">
+                                    <td colSpan={5} className="px-6 py-12 text-center text-body font-bold text-slate-400 italic">
                                         No {activeTab === 'all' ? '' : activeTab} providers found.
                                     </td>
                                 </tr>
@@ -264,72 +250,71 @@ const RootOrganization = () => {
                                     const isUpdatedResubmission = org.status === 'pending' && org.rejection_reason;
                                     const isArchived = Boolean(org.is_archived);
 
+                                    const statusStyle =
+                                        org.status === 'pending'
+                                            ? isUpdatedResubmission
+                                                ? 'bg-amber-50 text-amber-600 border-amber-200'
+                                                : 'bg-orange-50 text-orange-600 border-orange-100'
+                                            : org.status === 'approved'
+                                                ? 'bg-green-50 text-green-600 border-green-100'
+                                                : 'bg-red-50 text-red-600 border-red-100';
+
                                     return (
-                                        <tr key={org.id} className="hover:bg-slate-50/50 transition-all group">
-                                            <td className="px-8 py-5">
+                                        <tr key={org.id} className="hover:bg-slate-50/60 transition-all">
+                                            <td className="px-6 py-4">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="font-black text-slate-900 text-sm uppercase tracking-tight">{org.org_name}</div>
+                                                    <div className="font-black text-slate-900 text-body uppercase tracking-tight">{org.org_name}</div>
                                                     {isUpdatedResubmission && (
-                                                        <span className="bg-amber-500 text-white text-[8px] font-black uppercase px-1.5 py-0.5 rounded flex items-center gap-0.5 tracking-wider shrink-0">
-                                                            <IconRefresh size={8} strokeWidth={3} /> UPDATED
+                                                        <span className="bg-amber-500 text-white text-micro font-black uppercase px-1.5 py-0.5 rounded flex items-center gap-0.5 tracking-wider shrink-0">
+                                                            <IconRefresh size={8} strokeWidth={3} /> Updated
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">{org.city || 'Unknown City'}</div>
-                                            </td>
-                                            <td className="px-8 py-5">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-slate-900">
-                                                        <IconUser size={14} />
-                                                    </div>
-                                                    <div className="text-xs font-bold text-slate-700">{org.sub_email}</div>
+                                                <div className="text-micro text-slate-400 font-bold uppercase tracking-wide">
+                                                    {org.city || 'Unknown City'}
                                                 </div>
                                             </td>
-                                            <td className="px-8 py-5">
-                                                <span className={`px-4 py-1 text-[10px] font-black rounded-lg border uppercase tracking-tighter ${org.status === 'pending' ? (isUpdatedResubmission ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-orange-50 text-orange-600 border-orange-100') :
-                                                    org.status === 'approved' ? 'bg-green-50 text-green-600 border-green-100' :
-                                                        'bg-red-50 text-red-600 border-red-100'
-                                                    }`}>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-slate-900 shrink-0">
+                                                        <IconUser size={14} />
+                                                    </div>
+                                                    <div className="text-caption font-bold text-slate-700">{org.sub_email}</div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`px-3 py-1 text-micro font-black rounded-lg border uppercase tracking-wider ${statusStyle}`}>
                                                     {isUpdatedResubmission ? 'Updated' : org.status}
                                                 </span>
                                             </td>
-                                            <td className="px-8 py-5">
-                                                <span className={`px-4 py-1 text-[10px] font-black rounded-lg border uppercase tracking-tighter ${org.is_active ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-red-50 text-red-600 border-red-100'
+                                            <td className="px-6 py-4">
+                                                <span className={`px-3 py-1 text-micro font-black rounded-lg border uppercase tracking-wider ${org.is_active
+                                                    ? 'bg-brand-soft text-brand border-brand/10'
+                                                    : 'bg-red-50 text-red-600 border-red-100'
                                                     }`}>
                                                     {org.is_active ? 'Active' : 'Blocked'}
                                                 </span>
                                             </td>
-                                            <td className="px-8 py-5 text-right flex justify-end items-center gap-4">
-                                                <button
-                                                    onClick={() => setSelectedOrg(org)}
-                                                    title="View Details"
-                                                    className="flex items-center gap-2 p-3 bg-blue-600/10 hover:bg-blue-600 text-[10px] font-black uppercase text-blue-500 hover:text-white border border-blue-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
-                                                >
-                                                    <IconEye size={20} />
-                                                    <span>View</span>
-                                                </button>
+                                            <td className="px-6 py-4">
+                                                <div className="flex justify-end items-center gap-2">
+                                                    <button
+                                                        onClick={() => setSelectedOrg(org)}
+                                                        title="View Details"
+                                                        className={`${ROW_BTN} bg-brand-soft text-brand border-brand/20 hover:bg-brand hover:text-white`}
+                                                    >
+                                                        <IconEye size={16} />
+                                                        <span>View</span>
+                                                    </button>
 
-                                                {/* If archived, show Unarchive only */}
-                                                {isArchived ? (
                                                     <button
                                                         onClick={() => handleArchive(org)}
-                                                        title="Unarchive"
-                                                        className="flex items-center gap-2 p-3 bg-amber-600/10 hover:bg-amber-600 text-[10px] font-black uppercase text-amber-500 hover:text-white border border-amber-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
+                                                        title={isArchived ? 'Unarchive' : 'Archive'}
+                                                        className={`${ROW_BTN} bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-600 hover:text-white`}
                                                     >
-                                                        <ArchiveIcon size={20} />
-                                                        <span>Unarchive</span>
+                                                        <ArchiveIcon size={16} />
+                                                        <span>{isArchived ? 'Unarchive' : 'Archive'}</span>
                                                     </button>
-                                                ) : (
-                                                    /* For non-archived items, show Archive only */
-                                                    <button
-                                                        onClick={() => handleArchive(org)}
-                                                        title="Archive"
-                                                        className="flex items-center gap-2 p-3 bg-amber-600/10 hover:bg-amber-600 text-[10px] font-black uppercase text-amber-500 hover:text-white border border-amber-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
-                                                    >
-                                                        <ArchiveIcon size={20} />
-                                                        <span>Archive</span>
-                                                    </button>
-                                                )}
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -349,6 +334,8 @@ const RootOrganization = () => {
                 colors={colors}
                 fetchOrgs={fetchOrgs}
             />
+
+            {dialogElement}
         </div>
     );
 };
