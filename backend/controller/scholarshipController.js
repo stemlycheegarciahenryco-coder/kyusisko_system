@@ -185,15 +185,12 @@ const getPublicScholarships = async (req, res) => {
         sa.provider_type 
        FROM scholarships s
        LEFT JOIN sub_admins sa ON s.sub_admin_id = sa.id
-       WHERE s.status IN ('open', 'active')
+              WHERE s.status IN ('open', 'active')
          AND s.is_archived IS NOT TRUE
-<<<<<<< HEAD
          AND (s.deadline IS NULL OR s.deadline::date >= (NOW() AT TIME ZONE 'Asia/Manila')::date)
-=======
-         AND sa.is_archived = false
->>>>>>> e62145d6ebeed1b73e691616d1d5010c9868fd68
-       ORDER BY s.created_at DESC`
-        );
+         AND sa.is_archived IS NOT TRUE
+    ORDER BY s.created_at DESC`
+     );
 
         res.status(200).json({ success: true, data: result.rows });
     } catch (err) {

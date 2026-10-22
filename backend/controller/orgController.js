@@ -926,11 +926,12 @@ const blockCoAdmin = async (req, res) => {
 const getPartnerOrganizations = async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT id, org_name, org_pic, provider_type
-             FROM sub_admins
-             WHERE account_type = 'org'
-             ORDER BY org_name ASC`
-        );
+    `SELECT id, org_name, org_pic, provider_type
+     FROM sub_admins
+     WHERE account_type = 'main'
+       AND is_archived IS NOT TRUE
+     ORDER BY org_name ASC`
+);
 
         res.status(200).json({ success: true, data: result.rows });
     } catch (err) {
