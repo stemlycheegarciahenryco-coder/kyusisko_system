@@ -5,44 +5,6 @@ const pool = require('../config/db');
 const { verifyToken } = require('../middleware/auth');
 const { has } = require('lodash');
 
-/**
- * @route   POST /api/system-admin/create-co-admin
- * @desc    Create a new co-admin account using unique UID tracking values (Root Admin Only)
- */
-router.post('/create-co-admin', verifyToken, async (req, res) => {
-
-    if (req.user.role !== 'root_admin') {
-        return res.status(403).json({ success: false, message: 'Forbidden: Only the absolute System Admin can add administrators.' });
-    }
-
-    const { email, password, firstName, lastName } = req.body;
-
-    if (!email || !password || !firstName || !lastName) {
-        return res.status(400).json({ success: false, message: 'All fields are required.' });
-    }
-
-    try {
-        const hashedPw = await bcrypt.hash(password, 10);
-
-        // 🚀 CRITICAL ALIGNMENT: Modified prefix token string to output 'SADM-' tracking keys 
-        // This makes sure new Co-Admins match the frontend Login format rule
-        const customUid = `SADM-${Date.now().toString().slice(-4)}`;
-
-        const newAdmin = await pool.query(
-            `INSERT INTO users (email, password_hash, role, uid, account_status, first_name, last_name)
-             VALUES ($1, $2, $3, $4, $5, $6, $7) 
-             RETURNING id, email, uid, role, account_status, first_name, last_name`,
-            [email.trim().toLowerCase(), hashedPw, 'co_admin', customUid, 'active', firstName.trim(), lastName.trim()]
-        );
-
-        res.status(201).json({ success: true, data: newAdmin.rows[0] });
-    } catch (err) {
-        if (err.code === '23505') {
-            return res.status(400).json({ success: false, message: 'Email address or System ID conflict detected.' });
-        }
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
 
 //Report Archive
 router.patch('/reports/archive/:id', verifyToken, async (req, res) => {
@@ -429,4 +391,46 @@ router.delete('/student/delete/:id', verifyToken, async (req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 });
+
+router.post('/create-co-admin', verifyToken, async (req, res) => {
+    if (req.user.role !== 'root_admin') {
+        return res.status(403).json({ success: false, message: 'Forbidden: Only the absolute System Admin can add administrators.' });
+    }
+
+    const { email, password, firstName, lastName } = req.body;
+
+    if (!email || !password || !firstName || !lastName) {
+        return res.status(400).json({ success: false, message: 'All fields are required.' });
+    }
+
+    const trimmedEmail = email.trim().toLowerCase();
+
+    try {
+        // Check if email already exists in the main users table first for a cleaner custom error message
+        const emailCheck = await pool.query('SELECT id FROM users WHERE email = $1', [trimmedEmail]);
+        if (emailCheck.rows.length > 0) {
+            return res.status(400).json({ success: false, message: 'Email address is already in use by another account.' });
+        }
+
+        const hashedPw = await bcrypt.hash(password, 10);
+
+        // 🚀 CRITICAL ALIGNMENT: Modified prefix token string to output 'SADM-' tracking keys 
+        const customUid = `SADM-${Date.now().toString().slice(-4)}`;
+
+        const newAdmin = await pool.query(
+            `INSERT INTO users (email, password_hash, role, uid, account_status, first_name, last_name)
+             VALUES ($1, $2, $3, $4, $5, $6, $7) 
+             RETURNING id, email, uid, role, account_status, first_name, last_name`,
+            [trimmedEmail, hashedPw, 'co_admin', customUid, 'active', firstName.trim(), lastName.trim()]
+        );
+
+        res.status(201).json({ success: true, data: newAdmin.rows[0] });
+    } catch (err) {
+        if (err.code === '23505') {
+            return res.status(400).json({ success: false, message: 'Email address or System ID conflict detected.' });
+        }
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 module.exports = router;
