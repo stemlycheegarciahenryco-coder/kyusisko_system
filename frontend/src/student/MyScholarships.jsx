@@ -263,4 +263,4 @@ function SavedScholarshipCard({ s, onUnsave, index = 0 }) {
       </button>
     </div>
   );
-}
+} 

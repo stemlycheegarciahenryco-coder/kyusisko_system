@@ -1,21 +1,33 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
-import { Search, ShieldCheck, Lock, Phone, MapPin, Mail, Archive, Trash2, Users, UserX } from 'lucide-react';
+import { Search, ShieldCheck, Lock, Phone, MapPin, Mail, Archive } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 export default function RootStudentLog() {
     const [students, setStudents] = useState([]);
+    const [archivedStudents, setArchivedStudents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
-    const [activeTab, setActiveTab] = useState('all'); // Added state for the tab bar
+    const [activeTab, setActiveTab] = useState('all');
+    const [snapshotIsVisible, setSnapshotVisible] = useState(false);
+    const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
+    const [snapShotLists, setSnapshotList] = useState([]);
 
-    useEffect(() => { fetchStudents(); }, []);
+    useEffect(() => {
+        fetchAllData();
+    }, []);
 
-    const fetchStudents = async () => {
+    const fetchAllData = async () => {
         setLoading(true);
         try {
-            const res = await api.get('/students');
-            setStudents(res.data);
+            // Fetch regular and archived students concurrently
+            const [studentsRes, archivedRes] = await Promise.all([
+                api.get('/students'),
+                api.get('/system-admin/get/student/archive/')
+            ]);
+
+            setStudents(studentsRes.data);
+            setArchivedStudents(archivedRes.data);
         } catch (err) {
             console.error("Fetch Error:", err);
         } finally {
@@ -41,6 +53,7 @@ export default function RootStudentLog() {
         try {
             await api.patch(`/students/${id}/status`, { activeStatus: newStatus });
             setStudents(prev => prev.map(s => s.id === id ? { ...s, sis_active: newStatus } : s));
+            setArchivedStudents(prev => prev.map(s => s.id === id ? { ...s, sis_active: newStatus } : s));
             Swal.fire({ title: 'Success!', icon: 'success', timer: 1500, showConfirmButton: false });
         } catch (err) {
             Swal.fire({ title: 'Error!', icon: 'error' });
@@ -49,7 +62,7 @@ export default function RootStudentLog() {
 
     const handleArchive = async (id, currentArchiveStatus) => {
         const newArchiveStatus = !currentArchiveStatus;
-        const actionText = newArchiveStatus ? 'Archive' : 'Restore';
+        const actionText = newArchiveStatus ? 'Archive' : 'Unarchive';
 
         const result = await Swal.fire({
             title: `${actionText} Student?`,
@@ -58,64 +71,67 @@ export default function RootStudentLog() {
             showCancelButton: true,
             confirmButtonColor: '#d97706',
             confirmButtonText: `Yes, ${actionText}!`,
-        } );
+        });
 
         if (!result.isConfirmed) return;
 
         try {
-            await api.patch(`/students/${id}/archive`, { isArchived: newArchiveStatus });
-            setStudents(prev => prev.map(s => s.id === id ? { ...s, is_archived: newArchiveStatus } : s));
+            await api.patch(`/system-admin/student/archive/${id}`, { isArchived: newArchiveStatus });
+            await fetchAllData();
             Swal.fire({ title: 'Success!', icon: 'success', timer: 1500, showConfirmButton: false });
         } catch (err) {
             Swal.fire({ title: 'Error!', text: 'Failed to update archive status.', icon: 'error' });
         }
     };
 
-    const handleDelete = async (id) => {
-        const result = await Swal.fire({
-            title: 'Delete Student?',
-            text: "This action is permanent and cannot be undone!",
-            icon: 'error',
-            showCancelButton: true,
-            confirmButtonColor: '#FF1E1E',
-            confirmButtonText: 'Yes, Delete!',
-        });
+    const onSnapshotsClick = async () => { setSnapshotVisible(!snapshotIsVisible) };
 
-        if (!result.isConfirmed) return;
+    // Determine current dataset based on active tab
+    const currentDataset =
+        activeTab === 'archived' ? archivedStudents :
+            students;
 
-        try {
-            await api.delete(`/students/${id}`);
-            setStudents(prev => prev.filter(s => s.id !== id));
-            Swal.fire({ title: 'Deleted!', text: 'Student record has been removed.', icon: 'success', timer: 1500, showConfirmButton: false });
-        } catch (err) {
-            Swal.fire({ title: 'Error!', text: 'Failed to delete student.', icon: 'error' });
-        }
+    // Calculate accurate preloaded counts across variables
+    const counts = {
+        all: students.filter(s => !s.is_archived).length,
+        active: students.filter(s => s.sis_active && !s.is_archived).length,
+        blocked: students.filter(s => !s.sis_active && !s.is_archived).length,
+        archived: archivedStudents.length,
     };
 
-    const filtered = students.filter(s => {
-        const fullName = `${s.sfirst_name} ${s.slast_name}`.toLowerCase();
-        return fullName.includes(search.toLowerCase()) || s.student_email.toLowerCase().includes(search.toLowerCase());
+    const filtered = currentDataset.filter(s => {
+        const fullName = `${s.sfirst_name || ''} ${s.slast_name || ''}`.toLowerCase();
+        const email = (s.student_email || '').toLowerCase();
+        const matchesSearch = fullName.includes(search.toLowerCase()) || email.includes(search.toLowerCase());
+
+        if (!matchesSearch) return false;
+
+        if (activeTab === 'active') return s.sis_active;
+        if (activeTab === 'blocked') return !s.sis_active;
+
+        return true;
     });
 
     return (
         <div className="space-y-6 max-w-7xl mx-auto pb-20 bg-[#FFFCFB] min-h-screen p-4">
             {/* HEADER SECTION */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 bg-white p-8 rounded-[2.5rem] border border-[#093fb4]/10 shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-8 rounded-[2.5rem] border border-[#093fb4]/10 shadow-sm">
                 <div>
                     <h2 className="text-4xl font-black text-black tracking-tighter uppercase italic">
                         Student Management
                     </h2>
                 </div>
-                <div className="px-5 py-3 rounded-2xl border border-[#093fb4] bg-white shadow-sm">
-                    <p className="text-xl font-black leading-none text-[#093fb4]">{students.length}</p>
-                    <p className="text-[9px] font-black uppercase tracking-widest text-black mt-1">Total Student in Registered</p>
+
+                <div className="px-5 py-3 rounded-2xl border border-[#093fb4] bg-white shadow-sm self-start md:self-auto">
+                    <p className="text-xl font-black leading-none text-[#093fb4]">{students.length + archivedStudents.length}</p>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-black mt-1">Total Student Registered</p>
                 </div>
             </div>
 
-            {/* SEARCH AND VIEW BAR CONTAINER */}
-            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+            {/* SEARCH, STATUS TABS, AND SNAPSHOTS BUTTON CONTAINER */}
+            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
                 {/* SEARCH */}
-                <div className="relative w-full md:max-w-md">
+                <div className="relative w-full lg:max-w-md">
                     <Search size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-black/40" />
                     <input
                         placeholder="Search student identity..."
@@ -124,44 +140,26 @@ export default function RootStudentLog() {
                     />
                 </div>
 
-                {/* STATUS VIEW TABS (UI ONLY) */}
-                <div className="flex items-center gap-2 bg-white p-2 rounded-[1.5rem] border border-[#093fb4]/10 shadow-sm overflow-x-auto">
-                    <button
-                        onClick={() => setActiveTab('all')}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${activeTab === 'all'
-                                ? 'bg-[#093fb4] text-white shadow-sm'
-                                : 'text-black/60 hover:text-black hover:bg-black/5'
-                            }`}
-                    >
-                        All
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('active')}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${activeTab === 'active'
-                                ? 'bg-[#093fb4] text-white shadow-sm'
-                                : 'text-black/60 hover:text-black hover:bg-black/5'
-                            }`}
-                    >
-                        Active
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('blocked')}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${activeTab === 'blocked'
-                                ? 'bg-[#093fb4] text-white shadow-sm'
-                                : 'text-black/60 hover:text-black hover:bg-black/5'
-                            }`}
-                    >
-                        Blocked
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('archived')}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${activeTab === 'archived'
-                                ? 'bg-[#093fb4] text-white shadow-sm'
-                                : 'text-black/60 hover:text-black hover:bg-black/5'
-                            }`}
-                    >
-                        Archived
-                    </button>
+                {/* RIGHT SIDE: STATUS VIEW TABS */}
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-[1.5rem] border border-[#093fb4]/10 shadow-sm overflow-x-auto">
+                        {['all', 'active', 'blocked', 'archived'].map((tab) => (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab)}
+                                className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 ${activeTab === tab
+                                    ? 'bg-[#093fb4] text-white shadow-sm'
+                                    : 'text-black/65 hover:text-black hover:bg-black/5'
+                                    }`}
+                            >
+                                <span>{tab.charAt(0).toUpperCase() + tab.slice(1)}</span>
+                                <span className={`px-1.5 py-0.5 rounded-md text-[10px] ${activeTab === tab ? 'bg-white/20 text-white' : 'bg-black/5 text-black/70'
+                                    }`}>
+                                    {counts[tab]}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
@@ -181,90 +179,84 @@ export default function RootStudentLog() {
                         <tbody className="divide-y divide-[#093fb4]/5">
                             {loading ? (
                                 <tr><td colSpan={5} className="text-center py-20 text-black font-bold uppercase tracking-widest">Loading...</td></tr>
-                            ) : filtered.map(s => (
-                                <tr key={s.id} className="hover:bg-[#FFFCFB] transition-all group">
-                                    <td className="px-6 py-6">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-xl bg-[#093fb4] flex items-center justify-center text-white font-black text-xs">
-                                                {s.sfirst_name[0]}{s.slast_name[0]}
+                            ) : filtered.length === 0 ? (
+                                <tr><td colSpan={5} className="text-center py-20 text-black/50 font-bold uppercase tracking-widest">No students found.</td></tr>
+                            ) : (
+                                filtered.map(s => (
+                                    <tr key={s.id} className="hover:bg-[#FFFCFB] transition-all group">
+                                        <td className="px-6 py-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-xl bg-[#093fb4] flex items-center justify-center text-white font-black text-xs">
+                                                    {s.sfirst_name?.[0]}{s.slast_name?.[0]}
+                                                </div>
+                                                <div>
+                                                    <p className="font-black text-black text-sm uppercase">{s.sfirst_name} {s.slast_name}</p>
+                                                    <p className="text-[10px] text-black/40 font-bold">ID: #{s.id}</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="font-black text-black text-sm uppercase">{s.sfirst_name} {s.slast_name}</p>
-                                                <p className="text-[10px] text-black/40 font-bold">ID: #{s.id}</p>
+                                        </td>
+                                        <td className="px-6 py-6">
+                                            <div className="space-y-1">
+                                                <div className="flex items-center gap-2 text-black/60">
+                                                    <Mail size={12} className="text-[#093fb4]" />
+                                                    <span className="text-[11px] font-bold">{s.student_email}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-black/60">
+                                                    <Phone size={12} className="text-[#093fb4]" />
+                                                    <span className="text-[11px] font-bold">{s.scontact_number}</span>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-6">
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-2 text-black/60">
-                                                <Mail size={12} className="text-[#093fb4]" />
-                                                <span className="text-[11px] font-bold">{s.student_email}</span>
+                                        </td>
+                                        <td className="px-6 py-6">
+                                            <div className="flex items-start gap-2 max-w-[200px]">
+                                                <MapPin size={12} className="text-[#FF1E1E] mt-1 shrink-0" />
+                                                <span className="text-[11px] font-medium text-black/70 leading-tight">
+                                                    {s.full_address || 'No Address Provided'}
+                                                </span>
                                             </div>
-                                            <div className="flex items-center gap-2 text-black/60">
-                                                <Phone size={12} className="text-[#093fb4]" />
-                                                <span className="text-[11px] font-bold">{s.scontact_number}</span>
+                                        </td>
+                                        <td className="px-6 py-6">
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-1.5 h-1.5 rounded-full ${s.sis_active ? 'bg-green-500' : 'bg-red-500'}`} />
+                                                <span className={`text-[10px] font-black uppercase ${s.sis_active ? 'text-green-600' : 'text-red-600'}`}>
+                                                    {s.sis_active ? 'Active' : 'Blocked'}
+                                                </span>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-6">
-                                        <div className="flex items-start gap-2 max-w-[200px]">
-                                            <MapPin size={12} className="text-[#FF1E1E] mt-1 shrink-0" />
-                                            <span className="text-[11px] font-medium text-black/70 leading-tight">
-                                                {s.full_address || 'No Address Provided'}
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-6">
-                                        <div className="flex items-center gap-2">
-                                            <div className={`w-1.5 h-1.5 rounded-full ${s.sis_active ? 'bg-green-500' : 'bg-red-500'}`} />
-                                            <span className={`text-[10px] font-black uppercase ${s.sis_active ? 'text-green-600' : 'text-red-600'}`}>
-                                                {s.sis_active ? 'Active' : 'Blocked'}
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-6 text-right">
-                                        <div className="flex items-center justify-end gap-3">
-                                            {/* Block / Unblock Button */}
-                                            <button
-                                                onClick={() => handleStatus(s.id, s.sis_active)}
-                                                title={s.sis_active ? 'Block Student' : 'Unblock Student'}
-                                                className={`flex items-center gap-2 p-3 text-[10px] font-black uppercase rounded-2xl border shadow-md hover:scale-110 transition-all cursor-pointer ${
-                                                    !s.sis_active
-                                                        ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
-                                                        : 'bg-blue-600/10 text-blue-600 border-blue-600/20 hover:bg-blue-600 hover:text-white'
-                                                }`}
-                                            >
-                                                {!s.sis_active ? <ShieldCheck size={16} /> : <Lock size={16} />}
-                                                <span>{s.sis_active ? 'Block' : 'Unblock'}</span>
-                                            </button>
+                                        </td>
+                                        <td className="px-6 py-6 text-right">
+                                            <div className="flex items-center justify-end gap-3">
+                                                {/* Block / Unblock Button */}
+                                                {activeTab !== 'archived' && (
+                                                    <button
+                                                        onClick={() => handleStatus(s.id, s.sis_active)}
+                                                        title={s.sis_active ? 'Block Student' : 'Unblock Student'}
+                                                        className={`flex items-center gap-2 p-3 text-[10px] font-black uppercase rounded-2xl border shadow-md hover:scale-110 transition-all cursor-pointer ${!s.sis_active
+                                                            ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
+                                                            : 'bg-blue-600/10 text-blue-600 border-blue-600/20 hover:bg-blue-600 hover:text-white'
+                                                            }`}
+                                                    >
+                                                        {!s.sis_active ? <ShieldCheck size={16} /> : <Lock size={16} />}
+                                                        <span>{s.sis_active ? 'Block' : 'Unblock'}</span>
+                                                    </button>
+                                                )}
 
-                                            {/* Archive / Restore Button */}
-                                            <button
-                                                onClick={() => handleArchive(s.id, s.is_archived)}
-                                                title={s.is_archived ? 'Restore Student' : 'Archive Student'}
-                                                className={`flex items-center gap-2 p-3 text-[10px] font-black uppercase rounded-2xl border shadow-md hover:scale-110 transition-all cursor-pointer ${
-                                                    s.is_archived
+                                                {/* Archive / Unarchive Button */}
+                                                <button
+                                                    onClick={() => handleArchive(s.id, s.is_archived)}
+                                                    title={s.is_archived ? 'Unarchive Student' : 'Archive Student'}
+                                                    className={`flex items-center gap-2 p-3 text-[10px] font-black uppercase rounded-2xl border shadow-md hover:scale-110 transition-all cursor-pointer ${s.is_archived
                                                         ? 'bg-amber-600 text-white border-amber-600 hover:bg-amber-700'
                                                         : 'bg-amber-600/10 text-amber-600 border-amber-600/20 hover:bg-amber-600 hover:text-white'
-                                                }`}
-                                            >
-                                                <Archive size={16} />
-                                                <span>{s.is_archived ? 'Restore' : 'Archive'}</span>
-                                            </button>
-
-                                            {/* Delete Button */}
-                                            <button
-                                                onClick={() => handleDelete(s.id)}
-                                                title="Delete Student"
-                                                className="flex items-center gap-2 p-3 bg-red-600/10 hover:bg-red-600 text-[10px] font-black uppercase text-red-500 hover:text-white border border-red-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
-                                            >
-                                                <Trash2 size={16} />
-                                                <span>Delete</span>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
+                                                        }`}
+                                                >
+                                                    <Archive size={16} />
+                                                    <span>{s.is_archived ? 'Unarchive' : 'Archive'}</span>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>

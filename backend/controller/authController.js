@@ -11,7 +11,6 @@ const qrcode = require('qrcode');
 const MAX_ATTEMPTS = 5;
 const WINDOW_MINUTES = 10;
 
-// ✅ Dynamic Cookie Configuration based on environment
 const isProduction = process.env.NODE_ENV === 'production';
 const cookieOptions = {
     httpOnly: true,
@@ -35,7 +34,6 @@ exports.portalLogin = async (req, res) => {
     const { identifier, password, otp, mfaMethod } = req.body;
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     const input = identifier ? identifier.trim() : '';
-
     try {
         // 1. Universal Rate-Limiting Check
         const attemptCheck = await pool.query(
@@ -107,7 +105,7 @@ exports.portalLogin = async (req, res) => {
             });
 
             const token = jwt.sign({ id: user.id, role: user.role, email: user.email, uid: user.uid }, process.env.JWT_SECRET, { expiresIn: '1d' });
-            
+
             res.cookie('token', token, cookieOptions);
 
             return res.json({ role: user.role, data: { id: user.id, uid: user.uid, email: user.email } });
@@ -118,7 +116,7 @@ exports.portalLogin = async (req, res) => {
             'SELECT * FROM sub_admins WHERE UPPER(provider_code) = UPPER($1) OR sub_email = $1 AND is_archived = false',
             [input]
         );
-        
+
         if (subResult.rows.length > 0) {
             const sub = subResult.rows[0];
             const resolvedOrgId = sub.account_type === 'co_admin' ? sub.parent_org_id : sub.id;
@@ -162,7 +160,7 @@ exports.portalLogin = async (req, res) => {
             });
 
             const token = jwt.sign({ id: sub.id, role: 'sub_admin', email: sub.sub_email }, process.env.JWT_SECRET, { expiresIn: '1d' });
-            
+
             res.cookie('token', token, cookieOptions);
 
             return res.json({
@@ -179,7 +177,7 @@ exports.portalLogin = async (req, res) => {
 
         // Strategy B: Fallback and check if input matches a Student account registration
         const studentResult = await pool.query('SELECT * FROM students WHERE student_email = $1 AND is_archived = false', [input]);
-        
+
         if (studentResult.rows.length > 0) {
             const student = studentResult.rows[0];
             if (student.sis_active === false || student.account_status === 'blocked') {
@@ -192,56 +190,56 @@ exports.portalLogin = async (req, res) => {
             }
 
             // 🔐 MFA Verification Check for the student
-if (student.two_factor_enabled) {
+            if (student.two_factor_enabled) {
 
-    const hasAuthApp = !!student.two_factor_secret;
+                const hasAuthApp = !!student.two_factor_secret;
 
-    // Step 1: no method chosen yet by the frontend -> tell it what's on offer
-    if (!mfaMethod) {
-        const availableMethods = [];
-        if (hasAuthApp) availableMethods.push('otp');
-        availableMethods.push('email_approval'); // always available once MFA is on, no setup needed
+                // Step 1: no method chosen yet by the frontend -> tell it what's on offer
+                if (!mfaMethod) {
+                    const availableMethods = [];
+                    if (hasAuthApp) availableMethods.push('otp');
+                    availableMethods.push('email_approval'); // always available once MFA is on, no setup needed
 
-        return res.json({ mfaRequired: true, chooseMethod: true, availableMethods });
-    }
+                    return res.json({ mfaRequired: true, chooseMethod: true, availableMethods });
+                }
 
-    if (mfaMethod === 'otp') {
-        if (!hasAuthApp) {
-            return res.status(400).json({ error: "Authenticator App is not set up for this account." });
-        }
-        if (!otp) {
-            return res.json({ mfaRequired: true, method: 'otp' });
-        }
-        const isValidOtp = authenticator.verify({
-            token: otp,
-            secret: student.two_factor_secret
-        });
-        if (!isValidOtp) {
-            await logAttempt(input, ip, false);
-            return res.status(401).json({ error: "Invalid Authenticator code." });
-        }
+                if (mfaMethod === 'otp') {
+                    if (!hasAuthApp) {
+                        return res.status(400).json({ error: "Authenticator App is not set up for this account." });
+                    }
+                    if (!otp) {
+                        return res.json({ mfaRequired: true, method: 'otp' });
+                    }
+                    const isValidOtp = authenticator.verify({
+                        token: otp,
+                        secret: student.two_factor_secret
+                    });
+                    if (!isValidOtp) {
+                        await logAttempt(input, ip, false);
+                        return res.status(401).json({ error: "Invalid Authenticator code." });
+                    }
 
-    } else if (mfaMethod === 'email_approval') {
+                } else if (mfaMethod === 'email_approval') {
 
-        if (!otp) {
-            // No approval token yet -> create one and email the approve link
-            const token = crypto.randomBytes(32).toString('hex');
-            const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-            const userAgent = req.headers['user-agent'] || 'Unknown device';
+                    if (!otp) {
+                        // No approval token yet -> create one and email the approve link
+                        const token = crypto.randomBytes(32).toString('hex');
+                        const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+                        const userAgent = req.headers['user-agent'] || 'Unknown device';
 
-            await pool.query(
-                `INSERT INTO login_approvals (email, token, ip_address, user_agent, expires_at) 
+                        await pool.query(
+                            `INSERT INTO login_approvals (email, token, ip_address, user_agent, expires_at) 
                  VALUES ($1, $2, $3, $4, $5)`,
-                [student.student_email, token, ip, userAgent, expiresAt]
-            );
-                                        //REVIEW LOGIN must be turn to CLIENT_URL for production
-            const approveUrl = `${process.env.LOCAL_CLIENT_URL}/approve-login?token=${token}`;
+                            [student.student_email, token, ip, userAgent, expiresAt]
+                        );
+                        //REVIEW LOGIN must be turn to CLIENT_URL for production
+                        const approveUrl = `${process.env.LOCAL_CLIENT_URL}/approve-login?token=${token}`;
 
-            await transporter.sendMail({
-                from: `"KyusISKO" <${process.env.RESEND_FROM_EMAIL}>`,
-                to: student.student_email,
-                subject: 'Approve Your Login — KyusISKO',
-                html: `<div style="font-family: sans-serif; max-width: 420px; margin: auto; border: 1px solid #e2e8f0; padding: 24px; border-radius: 16px;">
+                        await transporter.sendMail({
+                            from: `"KyusISKO" <${process.env.RESEND_FROM_EMAIL}>`,
+                            to: student.student_email,
+                            subject: 'Approve Your Login — KyusISKO',
+                            html: `<div style="font-family: sans-serif; max-width: 420px; margin: auto; border: 1px solid #e2e8f0; padding: 24px; border-radius: 16px;">
                     <h2 style="color: #1e293b; text-align: center;">New Login Attempt</h2>
                     <p style="color: #64748b; text-align: center; font-size: 13px;">Someone is trying to log into your account from:</p>
                     <p style="color: #334155; text-align: center; font-size: 13px; font-weight: bold;">${userAgent}</p>
@@ -250,39 +248,39 @@ if (student.two_factor_enabled) {
                     </div>
                     <p style="color: #94a3b8; font-size: 12px; text-align: center;">Expires in 10 minutes. If this wasn't you, you can deny it on the next page.</p>
                 </div>`
-            });
+                        });
 
-            return res.json({ mfaRequired: true, method: 'email_approval', pollToken: token, message: "Check your email to approve this login." });
-        }
+                        return res.json({ mfaRequired: true, method: 'email_approval', pollToken: token, message: "Check your email to approve this login." });
+                    }
 
-        // otp here is actually the poll token the frontend is checking on
-        const approvalCheck = await pool.query(
-            `SELECT status FROM login_approvals WHERE token = $1 AND email = $2 AND expires_at > NOW()`,
-            [otp, student.student_email]
-        );
+                    // otp here is actually the poll token the frontend is checking on
+                    const approvalCheck = await pool.query(
+                        `SELECT status FROM login_approvals WHERE token = $1 AND email = $2 AND expires_at > NOW()`,
+                        [otp, student.student_email]
+                    );
 
-        if (approvalCheck.rows.length === 0) {
-            await logAttempt(input, ip, false);
-            return res.status(401).json({ error: "Approval request expired or invalid." });
-        }
+                    if (approvalCheck.rows.length === 0) {
+                        await logAttempt(input, ip, false);
+                        return res.status(401).json({ error: "Approval request expired or invalid." });
+                    }
 
-        const status = approvalCheck.rows[0].status;
+                    const status = approvalCheck.rows[0].status;
 
-        if (status === 'denied') {
-            await logAttempt(input, ip, false);
-            return res.status(401).json({ error: "Login was denied." });
-        }
-        if (status === 'pending') {
-            return res.json({ mfaRequired: true, method: 'email_approval', pollToken: otp, pending: true });
-        }
+                    if (status === 'denied') {
+                        await logAttempt(input, ip, false);
+                        return res.status(401).json({ error: "Login was denied." });
+                    }
+                    if (status === 'pending') {
+                        return res.json({ mfaRequired: true, method: 'email_approval', pollToken: otp, pending: true });
+                    }
 
-        // status === 'approved' -> consume it so it can't be reused, then continue below
-        await pool.query(`DELETE FROM login_approvals WHERE token = $1`, [otp]);
+                    // status === 'approved' -> consume it so it can't be reused, then continue below
+                    await pool.query(`DELETE FROM login_approvals WHERE token = $1`, [otp]);
 
-    } else {
-        return res.status(400).json({ error: "Invalid verification method selected." });
-    }
-}
+                } else {
+                    return res.status(400).json({ error: "Invalid verification method selected." });
+                }
+            }
 
             await logAttempt(input, ip, true);
             await trackEvent({
@@ -292,18 +290,18 @@ if (student.two_factor_enabled) {
             });
 
             const token = jwt.sign({ id: student.id, role: 'student', email: student.student_email }, process.env.JWT_SECRET, { expiresIn: '1d' });
-            
+
             res.cookie('token', token, cookieOptions);
 
-            return res.json({ 
-                role: 'student', 
-                data: { 
-                    id: student.id, 
+            return res.json({
+                role: 'student',
+                data: {
+                    id: student.id,
                     email: student.student_email,
                     firstName: student.sfirst_name,
                     lastName: student.slast_name,
                     isProfileComplete: student.is_profile_complete === true
-                } 
+                }
             });
         }
 
@@ -347,20 +345,20 @@ exports.forgotPassword = async (req, res) => {
         else if (studentRes.rows.length > 0) studentId = studentRes.rows[0].id;
 
         const code = Math.floor(100000 + Math.random() * 900000).toString();
-const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-await pool.query(
-    `INSERT INTO otp_codes (email, code, method, purpose, expires_at) 
+        await pool.query(
+            `INSERT INTO otp_codes (email, code, method, purpose, expires_at) 
      VALUES ($1, $2, 'email', 'password_reset', $3)
      ON CONFLICT (email, purpose) DO UPDATE SET code = $2, expires_at = $3`,
-    [email, code, expiresAt]
-);
+            [email, code, expiresAt]
+        );
 
-await transporter.sendMail({
-    from: `"KyusISKO" <${process.env.RESEND_FROM_EMAIL}>`,
-    to: email,
-    subject: 'Your Verification Code — KyusISKO',
-    html: `
+        await transporter.sendMail({
+            from: `"KyusISKO" <${process.env.RESEND_FROM_EMAIL}>`,
+            to: email,
+            subject: 'Your Verification Code — KyusISKO',
+            html: `
         <div style="font-family: sans-serif; max-width: 400px; margin: auto; border: 1px solid #e2e8f0; padding: 20px; border-radius: 16px;">
             <h2 style="color: #1e293b; text-align: center;">Password Reset Request</h2>
             <p style="color: #64748b; text-align: center;">Use the code below to reset your password. It expires in 10 minutes.</p>
@@ -369,7 +367,7 @@ await transporter.sendMail({
             </div>
             <p style="color: #94a3b8; font-size: 12px; text-align: center; margin-top: 20px;">If you did not request this, please ignore this email.</p>
         </div>`
-});
+        });
 
         await trackEvent({
             userId, subAdminId, studentId,
@@ -407,7 +405,7 @@ exports.resetPassword = async (req, res) => {
         }
 
         const hashed = await bcrypt.hash(newPassword, 10);
-        
+
         const userRes = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
         const subRes = await pool.query('SELECT id FROM sub_admins WHERE sub_email = $1', [email]);
         const studentRes = await pool.query('SELECT id FROM students WHERE student_email = $1', [email]);
@@ -427,8 +425,8 @@ exports.resetPassword = async (req, res) => {
             await pool.query('UPDATE students SET student_password_hash = $1 WHERE student_email = $2', [hashed, email]);
         }
 
-          await pool.query(`DELETE FROM otp_codes WHERE email = $1 AND purpose = 'password_reset'`, [email]);
-        
+        await pool.query(`DELETE FROM otp_codes WHERE email = $1 AND purpose = 'password_reset'`, [email]);
+
         await trackEvent({
             userId, subAdminId, studentId,
             actionType: 'PASSWORD_RESET_SUCCESS', ipAddress: ip, email: email,
@@ -453,17 +451,17 @@ exports.getLogInAttempt = async (req, res) => {
             ORDER BY attempted_at DESC 
             LIMIT 100
         `);
-        
+
         res.json({
             success: true,
             attempts: rows
         });
-    } catch (err) { 
+    } catch (err) {
         console.error("Error fetching login attempts:", err.message);
-        res.status(500).json({ 
-            success: false, 
-            error: "Server Error" 
-        }); 
+        res.status(500).json({
+            success: false,
+            error: "Server Error"
+        });
     }
 };
 
@@ -485,14 +483,14 @@ exports.logout = (req, res) => {
 exports.generateMfaSetup = async (req, res) => {
     // Requires a logged-in user (req.user populated by your JWT auth middleware)
     const { id, email, role } = req.user;
-    
+
     try {
         // 1. Generate a unique base32 secret using otplib
         const secret = authenticator.generateSecret();
 
         // 2. Create the otpauth URL for the authenticator app
         const otpauthUrl = authenticator.keyuri(
-            email, 
+            email,
             'KyusISKO', // Shows up as the issuer/app name in Google Authenticator
             secret
         );
@@ -509,7 +507,7 @@ exports.generateMfaSetup = async (req, res) => {
         } else {
             query = 'UPDATE users SET two_factor_secret = $1 WHERE id = $2';
         }
-        
+
         await pool.query(query, [secret, id]);
 
         // 5. Return the image and manual code to the frontend modal
@@ -536,7 +534,7 @@ exports.verifyMfaSetup = async (req, res) => {
         // 1. Fetch the temporary secret from the database
         let selectQuery = '';
         let updateQuery = '';
-        
+
         if (role === 'student') {
             selectQuery = 'SELECT two_factor_secret FROM students WHERE id = $1';
             updateQuery = 'UPDATE students SET two_factor_enabled = TRUE WHERE id = $1';

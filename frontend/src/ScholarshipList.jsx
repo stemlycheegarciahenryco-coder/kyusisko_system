@@ -4,6 +4,7 @@ import api from './api';
 import { ArrowRight, Bookmark, AlertTriangle, Building2Icon, CheckCircle2, Calendar, X } from 'lucide-react';
 import StudentSideNotif from './student/StudentSideNotif';
 import { IconReport } from '@tabler/icons-react';
+import Swal from 'sweetalert2';
 
 // 📋 Pre-defined lists of report reasons
 const PREDEFINED_REPORTS = [
@@ -97,7 +98,12 @@ export default function ScholarshipList() {
         }
 
         if (finalReasons.length === 0) {
-            alert("Please select at least one reason or type an explanation.");
+            Swal.fire({
+                icon: 'warning',
+                title: 'Missing Information',
+                text: 'Please select at least one reason or type an explanation.',
+                confirmButtonColor: '#093fb4'
+            });
             return;
         }
 
@@ -105,11 +111,26 @@ export default function ScholarshipList() {
 
         try {
             await api.post(`/recommendations/${reportModal.id}/report`, { reason: combinedReason });
-            alert("Report submitted successfully.");
+
+            // ✅ Replaced native alert with Swal.fire
+            Swal.fire({
+                icon: 'success',
+                title: 'Report Submitted',
+                text: 'Report submitted successfully.',
+                confirmButtonColor: '#093fb4',
+                timer: 2000,
+                timerProgressBar: true
+            });
+
             setReportModal({ open: false, id: null, selectedReasons: [], otherReason: '' });
         } catch (err) {
             console.error("Report error:", err);
-            alert("Failed to submit report. Please try again.");
+            Swal.fire({
+                icon: 'error',
+                title: 'Submission Failed',
+                text: 'Failed to submit report. Please try again.',
+                confirmButtonColor: '#093fb4'
+            });
         }
     };
 
@@ -156,8 +177,9 @@ export default function ScholarshipList() {
                     return (
                         <div
                             key={s.id}
-                            className="scholar-card bg-white rounded-3xl border border-blue-100 shadow-sm p-6 transition-all duration-300 hover:border-[#093fb4] hover:-translate-y-0.5 hover:shadow-md relative overflow-hidden"
-                            style={{ animationDelay: `${Math.min(i, 8) * 90}ms` }}
+                            className={`bg-white/80 backdrop-blur-xl rounded-[2.5rem] border-2 shadow-xl p-8 md:p-10 transition-all hover:shadow-2xl relative overflow-hidden ${
+                                s.is_best_match ? 'border-[#093fb4] shadow-blue-900/10' : 'border-white/80'
+                            }`}
                         >
                             <div className="flex flex-col gap-4">
 
@@ -238,10 +260,10 @@ export default function ScholarshipList() {
                                 <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-blue-100">
                                     <button
                                         onClick={() => handleSaveToggle(s.id, s.is_saved)}
-                                        className={`flex-none px-6 py-3 font-black rounded-xl flex items-center justify-center gap-2 uppercase text-[11px] tracking-widest transition-all border ${
+                                        className={`flex-none px-8 py-4 font-black rounded-2xl flex items-center justify-center gap-2 uppercase text-xs tracking-[0.2em] transition-all border-2 ${
                                             s.is_saved
-                                                ? 'bg-[#093fb4] border-[#093fb4] text-white'
-                                                : 'bg-white border-blue-100 text-black hover:border-[#093fb4] hover:text-[#093fb4]'
+                                                ? 'bg-[#093fb4] border-[#093fb4] text-white shadow-xl shadow-[#093fb4]/25'
+                                                : 'bg-white/60 border-black/10 text-black/60 hover:border-[#093fb4]/50 hover:text-[#093fb4] hover:bg-white'
                                         }`}
                                     >
                                         <Bookmark
@@ -318,10 +340,10 @@ export default function ScholarshipList() {
 
                         <div className="space-y-3 mb-6 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
                             <label
-                                className={`flex items-start gap-4 p-4 rounded-2xl border text-[13px] font-black cursor-pointer transition-all bg-white ${
+                                className={`flex items-start gap-4 p-4 rounded-2xl border-2 text-xs font-black cursor-pointer transition-all ${
                                     isAllSelected
-                                        ? 'border-[#093fb4] text-[#093fb4]'
-                                        : 'border-blue-100 text-black hover:border-[#093fb4]'
+                                        ? 'bg-[#093fb4]/10 border-[#093fb4] text-[#093fb4]'
+                                        : 'bg-black/5 border-transparent text-black/70 hover:border-black/10'
                                 }`}
                             >
                                 <input
@@ -340,10 +362,10 @@ export default function ScholarshipList() {
                                 return (
                                     <label
                                         key={index}
-                                        className={`flex items-start gap-4 p-4 rounded-2xl border text-[13px] font-bold cursor-pointer transition-all bg-white ${
+                                        className={`flex items-start gap-4 p-4 rounded-2xl border-2 text-xs font-bold cursor-pointer transition-all ${
                                             isChecked
-                                                ? 'border-[#093fb4] text-[#093fb4]'
-                                                : 'border-blue-100 text-black hover:border-[#093fb4]'
+                                                ? 'bg-[#093fb4]/10 border-[#093fb4] text-[#093fb4]'
+                                                : 'bg-black/5 border-transparent text-black/70 hover:border-black/10'
                                         }`}
                                     >
                                         <input

@@ -98,6 +98,8 @@ exports.getReports = async (req, res) => {
         r.reason,
         r.status,
         r.created_at,
+        r.dismisal_reason,
+        r.take_down_reason,
 
         -- Student info
         CONCAT(s.sfirst_name, ' ', s.slast_name) AS student_name,
@@ -166,8 +168,8 @@ exports.takedownScholarship = async (req, res) => {
 
     // 3. Resolve all reports for this scholarship
     await pool.query(
-      `UPDATE reports SET status = 'resolved' WHERE scholarship_id = $1`,
-      [scholarshipId]
+      `UPDATE reports SET status = 'resolved', take_down_reason = $2 WHERE scholarship_id = $1`,
+      [scholarshipId, reason]
     );
 
     // 4. Insert notification for the org
@@ -209,8 +211,9 @@ exports.takedownScholarship = async (req, res) => {
 
 // DISMISS a single report (no action taken)
 exports.dismissReport = async (req, res) => {
-  const { reportId } = req.params;
+  const { reportId} = req.params;
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  const {reason} = req.body
 
   try {
     const reportQuery = await pool.query(
@@ -220,8 +223,8 @@ exports.dismissReport = async (req, res) => {
     );
 
     await pool.query(
-      `UPDATE reports SET status = 'dismissed' WHERE id = $1`,
-      [reportId]
+      `UPDATE reports SET status = 'dismissed', dismisal_reason = $2 WHERE id = $1`,
+      [reportId, reason]
     );
 
     const contextInfo = reportQuery.rows[0];

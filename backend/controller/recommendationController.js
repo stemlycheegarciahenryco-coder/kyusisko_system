@@ -239,6 +239,7 @@ const getAllScholarships = async (req, res) => {
       WHERE sch.status IN ('open', 'published')
       AND sch.status != 'closed'
       AND sch.taken_down = FALSE
+      AND sa.is_archived = FALSE
       -- 1. Use strict greater than (>) to hide it ON the exact date
       -- 2. Force PostgreSQL to evaluate "today" based on Philippine Time
       AND sch.deadline::date > (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Manila')::date
@@ -300,7 +301,7 @@ const getSavedScholarships = async (req, res) => {
       FROM saved_scholarships ss
       JOIN scholarships sch ON sch.id = ss.scholarship_id
       JOIN sub_admins sa ON sa.id = sch.sub_admin_id
-      WHERE ss.student_id = $1 AND sch.taken_down = FALSE
+      WHERE ss.student_id = $1 AND sch.taken_down = FALSE AND sch.is_archived = false AND sa.is_archived = false
     `, [studentId]);
     res.json({ success: true, data: result.rows });
   } catch (err) {

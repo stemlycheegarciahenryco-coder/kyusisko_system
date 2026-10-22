@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, CheckCircle2, XCircle, ChevronDown, ChevronUp, Flag, Search, Archive, Trash2, Loader2, EyeOff, EyeIcon } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, XCircle, ChevronDown, ChevronUp, Flag, Search, Trash2, Loader2, EyeOff, EyeIcon, Clock } from 'lucide-react';
 import Swal from 'sweetalert2';
 import api from '../api';
 
@@ -10,6 +10,9 @@ export default function RootReports() {
     const [actionLoading, setActionLoading] = useState(null);
     const [filter, setFilter] = useState('all');
     const [search, setSearch] = useState('');
+    const [snapshotIsVisible, setSnapshotVisible] = useState(false);
+    const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
+    const [snapShotLists, setSnapshotList] = useState([]);
 
     const fetchReports = async () => {
         setLoading(true);
@@ -39,30 +42,25 @@ export default function RootReports() {
 
         if (!confirmResult.isConfirmed) return;
 
-        const { value: reasonText, isConfirmed } = await Swal.fire({
-            title: 'Provide Takedown Reason',
+        const { value: reasonText, dismiss } = await Swal.fire({
+            title: 'Provide Additional Takedown Reason',
             input: 'textarea',
-            inputPlaceholder: 'Please provide a reason for taking down this scholarship...',
+            inputPlaceholder: 'Please provide a reason for taking down this scholarship (optional)...',
             inputAttributes: {
                 'aria-label': 'Provide a reason for taking down this scholarship'
             },
             showCancelButton: true,
             confirmButtonColor: '#dc2626',
             cancelButtonColor: '#64748b',
-            confirmButtonText: 'Submit',
-            inputValidator: (value) => {
-                if (!value || !value.trim()) {
-                    return 'A reason is required to take down a scholarship program.';
-                }
-            }
+            confirmButtonText: 'Submit'
         });
 
-        if (!isConfirmed || !reasonText) return;
+        if (dismiss) return;
 
         setActionLoading(`takedown-${scholarshipId}`);
         try {
             await api.put(`/reports/takedown/${scholarshipId}`, {
-                reason: reasonText.trim()
+                reason: reasonText ? reasonText.trim() : 'No additional reason provided'
             });
             Swal.fire({
                 icon: 'success',
@@ -134,43 +132,10 @@ export default function RootReports() {
         }
     };
 
-    const handleArchive = async (reportId) => {
-        const result = await Swal.fire({
-            title: 'Archive this report?',
-            text: 'This report will be moved to archives.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d97706',
-            cancelButtonColor: '#64748b',
-            confirmButtonText: 'Yes, archive'
-        });
-
-        if (!result.isConfirmed) return;
-
-        setActionLoading(`archive-${reportId}`);
-        try {
-            await api.patch(`/system-admin/reports/archive/${reportId}`);
-            Swal.fire({
-                icon: 'success',
-                title: 'Archived!',
-                text: 'The report has been successfully archived.',
-                timer: 1500,
-                showConfirmButton: false
-            });
-            fetchReports();
-        } catch (err) {
-            console.error("Archive failed:", err);
-            Swal.fire('Error', 'Failed to archive the report.', 'error');
-        } finally {
-            setActionLoading(null);
-        }
-    };
-
     const handleDelete = async (reportId) => {
         const result = await Swal.fire({
-            title: 'Delete report permanently?',
-            text: 'This action cannot be undone.',
-            icon: 'warning',
+            title: 'Delete report?',
+            icon: 'error',
             showCancelButton: true,
             confirmButtonColor: '#dc2626',
             cancelButtonColor: '#64748b',
@@ -185,7 +150,7 @@ export default function RootReports() {
             Swal.fire({
                 icon: 'success',
                 title: 'Deleted!',
-                text: 'The report has been permanently deleted.',
+                text: 'The report has been deleted.',
                 timer: 1500,
                 showConfirmButton: false
             });
@@ -198,16 +163,19 @@ export default function RootReports() {
         }
     };
 
+    const onSnapshotsClick = async () => { setSnapshotVisible(!snapshotIsVisible); };
+
+    // 🔄 Updated status config mapping for "taken down"
     const statusConfig = {
         pending: { color: 'bg-amber-50 text-amber-600 border-amber-200 cursor-pointer', dot: 'bg-amber-400' },
-        resolved: { color: 'bg-green-50 text-green-600 border-green-200 cursor-pointer', dot: 'bg-green-400' },
+        'taken down': { color: 'bg-red-50 text-red-600 border-red-200 cursor-pointer', dot: 'bg-red-400' },
         dismissed: { color: 'bg-slate-100 text-slate-400 border-slate-200 cursor-pointer', dot: 'bg-slate-300' },
-        archived: { color: 'bg-slate-100 text-yellow-400 border-slate-200 cursor-pointer', dot: 'bg-amber-300' },
-        deleted: { color: 'bg-slate-100 text-red-400 border-slate-200 cursor-pointer', dot: 'bg-red-300' },
     };
 
     const filtered = reports.filter(r => {
-        const matchFilter = filter === 'all' ? true : r.status === filter;
+        // Map filter value check if your backend uses 'resolved' vs 'taken down'
+        const targetStatus = filter === 'taken down' ? 'resolved' : filter;
+        const matchFilter = filter === 'all' ? true : r.status === targetStatus;
         const matchSearch =
             r.student_name?.toLowerCase().includes(search.toLowerCase()) ||
             r.scholarship_title?.toLowerCase().includes(search.toLowerCase()) ||
@@ -216,48 +184,59 @@ export default function RootReports() {
     });
 
     const getCount = (f) => {
-        if (f === 'all') return reports.length;
-        return reports.filter(r => r.status === f).length;
+        if (f === 'all') {
+            return reports.length;
+        }
+        const targetStatus = f === 'taken down' ? 'resolved' : f;
+        return reports.filter(r => r.status === targetStatus).length;
     };
 
     return (
-        <div className="font-['Inter'] p-6 max-w-5xl mx-auto">
+        <div className="font-['Inter'] p-6 max-w-5xl mx-auto space-y-6">
             {/* Header */}
-            <div className="mb-6">
-                <div className="flex items-center gap-2 mb-1">
-                    <div className="w-8 h-8 bg-red-50 border border-red-100 rounded-xl flex items-center justify-center">
-                        <Flag size={15} className="text-red-500" />
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                <div>
+                    <div className="flex items-center gap-2 mb-1">
+                        <div className="w-8 h-8 bg-red-50 border border-red-100 rounded-xl flex items-center justify-center">
+                            <Flag size={15} className="text-red-500" />
+                        </div>
+                        <h1 className="text-lg font-black text-slate-900 uppercase tracking-tight">
+                            Scholarship Reports
+                        </h1>
                     </div>
-                    <h1 className="text-lg font-black text-slate-900 uppercase tracking-tight">
-                        Scholarship Reports
-                    </h1>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-10">
+                        Student-submitted flags for admin review
+                    </p>
                 </div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-10">
-                    Student-submitted flags for admin review
-                </p>
+
+                <div className="px-5 py-3 rounded-2xl border border-[#093fb4] bg-white shadow-sm self-start md:self-auto">
+                    <p className="text-xl font-black leading-none text-[#093fb4]">{reports.length}</p>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-black mt-1">Total Reports</p>
+                </div>
             </div>
 
-            {/* Filters + Search */}
-            <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
-                <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl">
-                    {['all', 'pending', 'resolved', 'dismissed', 'archived', 'deleted'].map(f => (
-                        <button
-                            key={f}
-                            onClick={() => setFilter(f)}
-                            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
-                                filter === f
+            {/* Filters, Search, and Snapshots Button Container */}
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl overflow-x-auto">
+                        {/* 🔄 Updated filter list from 'resolved' to 'taken down' */}
+                        {['all', 'pending', 'taken down', 'dismissed'].map(f => (
+                            <button
+                                key={f}
+                                onClick={() => setFilter(f)}
+                                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${filter === f
                                     ? 'bg-[#093fb4] text-white shadow-md shadow-blue-900/20'
                                     : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'
-                            }`}
-                        >
-                            <span>{f}</span>
-                            <span className={`px-2 py-0.5 rounded-lg text-[10px] ${
-                                filter === f ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
-                            }`}>
-                                {getCount(f)}
-                            </span>
-                        </button>
-                    ))}
+                                }`}
+                            >
+                                <span>{f}</span>
+                                <span className={`px-2 py-0.5 rounded-lg text-[10px] ${filter === f ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
+                                }`}>
+                                    {getCount(f)}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 <div className="relative">
@@ -304,23 +283,23 @@ export default function RootReports() {
                         const isExpanded = expandedId === r.report_id;
                         const isPending = r.status === 'pending';
                         const isTakenDown = r.taken_down;
-                        const cfg = statusConfig[r.status] || statusConfig.pending;
+                        
+                        // Map internal status string for UI label display
+                        const displayStatus = r.status === 'resolved' ? 'taken down' : r.status;
+                        const cfg = statusConfig[displayStatus] || statusConfig.pending;
 
-                        const isArchiving = actionLoading === `archive-${r.report_id}`;
                         const isDeleting = actionLoading === `delete-${r.report_id}`;
 
                         return (
                             <div
                                 key={r.report_id}
-                                className={`bg-white rounded-2xl border transition-all shadow-xs ${
-                                    isPending ? 'border-amber-100' : 'border-slate-100'
-                                } ${isArchiving || isDeleting ? 'opacity-50 pointer-events-none' : ''}`}
+                                className={`bg-white rounded-2xl border transition-all shadow-xs ${isPending ? 'border-amber-100' : 'border-slate-100'
+                                } ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}
                             >
                                 {/* Main Row */}
                                 <div className="p-4 flex items-start gap-3">
                                     {/* Icon */}
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-                                        isPending ? 'bg-amber-50' : 'bg-slate-50'
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${isPending ? 'bg-amber-50' : 'bg-slate-50'
                                     }`}>
                                         <AlertTriangle size={15} className={isPending ? 'text-amber-500' : 'text-slate-300'} />
                                     </div>
@@ -339,7 +318,7 @@ export default function RootReports() {
                                             <div className="flex items-center gap-2 shrink-0">
                                                 <span className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border flex items-center gap-1.5 ${cfg.color}`}>
                                                     <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                                                    {r.status}
+                                                    {displayStatus}
                                                 </span>
                                             </div>
                                         </div>
@@ -377,27 +356,6 @@ export default function RootReports() {
 
                                     {/* Actions / Buttons Group */}
                                     <div className="flex items-center gap-2 shrink-0 mt-0.5">
-                                        {/* Archive Button */}
-                                        <button
-                                            onClick={() => handleArchive(r.report_id)}
-                                            disabled={isArchiving || isDeleting}
-                                            title="Archive Report"
-                                            className="p-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-600 transition-colors disabled:opacity-50 flex items-center justify-center cursor-pointer shadow-xs"
-                                        >
-                                            {isArchiving ? <Loader2 size={18} className="animate-spin" /> : <Archive size={18} />}
-                                        </button>
-
-                                        {/* Delete Button */}
-                                        <button
-                                            onClick={() => handleDelete(r.report_id)}
-                                            disabled={isArchiving || isDeleting}
-                                            title="Delete Report"
-                                            className="p-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors disabled:opacity-50 flex items-center justify-center cursor-pointer shadow-xs"
-                                        >
-                                            {isDeleting ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
-                                        </button>
-
-                                        {/* Expand/Collapse Button */}
                                         <button
                                             onClick={() => setExpandedId(isExpanded ? null : r.report_id)}
                                             title={isExpanded ? "Close Report" : "Open Report"}
@@ -468,12 +426,24 @@ export default function RootReports() {
                                             </p>
                                         </div>
 
+                                        {(r.take_down_reason || r.dismisal_reason) && (
+                                            <div className="bg-amber-50/60 border border-amber-200/60 rounded-xl p-3">
+                                                <p className="text-[9px] font-black text-amber-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                                                    <Clock size={11} />
+                                                    Admin Remarks ({r.take_down_reason ? 'Taken Down' : 'Dismissed'})
+                                                </p>
+                                                <p className="text-xs text-slate-700 font-medium leading-relaxed">
+                                                    "{r.take_down_reason || r.dismisal_reason}"
+                                                </p>
+                                            </div>
+                                        )}
+
                                         {isPending && !isTakenDown ? (
                                             <div className="flex gap-2">
                                                 <button
                                                     onClick={() => handleTakedown(r.scholarship_id)}
                                                     disabled={actionLoading === `takedown-${r.scholarship_id}`}
-                                                    className="flex-1 py-2.5 bg-red-600 text-white font-black rounded-xl uppercase text-[10px] tracking-widest hover:bg-red-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm shadow-red-900/20"
+                                                    className="flex-1 py-2.5 bg-red-600 text-white font-black rounded-xl uppercase text-[10px] tracking-widest hover:bg-red-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm shadow-red-900/20 cursor-pointer"
                                                 >
                                                     <XCircle size={13} />
                                                     {actionLoading === `takedown-${r.scholarship_id}` ? 'Processing...' : 'Take Down Scholarship'}
@@ -481,7 +451,7 @@ export default function RootReports() {
                                                 <button
                                                     onClick={() => handleDismiss(r.report_id)}
                                                     disabled={actionLoading === `dismiss-${r.report_id}`}
-                                                    className="flex-1 py-2.5 bg-slate-100 text-slate-600 font-black rounded-xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                                    className="flex-1 py-2.5 bg-slate-100 text-slate-600 font-black rounded-xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                                                 >
                                                     <CheckCircle2 size={13} />
                                                     {actionLoading === `dismiss-${r.report_id}` ? 'Processing...' : 'Dismiss'}

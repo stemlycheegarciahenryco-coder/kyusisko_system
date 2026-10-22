@@ -3,10 +3,10 @@ import api from '../api';
 import { IconEye, IconUser, IconSearch, IconRefresh } from '@tabler/icons-react';
 import Swal from 'sweetalert2';
 import RootOrgView from './RootOrgView';
-import { ArchiveIcon, Trash2Icon } from 'lucide-react';
+import { ArchiveIcon, Clock1Icon } from 'lucide-react';
 
-// Added 'deleted' into the tabs list
-const TABS = ['all', 'pending', 'approved', 'rejected', 'blocked', 'archived', 'deleted'];
+// Removed 'deleted' from the tabs list
+const TABS = ['all', 'pending', 'approved', 'rejected', 'blocked', 'archived'];
 
 const RootOrganization = () => {
     const [orgs, setOrgs] = useState([]);
@@ -14,14 +14,17 @@ const RootOrganization = () => {
     const [selectedOrg, setSelectedOrg] = useState(null);
     const [search, setSearch] = useState('');
     const [activeTab, setActiveTab] = useState('all');
+    const [snapshotIsVisible, setSnapshotVisible] = useState(false);
+    const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
+    const [snapShotLists, setSnapshotList] = useState([]);
 
     const colors = { red: '#FF1E1E', white: '#FFFCFB', blue: '#093fb4', green: '#16a34a' };
 
     const fetchOrgs = async () => {
         try {
             setLoading(true);
-            const res = await api.get('/onboarding-orgs/list');
-            setOrgs(res.data);
+            const resOrgs = await api.get('/onboarding-orgs/list');
+            setOrgs(resOrgs.data);
         } catch (err) {
             console.error('Failed to fetch organizations');
         } finally {
@@ -31,16 +34,17 @@ const RootOrganization = () => {
 
     useEffect(() => { fetchOrgs(); }, []);
 
-    // Helper to evaluate tab status and archive/delete matching
+    // Helper to evaluate tab status and archive matching
     const matchStatusOrAccess = (org, tab) => {
         const isArchived = Boolean(org.is_archived);
         const isDeleted = org.status === 'deleted' || org.account_status === 'deleted';
 
-        if (tab === 'deleted') return isDeleted;
-        if (tab === 'archived') return isArchived && !isDeleted;
+        // Exclude deleted items globally since the delete tab is removed
+        if (isDeleted) return false;
+        if (tab === 'archived') return isArchived;
 
-        // For standard tabs, exclude archived and deleted items
-        if (isArchived || isDeleted) return false;
+        // For standard tabs, exclude archived items
+        if (isArchived) return false;
 
         if (tab === 'all') return true;
         if (tab === 'blocked') return !org.is_active;
@@ -48,8 +52,9 @@ const RootOrganization = () => {
     };
 
     // Count records matching the current tab status
-    const countByStatus = (status) =>
-        orgs.filter((o) => matchStatusOrAccess(o, status)).length;
+    const countByStatus = (status) => {
+        return orgs.filter((o) => matchStatusOrAccess(o, status)).length;
+    };
 
     // Filter organizations by tab status and search query
     const filteredOrgs = orgs.filter((org) => {
@@ -147,8 +152,6 @@ const RootOrganization = () => {
             confirmButtonText: `Yes, ${actionText}!`,
         });
 
-
-
         if (result.isConfirmed) {
             try {
                 await api.patch(`/onboarding-orgs/archive/${org.id}`);
@@ -157,49 +160,6 @@ const RootOrganization = () => {
                 fetchOrgs();
             } catch {
                 Swal.fire('Error', 'Action failed.', 'error');
-            }
-        }
-    };
-
-    const handleDelete = async (org) => {
-        const result = await Swal.fire(
-            swalConfig(
-                'Delete Provider?',
-                `Are you sure you want to permanently delete ${org.org_name}? This action cannot be undone.`,
-                'error',
-                colors.red
-            )
-        );
-
-        if (result.isConfirmed) {
-            try {
-                await api.delete(`/onboarding-orgs/delete/${org.id}`);
-
-                Swal.fire({
-                    title: 'Deleted!',
-                    text: `${org.org_name} has been removed.`,
-                    icon: 'success',
-                    timer: 1500,
-                    showConfirmButton: false,
-                    background: colors.white,
-                    color: '#0f172a',
-                    borderRadius: '24px',
-                });
-
-                if (selectedOrg?.id === org.id) {
-                    setSelectedOrg(null);
-                }
-                fetchOrgs();
-            } catch (err) {
-                Swal.fire({
-                    title: 'Error',
-                    text: err.response?.data?.error || 'Failed to delete provider.',
-                    icon: 'error',
-                    background: colors.white,
-                    color: '#0f172a',
-                    borderRadius: '24px',
-                    confirmButtonColor: colors.blue,
-                });
             }
         }
     };
@@ -218,11 +178,10 @@ const RootOrganization = () => {
         rejected: 'Rejected',
         blocked: 'Blocked',
         archived: 'Archived',
-        deleted: 'Deleted',
     };
 
     return (
-        <div className="p-8 min-h-screen" style={{ backgroundColor: colors.white }}>
+        <div className="p-10 min-h-screen" style={{ backgroundColor: colors.white }}>
 
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 bg-white p-8 rounded-[2.5rem] border border-[#093fb4]/10 shadow-sm mb-6">
@@ -232,7 +191,7 @@ const RootOrganization = () => {
                 <div className="px-5 py-3 rounded-2xl border border-[#093fb4] bg-white shadow-sm">
                     <p className="text-xl font-black leading-none text-[#093fb4]">{filteredOrgs.length}</p>
                     <p className="text-[9px] font-black uppercase tracking-widest text-black mt-1">
-                        {activeTab === 'archived' ? 'Archived Providers' : activeTab === 'deleted' ? 'Deleted Providers' : 'Total Providers'}
+                        {activeTab === 'archived' ? 'Archived Providers' : 'Total Providers'}
                     </p>
                 </div>
             </div>
@@ -252,29 +211,32 @@ const RootOrganization = () => {
             </div>
 
             {/* Tabs */}
-            <div className="flex flex-wrap gap-2 mb-6">
-                {TABS.map((tab) => {
-                    const count = countByStatus(tab);
-                    const isActive = activeTab === tab;
-                    return (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all cursor-pointer ${isActive
-                                ? 'bg-[#093fb4] text-white border-[#093fb4] shadow-md shadow-blue-900/10'
-                                : 'bg-white text-slate-500 border-slate-200 hover:border-[#093fb4]/30'
-                                }`}
-                        >
-                            {tabLabels[tab]}
-                            <span
-                                className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                {/* Tabs Group (Left) */}
+                <div className="flex flex-wrap gap-2">
+                    {TABS.map((tab) => {
+                        const count = countByStatus(tab);
+                        const isActive = activeTab === tab;
+                        return (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab)}
+                                className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all cursor-pointer ${isActive
+                                    ? 'bg-[#093fb4] text-white border-[#093fb4] shadow-md shadow-blue-900/10'
+                                    : 'bg-white text-slate-500 border-slate-200 hover:border-[#093fb4]/30'
                                     }`}
                             >
-                                {count}
-                            </span>
-                        </button>
-                    );
-                })}
+                                {tabLabels[tab]}
+                                <span
+                                    className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                                        }`}
+                                >
+                                    {count}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
 
             {/* Table */}
@@ -287,7 +249,7 @@ const RootOrganization = () => {
                                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-black">Account</th>
                                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-black">Status</th>
                                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-black">Access</th>
-                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-right text-black"></th>
+                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-right text-black">Action</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[#093fb4]/5">
@@ -301,7 +263,6 @@ const RootOrganization = () => {
                                 filteredOrgs.map((org) => {
                                     const isUpdatedResubmission = org.status === 'pending' && org.rejection_reason;
                                     const isArchived = Boolean(org.is_archived);
-                                    const isDeleted = org.status === 'deleted' || org.account_status === 'deleted';
 
                                     return (
                                         <tr key={org.id} className="hover:bg-slate-50/50 transition-all group">
@@ -325,12 +286,11 @@ const RootOrganization = () => {
                                                 </div>
                                             </td>
                                             <td className="px-8 py-5">
-                                                <span className={`px-4 py-1 text-[10px] font-black rounded-lg border uppercase tracking-tighter ${isDeleted ? 'bg-red-50 text-red-600 border-red-100' :
-                                                    org.status === 'pending' ? (isUpdatedResubmission ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-orange-50 text-orange-600 border-orange-100') :
-                                                        org.status === 'approved' ? 'bg-green-50 text-green-600 border-green-100' :
-                                                            'bg-red-50 text-red-600 border-red-100'
+                                                <span className={`px-4 py-1 text-[10px] font-black rounded-lg border uppercase tracking-tighter ${org.status === 'pending' ? (isUpdatedResubmission ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-orange-50 text-orange-600 border-orange-100') :
+                                                    org.status === 'approved' ? 'bg-green-50 text-green-600 border-green-100' :
+                                                        'bg-red-50 text-red-600 border-red-100'
                                                     }`}>
-                                                    {isDeleted ? 'Deleted' : isUpdatedResubmission ? 'Updated' : org.status}
+                                                    {isUpdatedResubmission ? 'Updated' : org.status}
                                                 </span>
                                             </td>
                                             <td className="px-8 py-5">
@@ -349,52 +309,26 @@ const RootOrganization = () => {
                                                     <span>View</span>
                                                 </button>
 
-                                                {/* If archived, only show Unarchive and Delete */}
+                                                {/* If archived, show Unarchive only */}
                                                 {isArchived ? (
-                                                    <>
-                                                        <button
-                                                            onClick={() => handleArchive(org)}
-                                                            title="Unarchive"
-                                                            className="flex items-center gap-2 p-3 bg-amber-600/10 hover:bg-amber-600 text-[10px] font-black uppercase text-amber-500 hover:text-white border border-amber-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
-                                                        >
-                                                            <ArchiveIcon size={20} />
-                                                            <span>Unarchive</span>
-                                                        </button>
-
-                                                        <button
-                                                            onClick={() => handleDelete(org)}
-                                                            title="Delete"
-                                                            className="flex items-center gap-2 p-3 bg-red-600/20 hover:bg-red-600 text-[10px] font-black uppercase text-red-500 hover:text-white border border-red-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
-                                                        >
-                                                            <Trash2Icon size={20} />
-                                                            <span>Delete</span>
-                                                        </button>
-                                                    </>
+                                                    <button
+                                                        onClick={() => handleArchive(org)}
+                                                        title="Unarchive"
+                                                        className="flex items-center gap-2 p-3 bg-amber-600/10 hover:bg-amber-600 text-[10px] font-black uppercase text-amber-500 hover:text-white border border-amber-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
+                                                    >
+                                                        <ArchiveIcon size={20} />
+                                                        <span>Unarchive</span>
+                                                    </button>
                                                 ) : (
-                                                    /* For non-archived items */
-                                                    !isDeleted && (
-                                                        <>
-                                                            <button
-                                                                onClick={() => handleArchive(org)}
-                                                                title="Archive"
-                                                                className="flex items-center gap-2 p-3 bg-amber-600/10 hover:bg-amber-600 text-[10px] font-black uppercase text-amber-500 hover:text-white border border-amber-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
-                                                            >
-                                                                <ArchiveIcon size={20} />
-                                                                <span>Archive</span>
-                                                            </button>
-
-                                                            {!org.is_active && (
-                                                                <button
-                                                                    onClick={() => handleDelete(org)}
-                                                                    title="Delete"
-                                                                    className="flex items-center gap-2 p-3 bg-red-600/20 hover:bg-red-600 text-[10px] font-black uppercase text-red-500 hover:text-white border border-red-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
-                                                                >
-                                                                    <Trash2Icon size={20} />
-                                                                    <span>Delete</span>
-                                                                </button>
-                                                            )}
-                                                        </>
-                                                    )
+                                                    /* For non-archived items, show Archive only */
+                                                    <button
+                                                        onClick={() => handleArchive(org)}
+                                                        title="Archive"
+                                                        className="flex items-center gap-2 p-3 bg-amber-600/10 hover:bg-amber-600 text-[10px] font-black uppercase text-amber-500 hover:text-white border border-amber-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
+                                                    >
+                                                        <ArchiveIcon size={20} />
+                                                        <span>Archive</span>
+                                                    </button>
                                                 )}
                                             </td>
                                         </tr>
