@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     ShieldCheck,
     ClipboardList,
@@ -40,7 +40,7 @@ const GuidelineSection = ({ icon: Icon, title, children }) => (
  * Main Content Component for Provider Guidelines
  * Can be exported and reused elsewhere in your layout structure.
  */
-export const ProviderGuidelinesMain = ({ onNavigate, isModal, handleFinishedReadingGuidelines}) => {
+export const ProviderGuidelinesMain = ({ onNavigate, isModal, handleFinishedReadingGuidelines }) => {
     return (
         <main className="max-w-5xl mx-auto px-6 pt-12 relative z-10">
             {/* Welcome Section */}
@@ -366,6 +366,39 @@ export const ProviderGuidelinesMain = ({ onNavigate, isModal, handleFinishedRead
 
 export default function ProviderGuidelines() {
     const navigate = useNavigate();
+    const [first_mount, setFirstMount] = useState(true)
+    const smoothScrollToTop = (duration = 800) => {
+        const startPosition = window.pageYOffset;
+        const startTime = performance.now();
+        // Easing function: creates a smooth acceleration and deceleration curve
+        const easeInOutCubic = (t) => {
+            return t < 0.5
+                ? 4 * t * t * t
+                : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
+        };
+        const animation = (currentTime) => {
+            const elapsedTime = currentTime - startTime;
+            const progress = Math.min(elapsedTime / duration, 1);
+
+            // Apply the curve to the progress
+            const ease = easeInOutCubic(progress);
+
+            // Scroll to the calculated position
+            window.scrollTo(0, startPosition * (1 - ease));
+
+            // Continue animating until duration is reached
+            if (progress < 1) {
+                requestAnimationFrame(animation);
+            }
+        };
+        requestAnimationFrame(animation);
+    };
+    useEffect(() => {
+        if (first_mount === true && window.pageYOffset != 0) {
+            smoothScrollToTop();
+        }
+        setFirstMount(false);
+    }, [first_mount]);
 
     return (
         <div className="min-h-screen bg-slate-50  pb-20 relative">
@@ -399,7 +432,7 @@ export default function ProviderGuidelines() {
             </header>
 
             {/* Render Main Section */}
-            <ProviderGuidelinesMain onNavigate={navigate} isModal={false} handleFinishedReadingGuidelines={()=>{}}/>
+            <ProviderGuidelinesMain onNavigate={navigate} isModal={false} handleFinishedReadingGuidelines={() => { }} />
         </div>
     );
 }

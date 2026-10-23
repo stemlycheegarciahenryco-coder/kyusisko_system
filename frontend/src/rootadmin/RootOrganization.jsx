@@ -214,7 +214,7 @@ const RootOrganization = () => {
         <div className="p-10 min-h-screen" style={{ backgroundColor: colors.white }}>
 
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 bg-white p-8 rounded-[2.5rem] border border-[#093fb4]/10 shadow-sm mb-6">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 bg-white p-8 rounded-[1.5rem] border border-[#093fb4]/10 shadow-sm mb-6">
                 <h2 className="text-4xl font-black text-black tracking-tighter uppercase italic">
                     Providers Management
                 </h2>
@@ -270,7 +270,7 @@ const RootOrganization = () => {
             </div>
 
             {/* Table */}
-            <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-blue-900/5 border border-slate-100 overflow-hidden">
+            <div className="bg-white rounded-[1.0rem] shadow-2xl shadow-blue-900/5 border border-slate-100 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead className="bg-[#093fb4]/5 border-b border-[#093fb4]/10">

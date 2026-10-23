@@ -22,6 +22,34 @@ const OrganizationRegisterPage = () => {
         loading, verifying
     } = useOrganization();
 
+    const [first_mount, setFirstMount] = useState(true);
+    const smoothScrollToTop = (duration = 800) => {
+        const startPosition = window.pageYOffset;
+        const startTime = performance.now();
+        const easeInOutCubic = (t) => {
+            return t < 0.5
+                ? 4 * t * t * t
+                : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
+        };
+        const animation = (currentTime) => {
+            const elapsedTime = currentTime - startTime;
+            const progress = Math.min(elapsedTime / duration, 1);
+            const ease = easeInOutCubic(progress);
+            window.scrollTo(0, startPosition * (1 - ease));
+            if (progress < 1) {
+                requestAnimationFrame(animation);
+            }
+        };
+        requestAnimationFrame(animation);
+    };
+
+    useEffect(() => {
+        if (first_mount === true && window.pageYOffset != 0) {
+            smoothScrollToTop();
+        }
+        setFirstMount(false);
+    }, [first_mount]);
+
     const [regions, setRegions] = useState([]);
     const [cities, setCities] = useState([]);
     const [barangays, setBarangays] = useState([]);
@@ -38,7 +66,7 @@ const OrganizationRegisterPage = () => {
     // Track touched fields
     const [touched, setTouched] = useState({});
 
-    // Field Status States (password status fields removed)
+    // Field Status States
     const [status, setStatus] = useState({
         org_name: FieldStatus.INCOMPLETE,
         provider_type: FieldStatus.INCOMPLETE,
@@ -97,14 +125,14 @@ const OrganizationRegisterPage = () => {
     // Live Field Validation Effect
     useEffect(() => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const mobileRegex = /^09\d{9}$/;
         const telephoneRegex = /^(?:\+?63|0)?(?:\d{2,3})?\d{7,8}$/;
         const websiteRegex = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/;
-        
+
         const telVal = formData.tel_number || '';
         const cleanTel = telVal.replace(/[\s\-\(\)]/g, '');
         const trimmedWebsite = formData.website?.trim() || '';
 
-        // Optional Fields logic
         let telStatus = null;
         if (cleanTel.length > 0) {
             telStatus = telephoneRegex.test(cleanTel) ? FieldStatus.VALID : FieldStatus.INVALID;
@@ -118,18 +146,14 @@ const OrganizationRegisterPage = () => {
         setStatus({
             org_name: formData.org_name?.trim() ? FieldStatus.VALID : FieldStatus.INCOMPLETE,
             provider_type: formData.provider_type ? FieldStatus.VALID : FieldStatus.INCOMPLETE,
-
             sub_email: !formData.sub_email?.trim()
                 ? FieldStatus.INCOMPLETE
                 : emailRegex.test(formData.sub_email.trim()) ? FieldStatus.VALID : FieldStatus.INVALID,
-
             contact_number: !formData.contact_number
                 ? FieldStatus.INCOMPLETE
-                : formData.contact_number.length === 10 ? FieldStatus.VALID : FieldStatus.INVALID,
-
+                : mobileRegex.test(formData.contact_number) ? FieldStatus.VALID : FieldStatus.INVALID,
             tel_number: telStatus,
             website: websiteStatus,
-
             region: formData.region ? FieldStatus.VALID : FieldStatus.INCOMPLETE,
             city: formData.city ? FieldStatus.VALID : FieldStatus.INCOMPLETE,
             barangay: formData.barangay ? FieldStatus.VALID : FieldStatus.INCOMPLETE,
@@ -141,16 +165,18 @@ const OrganizationRegisterPage = () => {
         const { name, value } = e.target;
 
         if (name === "contact_number") {
-            const numbersOnly = value.replace(/[^0-9]/g, "");
-            if (numbersOnly.length > 0 && numbersOnly[0] !== '9') return;
-            if (numbersOnly.length > 10) return;
+            let numbersOnly = value.replace(/[^0-9]/g, "");
+            // Optional convenience: If user inputs 10 digits starting with 9 (e.g. 9660430534), auto-prepend 0
+            if (numbersOnly.length === 10 && numbersOnly.startsWith('9')) {
+                numbersOnly = '0' + numbersOnly;
+            }
+            numbersOnly = numbersOnly.slice(0, 11);
             setFormData(prev => ({ ...prev, [name]: numbersOnly }));
             return;
         }
 
         if (name === "tel_number") {
-            const numbersOnly = value.replace(/[^0-9]/g, "");
-            if (numbersOnly.length > 10) return;
+            const numbersOnly = value.replace(/[^0-9]/g, "").slice(0, 10);
             setFormData(prev => ({ ...prev, [name]: numbersOnly }));
             return;
         }
@@ -176,13 +202,48 @@ const OrganizationRegisterPage = () => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    // Required fields list
+    const requiredFields = [
+        'org_name', 'provider_type', 'sub_email', 'contact_number',
+        'region', 'city', 'barangay', 'street_address'
+    ];
+
+    const hasInvalidRequiredFields = requiredFields.some(key => status[key] !== FieldStatus.VALID);
+    const hasInvalidOptionalFields = (status.tel_number === FieldStatus.INVALID) || (status.website === FieldStatus.INVALID);
+    const isFormInvalid = hasInvalidRequiredFields || hasInvalidOptionalFields || !guidelinesReadComplete;
+
     const handleInitialSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitted(true);
 
+        // Mark all fields as touched to display validation highlights
+        const allFields = [
+            'org_name', 'provider_type', 'sub_email', 'contact_number',
+            'tel_number', 'website', 'region', 'city', 'barangay', 'street_address'
+        ];
+        const touchedAll = allFields.reduce((acc, field) => ({ ...acc, [field]: true }), {});
+        setTouched(touchedAll);
+
+        // Instant validation check for email and contact number format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const mobileRegex = /^09\d{9}$/;
+
+        const isEmailInvalid = !formData.sub_email?.trim() || !emailRegex.test(formData.sub_email.trim());
+        const isContactInvalid = !formData.contact_number || !mobileRegex.test(formData.contact_number);
+
+        if (isEmailInvalid || isContactInvalid || hasInvalidRequiredFields || hasInvalidOptionalFields || !guidelinesReadComplete) {
+            setErrorMessage("Please ensure all required fields are filled out correctly, formats are valid, and guidelines are read.");
+            setShowError(true);
+            return; // Hard stop: prevents OTP request/modal from triggering
+        }
+
         const res = await handleRequestOtp();
-        if (res.success) setShowOtpModal(true);
-        else { setErrorMessage(res.error); setShowError(true); }
+        if (res.success) {
+            setShowOtpModal(true);
+        } else {
+            setErrorMessage(res.error);
+            setShowError(true);
+        }
     };
 
     const handleOtpVerified = async (otp) => {
@@ -198,17 +259,6 @@ const OrganizationRegisterPage = () => {
         }
     };
 
-    // Required fields check without password and confirm_password
-    const requiredFields = [
-        'org_name', 'provider_type', 'sub_email', 'contact_number',
-        'region', 'city', 'barangay', 'street_address'
-    ];
-
-    const hasInvalidRequiredFields = requiredFields.some(key => status[key] !== FieldStatus.VALID);
-    const hasInvalidOptionalFields = (status.tel_number === FieldStatus.INVALID) || (status.website === FieldStatus.INVALID);
-    
-    const isFormDisabled = hasInvalidRequiredFields || hasInvalidOptionalFields || !guidelinesReadComplete;
-
     const getBorderClass = (fieldName) => {
         const fieldStatus = status[fieldName];
         const isFieldTouched = touched[fieldName] || isSubmitted;
@@ -221,11 +271,8 @@ const OrganizationRegisterPage = () => {
         return `w-full pr-4 py-3.5 bg-white/60 border-2 ${borderStyle} rounded-2xl focus:bg-white outline-none transition-all placeholder:text-black/30 font-bold text-slate-900 text-sm shadow-sm`;
     };
 
-    const getLabelClass = (fieldName) => {
-        const fieldStatus = status[fieldName];
-        const isFieldTouched = touched[fieldName] || isSubmitted;
-        const isError = isFieldTouched && (fieldStatus === FieldStatus.INCOMPLETE || fieldStatus === FieldStatus.INVALID);
-        return isError ? "text-[#FF1E1E]" : "text-slate-800";
+    const getLabelClass = () => {
+        return "text-slate-800";
     };
 
     return (
@@ -265,7 +312,7 @@ const OrganizationRegisterPage = () => {
                     <SectionLabel label="Account Identity" />
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <Field label="Organization / Institution Name" required status={status.org_name} labelClass={getLabelClass("org_name")}>
+                        <Field label="Organization / Institution Name" required status={status.org_name} labelClass={getLabelClass()}>
                             <div className="relative group">
                                 <IconBuildingCommunity className="absolute left-4 top-1/2 -translate-y-1/2 text-black/30 group-focus-within:text-[#093fb4] transition-colors" size={20} />
                                 <input
@@ -280,7 +327,7 @@ const OrganizationRegisterPage = () => {
                             </div>
                         </Field>
 
-                        <Field label="Provider Type" required status={status.provider_type} labelClass={getLabelClass("provider_type")}>
+                        <Field label="Provider Type" required status={status.provider_type} labelClass={getLabelClass()}>
                             <select
                                 required
                                 name="provider_type"
@@ -301,7 +348,7 @@ const OrganizationRegisterPage = () => {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <Field label="Organization / Coordinator Email" required status={status.sub_email} labelClass={getLabelClass("sub_email")}>
+                        <Field label="Organization / Coordinator Email" required status={status.sub_email} labelClass={getLabelClass()}>
                             <div className="relative group">
                                 <IconMail className="absolute left-4 top-1/2 -translate-y-1/2 text-black/30 group-focus-within:text-[#093fb4] transition-colors" size={20} />
                                 <input
@@ -315,35 +362,37 @@ const OrganizationRegisterPage = () => {
                                     placeholder="org@domain.com"
                                 />
                             </div>
+                            {touched.sub_email && status.sub_email === FieldStatus.INVALID && (
+                                <span className="text-[10px] font-black text-[#FF1E1E] uppercase tracking-wider ml-1 mt-1 block">
+                                    invalid email format (example@email.com).
+                                </span>
+                            )}
                         </Field>
 
-                        <Field label="Mobile Number" required status={status.contact_number} labelClass={getLabelClass("contact_number")}>
+                        <Field label="Mobile Number" required status={status.contact_number} labelClass={getLabelClass()}>
                             <div className="relative group flex items-center">
-                                <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none border-r border-black/15 pr-3 h-6 z-10">
-                                    <img src="/ph.svg" alt="PH" className="w-5 h-3 object-contain" />
-                                    <span className="text-xs font-bold text-black/60 group-focus-within:text-[#093fb4] transition-colors">+63</span>
-                                </div>
+                                <IconPhone className="absolute left-4 top-1/2 -translate-y-1/2 text-black/30 group-focus-within:text-[#093fb4] transition-colors z-10" size={20} />
                                 <input
                                     type="text"
                                     required
                                     name="contact_number"
-                                    placeholder="9XXXXXXXXX"
+                                    placeholder="09XXXXXXXXX"
                                     value={formData.contact_number || ""}
                                     onChange={(e) => { handleChange(e); setTouched(prev => ({ ...prev, contact_number: true })); }}
                                     onBlur={handleBlur}
-                                    className={`${getBorderClass("contact_number")} pl-[6.5rem]`}
+                                    className={`${getBorderClass("contact_number")} pl-12`}
                                 />
                             </div>
                             {touched.contact_number && status.contact_number === FieldStatus.INVALID && (
                                 <span className="text-[10px] font-black text-[#FF1E1E] uppercase tracking-wider ml-1 mt-1 block">
-                                    Mobile number must be 10 digits starting with 9.
+                                    Mobile number must be 11 digits starting with 09 (e.g., 09660430534).
                                 </span>
                             )}
                         </Field>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <Field label="Telephone Number (Landline)" status={status.tel_number} labelClass={getLabelClass("tel_number")}>
+                        <Field label="Telephone Number (Landline)" status={status.tel_number} labelClass={getLabelClass()}>
                             <div className="relative group">
                                 <IconPhone className="absolute left-4 top-1/2 -translate-y-1/2 text-black/30 group-focus-within:text-[#093fb4] transition-colors" size={20} />
                                 <input
@@ -356,9 +405,14 @@ const OrganizationRegisterPage = () => {
                                     className={`${getBorderClass("tel_number")} pl-12`}
                                 />
                             </div>
+                            {touched.tel_number && status.tel_number === FieldStatus.INVALID && (
+                                <span className="text-[10px] font-black text-[#FF1E1E] uppercase tracking-wider ml-1 mt-1 block">
+                                    Invalid telephone number format.
+                                </span>
+                            )}
                         </Field>
 
-                        <Field label="Website / Social Media Page" status={status.website} labelClass={getLabelClass("website")}>
+                        <Field label="Website / Social Media Page" status={status.website} labelClass={getLabelClass()}>
                             <div className="relative group">
                                 <IconWorld className="absolute left-4 top-1/2 -translate-y-1/2 text-black/30 group-focus-within:text-[#093fb4] transition-colors" size={20} />
                                 <input
@@ -370,13 +424,18 @@ const OrganizationRegisterPage = () => {
                                     placeholder="https://your-institution.org or Facebook"
                                 />
                             </div>
+                            {touched.website && status.website === FieldStatus.INVALID && (
+                                <span className="text-[10px] font-black text-[#FF1E1E] uppercase tracking-wider ml-1 mt-1 block">
+                                    Invalid website/URL format.
+                                </span>
+                            )}
                         </Field>
                     </div>
 
                     <SectionLabel label="Provider Address" />
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                        <Field label="Region" required status={status.region} labelClass={getLabelClass("region")}>
+                        <Field label="Region" required status={status.region} labelClass={getLabelClass()}>
                             <select
                                 required
                                 name="region"
@@ -390,7 +449,7 @@ const OrganizationRegisterPage = () => {
                             </select>
                         </Field>
 
-                        <Field label="City / Municipality" required status={status.city} labelClass={getLabelClass("city")}>
+                        <Field label="City / Municipality" required status={status.city} labelClass={getLabelClass()}>
                             <select
                                 required
                                 name="city"
@@ -405,7 +464,7 @@ const OrganizationRegisterPage = () => {
                             </select>
                         </Field>
 
-                        <Field label="Barangay" required status={status.barangay} labelClass={getLabelClass("barangay")}>
+                        <Field label="Barangay" required status={status.barangay} labelClass={getLabelClass()}>
                             <select
                                 required
                                 name="barangay"
@@ -421,7 +480,7 @@ const OrganizationRegisterPage = () => {
                         </Field>
                     </div>
 
-                    <Field label="Street Address / Building / Office No." required status={status.street_address} labelClass={getLabelClass("street_address")}>
+                    <Field label="Street Address / Building / Office No." required status={status.street_address} labelClass={getLabelClass()}>
                         <div className="relative group">
                             <IconMapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-black/30 group-focus-within:text-[#093fb4] transition-colors" size={20} />
                             <input
@@ -455,7 +514,6 @@ const OrganizationRegisterPage = () => {
 
                     <button
                         type="submit"
-                        disabled={isFormDisabled || loading || verifying}
                         className="w-full bg-[#093fb4] hover:bg-[#073496] disabled:bg-[#093fb4]/50 disabled:cursor-not-allowed text-[#ffffff] font-black py-4 rounded-2xl transition-all shadow-xl shadow-[#093fb4]/25 active:scale-[0.98] uppercase text-sm tracking-[0.2em] mt-8"
                     >
                         {loading || verifying ? "Processing Onboarding..." : "Submit Registration"}
@@ -496,29 +554,20 @@ const OrganizationRegisterPage = () => {
     );
 };
 
-function Field({ label, required, status, labelClass, children }) {
-    const getBadge = () => {
-        if (!status) return null;
-        let style = "bg-amber-100 text-amber-700 border-amber-300";
-        if (status === FieldStatus.VALID) style = "bg-emerald-100 text-emerald-700 border-emerald-300";
-        if (status === FieldStatus.INVALID) style = "bg-red-100 text-[#FF1E1E] border-red-200";
-
-        return (
-            <span className={`text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md border ${style}`}>
-                {status}
-            </span>
-        );
-    };
-
+function Field({ label, required, status, labelClass, errorText, children }) {
     return (
         <div className="space-y-2">
             <div className="flex items-center justify-between mb-1">
                 <label className={`text-xs font-black uppercase tracking-wider block ${labelClass || "text-slate-800"}`}>
                     {label}{required && <span className="text-[#FF1E1E] ml-0.5">*</span>}
                 </label>
-                {getBadge()}
             </div>
             {children}
+            {errorText && (
+                <span className="text-[10px] font-black text-[#FF1E1E] uppercase tracking-wider ml-1 mt-1 block">
+                    {errorText}
+                </span>
+            )}
         </div>
     );
 }

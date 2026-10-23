@@ -40,8 +40,8 @@ const ScrollReveal = ({ children, delay = 0 }) => {
             ref={domRef}
             style={{ transitionDelay: `${delay}ms` }}
             className={`transition-all duration-1000 ease-out transform ${isVisible
-                    ? 'opacity-100 translate-y-0 scale-100'
-                    : 'opacity-0 translate-y-12 scale-95 pointer-events-none'
+                ? 'opacity-100 translate-y-0 scale-100'
+                : 'opacity-0 translate-y-12 scale-95 pointer-events-none'
                 }`}
         >
             {children}
@@ -220,7 +220,7 @@ export default function Home() {
                     <div className="max-w-6xl mx-auto relative z-10">
                         <ScrollReveal>
                             <div className="text-center mb-16 space-y-4">
-                                
+
                                 <h3 className="home-section-title">
                                     How to <span className="text-[#093FB4]">Get Started</span>
                                 </h3>
@@ -266,7 +266,9 @@ export default function Home() {
 
                                     <ScrollReveal delay={400}>
                                         <button
-                                            onClick={() => navigate(col.path)}
+                                            onClick={() => {
+                                                navigate(col.path)
+                                            }}
                                             style={{ backgroundColor: col.color }}
                                             onMouseEnter={e => { e.currentTarget.style.backgroundColor = col.hover; }}
                                             onMouseLeave={e => { e.currentTarget.style.backgroundColor = col.color; }}
@@ -378,7 +380,7 @@ export default function Home() {
                                 <p onClick={() => navigate('/provider-guidelines')} className="text-sm text-slate-400 hover:text-white transition-colors cursor-pointer font-semibold">
                                     Provider Guidelines
                                 </p>
-                               
+
                             </div>
                         </div>
 

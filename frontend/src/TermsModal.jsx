@@ -19,7 +19,7 @@ export default function TermsModal({ isOpen, onClose, onAccept }) {
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            
+
             {/* Embedded CSS for a thinner, neat scrollbar */}
             <style>
                 {`
@@ -48,15 +48,15 @@ export default function TermsModal({ isOpen, onClose, onAccept }) {
                 <p className="text-[#093FB4] text-[10px] font-black uppercase tracking-[0.15em] mb-5">
                     {hasReadToBottom ? "Please check the box below to continue" : "Scroll to the bottom to unlock"}
                 </p>
-                
+
                 {/* Scrollable Content Area */}
-                <div 
-                    ref={scrollRef} 
-                    onScroll={handleScroll} 
+                <div
+                    ref={scrollRef}
+                    onScroll={handleScroll}
                     className="max-h-[45vh] overflow-y-scroll pr-4 text-slate-600 text-sm leading-relaxed font-medium space-y-4 border-b border-slate-100 pb-6 custom-scrollbar"
                 >
                     <h4 className="font-black text-center text-slate-900 text-base uppercase tracking-widest border-b border-slate-100 pb-3 mb-4">
-                        KyusISKO User Agreement<br/>
+                        KyusISKO User Agreement<br />
                         <span className="text-xs text-[#093fb4] mt-1 block">Terms and Conditions</span>
                     </h4>
 
@@ -122,9 +122,10 @@ export default function TermsModal({ isOpen, onClose, onAccept }) {
 
                 {/* Checkbox Section */}
                 <div className="flex items-center gap-3 mt-5 p-4 bg-slate-50 border border-slate-100 rounded-xl">
-                    <input 
-                        type="checkbox" 
+                    <input
+                        type="checkbox"
                         id="terms-check"
+                        disabled={!hasReadToBottom}
                         checked={isCheck}
                         onChange={(e) => setIsCheck(e.target.checked)}
                         className="w-5 h-5 rounded border-slate-300 text-[#093FB4] focus:ring-[#093FB4] cursor-pointer"
@@ -136,20 +137,19 @@ export default function TermsModal({ isOpen, onClose, onAccept }) {
 
                 {/* Actions */}
                 <div className="flex gap-3 mt-5">
-                    <button 
-                        onClick={onClose} 
+                    <button
+                        onClick={onClose}
                         className="flex-1 py-3 text-slate-500 font-black hover:text-[#FF1E1E] transition-colors uppercase text-[11px] tracking-widest bg-slate-50 hover:bg-red-50 rounded-xl border border-transparent hover:border-red-100"
                     >
                         Cancel
                     </button>
-                    <button 
-                        disabled={!canAccept} 
-                        onClick={onAccept} 
-                        className={`flex-[2] py-3 rounded-xl font-black uppercase tracking-widest transition-all text-[11px] flex items-center justify-center gap-2 ${
-                            canAccept 
-                            ? 'bg-[#093FB4] hover:bg-[#073496] text-white shadow-lg shadow-[#093FB4]/25 active:scale-95 cursor-pointer' 
-                            : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
-                        }`}
+                    <button
+                        disabled={!canAccept}
+                        onClick={onAccept}
+                        className={`flex-[2] py-3 rounded-xl font-black uppercase tracking-widest transition-all text-[11px] flex items-center justify-center gap-2 ${canAccept
+                                ? 'bg-[#093FB4] hover:bg-[#073496] text-white shadow-lg shadow-[#093FB4]/25 active:scale-95 cursor-pointer'
+                                : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                            }`}
                     >
                         {!hasReadToBottom ? "Scroll to Bottom" : !isCheck ? "Check the Box" : "I Agree & Continue"}
                     </button>

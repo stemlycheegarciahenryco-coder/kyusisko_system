@@ -13,7 +13,8 @@ import {
   Globe,
   User,
   Building,
-  UserCheck
+  UserCheck,
+  ArchiveIcon
 } from 'lucide-react';
 
 export default function RootAudit() {
@@ -76,7 +77,8 @@ export default function RootAudit() {
       ADMIN_APPROVED: { bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: CheckCircle2, label: 'Approved' },
       ADMIN_REJECTED: { bg: 'bg-rose-50 text-rose-700 border-rose-200', icon: XCircle, label: 'Rejected' },
       SCHOLARSHIP_TAKEDOWN: { bg: 'bg-orange-50 text-orange-700 border-orange-200', icon: Trash2, label: 'Takedown' },
-      REPORT_DISMISSED: { bg: 'bg-slate-50 text-slate-600 border-slate-200', icon: CheckCircle2, label: 'Dismissed' }
+      REPORT_DISMISSED: { bg: 'bg-slate-50 text-slate-600 border-slate-200', icon: CheckCircle2, label: 'Dismissed' },
+      ADMIN_ARCHIVED: { bg: 'bg-amber-50 text-amber-600 border-amber-200', icon: ArchiveIcon, label: 'Archived' }
     };
     return config[type] || { bg: 'bg-slate-50 text-slate-700 border-slate-200', icon: AlertTriangle, label: type?.replace('_', ' ') || 'System Action' };
   };

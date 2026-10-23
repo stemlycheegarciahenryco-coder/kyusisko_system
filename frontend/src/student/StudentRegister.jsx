@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import api from "../api";
 import { Mail, Loader2, ArrowLeft } from "lucide-react"; // Removed X, added ArrowLeft
@@ -22,6 +22,39 @@ passwordSchema
 
 export default function StudentRegister() {
     const navigate = useNavigate();
+    const [first_mount, setFirstMount] = useState(true)
+    const smoothScrollToTop = (duration = 800) => {
+        const startPosition = window.pageYOffset;
+        const startTime = performance.now();
+        // Easing function: creates a smooth acceleration and deceleration curve
+        const easeInOutCubic = (t) => {
+            return t < 0.5
+                ? 4 * t * t * t
+                : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
+        };
+        const animation = (currentTime) => {
+            const elapsedTime = currentTime - startTime;
+            const progress = Math.min(elapsedTime / duration, 1);
+
+            // Apply the curve to the progress
+            const ease = easeInOutCubic(progress);
+
+            // Scroll to the calculated position
+            window.scrollTo(0, startPosition * (1 - ease));
+
+            // Continue animating until duration is reached
+            if (progress < 1) {
+                requestAnimationFrame(animation);
+            }
+        };
+        requestAnimationFrame(animation);
+    };
+    useEffect(() => {
+        if (first_mount === true && window.pageYOffset != 0) {
+            smoothScrollToTop();
+        }
+        setFirstMount(false);
+    }, [first_mount]);
 
     // UI States
     const [loading, setLoading] = useState(false);
@@ -111,7 +144,7 @@ export default function StudentRegister() {
         return entered >= new Date(minDate) && entered <= new Date(maxDate);
     })();
 
-    // CONTACT NUMBER VALIDATION
+    // CONTACT NUMBER VALIDATION (Standardized to 10 digits starting with 9 since +63 is prefixed)
     const isContactValid = (() => {
         if (!regform.contactNumber) return false;
         const cleaned = regform.contactNumber.replace(/[\s\-\(\)]/g, '');
@@ -155,8 +188,9 @@ export default function StudentRegister() {
             if (val.length > 0 && val[0] !== '9') return;
             if (val.length <= 10) {
                 setRegForm(prev => ({ ...prev, contactNumber: val }));
+                const phMobileRegex = /^9\d{9}$/;
                 setContactNumberStatus(
-                    val.length === 10 ? FieldStatus.VALID : (val.length > 0 ? FieldStatus.INVALID : FieldStatus.INCOMPLETE)
+                    phMobileRegex.test(val) ? FieldStatus.VALID : (val.length > 0 ? FieldStatus.INVALID : FieldStatus.INCOMPLETE)
                 );
             }
             return;
@@ -214,6 +248,11 @@ export default function StudentRegister() {
             setShowError(true);
             return;
         }
+        if (!isContactValid) {
+            setErrorMessage("Contact number must be 10 digits starting with 9 (e.g., 9660430534).");
+            setShowError(true);
+            return;
+        }
         if (!acceptedTerms) {
             setErrorMessage("You must accept the terms and conditions.");
             setShowError(true);
@@ -253,36 +292,25 @@ export default function StudentRegister() {
         return api.post('/send-registration-otp', { email: regform.email });
     };
 
-    // Standardized Input Field styling
-    const standardInputClass = "w-full px-4 py-3.5 bg-white/60 border-2 border-white/80 rounded-2xl outline-none focus:bg-white focus:border-[#093fb4] transition-all placeholder:text-black/30 font-bold text-slate-900 text-base shadow-sm";
+    // Border class generator with reactive error red borders
+    const getBorderClass = (fieldName, fieldStatus) => {
+        const isFieldTouched = touched[fieldName] || isSubmitted;
+        const isError = isFieldTouched && (fieldStatus === FieldStatus.INCOMPLETE || fieldStatus === FieldStatus.INVALID);
+
+        const borderStyle = isError
+            ? "border-red-500 focus:border-red-500 bg-red-50/20"
+            : "border-white/80 focus:border-[#093fb4]";
+
+        return `w-full px-4 py-3.5 bg-white/60 border-2 ${borderStyle} rounded-2xl outline-none focus:bg-white transition-all placeholder:text-black/30 font-bold text-slate-900 text-base shadow-sm`;
+    };
 
     // UI HELPER COMPONENTS WITH ALWAYS-VISIBLE STATUS BADGE
     const Label = ({ text, required, status, className = "" }) => {
-        const getStatusBadge = () => {
-            if (!status) return null;
-
-            let colorClasses = "";
-            if (status === FieldStatus.VALID) {
-                colorClasses = "bg-emerald-100 text-emerald-700 border border-emerald-300";
-            } else if (status === FieldStatus.INVALID) {
-                colorClasses = "bg-red-100 text-[#FF1E1E] border border-red-200";
-            } else {
-                colorClasses = "bg-amber-100 text-amber-700 border border-amber-300";
-            }
-
-            return (
-                <span className={`text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md ${colorClasses}`}>
-                    {status}
-                </span>
-            );
-        };
-
         return (
             <div className="flex items-center justify-between mb-2">
                 <label className={`text-xs font-black uppercase tracking-wider ml-1 block ${className || "text-slate-800"}`}>
                     {text} {required && <span className="text-[#FF1E1E]">*</span>}
                 </label>
-                {getStatusBadge()}
             </div>
         );
     };
@@ -348,7 +376,7 @@ export default function StudentRegister() {
                                     onChange={handleChange}
                                     onBlur={handleBlur}
                                     required
-                                    className={standardInputClass}
+                                    className={getBorderClass("firstName", firstNameStatus)}
                                 />
                             </div>
                             <div>
@@ -359,7 +387,7 @@ export default function StudentRegister() {
                                     placeholder="Optional"
                                     value={regform.middleName}
                                     onChange={handleChange}
-                                    className={standardInputClass}
+                                    className={getBorderClass("middleName", FieldStatus.VALID)}
                                 />
                             </div>
                             <div>
@@ -372,7 +400,7 @@ export default function StudentRegister() {
                                     onChange={handleChange}
                                     onBlur={handleBlur}
                                     required
-                                    className={standardInputClass}
+                                    className={getBorderClass("lastName", lastNameStatus)}
                                 />
                             </div>
                         </div>
@@ -386,7 +414,7 @@ export default function StudentRegister() {
                                     placeholder="Jr, Sr (Optional)"
                                     value={regform.suffix}
                                     onChange={handleChange}
-                                    className={`${standardInputClass} uppercase`}
+                                    className={`${getBorderClass("suffix", FieldStatus.VALID)} uppercase`}
                                 />
                             </div>
 
@@ -402,7 +430,7 @@ export default function StudentRegister() {
                                     onChange={handleChange}
                                     onBlur={handleBlur}
                                     required
-                                    className={`${standardInputClass} cursor-pointer`}
+                                    className={`${getBorderClass("birthDate", birthDateStatus)} cursor-pointer`}
                                 />
                                 {birthDateStatus === FieldStatus.INVALID && (
                                     <span className="text-[10px] font-black text-[#FF1E1E] uppercase tracking-wider ml-2 mt-2 block">
@@ -417,7 +445,7 @@ export default function StudentRegister() {
                                     name="gender"
                                     value={regform.gender}
                                     onChange={handleChange}
-                                    className={standardInputClass}
+                                    className={getBorderClass("gender", FieldStatus.VALID)}
                                 >
                                     <option value="Male">Male</option>
                                     <option value="Female">Female</option>
@@ -430,9 +458,6 @@ export default function StudentRegister() {
 
                     {/* ADDRESS COMPONENT */}
                     <div>
-                        <p className="text-xs font-black text-[#093FB4] uppercase tracking-widest mb-4 border-b border-black/5 pb-2">
-                            Home Address
-                        </p>
                         <StudentAddress
                             regform={regform}
                             setRegForm={setRegForm}
@@ -462,12 +487,12 @@ export default function StudentRegister() {
                                         onChange={handleChange}
                                         onBlur={handleBlur}
                                         required
-                                        className={`${standardInputClass} pl-12`}
+                                        className={`${getBorderClass("email", emailStatus)} pl-12`}
                                     />
                                 </div>
                                 {emailStatus === FieldStatus.INVALID && (
                                     <span className="text-[10px] font-black text-[#FF1E1E] uppercase tracking-wider ml-2 mt-2 block">
-                                        Invalid email format
+                                        {'Invalid email format (example@email.com)'}
                                     </span>
                                 )}
                             </div>
@@ -488,9 +513,14 @@ export default function StudentRegister() {
                                         onBlur={handleBlur}
                                         required
                                         placeholder="9XXXXXXXXX"
-                                        className={`${standardInputClass} pl-28`}
+                                        className={`${getBorderClass("contactNumber", contactNumberStatus)} pl-28`}
                                     />
                                 </div>
+                                {touched.contactNumber && contactNumberStatus === FieldStatus.INVALID && (
+                                    <span className="text-[10px] font-black text-[#FF1E1E] uppercase tracking-wider ml-2 mt-2 block">
+                                        Contact number must be 10 digits starting with 9 (e.g., 9660430534).
+                                    </span>
+                                )}
                             </div>
                         </div>
 
@@ -549,11 +579,11 @@ export default function StudentRegister() {
                 message={errorMessage}
             />
 
-            <OtpModal 
-                isOpen={showOtpModal} 
-                email={regform.email} 
-                onClose={() => setShowOtpModal(false)} 
-                onVerify={handleVerifyOtp} 
+            <OtpModal
+                isOpen={showOtpModal}
+                email={regform.email}
+                onClose={() => setShowOtpModal(false)}
+                onVerify={handleVerifyOtp}
                 loading={verifying}
             />
         </div>

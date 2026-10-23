@@ -165,7 +165,6 @@ export default function RootReports() {
 
     const onSnapshotsClick = async () => { setSnapshotVisible(!snapshotIsVisible); };
 
-    // 🔄 Updated status config mapping for "taken down"
     const statusConfig = {
         pending: { color: 'bg-amber-50 text-amber-600 border-amber-200 cursor-pointer', dot: 'bg-amber-400' },
         'taken down': { color: 'bg-red-50 text-red-600 border-red-200 cursor-pointer', dot: 'bg-red-400' },
@@ -194,7 +193,7 @@ export default function RootReports() {
     return (
         <div className="font-['Inter'] p-6 max-w-5xl mx-auto space-y-6">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[1.5rem] border border-slate-100 shadow-sm">
                 <div>
                     <div className="flex items-center gap-2 mb-1">
                         <div className="w-8 h-8 bg-red-50 border border-red-100 rounded-xl flex items-center justify-center">

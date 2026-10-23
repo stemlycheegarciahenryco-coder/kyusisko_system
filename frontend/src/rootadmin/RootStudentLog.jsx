@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
-import { Search, ShieldCheck, Lock, Phone, MapPin, Mail, Archive, Trash2 } from 'lucide-react';
+import { Search, ShieldCheck, Lock, Phone, MapPin, Mail, Archive, Trash2, Clock2Icon } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 export default function RootStudentLog() {
@@ -177,7 +177,7 @@ export default function RootStudentLog() {
     return (
         <div className="space-y-6 max-w-7xl mx-auto pb-20 bg-[#FFFCFB] min-h-screen p-4">
             {/* HEADER SECTION */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-8 rounded-[2.5rem] border border-[#093fb4]/10 shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-8 rounded-[1.5rem] border border-[#093fb4]/10 shadow-sm">
                 <div>
                     <h2 className="text-4xl font-black text-black tracking-tighter uppercase italic">
                         Student Management
@@ -201,6 +201,7 @@ export default function RootStudentLog() {
                         className="w-full pl-12 pr-6 py-4 bg-white border border-[#093fb4]/20 rounded-[1.5rem] outline-none focus:ring-4 focus:ring-[#093fb4]/10 text-black font-medium"
                     />
                 </div>
+
 
                 {/* RIGHT SIDE: STATUS VIEW TABS */}
                 <div className="flex flex-wrap items-center gap-3">
@@ -226,7 +227,7 @@ export default function RootStudentLog() {
             </div>
 
             {/* DATA TABLE */}
-            <div className="bg-white rounded-[2.5rem] border border-[#093fb4]/10 shadow-xl overflow-hidden">
+            <div className="bg-white rounded-[1.0rem] border border-[#093fb4]/10 shadow-xl overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead>

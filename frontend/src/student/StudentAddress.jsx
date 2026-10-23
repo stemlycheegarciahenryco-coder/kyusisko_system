@@ -25,7 +25,6 @@ export default function StudentAddress({ regform, setRegForm, handleChange, isSu
         zipCode: false
     });
 
-
     const handleBlur = (e) => {
         const { name } = e.target;
         setTouched(prev => ({ ...prev, [name]: true }));
@@ -85,61 +84,34 @@ export default function StudentAddress({ regform, setRegForm, handleChange, isSu
     }, [regform.barangay, regform.street, regform.zipCode]);
 
     // ALWAYS-VISIBLE STATUS BADGE LABEL
-    const Label = ({ text, required, status, className = "" }) => {
-        const getStatusBadge = () => {
-            if (!status) return null;
-
-            let colorClasses = "";
-            if (status === FieldStatus.VALID) {
-                colorClasses = "bg-emerald-100 text-emerald-700 border border-emerald-300";
-            } else if (status === FieldStatus.INVALID) {
-                colorClasses = "bg-red-100 text-[#FF1E1E] border border-red-200";
-            } else {
-                colorClasses = "bg-amber-100 text-amber-700 border border-amber-300";
-            }
-
-            return (
-                <span className={`text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md ${colorClasses}`}>
-                    {status}
-                </span>
-            );
-        };
-
+    const Label = ({ text, required, className = "" }) => {
         return (
             <div className="flex items-center justify-between mb-2">
                 <label className={`text-xs font-black uppercase tracking-wider ml-1 block ${className || "text-slate-800"}`}>
                     {text} {required && <span className="text-[#FF1E1E]">*</span>}
                 </label>
-                {getStatusBadge()}
             </div>
         );
     };
 
-    // Dynamic Class Generator for Border Colors
+    // Border class generator with reactive error red borders
     const getBorderClass = (fieldName, fieldStatus) => {
         const isFieldTouched = touched[fieldName] || isSubmitted;
-        
-        // Triggers RED if field is touched/submitted AND is either INCOMPLETE or INVALID
         const isError = isFieldTouched && (fieldStatus === FieldStatus.INCOMPLETE || fieldStatus === FieldStatus.INVALID);
         
         const borderStyle = isError 
-            ? "border-[#FF1E1E] focus:border-[#FF1E1E] bg-red-50/20 text-[#FF1E1E]" 
+            ? "border-red-500 focus:border-red-500 bg-red-50/20" 
             : "border-white/80 focus:border-[#093fb4]";
 
-        return `w-full px-4 py-3.5 bg-white/60 border-2 ${borderStyle} rounded-2xl focus:bg-white outline-none transition-all placeholder:text-black/30 font-bold text-slate-900 text-base shadow-sm`;
+        return `w-full px-4 py-3.5 bg-white/60 border-2 ${borderStyle} rounded-2xl outline-none focus:bg-white transition-all placeholder:text-black/30 font-bold text-slate-900 text-base shadow-sm`;
     };
 
-    const getLabelClass = (fieldName, fieldStatus) => {
-        const isFieldTouched = touched[fieldName] || isSubmitted;
-        const isError = isFieldTouched && (fieldStatus === FieldStatus.INCOMPLETE || fieldStatus === FieldStatus.INVALID);
-        if (isError) {
-            return "text-[#FF1E1E]";
-        }
+    const getLabelClass = () => {
         return "text-slate-800";
     };
 
     return (
-        <div className="pt-4 border-t border-slate-100">
+        <div>
             <p className="text-xs font-black text-[#093FB4] uppercase tracking-widest mb-5 border-b border-black/5 pb-2 mt-2">
                 Permanent Address (Quezon City)
             </p>
@@ -150,8 +122,7 @@ export default function StudentAddress({ regform, setRegForm, handleChange, isSu
                     <Label 
                         text="District" 
                         required 
-                        status={districtStatus} 
-                        className={getLabelClass("district", districtStatus)} 
+                        className={getLabelClass()} 
                     />
                     <select 
                         name="district" 
@@ -176,8 +147,7 @@ export default function StudentAddress({ regform, setRegForm, handleChange, isSu
                     <Label 
                         text="Barangay" 
                         required 
-                        status={barangayStatus} 
-                        className={getLabelClass("barangay", barangayStatus)} 
+                        className={getLabelClass()} 
                     />
                     <select 
                         name="barangay" 
@@ -203,8 +173,7 @@ export default function StudentAddress({ regform, setRegForm, handleChange, isSu
                     <Label 
                         text="Street / Blk / Lot" 
                         required 
-                        status={streetStatus} 
-                        className={getLabelClass("street", streetStatus)} 
+                        className={getLabelClass()} 
                     />
                     <input 
                         type="text" 
@@ -226,8 +195,7 @@ export default function StudentAddress({ regform, setRegForm, handleChange, isSu
                     <Label 
                         text="Postal Code" 
                         required 
-                        status={postalCodeStatus} 
-                        className={getLabelClass("zipCode", postalCodeStatus)} 
+                        className={getLabelClass()} 
                     />
                     <input 
                         type="text" 
@@ -235,7 +203,7 @@ export default function StudentAddress({ regform, setRegForm, handleChange, isSu
                         maxLength="4"
                         value={regform.zipCode || ""} 
                         onChange={(e) => {
-                            const val = e.target.value.replace(/\D/g, ""); // Strip non-digits
+                            const val = e.target.value.replace(/\D/g, "").slice(0, 4); // Strip non-digits and cap at 4
                             setRegForm(prev => ({ ...prev, zipCode: val }));
                             setTouched(prev => ({ ...prev, zipCode: true }));
                         }} 
@@ -244,9 +212,9 @@ export default function StudentAddress({ regform, setRegForm, handleChange, isSu
                         required
                         className={getBorderClass("zipCode", postalCodeStatus)} 
                     />
-                    {postalCodeStatus === FieldStatus.INVALID && (
+                    {touched.zipCode && postalCodeStatus === FieldStatus.INVALID && (
                         <span className="text-[10px] font-black text-[#FF1E1E] uppercase tracking-wider ml-2 mt-2 block">
-                            Postal code must be exactly 4 digits.
+                            Postal code must be 4 digits
                         </span>
                     )}
                 </div>

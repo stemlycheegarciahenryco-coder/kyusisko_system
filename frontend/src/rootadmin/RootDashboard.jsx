@@ -95,6 +95,9 @@ function CoAdminSection({
         }
     };
 
+    const handleRegeneratePassword = async () => {
+    }
+
     // Handle Delete click with SweetAlert confirmation
     const handleDeleteClick = async (admin) => {
         const adminFullName = `${admin.first_name || ''} ${admin.last_name || ''}`.trim();
@@ -193,7 +196,7 @@ function CoAdminSection({
     }, [coAdmins, activeTab, searchQuery]);
 
     return (
-        <section className="bg-white p-8 rounded-[2.5rem] border border-blue-200 shadow-sm">
+        <section className="bg-white p-8 rounded-[1.5rem] border border-grey-200 shadow-sm">
             {/* Section Header */}
             <div className="flex items-center justify-between mb-6">
                 <h2 className="text-base font-black text-slate-900 uppercase tracking-tight flex items-center gap-2 m-0">
@@ -748,7 +751,7 @@ export default function RootDashboard() {
                 {/* Stat Cards Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {STAT_CARDS.map((card) => (
-                        <div key={card.key} className="bg-white p-6 rounded-[2rem] border border-blue-200 shadow-sm flex items-center justify-between">
+                        <div key={card.key} className="bg-white p-6 rounded-[1rem] border border-slate-200 shadow-sm flex items-center justify-between">
                             <div className="flex items-center gap-4">
                                 <div className={`w-12 h-12 rounded-2xl ${card.color} flex items-center justify-center`}>
                                     <card.icon size={22} />
@@ -765,7 +768,7 @@ export default function RootDashboard() {
                 {/* Pie Chart & Analytics Section */}
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-stretch">
                     {/* Pie Chart */}
-                    <div className="bg-white p-6 rounded-[2.5rem] border border-blue-400 shadow-sm flex flex-col justify-between min-h-[360px] xl:col-span-1">
+                    <div className="bg-white p-6 rounded-[1.5rem] border border-grey-400 shadow-sm flex flex-col justify-between min-h-[360px] xl:col-span-1">
                         <div>
                             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 text-center">
                                 Data Distribution
@@ -803,7 +806,7 @@ export default function RootDashboard() {
                     {/* Recent Items Overview Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 xl:col-span-2">
                         {/* Recent Students */}
-                        <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col justify-between min-h-[360px]">
+                        <div className="bg-white p-6 rounded-[1.0rem] border border-slate-200 shadow-sm flex flex-col justify-between min-h-[360px]">
                             <div>
                                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                                     <Users size={14} className="text-blue-600" /> Recent Students Overview
@@ -830,7 +833,7 @@ export default function RootDashboard() {
                         </div>
 
                         {/* Recent Providers */}
-                        <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col justify-between min-h-[360px]">
+                        <div className="bg-white p-6 rounded-[1rem] border border-slate-200 shadow-sm flex flex-col justify-between min-h-[360px]">
                             <div>
                                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                                     <Building2 size={14} className="text-amber-600" /> Recent Providers Overview

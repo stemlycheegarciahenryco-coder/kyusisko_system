@@ -13,7 +13,7 @@ export default function RegisterActions({ loading, acceptedTerms, onShowTerms, d
                 
             <button 
                 type="submit" 
-                disabled={disabled || !acceptedTerms} 
+                // disabled={disabled || !acceptedTerms} 
                 style={{ backgroundColor: '#093FB4' }} // Using your specific Blue
                 className="w-full py-5 hover:opacity-90 disabled:opacity-20 text-[#FFFCFB] rounded-2xl font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-900/20"
             >
