@@ -1,9 +1,17 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 
 export default function TermsModal({ isOpen, onClose, onAccept }) {
     const scrollRef = useRef(null);
     const [hasReadToBottom, setHasReadToBottom] = useState(false);
     const [isCheck, setIsCheck] = useState(false);
+
+    // Reset states when the modal is closed or reopened
+    useEffect(() => {
+        if (!isOpen) {
+            setHasReadToBottom(false);
+            setIsCheck(false);
+        }
+    }, [isOpen]);
 
     const handleScroll = () => {
         if (scrollRef.current) {
@@ -118,21 +126,30 @@ export default function TermsModal({ isOpen, onClose, onAccept }) {
                         <p className="font-black text-slate-900 text-[15px] mb-1">11. Acceptance</p>
                         <p>By using KyusISKO, users confirm they have read and agreed to these Terms.</p>
                     </div>
-                </div>
 
-                {/* Checkbox Section */}
-                <div className="flex items-center gap-3 mt-5 p-4 bg-slate-50 border border-slate-100 rounded-xl">
-                    <input
-                        type="checkbox"
-                        id="terms-check"
-                        disabled={!hasReadToBottom}
-                        checked={isCheck}
-                        onChange={(e) => setIsCheck(e.target.checked)}
-                        className="w-5 h-5 rounded border-slate-300 text-[#093FB4] focus:ring-[#093FB4] cursor-pointer"
-                    />
-                    <label htmlFor="terms-check" className="text-xs font-black text-slate-800 cursor-pointer uppercase tracking-wider select-none">
-                        I have read and understood the terms.
-                    </label>
+                    {/* Checkbox Section (Placed at the bottom inside the scrollable content) */}
+                    <div
+                        className={`flex items-center gap-3 mt-8 p-4 bg-slate-50 border border-slate-100 rounded-xl transition-opacity ${
+                            !hasReadToBottom ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
+                    >
+                        <input
+                            type="checkbox"
+                            id="terms-check"
+                            disabled={!hasReadToBottom}
+                            checked={isCheck}
+                            onChange={(e) => setIsCheck(e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-[#093FB4] focus:ring-[#093FB4] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        />
+                        <label
+                            htmlFor="terms-check"
+                            className={`text-xs font-black text-slate-800 uppercase tracking-wider select-none ${
+                                !hasReadToBottom ? "cursor-not-allowed text-slate-400" : "cursor-pointer"
+                            }`}
+                        >
+                            I have read and understood the terms.
+                        </label>
+                    </div>
                 </div>
 
                 {/* Actions */}
@@ -146,10 +163,11 @@ export default function TermsModal({ isOpen, onClose, onAccept }) {
                     <button
                         disabled={!canAccept}
                         onClick={onAccept}
-                        className={`flex-[2] py-3 rounded-xl font-black uppercase tracking-widest transition-all text-[11px] flex items-center justify-center gap-2 ${canAccept
+                        className={`flex-[2] py-3 rounded-xl font-black uppercase tracking-widest transition-all text-[11px] flex items-center justify-center gap-2 ${
+                            canAccept
                                 ? 'bg-[#093FB4] hover:bg-[#073496] text-white shadow-lg shadow-[#093FB4]/25 active:scale-95 cursor-pointer'
                                 : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
-                            }`}
+                        }`}
                     >
                         {!hasReadToBottom ? "Scroll to Bottom" : !isCheck ? "Check the Box" : "I Agree & Continue"}
                     </button>
