@@ -4,6 +4,7 @@ import { Users, ClipboardList, UserCog, GraduationCap, UserPlus, Building2, Tras
 import api from '../api';
 import { IconLock } from '@tabler/icons-react';
 import Swal from 'sweetalert2';
+import { data } from 'autoprefixer';
 
 
 const STAT_CARDS = [
@@ -48,7 +49,8 @@ function CoAdminSection({
         setFormData({
             firstName: admin.first_name || '',
             lastName: admin.last_name || '',
-            email: admin.email || ''
+            email: admin.email || '',
+            uid: admin.uid
         });
 
         // Smooth scroll to form and focus input for better UX on mobile/desktop
@@ -95,7 +97,31 @@ function CoAdminSection({
         }
     };
 
-    const handleRegeneratePassword = async () => {
+    const handleRegeneratePassword = async (admin) => {
+        try {
+            const response = await api.put(`/system-admin/co-admin/update/reroll-password/${admin.email}`);
+            if (response.data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Password Regenerated',
+                    html: `
+                        <p>ID: <b>${admin.uid}</b></p>
+                        ${response.data.generatedPassword ? `<div style="margin-top: 12px; padding: 10px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px;">
+                            <span style="display: block; font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Generated Password:</span>
+                            <code style="font-size: 15px; font-weight: bold; color: #2563eb; user-select: all;">${response.data.generatedPassword}</code>
+                        </div>` : ''}
+                    `,
+                    confirmButtonColor: '#2563eb'
+                });
+            }
+        } catch (err) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Generation Failed',
+                text: err.response?.data?.message || err.data?.message || 'Unable to Generate Password',
+                confirmButtonColor: '#2563eb'
+            });
+        }
     }
 
     // Handle Delete click with SweetAlert confirmation
@@ -250,7 +276,6 @@ function CoAdminSection({
                         className={`w-full p-2.5 text-xs font-semibold border rounded-xl bg-slate-50 focus:outline-none text-slate-800 ${editingAdmin ? 'border-emerald-200 focus:border-emerald-600' : 'border-slate-200 focus:border-blue-600'
                             }`}
                     />
-
                     <button
                         type="submit"
                         className={`w-full py-2.5 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer shadow-sm ${editingAdmin ? 'bg-emerald-600 hover:bg-emerald-800' : 'bg-blue-600 hover:bg-blue-800'
@@ -258,6 +283,16 @@ function CoAdminSection({
                     >
                         {editingAdmin ? 'Update Co-Admin Account' : 'Create Co-Admin Account'}
                     </button>
+                    {editingAdmin && (
+                        <button
+                            type='button'
+                            onClick={() => { handleRegeneratePassword(formData) }}
+                            className={`w-full py-2.5 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer shadow-sm ${editingAdmin ? 'bg-emerald-600 hover:bg-emerald-800' : 'bg-blue-600 hover:bg-blue-800'
+                                }`}
+                        >
+                            {'Regenerate Password'}
+                        </button>
+                    )}
                     {editingAdmin && (
                         <button
                             type="button"
@@ -480,7 +515,7 @@ export default function RootDashboard() {
             if (response.data.success) {
                 const createdAdmin = response.data.data;
                 const generatedPassword = response.data.generatedPassword || createdAdmin.temp_password || createdAdmin.password;
-                
+
                 const normalizedAdmin = {
                     ...createdAdmin,
                     first_name: createdAdmin.first_name || formData.firstName,
@@ -529,8 +564,8 @@ export default function RootDashboard() {
                     email: updatedData.email
                 } : admin));
 
-                setEditingAdmin(null);
-                setFormData({ firstName: '', lastName: '', email: '' });
+                // setEditingAdmin(null);
+                // setFormData({ firstName: '', lastName: '', email: '', uid: ''});
 
                 Swal.fire({
                     icon: 'success',

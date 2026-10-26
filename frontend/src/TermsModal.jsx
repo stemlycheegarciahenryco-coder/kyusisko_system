@@ -1,5 +1,265 @@
 import React, { useRef, useState, useEffect } from "react";
 
+
+export function OtpModal({ isOpen, email, onVerify, onClose, loading, onResend }) {
+  const [otp, setOtp] = useState("");
+  const [timer, setTimer] = useState(120);
+  const [resending, setResending] = useState(false);
+  const [resendMsg, setResendMsg] = useState("");
+
+  // Resend is available much sooner than the 2-minute code-expiry window —
+  // this is a short, separate cooldown just to stop rapid double-clicks.
+  const RESEND_COOLDOWN = 10; // seconds
+  const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN);
+
+  // Backend allows 2 resends per 15 minutes (see otpSendLimiter). Mirror that
+  // limit on the client so a 3rd click shows an immediate, clear message
+  // instead of relying only on a 429 round-trip.
+  const MAX_RESENDS = 2;
+  const LOCKOUT_SECONDS = 15 * 60;
+  const [resendCount, setResendCount] = useState(0);
+  const [lockoutSecondsLeft, setLockoutSecondsLeft] = useState(0);
+
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    let interval;
+    if (isOpen && timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isOpen, timer]);
+
+  useEffect(() => {
+    let interval;
+    if (isOpen && resendCooldown > 0) {
+      interval = setInterval(() => {
+        setResendCooldown((prev) => (prev <= 1 ? 0 : prev - 1));
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isOpen, resendCooldown]);
+
+  useEffect(() => {
+    let interval;
+    if (isOpen && lockoutSecondsLeft > 0) {
+      interval = setInterval(() => {
+        setLockoutSecondsLeft((prev) => (prev <= 1 ? 0 : prev - 1));
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isOpen, lockoutSecondsLeft]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setTimer(120);
+      setOtp("");
+      setResendMsg("");
+      setResendCooldown(RESEND_COOLDOWN);
+      setResendCount(0);
+      setLockoutSecondsLeft(0);
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [isOpen]);
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  if (!isOpen) return null;
+
+  // Wraps the parent's onVerify so a wrong/expired code visibly clears the
+  // input instead of silently doing nothing.
+  const handleVerifyClick = async () => {
+    try {
+      const result = await onVerify(otp);
+      if (result === false) {
+        setOtp("");
+        setTimeout(() => inputRef.current?.focus(), 50);
+      }
+    } catch (err) {
+      setOtp("");
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  };
+
+  const handleResend = async () => {
+    if (resending || resendCooldown > 0 || lockoutSecondsLeft > 0) return;
+
+    if (resendCount >= MAX_RESENDS) {
+      setLockoutSecondsLeft(LOCKOUT_SECONDS);
+      setResendMsg("");
+      return;
+    }
+
+    setResending(true);
+    setResendMsg("");
+    try {
+      if (!onResend) {
+        // Previously this silently skipped the call and still reported
+        // success below — meaning a parent that forgot to wire up onResend
+        // would show "A new code has been sent." without ever hitting the
+        // backend. Now it fails loudly instead.
+        throw new Error("onResend handler is not wired up in the parent component.");
+      }
+      await onResend();
+      setTimer(120);
+      setOtp("");
+      setResendCount((prev) => prev + 1);
+      setResendCooldown(RESEND_COOLDOWN);
+      setResendMsg("A new code has been sent.");
+      setTimeout(() => inputRef.current?.focus(), 100);
+    } catch (err) {
+      console.error("Resend OTP failed:", err);
+      // The backend's own limiter (2 per 15 min) can still fire even if our
+      // client-side count somehow gets out of sync — surface that clearly.
+      if (err?.response?.status === 429) {
+        setLockoutSecondsLeft(LOCKOUT_SECONDS);
+      } else {
+        setResendMsg(err?.response?.data?.error || "Couldn't resend the code. Please try again.");
+      }
+    } finally {
+      setResending(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="w-full max-w-sm bg-[#FFFCFB] rounded-[2.5rem] p-8 text-center shadow-2xl border border-slate-100 relative animate-in zoom-in-95 duration-200">
+        
+        {/* Top Right Close Button */}
+        <button 
+          type="button"
+          onClick={onClose}
+          className="absolute top-6 right-6 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-all"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+
+        <h2 className="text-xl font-black text-slate-900 mb-1 tracking-tight mt-2">Verify Your Email</h2>
+        <p className="text-slate-500 text-xs font-medium mb-6 leading-relaxed">
+          We've sent a 6-digit verification code to<br />
+          <span className="text-[#093fb4] font-bold break-all">{email}</span>
+        </p>
+
+        {/* 6-DIGIT CODE INPUT BOXES */}
+        <div className="mb-4 relative">
+          <p className="text-[11px] font-bold text-slate-400 mb-3">Enter the 6-digit code below</p>
+          
+          <div 
+            onClick={() => inputRef.current?.focus()} 
+            className="flex justify-center gap-2 cursor-pointer"
+          >
+            {Array.from({ length: 6 }).map((_, idx) => {
+              const char = otp[idx] || "";
+              const isFocused = idx === otp.length || (idx === 5 && otp.length === 6);
+              return (
+                <div 
+                  key={idx}
+                  className={`w-11 h-13 rounded-2xl border-2 flex items-center justify-center text-lg font-black transition-all ${
+                    isFocused 
+                      ? "border-[#093fb4] bg-white ring-4 ring-blue-50 shadow-sm" 
+                      : char ? "border-slate-300 bg-slate-50 text-slate-900" : "border-slate-200 bg-slate-50 text-slate-300"
+                  }`}
+                >
+                  {char ? char : <span className="w-2 h-2 rounded-full bg-slate-300 inline-block" />}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Hidden Overlay Input */}
+          <input 
+            ref={inputRef}
+            type="text" 
+            maxLength={6}
+            value={otp}
+            onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+          />
+        </div>
+
+        {/* TIMER PILL BADGE / RESEND */}
+        <div className="mb-4 space-y-2">
+          {timer > 0 && (
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50/80 rounded-full text-slate-600 text-xs font-semibold">
+              <svg className="w-3.5 h-3.5 text-[#093fb4]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span>Code expires in <strong className="text-[#093fb4] font-black">{formatTime(timer)}</strong></span>
+            </div>
+          )}
+
+          {lockoutSecondsLeft > 0 ? (
+            <div className="text-[11px] font-bold text-[#FF1E1E] bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+              Too many OTP requests. Please wait {formatTime(lockoutSecondsLeft)} before requesting another code.
+            </div>
+          ) : (
+            <div className="text-xs text-slate-500">
+              Didn't receive the code?{" "}
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={resendCooldown > 0 || resending}
+                className={`font-bold transition-colors ${
+                  resendCooldown > 0
+                    ? "text-slate-300 cursor-not-allowed"
+                    : "text-[#093fb4] hover:underline disabled:opacity-50"
+                }`}
+              >
+                {resending
+                  ? "Sending..."
+                  : resendCooldown > 0
+                    ? `Resend code (${resendCooldown}s)`
+                    : "Resend code"}
+              </button>
+            </div>
+          )}
+
+          {resendMsg && (
+            <p className="mt-2 text-[10px] font-bold text-slate-400">{resendMsg}</p>
+          )}
+        </div>
+
+        {/* ACTIONS */}
+        <div className="space-y-3">
+          <button 
+            type="button"
+            onClick={handleVerifyClick}
+            disabled={otp.length !== 6 || loading}
+            className="w-full py-3.5 bg-[#093fb4] text-white rounded-2xl font-bold text-sm tracking-wide hover:bg-blue-800 disabled:opacity-40 transition-all shadow-md shadow-blue-200 flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              "Verifying..."
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                Verify Code
+              </>
+            )}
+          </button>
+
+          <div className="relative py-1 flex items-center justify-center">
+            <div className="border-t border-slate-100 w-full absolute"></div>
+            <span className="bg-[#FFFCFB] px-3 text-[10px] font-extrabold text-slate-300 uppercase tracking-widest relative">OR</span>
+          </div>
+
+          <button 
+            type="button"
+            onClick={onClose} 
+            className="text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors block w-full py-1"
+          >
+            Cancel
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 export default function TermsModal({ isOpen, onClose, onAccept }) {
     const scrollRef = useRef(null);
     const [hasReadToBottom, setHasReadToBottom] = useState(false);

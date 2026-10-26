@@ -281,20 +281,20 @@ router.put('/update/password', verifyToken, async (req, res) => {
             return res.status(403).json({ success: false, message: 'Forbidden access.' });
         }
 
-        const {current_password, new_password } = req.body;
+        const { current_password, new_password } = req.body;
 
         // 2. Input validation
         if (!req.user.email || !current_password || !new_password) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Email, current password, and new password are required.' 
+            return res.status(400).json({
+                success: false,
+                message: 'Email, current password, and new password are required.'
             });
         }
 
         if (new_password.length < 8) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'New password must be at least 8 characters long.' 
+            return res.status(400).json({
+                success: false,
+                message: 'New password must be at least 8 characters long.'
             });
         }
 
@@ -327,10 +327,10 @@ router.put('/update/password', verifyToken, async (req, res) => {
         `;
         const updateResult = await pool.query(updateQuery, [hashedNewPassword, req.user.email]);
 
-        return res.status(200).json({ 
-            success: true, 
+        return res.status(200).json({
+            success: true,
             message: 'Password updated successfully.',
-            data: updateResult.rows[0] 
+            data: updateResult.rows[0]
         });
 
     } catch (err) {
@@ -346,7 +346,7 @@ router.put('/co-admins/update/:id', verifyToken, async (req, res) => {
 
     try {
         const { id } = req.params;
-        const { firstName, lastName, email, password } = req.body;
+        const { firstName, lastName, email } = req.body;
 
         const emailCheck = await pool.query(
             ` 
@@ -362,22 +362,8 @@ router.put('/co-admins/update/:id', verifyToken, async (req, res) => {
 
         let query;
         let values;
-
-        if (password && password.trim() !== '') {
-            const hashedPassword = await bcrypt.hash(password, 10);
-            query = `
-                UPDATE users 
-                SET first_name = $1, 
-                    last_name = $2, 
-                    email = $3, 
-                    password_hash = $4 
-                WHERE id = $5 
-                RETURNING id, first_name, last_name, email, account_status, is_archived, uid;
-            `;
-            values = [firstName, lastName, email, hashedPassword, id]; // Use hashedPassword instead of password in production
-        } else {
-            // If no password is provided, leave the existing password untouched
-            query = `
+        // If no password is provided, leave the existing password untouched
+        query = `
                 UPDATE users 
                 SET first_name = $1, 
                     last_name = $2, 
@@ -385,8 +371,7 @@ router.put('/co-admins/update/:id', verifyToken, async (req, res) => {
                 WHERE id = $4 
                 RETURNING id, first_name, last_name, email, account_status, is_archived, uid;
             `;
-            values = [firstName, lastName, email, id];
-        }
+        values = [firstName, lastName, email, id];
 
         const result = await pool.query(query, values);
 
@@ -458,6 +443,40 @@ router.delete('/student/delete/:id', verifyToken, async (req, res) => {
         res.json({ success: true, message: `Account Is Deleted.` });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+router.put('/co-admin/update/reroll-password/:email', verifyToken, async (req, res) => {
+    if (req.user.role !== 'root_admin') {
+        return res.status(403).json({ success: false, message: 'Forbidden: Only the absolute System Admin can add administrators.' });
+    }
+
+    // Password field removed from req.body destructuring
+    const { email } = req.params;
+
+    try {
+        // Generate a secure random plain-text password automatically
+        const generatedPassword = crypto.randomBytes(4).toString('hex') + '@' + Math.floor(100 + Math.random() * 900);
+        const hashedPw = await bcrypt.hash(generatedPassword, 10);
+
+        const newAdmin = await pool.query(
+            `UPDATE users
+            SET password_hash = $1
+            WHERE email = $2
+            RETURNING id, uid
+            `,
+            [hashedPw, email.trim()]
+        );
+
+        // Return the plain-text generatedPassword so the frontend can display it in Swal
+        res.status(200).json({
+            success: true,
+            data: newAdmin.rows[0],
+            generatedPassword
+        });
+    } catch (err) {
+        console.error(err)
+        res.status(500).json({ success: false, error: "Server Error" });
     }
 });
 
