@@ -327,29 +327,33 @@ export const ProviderGuidelinesMain = ({ onNavigate, isModal, handleFinishedRead
             </div>
 
             {/* Bottom CTA Block */}
-            <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 mt-12 mb-8 border border-slate-200 shadow-sm relative z-10 max-w-4xl mx-auto">
-                <div className="flex items-center gap-4">
-                    <div className="bg-blue-100 text-[#093fb4] p-3 rounded-2xl shrink-0 relative">
-                        <Building2 size={28} strokeWidth={2.5} />
-                        <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
-                            <CheckCircle size={14} className="text-green-500" fill="currentColor" />
+            {!isModal && (
+                <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 mt-12 mb-8 border border-slate-200 shadow-sm relative z-10 max-w-4xl mx-auto">
+                    <div className="flex items-center gap-4">
+                        <div className="bg-blue-100 text-[#093fb4] p-3 rounded-2xl shrink-0 relative">
+                            <Building2 size={28} strokeWidth={2.5} />
+                            <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
+                                <CheckCircle size={14} className="text-green-500" fill="currentColor" />
+                            </div>
+                        </div>
+                        <div>
+                            <h4 className="font-black text-slate-900 text-lg mb-1 tracking-tight">Ready to Get Started?</h4>
+                            <p className="text-xs font-medium text-slate-500 max-w-sm leading-relaxed">
+                                Make sure you have all the required information ready before proceeding with your registration. By continuing, you agree to these platform guidelines.
+                            </p>
                         </div>
                     </div>
-                    <div>
-                        <h4 className="font-black text-slate-900 text-lg mb-1 tracking-tight">Ready to Get Started?</h4>
-                        <p className="text-xs font-medium text-slate-500 max-w-sm leading-relaxed">
-                            Make sure you have all the required information ready before proceeding with your registration. By continuing, you agree to these platform guidelines.
-                        </p>
-                    </div>
-                </div>
 
-                <button
-                    onClick={() => isModal == false ? onNavigate('/organization-register') : handleFinishedReadingGuidelines()}
-                    className="w-full md:w-auto px-8 py-3.5 bg-[#093fb4] text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 hover:bg-[#07308a] transition-all shadow-md hover:shadow-lg whitespace-nowrap"
-                >
-                    Continue to Registration <ArrowRight size={18} />
-                </button>
-            </div>
+                    <button
+                        onClick={() => isModal == false ? onNavigate('/organization-register') : handleFinishedReadingGuidelines()}
+                        className="w-full md:w-auto px-8 py-3.5 bg-[#093fb4] text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 hover:bg-[#07308a] transition-all shadow-md hover:shadow-lg whitespace-nowrap"
+                    >
+                        Continue to Registration <ArrowRight size={18} />
+                    </button>
+                </div>
+            )
+
+            }
 
             {/* Support Contact */}
             <div className="text-center relative z-10 mt-8">
