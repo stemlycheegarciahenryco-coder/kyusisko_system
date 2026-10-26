@@ -3,7 +3,7 @@ import api from '../api';
 import { IconEye, IconUser, IconSearch, IconRefresh } from '@tabler/icons-react';
 import Swal from 'sweetalert2';
 import RootOrgView from './RootOrgView';
-import { ArchiveIcon, Trash2 } from 'lucide-react';
+import { ArchiveIcon, KeyIcon, Trash2 } from 'lucide-react';
 
 const TABS = ['all', 'pending', 'approved', 'rejected', 'blocked', 'archived'];
 
@@ -159,6 +159,55 @@ const RootOrganization = () => {
             }
         }
     };
+
+    const handleNewPassword = async (org) => {
+        const { value: enteredName } = await Swal.fire({
+            title: `Renew ${org.org_name} Password?`,
+            text: `Please type the provider name ("${org.org_name}") to confirm.`,
+            input: 'text',
+            inputPlaceholder: 'Enter provider name',
+            inputAttributes: {
+                style: 'font-size: 14px; border-radius: 12px;'
+            },
+            showCancelButton: true,
+            confirmButtonColor: colors.red,
+            cancelButtonColor: '#94a3b8',
+            confirmButtonText: 'Renew Password',
+            background: colors.white,
+            color: '#0f172a',
+            inputValidator: (value) => {
+                if (value !== org.org_name) {
+                    return 'The provider name you entered does not match.';
+                }
+            }
+        });
+        if (enteredName) {
+            try {
+                const response = await api.put(`/system-admin/provider/update/reroll-password/${org.id}`);
+                if (response.data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Password Regenerated',
+                        html: `
+                        <p>ID: <b>${org.sub_email}</b></p>
+                        ${response.data.generatedPassword ? `<div style="margin-top: 12px; padding: 10px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px;">
+                            <span style="display: block; font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Generated Password:</span>
+                            <code style="font-size: 15px; font-weight: bold; color: #2563eb; user-select: all;">${response.data.generatedPassword}</code>
+                        </div>` : ''}
+                    `,
+                        confirmButtonColor: '#2563eb'
+                    });
+                }
+            } catch (err) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Generation Failed',
+                    text: err.response?.data?.message || err.data?.message || 'Unable to Generate Password',
+                    confirmButtonColor: '#2563eb'
+                });
+            }
+        }
+    }
 
     const handleDelete = async (org) => {
         const { value: enteredName } = await Swal.fire({
@@ -338,6 +387,17 @@ const RootOrganization = () => {
                                                     <IconEye size={20} />
                                                     <span>View</span>
                                                 </button>
+
+                                                {!isArchived && (
+                                                    <button
+                                                        onClick={() => handleNewPassword(org)}
+                                                        title="Regenerate Password"
+                                                        className="flex items-center gap-2 p-3 bg-indigo-600/10 hover:bg-indigo-600 text-[10px] font-black uppercase text-indigo-500 hover:text-white border border-indigo-600/20 rounded-2xl hover:scale-110 transition-all shadow-md cursor-pointer"
+                                                    >
+                                                        <KeyIcon />
+                                                        Regenerate Password
+                                                    </button>
+                                                )}
 
                                                 {/* If archived, show Unarchive and Delete buttons */}
                                                 {isArchived ? (

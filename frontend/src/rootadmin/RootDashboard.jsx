@@ -287,7 +287,7 @@ function CoAdminSection({
                         <button
                             type='button'
                             onClick={() => { handleRegeneratePassword(formData) }}
-                            className={`w-full py-2.5 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer shadow-sm ${editingAdmin ? 'bg-emerald-600 hover:bg-emerald-800' : 'bg-blue-600 hover:bg-blue-800'
+                            className={`w-full py-2.5 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer shadow-sm ${editingAdmin ? 'bg-indigo-600 hover:bg-indigo-800' : 'bg-blue-600 hover:bg-blue-800'
                                 }`}
                         >
                             {'Regenerate Password'}

@@ -136,9 +136,9 @@ router.get('/get/student/archive', verifyToken, async (req, res) => {
     }
 })
 
-// Delete CoAdmin
-router.delete('/delete/:id', verifyToken, async (req, res) => {
-})
+// // Delete CoAdmin
+// router.delete('/delete/:id', verifyToken, async (req, res) => {
+// })
 
 // Archive CoAdmin
 router.patch('/archive/:id', verifyToken, async (req, res) => {
@@ -177,10 +177,6 @@ router.patch('/archive/:id', verifyToken, async (req, res) => {
  * @desc    Block or unblock a co-admin account (Root Admin Only)
  */
 router.patch('/toggle-status/:id', verifyToken, async (req, res) => {
-    if (req.user.role !== 'root_admin') {
-        return res.status(403).json({ success: false, message: 'Forbidden: Access restricted to Root Admin.' });
-    }
-
     const { id } = req.params;
     const { status } = req.body;
 
@@ -414,7 +410,7 @@ router.delete('/co-admins/delete/:id', verifyToken, async (req, res) => {
 
 router.delete('/provider/delete/:id', verifyToken, async (req, res) => {
     if (req.user.role !== 'root_admin') {
-        return res.status(403).json({ success: false, message: 'Forbidden: Access restricted to Root Admin.' });
+        return res.status(403).json({ success: false, message: 'Forbidden access.' });
     }
     const { id } = req.params;
     try {
@@ -431,7 +427,7 @@ router.delete('/provider/delete/:id', verifyToken, async (req, res) => {
 
 router.delete('/student/delete/:id', verifyToken, async (req, res) => {
     if (req.user.role !== 'root_admin') {
-        return res.status(403).json({ success: false, message: 'Forbidden: Access restricted to Root Admin.' });
+        return res.status(403).json({ success: false, message: 'Forbidden access.' });
     }
     const { id } = req.params;
     try {
@@ -447,17 +443,17 @@ router.delete('/student/delete/:id', verifyToken, async (req, res) => {
 });
 
 router.put('/co-admin/update/reroll-password/:email', verifyToken, async (req, res) => {
-    if (req.user.role !== 'root_admin') {
-        return res.status(403).json({ success: false, message: 'Forbidden: Only the absolute System Admin can add administrators.' });
-    }
-
-    // Password field removed from req.body destructuring
-    const { email } = req.params;
+    //if (req.user.role !== 'root_admin') {
+    //    return res.status(403).json({ success: false, message: 'Forbidden: Only the absolute System Admin can add administrators.' });
+    //}
 
     try {
+        const { email } = req.params;
+
         // Generate a secure random plain-text password automatically
         const generatedPassword = crypto.randomBytes(4).toString('hex') + '@' + Math.floor(100 + Math.random() * 900);
-        const hashedPw = await bcrypt.hash(generatedPassword, 10);
+        const salt = await bcrypt.genSalt(10);
+        const hashedPw = await bcrypt.hash(generatedPassword, salt);
 
         const newAdmin = await pool.query(
             `UPDATE users
@@ -472,6 +468,35 @@ router.put('/co-admin/update/reroll-password/:email', verifyToken, async (req, r
         res.status(200).json({
             success: true,
             data: newAdmin.rows[0],
+            generatedPassword
+        });
+    } catch (err) {
+        console.error(err)
+        res.status(500).json({ success: false, error: "Server Error" });
+    }
+});
+
+router.put('/provider/update/reroll-password/:id', verifyToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        // Generate a secure random plain-text password automatically
+        const generatedPassword = crypto.randomBytes(4).toString('hex') + '@' + Math.floor(100 + Math.random() * 900);
+        const salt = await bcrypt.genSalt(10);
+        const hashedPw = await bcrypt.hash(generatedPassword, salt);
+
+        const provider = await pool.query(
+            `UPDATE sub_admins
+            SET sub_password = $1
+            WHERE id = $2
+            RETURNING id, sub_email
+            `,
+            [hashedPw, id]
+        );
+
+        // Return the plain-text generatedPassword so the frontend can display it in Swal
+        res.status(200).json({
+            success: true,
+            data: provider.rows[0],
             generatedPassword
         });
     } catch (err) {
@@ -511,7 +536,8 @@ router.post('/create-co-admin', verifyToken, async (req, res) => {
 
         // Generate a secure random plain-text password automatically
         const generatedPassword = crypto.randomBytes(4).toString('hex') + '@' + Math.floor(100 + Math.random() * 900);
-        const hashedPw = await bcrypt.hash(generatedPassword, 10);
+        const salt = await bcrypt.genSalt(10);
+        const hashedPw = await bcrypt.hash(generatedPassword, salt);
 
         // 🚀 CRITICAL ALIGNMENT: Modified prefix token string to output 'SADM-' tracking keys 
         const customUid = `SADM-${Date.now().toString().slice(-4)}`;
