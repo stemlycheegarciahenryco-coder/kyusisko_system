@@ -67,7 +67,7 @@ export default function LogIn() {
     } else if (role === 'student') {
       localStorage.setItem('userRole', role);
       if (!data.isProfileComplete) {
-        navigate('/student-onboard');
+        navigate('/StudentProfile');
       } else {
         navigate('/scholarships');
       }
