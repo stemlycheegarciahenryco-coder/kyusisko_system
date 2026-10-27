@@ -32,7 +32,7 @@ export default function OrgSidebar() {
                 const res = await api.get(`/org/role`);
                 setRole(res.data.role);
                 setUserName(`${res.data.first_name} ${res.data.last_name}`)
-                console.log(role)
+                console.log(res.data.role)
             } catch (err) {
                 console.error("Failed to fetch role", err);
             }
@@ -94,9 +94,14 @@ export default function OrgSidebar() {
                             {orgData?.org_name || "Provider"}
                         </h3>
                         {user && (
-                            <p className="text-slate-500 font-medium text-xs tracking-wide truncate mt-0.5 w-full">
+                            <p className="text-slate-700 font-semibold text-xs tracking-wide truncate mt-1 w-full">
                                 {user}
                             </p>
+                        )}
+                        {role && (
+                            <span className="inline-block mt-1.5 px-2.5 py-0.5 bg-[#093fb4]/10 text-[#093fb4] font-bold text-[10px] uppercase tracking-wider rounded-full truncate max-w-full">
+                                {role.replace('_', ' ')}
+                            </span>
                         )}
                     </div>
                 )}
