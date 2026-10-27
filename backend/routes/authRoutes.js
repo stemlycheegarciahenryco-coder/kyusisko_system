@@ -4,12 +4,12 @@ const pool = require('../config/db');
 const bcrypt = require('bcrypt');
 const authCtrl = require('../controller/authController');
 const adminCtrl = require('../controller/adminController');
-const stdCtrl = require ('../controller/studentController');
-const {verifyToken, isStudent} = require('../middleware/auth');
+const stdCtrl = require('../controller/studentController');
+const { verifyToken, isStudent } = require('../middleware/auth');
 const upload = require('../middleware/multerConfig');
 const handleUpload = require('../middleware/handleUpload');
 
-const { authLimiter, generalLimiter, otpVerifyLimiter ,otpSendLimiter } = require('../middleware/rateLimiter');
+const { authLimiter, generalLimiter, otpVerifyLimiter, otpSendLimiter } = require('../middleware/rateLimiter');
 
 // ==========================================
 // 1. SYSTEM & ORGANIZATION AUTHENTICATION 
@@ -19,14 +19,14 @@ const { authLimiter, generalLimiter, otpVerifyLimiter ,otpSendLimiter } = requir
 // For System Administrators (Root & Co-Admins logging in with SADM-XXX tracking IDs)
 
 
-router.post('/auth/portal-login', authLimiter, authCtrl.portalLogin); 
+router.post('/auth/portal-login', authLimiter, authCtrl.portalLogin);
 
 
 
 // Shared Security Utilities
 router.post('/auth/forgot-password', otpSendLimiter, authCtrl.forgotPassword);
 router.post('/auth/reset-password', otpVerifyLimiter, authCtrl.resetPassword);
-router.get('/auth/login-attempts', authCtrl.getLogInAttempt); 
+router.get('/auth/login-attempts', authCtrl.getLogInAttempt);
 router.post('/auth/logout', authCtrl.logout);
 
 router.post('/auth/respond-login-approval', authCtrl.respondLoginApproval);
@@ -38,7 +38,7 @@ router.post('/auth/mfa/verify', verifyToken, authCtrl.verifyMfaSetup);
 // 2. STUDENT ACCOUNT MANAGEMENT
 // ==========================================
 
-router.put('/students/update-2fa', verifyToken, isStudent,stdCtrl.update2FA);
+router.put('/students/update-2fa', verifyToken, isStudent, stdCtrl.update2FA);
 router.get('/students', stdCtrl.getAllStudents);
 router.put('/students/change-password', verifyToken, isStudent, stdCtrl.changePassword);
 router.patch('/students/:id/status', stdCtrl.updateStudentStatus);
@@ -49,7 +49,7 @@ router.get('/students/my-scholarships', verifyToken, isStudent, stdCtrl.getMySch
 router.get('/students/:id', stdCtrl.getStudentById);
 router.patch('/students/update-portfolio', verifyToken, isStudent, handleUpload(upload.array('files', 10)), stdCtrl.updatePortfolio);
 router.delete('/students/portfolio-item', verifyToken, isStudent, stdCtrl.removePortfolioItem);
-router.put('/upload-profile/me',verifyToken, isStudent, handleUpload(upload.single('profile_image')), stdCtrl.updateProfilePic);
+router.put('/upload-profile/me', verifyToken, isStudent, handleUpload(upload.single('profile_image')), stdCtrl.updateProfilePic);
 router.put('/students/parent-profile/me', verifyToken, isStudent, stdCtrl.saveOrUpdateParentProfile);
 router.put('/students/personal-info/me', verifyToken, isStudent, stdCtrl.updatePersonalInfo);
 
@@ -67,7 +67,7 @@ router.get('/rootadmin/audit-logs', adminCtrl.getAuditLogs);
 
 router.post('/post/check/email', async (req, res) => {
     try {
-        const {email} = req.body
+        const { email } = req.body
         const emailCheck = await pool.query(
             `SELECT email FROM users WHERE email = $1 
              UNION 
@@ -78,7 +78,7 @@ router.post('/post/check/email', async (req, res) => {
         );
 
         if (emailCheck.rows.length > 0) {
-            return res.status(400).json({ success: false, message: 'Email address is already in use by another account.' });
+            res.status(500).json({ success: false, message: "An unexpected error occurred. Please try again later." });
         }
 
         // Return the plain-text generatedPassword so the frontend can display it in Swal
