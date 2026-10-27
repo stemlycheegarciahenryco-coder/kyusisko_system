@@ -388,7 +388,7 @@ const RootOrganization = () => {
                                                     <span>View</span>
                                                 </button>
 
-                                                {!isArchived && (
+                                                {org.status === 'approved' && !isArchived && (
                                                     <button
                                                         onClick={() => handleNewPassword(org)}
                                                         title="Regenerate Password"
