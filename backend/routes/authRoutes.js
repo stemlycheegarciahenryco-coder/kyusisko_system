@@ -101,7 +101,7 @@ router.get('/org/role', verifyToken, async (req, res) => {
 
         // 2. Moved query inside the try block
         const roleCheck = await pool.query(
-            `SELECT account_type FROM sub_admins WHERE sub_email = $1`,
+            `SELECT account_type, last_name, first_name FROM sub_admins WHERE sub_email = $1`,
             [email.trim()]
         );
 
@@ -111,11 +111,14 @@ router.get('/org/role', verifyToken, async (req, res) => {
 
         // 3. Extract the exact value from .rows[0]
         const accountType = roleCheck.rows[0].account_type;
-        console.log(accountType);
+        const first = roleCheck.rows[0].first_name;
+        const last = roleCheck.rows[0].last_name;
 
         res.status(200).json({
             success: true,
-            role: accountType
+            role: accountType,
+            first_name: first,
+            last_name: last
         });
     } 
     catch (error) {

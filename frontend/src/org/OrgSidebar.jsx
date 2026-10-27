@@ -14,13 +14,14 @@ export default function OrgSidebar() {
     const [isExpanded, setIsExpanded] = useState(true);
     const [showLogoutDialog, setShowLogoutDialog] = useState(false);
     const [orgData, setOrgData] = useState(null);
+    const [user, setUserName] = useState('')
     const navigate = useNavigate();
 
     useEffect(() => {
         const fetchOrgProfile = async () => {
             try {
                 const res = await api.get(`/organizations/profile/me`);
-                setOrgData(res.data.data);
+                setOrgData(res.data.data);                
             } catch (err) {
                 console.error("Failed to fetch org profile:", err);
             }
@@ -30,6 +31,7 @@ export default function OrgSidebar() {
             try {
                 const res = await api.get(`/org/role`);
                 setRole(res.data.role);
+                setUserName(`${res.data.first_name} ${res.data.last_name}`)
                 console.log(role)
             } catch (err) {
                 console.error("Failed to fetch role", err);
@@ -48,7 +50,6 @@ export default function OrgSidebar() {
     const menuItems = [
         { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/OrgDashboard' },
         { name: 'Manage Programs', icon: <LucideScroll size={20} />, path: '/ProgramView' },
-
         { name: 'Manage Students', icon: <Form size={20} />, path: '/OrgApplicantPrograms' },
         { name: 'Profile', icon: <User size={20} />, path: '/OrgProfile' },
         { name: 'Reports', icon: <Flag size={20} />, path: '/OrgReports' },
@@ -74,8 +75,9 @@ export default function OrgSidebar() {
             {/* Profile Section */}
             <div className="px-4 mb-6 flex flex-col items-center justify-center text-center transition-all">
                 <div
-                    className={`relative mx-auto transition-all duration-300 ${isExpanded ? 'w-24 h-24' : 'w-12 h-12'
-                        }`}
+                    className={`relative mx-auto transition-all duration-300 ${
+                        isExpanded ? 'w-24 h-24' : 'w-12 h-12'
+                    }`}
                 >
                     <div className="w-full h-full rounded-full border-4 border-[#093fb4]/15 overflow-hidden bg-white shadow-md flex items-center justify-center">
                         {orgData?.org_pic ? (
@@ -87,9 +89,16 @@ export default function OrgSidebar() {
                 </div>
 
                 {isExpanded && (
-                    <h3 className="text-slate-900 font-extrabold uppercase text-sm md:text-base tracking-wide truncate mt-3 w-full px-2">
-                        {orgData?.org_name || "Provider"}
-                    </h3>
+                    <div className="w-full px-2 mt-3">
+                        <h3 className="text-slate-900 font-extrabold uppercase text-sm md:text-base tracking-wide truncate w-full">
+                            {orgData?.org_name || "Provider"}
+                        </h3>
+                        {user && (
+                            <p className="text-slate-500 font-medium text-xs tracking-wide truncate mt-0.5 w-full">
+                                {user}
+                            </p>
+                        )}
+                    </div>
                 )}
             </div>
 
@@ -101,7 +110,6 @@ export default function OrgSidebar() {
                         to={item.path}
                         title={!isExpanded ? item.name : undefined}
                         onClick={(e) => {
-                            // If the current page has unsaved work, ask before leaving
                             if (!hasUnsavedChanges()) return;
                             e.preventDefault();
                             requestLeave(() => navigate(item.path));
@@ -129,7 +137,7 @@ export default function OrgSidebar() {
                             ? 'gap-3.5 px-4 py-3 text-slate-600 hover:bg-red-50 hover:text-red-600'
                             : 'justify-center py-3 text-slate-600 hover:bg-red-50 hover:text-red-600'
                         }
-          `}
+        `}
                 >
                     <LogOut size={20} className="shrink-0" />
                     {isExpanded && <span>Sign Out</span>}

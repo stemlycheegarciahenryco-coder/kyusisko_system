@@ -579,7 +579,6 @@ router.get('/role', verifyToken, async (req, res) => {
         const userRole = roleCheck.rows[0].role;
         const first = roleCheck.rows[0].first_name;
         const last = roleCheck.rows[0].last;
-        console.log(userRole);
 
         res.status(200).json({
             success: true,
