@@ -155,7 +155,7 @@ function ContactField({ label, value, onChange, disabled, error }) {
   );
 }
 
-export default function StudentEditProfile({ studentData, onClose, onRefresh }) {
+export default function StudentEditProfile({ studentData, onRefresh }) {
   const [form, setForm] = useState({
     bio: studentData?.bio || '',
     college_id: '',
@@ -426,44 +426,36 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
   const currentBarangayMissing = form.sbarangay && !barangays.some(b => b.name === form.sbarangay);
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 ">
-      {/* Always-visible scrollbar on the side of the form body */}
-      <style>{`
-        .edit-profile-scroll { scrollbar-width: thin; scrollbar-color: #093fb4 #e5e7eb; }
-        .edit-profile-scroll::-webkit-scrollbar { width: 8px; }
-        .edit-profile-scroll::-webkit-scrollbar-track { background: #e5e7eb; border-radius: 9999px; }
-        .edit-profile-scroll::-webkit-scrollbar-thumb { background: #093fb4; border-radius: 9999px; }
-      `}</style>
-
-      <div className="bg-white w-full max-w-xl max-h-[90vh] flex flex-col rounded-3xl border-4 border-black/5 shadow-2xl overflow-hidden">
+    <div className="max-w-4xl mx-auto space-y-8 antialiased">
+      <div className="bg-white/70 backdrop-blur-xl border-2 border-white/80 rounded-[2.5rem] shadow-2xl overflow-hidden">
         {showSuccess ? (
-          <div className="p-8 text-center flex flex-col items-center max-w-xs mx-auto">
-            <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-500 mb-4 shadow-inner border-2 border-emerald-100">
-              <CheckCircle2 size={28} strokeWidth={2.5} />
+          <div className="p-12 text-center flex flex-col items-center max-w-sm mx-auto">
+            <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-500 mb-4 shadow-inner border-2 border-emerald-100">
+              <CheckCircle2 size={32} strokeWidth={2.5} />
             </div>
-            <h3 className="text-lg font-black text-black uppercase tracking-tight mb-2">Profile Updated!</h3>
+            <h3 className="text-xl font-black text-black uppercase tracking-tight mb-2">Profile Updated!</h3>
             <p className="text-xs text-black/60 font-bold leading-relaxed mb-6">
-              Your academic, eligibility, personal, and family information has been saved.
+              Your academic, eligibility, personal, and family information has been successfully saved.
             </p>
             <button
-              onClick={() => { setShowSuccess(false); onClose(); }}
-              className="w-full bg-[#093fb4] hover:bg-[#073496] text-white py-3 rounded-xl font-black text-xs uppercase tracking-[0.15em] transition-all shadow-lg shadow-[#093fb4]/25 active:scale-95"
+              onClick={() => setShowSuccess(false)}
+              className="w-full bg-[#093fb4] hover:bg-[#073496] text-white py-3.5 rounded-xl font-black text-xs uppercase tracking-[0.15em] transition-all shadow-lg shadow-[#093fb4]/25 active:scale-95"
             >
-              Close & View Profile
+              Continue Editing
             </button>
           </div>
         ) : (
-          <form onSubmit={handleSaveAll} noValidate className="flex flex-col min-h-0 flex-1">
-            {/* Header (no X button) */}
-            <div className="px-6 pt-6 pb-4 border-b-2 border-black/5 shrink-0">
-              <h2 className="text-xl font-black text-black uppercase tracking-tight">Edit Profile</h2>
-              <p className="text-[10px] font-black text-black/40 uppercase tracking-[0.18em] mt-1">
+          <form onSubmit={handleSaveAll} noValidate className="flex flex-col">
+            {/* Header */}
+            <div className="px-8 md:px-12 pt-8 pb-6 border-b-2 border-black/5 shrink-0">
+              <h2 className="text-2xl font-black text-black uppercase tracking-tight">Edit Profile</h2>
+              <p className="text-[11px] font-black text-black/40 uppercase tracking-[0.18em] mt-1">
                 Update all your records in one place
               </p>
             </div>
 
-            {/* Scrollable body */}
-            <div className="edit-profile-scroll flex-1 min-h-0 overflow-y-scroll px-6 py-5 text-left">
+            {/* Form Body */}
+            <div className="px-8 md:px-12 py-8 text-left space-y-2">
               {globalError && (
                 <div className="mb-5 p-3.5 bg-red-50 border-2 border-red-200 text-red-600 text-[11px] font-black uppercase tracking-wider rounded-xl flex items-center gap-2.5">
                   <AlertCircle size={18} strokeWidth={2.5} className="shrink-0" /> {globalError}
@@ -730,7 +722,6 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
                       <option value="">Select Gender</option>
                       <option value="Male">Male</option>
                       <option value="Female">Female</option>
-                      
                     </select>
                   </Field>
 
@@ -831,7 +822,7 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
                 isEditing={editMode.family}
                 onToggleEdit={() => handleToggleEdit('family')}
               />
-              <div className="space-y-5 mb-2">
+              <div className="space-y-5 mb-4">
                 {[
                   { key: 'mother', title: "Mother's Details", occLabel: 'Occupation' },
                   { key: 'father', title: "Father's Details", occLabel: 'Occupation' },
@@ -881,32 +872,24 @@ export default function StudentEditProfile({ studentData, onClose, onRefresh }) 
               </div>
             </div>
 
-            {/* Footer: Cancel / Update */}
-            <div className="px-6 py-4 border-t-2 border-black/5 bg-white shrink-0">
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  disabled={saving}
-                  className="flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-[0.15em] border-2 border-black/15 text-black/70 hover:bg-black/5 transition-all active:scale-95 disabled:opacity-50"
-                >
-                  Cancel
-                </button>
+            {/* Footer Actions */}
+            <div className="px-8 md:px-12 py-6 border-t-2 border-black/5 bg-gray-50 shrink-0">
+              <div className="flex gap-4">
                 <button
                   type="submit"
                   disabled={saving || !hasEdited}
-                  className={`flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-[0.15em] transition-all flex items-center justify-center gap-2 border-2 ${
+                  className={`w-full py-4 rounded-xl font-black text-xs uppercase tracking-[0.15em] transition-all flex items-center justify-center gap-2 border-2 ${
                     hasEdited
                       ? 'bg-[#093fb4] hover:bg-[#073496] text-white border-transparent shadow-lg shadow-[#093fb4]/25 active:scale-95'
                       : 'bg-black/10 text-black/40 cursor-not-allowed border-transparent'
                   }`}
                 >
-                  {saving ? <><Loader2 size={16} className="animate-spin" strokeWidth={2.5} /> Updating...</> : 'Update'}
+                  {saving ? <><Loader2 size={16} className="animate-spin" strokeWidth={2.5} /> Saving Updates...</> : 'Save Profile Changes'}
                 </button>
               </div>
               {!hasEdited && (
                 <p className="text-center text-[10px] font-black text-black/40 uppercase tracking-widest mt-3">
-                  Click 'Edit' on a section to make changes
+                  Click 'Edit' on any section above to make changes
                 </p>
               )}
             </div>

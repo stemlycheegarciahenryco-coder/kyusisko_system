@@ -1,32 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useStudent } from './StudentContext';
-import { Camera, User, MapPin, Plus, Award, FileText, GraduationCap, School, Pencil, ExternalLink, Users, Trophy } from 'lucide-react';
+import { Camera, User, FileText, GraduationCap, School, Award, Plus } from 'lucide-react';
 import api from '../api';
 import AddPortfolioModal from './AddPortfolioModal'; 
 import StudentEditProfile from './StudentEditProfile';
 
 const backendURL = "http://localhost:5000";
-
-function ProfileInfoRow({ label, value }) {
-  return (
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-4 border-b-2 border-black/5 last:border-0 gap-1 sm:gap-4">
-      <span className="text-black/50 font-black uppercase tracking-wider text-xs">{label}</span>
-      <span className="text-black font-extrabold text-base truncate max-w-full sm:max-w-[350px] text-left sm:text-right">{value || '—'}</span>
-    </div>
-  );
-}
-
-function SectionHeader({ icon: Icon, title }) {
-  return (
-    <div className="flex items-center gap-3.5 pt-8 pb-3 border-b-2 border-black/5">
-      <div className="w-10 h-10 rounded-2xl bg-[#093fb4]/10 flex items-center justify-center text-[#093fb4] shrink-0">
-        <Icon size={22} strokeWidth={2.5} />
-      </div>
-      <h3 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-black">{title}</h3>
-    </div>
-  );
-}
 
 export default function StudentProfile() {
   const location = useLocation();
@@ -43,18 +23,6 @@ export default function StudentProfile() {
 
   useEffect(() => () => { if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current); }, []);
 
-  // Saved eligibility answers (athlete / sports / etc.)
-  const [eligibility, setEligibility] = useState(null);
-  const fetchEligibility = async () => {
-    try {
-      const res = await api.get('/student-onboarding-profile');
-      setEligibility(res.data?.profile || null);
-    } catch (err) {
-      setEligibility(null); // 404 = not answered yet
-    }
-  };
-  useEffect(() => { fetchEligibility(); }, []);
-
   const handleProfileSaved = async (patch) => {
     if (patch) {
       updateStudent(patch);
@@ -63,10 +31,8 @@ export default function StudentProfile() {
     try {
       await refreshProfile();
     } catch (err) {}
-    fetchEligibility();
   };
 
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false); 
   const [isPortfolioModalOpen, setIsPortfolioModalOpen] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(location.state?.justOnboarded || false);
   
@@ -116,16 +82,10 @@ export default function StudentProfile() {
     }
   } catch (e) {}
 
-  const schoolName = student?.other_school ? student.other_school : (student?.college_name || "School not set");
   const degreeName = student?.other_degree_program ? student.other_degree_program : (student?.course_name || "Course not set");
-  const fullAddress = [student?.sbarangay, student?.sdistrict, student?.sstreet, student?.szip_code].filter(Boolean).join(', ') || "Not provided";
-
-  const hasMother = !!student?.mother_name;
-  const hasFather = !!student?.father_name;
-  const hasGuardian = !!student?.guardian_name;
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8  antialiased">
+    <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8 antialiased">
       
       {showWelcomeModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-300">
@@ -151,257 +111,136 @@ export default function StudentProfile() {
         </div>
       )}
 
-      {/* ================= UNIFIED PROFILE CONTAINER ================= */}
-      <div
-        className={`bg-white/70 backdrop-blur-xl border-2 rounded-[2.5rem] shadow-2xl p-8 md:p-12 space-y-8 relative overflow-hidden transition-all duration-700 ease-out ${
-          justUpdated ? 'border-[#093fb4]/60 ring-4 ring-[#093fb4]/20' : 'border-white/80'
-        }`}
-      >
+      {/* ================= BALANCED TWO-COLUMN GRID LAYOUT ================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
-        {/* TOP BIO OVERVIEW */}
-        <div className="flex flex-col sm:flex-row gap-8 items-start sm:items-center pb-8 border-b-2 border-black/5">
-          <div className="relative group cursor-pointer shrink-0" onClick={handleAvatarClick}>
-            <div className="w-36 h-36 rounded-[2rem] bg-white/60 border-4 border-white/80 overflow-hidden flex items-center justify-center shadow-lg transition-transform group-hover:scale-[1.02]">
-              {avatarPreview || student.sprofile_pic ? (
-                <img src={avatarPreview || student.sprofile_pic} className="w-full h-full object-cover transition-opacity duration-300" alt="Profile" />
-              ) : (
-                <User size={64} className="text-black/20" strokeWidth={1.5} />
-              )}
-            </div>
-            <div className="absolute inset-0 bg-black/40 rounded-[2rem] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
-              <Camera size={28} className="text-white" strokeWidth={2.5}/>
-            </div>
-            <input type="file" ref={fileInputRef} onChange={handleAvatarChange} accept="image/*" className="hidden" />
-          </div>
+        {/* LEFT COLUMN: Sticky Profile Summary & Portfolio (Span 5) with adjusted top offset */}
+        <div className="lg:col-span-5 lg:sticky lg:top-24 space-y-6">
+          <div
+            className={`bg-white/70 backdrop-blur-xl border-2 rounded-[2.5rem] shadow-2xl p-6 md:p-8 space-y-6 relative overflow-hidden transition-all duration-700 ease-out ${
+              justUpdated ? 'border-[#093fb4]/60 ring-4 ring-[#093fb4]/20' : 'border-white/80'
+            }`}
+          >
+            {/* Avatar & Names */}
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="relative group cursor-pointer shrink-0" onClick={handleAvatarClick}>
+                <div className="w-32 h-32 rounded-[2rem] bg-white/60 border-4 border-white/80 overflow-hidden flex items-center justify-center shadow-lg transition-transform group-hover:scale-[1.02]">
+                  {avatarPreview || student.sprofile_pic ? (
+                    <img src={avatarPreview || student.sprofile_pic} className="w-full h-full object-cover transition-opacity duration-300" alt="Profile" />
+                  ) : (
+                    <User size={56} className="text-black/20" strokeWidth={1.5} />
+                  )}
+                </div>
+                <div className="absolute inset-0 bg-black/40 rounded-[2rem] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+                  <Camera size={26} className="text-white" strokeWidth={2.5}/>
+                </div>
+                <input type="file" ref={fileInputRef} onChange={handleAvatarChange} accept="image/*" className="hidden" />
+              </div>
 
-          <div className="space-y-4 flex-1 w-full min-w-0">
-            <div className="flex flex-col md:flex-row md:items-start justify-between w-full gap-4">
               <div>
-                <h1 className="text-3xl md:text-4xl font-black tracking-tight text-black uppercase">
+                <h1 className="text-2xl font-black tracking-tight text-black uppercase">
                   {student.sfirst_name} {student.slast_name}
                 </h1>
-                <p className="text-[#093fb4] text-sm md:text-base font-black uppercase tracking-[0.15em] mt-2">
+                <p className="text-[#093fb4] text-xs font-black uppercase tracking-[0.15em] mt-1">
                   {degreeName}
                 </p>
               </div>
-              <button 
-                onClick={() => setIsEditModalOpen(true)}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-xs font-black uppercase tracking-[0.1em] text-black/70 bg-white/60 border-2 border-white/80 rounded-2xl hover:bg-white hover:text-[#093fb4] hover:border-[#093fb4]/40 transition-all shadow-sm active:scale-95 shrink-0"
-              >
-                <Pencil size={16} strokeWidth={2.5}/> Edit Profile
-              </button>
-            </div>
 
-            {student.bio && (
-              <p className="text-sm md:text-base text-black/70 font-bold leading-relaxed max-w-2xl bg-white/50 p-5 rounded-2xl border-2 border-white/80 italic shadow-sm">
-                "{student.bio}"
-              </p>
-            )}
+              {student.bio && (
+                <p className="text-xs text-black/70 font-bold leading-relaxed bg-white/50 p-4 rounded-2xl border-2 border-white/80 italic shadow-sm w-full">
+                  "{student.bio}"
+                </p>
+              )}
 
-            <div className="flex flex-wrap gap-3 pt-2">
-              <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/60 border-2 border-white/80 rounded-xl text-xs font-black uppercase tracking-widest text-black/70 shadow-sm">
-                <GraduationCap size={18} className="text-[#093fb4]" strokeWidth={2.5}/>
-                <span>ID: <strong className="text-black ml-1">{student.student_id || '—'}</strong></span>
-              </div>
-              <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/60 border-2 border-white/80 rounded-xl text-xs font-black uppercase tracking-widest text-black/70 shadow-sm">
-                <School size={18} className="text-[#093fb4]" strokeWidth={2.5}/>
-                <span>Level: <strong className="text-black ml-1">{student.year_level || '—'}</strong></span>
-              </div>
-              <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/60 border-2 border-white/80 rounded-xl text-xs font-black uppercase tracking-widest text-black/70 shadow-sm">
-                <Award size={18} className="text-[#093fb4]" strokeWidth={2.5}/>
-                {/* APPLIED PERCENTAGE FORMATTING TO GWA */}
-                <span>GWA: <strong className="text-black ml-1">{student.gwa ? `${student.gwa}%` : '—'}</strong></span>
+              <div className="grid grid-cols-3 gap-2 w-full pt-2">
+                <div className="flex flex-col items-center p-3 bg-white/60 border-2 border-white/80 rounded-xl text-[10px] font-black uppercase tracking-widest text-black/70 shadow-sm">
+                  <GraduationCap size={16} className="text-[#093fb4] mb-1" strokeWidth={2.5}/>
+                  <span>ID</span>
+                  <strong className="text-black text-xs mt-0.5 truncate max-w-full">{student.student_id || '—'}</strong>
+                </div>
+                <div className="flex flex-col items-center p-3 bg-white/60 border-2 border-white/80 rounded-xl text-[10px] font-black uppercase tracking-widest text-black/70 shadow-sm">
+                  <School size={16} className="text-[#093fb4] mb-1" strokeWidth={2.5}/>
+                  <span>Level</span>
+                  <strong className="text-black text-xs mt-0.5 truncate max-w-full">{student.year_level || '—'}</strong>
+                </div>
+                <div className="flex flex-col items-center p-3 bg-white/60 border-2 border-white/80 rounded-xl text-[10px] font-black uppercase tracking-widest text-black/70 shadow-sm">
+                  <Award size={16} className="text-[#093fb4] mb-1" strokeWidth={2.5}/>
+                  <span>GWA</span>
+                  <strong className="text-black text-xs mt-0.5 truncate max-w-full">{student.gwa ? `${student.gwa}%` : '—'}</strong>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* SECTION 1: ACADEMIC INFO */}
-        <div className="space-y-4">
-          <SectionHeader icon={School} title="Academic Information" />
-          <div className="bg-white/60 border-2 border-white/80 rounded-2xl p-6 shadow-sm">
-            <ProfileInfoRow label="Campus / Institution" value={schoolName} />
-            <ProfileInfoRow label="Degree Track" value={degreeName} />
-          </div>
-        </div>
-
-        {/* SECTION: ATHLETICS & ELIGIBILITY */}
-        <div className="space-y-4">
-          <SectionHeader icon={Trophy} title="Athletics & Eligibility" />
-          <div className="bg-white/60 border-2 border-white/80 rounded-2xl p-6 shadow-sm">
-            {eligibility ? (
-              <>
-                <ProfileInfoRow label="Student Athlete" value={eligibility.is_athlete ? 'Yes' : 'No'} />
-                {eligibility.is_athlete && (
-                  <div className="py-4 border-b-2 border-black/5 flex flex-col sm:flex-row justify-between items-start gap-2 sm:gap-4">
-                    <span className="text-black/50 font-black uppercase tracking-wider text-xs">Sports</span>
-                    <div className="flex flex-wrap gap-2 sm:justify-end">
-                      {(Array.isArray(eligibility.sports_interests) ? eligibility.sports_interests : []).length > 0 ? (
-                        eligibility.sports_interests.map((sport) => (
-                          <span key={sport} className="px-3 py-1.5 rounded-xl bg-[#093fb4]/10 text-[#093fb4] text-xs font-black uppercase tracking-wider">
-                            {sport === 'Others' && eligibility.other_sport ? eligibility.other_sport : sport}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-black font-extrabold text-base">—</span>
-                      )}
-                    </div>
+            {/* PORTFOLIO & DOCUMENTS SECTION */}
+            <div className="space-y-3 pt-4 border-t-2 border-black/5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-[#093fb4]/10 flex items-center justify-center text-[#093fb4] shrink-0">
+                    <Award size={16} strokeWidth={2.5} />
                   </div>
-                )}
-                <ProfileInfoRow label="Indigenous Person" value={eligibility.is_indigenous ? (eligibility.indigenous_group ? `Yes — ${eligibility.indigenous_group}` : 'Yes') : 'No'} />
-                <ProfileInfoRow label="Person with Disability" value={eligibility.is_pwd ? 'Yes' : 'No'} />
-                <ProfileInfoRow label="Working Student" value={eligibility.is_working_student ? 'Yes' : 'No'} />
-                <ProfileInfoRow
-                  label="Poverty Reduction Program"
-                  value={eligibility.is_poverty_program ? (eligibility.program_type === 'Others' ? (eligibility.other_program || 'Yes') : (eligibility.program_type || 'Yes')) : 'No'}
-                />
-              </>
-            ) : (
-              <p className="text-sm font-bold text-black/50 py-2">
-                Not set yet. Click <strong className="text-black">Edit Profile</strong> and fill in Eligibility Details.
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* SECTION 2: PERSONAL DETAILS */}
-        <div className="space-y-4">
-          <SectionHeader icon={User} title="Personal Details" />
-          <div className="bg-white/60 border-2 border-white/80 rounded-2xl p-6 shadow-sm">
-            <ProfileInfoRow label="Email Address" value={student.student_email} />
-            <ProfileInfoRow label="Contact Number" value={student.scontact_number ? `+63 ${student.scontact_number}` : '—'} />
-            <ProfileInfoRow label="Gender Profile" value={student.sgender} />
-            <ProfileInfoRow label="Religion" value={student.religion === 'Others' ? student.other_religion : student.religion} />
-          </div>
-        </div>
-
-        {/* SECTION 3: PERMANENT RESIDENCE */}
-        <div className="space-y-4">
-          <SectionHeader icon={MapPin} title="Permanent Residence" />
-          <div className="p-6 bg-white/60 border-2 border-white/80 rounded-2xl shadow-sm">
-            <p className="text-base font-extrabold text-black leading-relaxed">
-              {fullAddress || "No complete family address listed. Kindly update via family settings."}
-            </p>
-          </div>
-        </div>
-
-        {/* SECTION 4: FAMILY INFORMATION */}
-        <div className="space-y-4">
-          <SectionHeader icon={Users} title="Family Information" />
-          <div className="bg-white/60 border-2 border-white/80 rounded-2xl p-6 shadow-sm space-y-6">
-            {hasMother && (
-              <div>
-                <p className="text-[10px] font-black text-[#093fb4] uppercase tracking-[0.2em] mb-3">Mother's Details</p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <ProfileInfoRow label="Full Name" value={student.mother_name} />
-                  <ProfileInfoRow label="Contact Number" value={student.mother_contact} />
-                  <ProfileInfoRow label="Occupation" value={student.mother_occupation} />
+                  <h3 className="text-xs font-black uppercase tracking-[0.15em] text-black">Portfolio & Files</h3>
                 </div>
+                <button 
+                  onClick={() => setIsPortfolioModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-widest text-white bg-[#093fb4] rounded-xl hover:bg-[#073496] transition-all shadow-md shadow-[#093fb4]/20 active:scale-95"
+                >
+                  <Plus size={14} strokeWidth={3} /> Add
+                </button>
               </div>
-            )}
 
-            {hasFather && (
-              <div className={hasMother ? "pt-5 border-t-2 border-black/5" : ""}>
-                <p className="text-[10px] font-black text-[#093fb4] uppercase tracking-[0.2em] mb-3">Father's Details</p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <ProfileInfoRow label="Full Name" value={student.father_name} />
-                  <ProfileInfoRow label="Contact Number" value={student.father_contact} />
-                  <ProfileInfoRow label="Occupation" value={student.father_occupation} />
+              {Array.isArray(processedPortfolio) && processedPortfolio.length > 0 ? (
+                <div className="space-y-2.5 pt-1 max-h-[280px] overflow-y-auto pr-1">
+                  {processedPortfolio.map((item, idx) => {
+                    if (!item) return null;
+                    const itemTitle = typeof item === 'object' ? item.title : item;
+                    let rawLink = typeof item === 'object' ? (item.link || item.url || item.href) : null;
+                    
+                    if (rawLink && typeof rawLink === 'string') {
+                      rawLink = rawLink.trim().replace(/\\/g, '/');
+                      if (rawLink.startsWith('uploads/')) rawLink = `${backendURL}/${rawLink}`;
+                    }
+
+                    return (
+                      <a
+                        key={idx}
+                        href={rawLink || '#'}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-3 px-4 py-3 bg-white/60 border-2 border-white/80 hover:border-[#093fb4]/50 hover:bg-white rounded-xl shadow-sm transition-all group"
+                      >
+                        <div className="w-10 h-10 rounded-lg bg-blue-50/50 border-2 border-blue-100 flex items-center justify-center shrink-0">
+                          <FileText size={18} className="text-[#093fb4]" strokeWidth={2.5}/>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-black text-black uppercase tracking-wider truncate group-hover:text-[#093fb4] transition-colors">
+                            {itemTitle}
+                          </p>
+                          <p className="text-[9px] text-black/50 font-black tracking-widest uppercase">Digital Copy</p>
+                        </div>
+                      </a>
+                    );
+                  })}
                 </div>
-              </div>
-            )}
-
-            {hasGuardian && (
-              <div className={(hasMother || hasFather) ? "pt-5 border-t-2 border-black/5" : ""}>
-                <p className="text-[10px] font-black text-[#093fb4] uppercase tracking-[0.2em] mb-3">Guardian Details</p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <ProfileInfoRow label="Guardian Name" value={student.guardian_name} />
-                  <ProfileInfoRow label="Contact Number" value={student.guardian_contact} />
-                  <ProfileInfoRow label="Occupation" value={student.guardian_occupation} />
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 bg-white/40 border-2 border-dashed border-white/80 rounded-2xl text-center px-4">
+                  <FileText size={28} className="text-black/30 mb-2" strokeWidth={1.5}/>
+                  <p className="text-[10px] font-black text-black/50 uppercase tracking-widest">No extra portfolio files uploaded yet.</p>
                 </div>
-              </div>
-            )}
-
-            {!hasMother && !hasFather && !hasGuardian && (
-              <p className="text-xs font-black text-black/40 uppercase tracking-widest text-center py-4">No family information provided yet.</p>
-            )}
-
-            {student?.house_address && (
-              <div className="pt-5 border-t-2 border-black/5">
-                <ProfileInfoRow label="Family House Address" value={student.house_address} />
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
 
-        {/* SECTION 5: PORTFOLIO & ACHIEVEMENTS */}
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-8 pb-3 border-b-2 border-black/5 gap-4">
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-2xl bg-[#093fb4]/10 flex items-center justify-center text-[#093fb4] shrink-0">
-                <Award size={22} strokeWidth={2.5} />
-              </div>
-              <h3 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-black">Portfolio & Documents</h3>
-            </div>
-            <button 
-              onClick={() => setIsPortfolioModalOpen(true)}
-              className="inline-flex items-center justify-center gap-2 px-5 py-3 text-xs font-black uppercase tracking-[0.15em] text-white bg-[#093fb4] rounded-2xl hover:bg-[#073496] transition-all shadow-lg shadow-[#093fb4]/20 active:scale-95"
-            >
-              <Plus size={18} strokeWidth={3} /> Add Document
-            </button>
-          </div>
-
-          {Array.isArray(processedPortfolio) && processedPortfolio.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 pt-3">
-              {processedPortfolio.map((item, idx) => {
-                if (!item) return null;
-                const itemTitle = typeof item === 'object' ? item.title : item;
-                let rawLink = typeof item === 'object' ? (item.link || item.url || item.href) : null;
-                
-                if (rawLink && typeof rawLink === 'string') {
-                  rawLink = rawLink.trim().replace(/\\/g, '/');
-                  if (rawLink.startsWith('uploads/')) rawLink = `${backendURL}/${rawLink}`;
-                }
-
-                return (
-                  <a
-                    key={idx}
-                    href={rawLink || '#'}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-4 px-5 py-4 bg-white/60 border-2 border-white/80 hover:border-[#093fb4]/50 hover:bg-white rounded-2xl shadow-sm transition-all group"
-                  >
-                    <div className="w-12 h-12 rounded-xl bg-blue-50/50 border-2 border-blue-100 flex items-center justify-center shrink-0">
-                      <FileText size={22} className="text-[#093fb4]" strokeWidth={2.5}/>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-black text-black uppercase tracking-wider truncate group-hover:text-[#093fb4] transition-colors">
-                        {itemTitle}
-                      </p>
-                      <p className="text-[10px] text-black/50 mt-1 font-black tracking-widest uppercase">Digital Copy</p>
-                    </div>
-                    <ExternalLink size={18} className="text-black/30 group-hover:text-[#093fb4] shrink-0 ml-1 transition-colors" strokeWidth={2.5} />
-                  </a>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 bg-white/40 border-2 border-dashed border-white/80 rounded-[2rem] text-center">
-              <FileText size={36} className="text-black/30 mb-4" strokeWidth={1.5}/>
-              <p className="text-xs font-black text-black/50 uppercase tracking-widest">No verified extra portfolio files uploaded yet.</p>
-            </div>
-          )}
+        {/* RIGHT COLUMN: StudentEditProfile Form (Span 7) - Scrollable */}
+        <div className="lg:col-span-7">
+          <StudentEditProfile
+            studentData={student}
+            onRefresh={handleProfileSaved}
+          />
         </div>
 
       </div>
 
-      {isEditModalOpen && (
-        <StudentEditProfile
-          studentData={student}
-          onClose={() => setIsEditModalOpen(false)}
-          onRefresh={handleProfileSaved}
-        />
-      )}
       {isPortfolioModalOpen && (
         <AddPortfolioModal onClose={() => { setIsPortfolioModalOpen(false); refreshProfile(); }} studentData={student} />
       )}
