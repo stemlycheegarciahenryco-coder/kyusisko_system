@@ -553,7 +553,7 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
                     <form onSubmit={handleSaveAll} noValidate className="flex flex-col">
                         <div className="px-8 md:px-12 pt-8 pb-6 border-b-2 border-black/5 shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <div>
-                                <h2 className="text-2xl font-black text-black uppercase tracking-tight">Edit Profile</h2>
+                                <h2 className="text-2xl font-black text-black uppercase tracking-tight">Profile</h2>
                                 <p className="text-[11px] font-black text-black/40 uppercase tracking-[0.18em] mt-1">
                                     Update all your records in one place
                                 </p>
