@@ -24,7 +24,7 @@ export default function RootSidebar() {
         try {
             const res = await api.get(`/system-admin/role`);
             setRole(res.data.role);
-            if (res.data.first_name.trim() === '' || res.data.lastName.trim() === '') {
+            if (res.data.role == 'root_admin') {
                 return
             }
             setAdminName({
