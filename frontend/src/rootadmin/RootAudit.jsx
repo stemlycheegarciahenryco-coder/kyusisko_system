@@ -14,7 +14,9 @@ import {
   User,
   Building,
   UserCheck,
-  ArchiveIcon
+  ArchiveIcon,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 export default function RootAudit() {
@@ -24,6 +26,10 @@ export default function RootAudit() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Combined fetch controller based on active tab focus
   const loadData = () => {
@@ -62,6 +68,11 @@ export default function RootAudit() {
     loadData();
   }, [activeTab]);
 
+  // Reset to page 1 when tab or search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, searchTerm]);
+
   // Extended to map scholarship postings, student applications, and compliance updates
   const getBadgeConfig = (type) => {
     const config = {
@@ -69,7 +80,7 @@ export default function RootAudit() {
       ORG_LOGIN: { bg: 'bg-sky-50 text-sky-700 border-sky-200', icon: LogIn, label: 'Org Login' },
       LOGIN_FAILED: { bg: 'bg-rose-50 text-rose-700 border-rose-200', icon: XCircle, label: 'Failed Auth' },
       SECURITY_LOCKOUT: { bg: 'bg-red-100 text-red-800 border-red-300 animate-pulse', icon: Shield, label: 'Lockout Trigger' },
-      
+       
       // Scholarship & Application Pipeline Actions
       STUDENT_APPLY: { bg: 'bg-blue-50 text-blue-700 border-blue-200', icon: UserCheck, label: 'Scholarship Apply' },
       APP_APPROVED: { bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: CheckCircle2, label: 'Approved' },
@@ -99,7 +110,7 @@ export default function RootAudit() {
     }
   };
 
-  // Enhanced filtering strings handling our modern joint schemas
+  // Filtered dataset
   const filteredData = () => {
     const normalizedTerm = searchTerm.toLowerCase();
     if (activeTab === 'audit') {
@@ -118,7 +129,10 @@ export default function RootAudit() {
     }
   };
 
-  const displays = filteredData();
+  const filtered = filteredData();
+  const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentDisplays = filtered.slice(startIndex, startIndex + itemsPerPage);
 
   return (
     <div className="p-6 bg-slate-50 min-h-screen">
@@ -159,7 +173,7 @@ export default function RootAudit() {
       {/* 🚀 SEGMENTED TAB SWITCHER */}
       <div className="flex border-b border-slate-200 mb-6 gap-2">
         <button
-          onClick={() => { setActiveTab('audit'); setSearchTerm(''); }}
+          onClick={() => setActiveTab('audit')}
           className={`pb-3 px-4 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'audit' 
               ? 'border-indigo-600 text-indigo-600' 
@@ -170,7 +184,7 @@ export default function RootAudit() {
           System Trails
         </button>
         <button
-          onClick={() => { setActiveTab('login'); setSearchTerm(''); }}
+          onClick={() => setActiveTab('login')}
           className={`pb-3 px-4 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'login' 
               ? 'border-indigo-600 text-indigo-600' 
@@ -232,8 +246,8 @@ export default function RootAudit() {
                     <td className="p-4"><div className="h-4 bg-slate-200 rounded w-24 ml-auto" /></td>
                   </tr>
                 ))
-              ) : displays.length > 0 ? (
-                displays.map((item) => {
+              ) : currentDisplays.length > 0 ? (
+                currentDisplays.map((item) => {
                   if (activeTab === 'audit') {
                     const badge = getBadgeConfig(item.action_type);
                     const ActionIcon = badge.icon;
@@ -330,15 +344,39 @@ export default function RootAudit() {
           </table>
         </div>
         
-        {/* Dynamic footer summary */}
-        <div className="bg-slate-50 border-t border-slate-100 px-4 py-3 flex items-center justify-between text-xs font-medium text-slate-500">
+        {/* Dynamic footer summary & Pagination Controls */}
+        <div className="bg-slate-50 border-t border-slate-100 px-4 py-3 flex flex-col sm:flex-row items-center justify-between text-xs font-medium text-slate-500 gap-3">
           <div>
-            Showing <span className="text-slate-700">{displays.length}</span> of{' '}
+            Showing <span className="text-slate-700">{filtered.length > 0 ? startIndex + 1 : 0}</span> to{' '}
             <span className="text-slate-700">
-              {activeTab === 'audit' ? logs.length : loginAttempts.length}
-            </span> {activeTab === 'audit' ? 'system trail logs' : 'authorization login profiles'}
+              {Math.min(startIndex + itemsPerPage, filtered.length)}
+            </span> of{' '}
+            <span className="text-slate-700">{filtered.length}</span> entries{' '}
+            {searchTerm && <span className="italic text-slate-400">(filtered from {activeTab === 'audit' ? logs.length : loginAttempts.length} total)</span>}
           </div>
-          <div className="text-slate-400 select-none">KyusISKO System Guard</div>
+
+          {/* Pagination Navigation */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1 || loading}
+              className="flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 rounded-md text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-sm"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              Previous
+            </button>
+            <span className="px-2 py-1 text-slate-600">
+              Page <strong className="text-slate-900">{currentPage}</strong> of <strong className="text-slate-900">{totalPages || 1}</strong>
+            </span>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages || totalPages === 0 || loading}
+              className="flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 rounded-md text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-sm"
+            >
+              Next
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

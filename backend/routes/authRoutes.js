@@ -92,4 +92,42 @@ router.post('/post/check/email', async (req, res) => {
     }
 });
 
+
+
+router.get('/org/role', verifyToken, async (req, res) => {
+    try {
+        // 1. Get email from req.user (populated by verifyToken middleware)
+        const email = req.user.email; 
+
+        // 2. Moved query inside the try block
+        const roleCheck = await pool.query(
+            `SELECT account_type FROM sub_admins WHERE sub_email = $1`,
+            [email.trim()]
+        );
+
+        if (roleCheck.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        // 3. Extract the exact value from .rows[0]
+        const accountType = roleCheck.rows[0].account_type;
+        console.log(accountType);
+
+        res.status(200).json({
+            success: true,
+            role: accountType
+        });
+    } 
+    catch (error) {
+        console.error('Error fetching org role:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+});
+
+
+module.exports = router;
+
 module.exports = router;

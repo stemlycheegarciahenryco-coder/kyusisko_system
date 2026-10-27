@@ -1,189 +1,198 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { 
-  IconLayoutDashboard, 
-  IconBuildingCommunity, 
-  IconUsers, 
-  IconFileDescription, 
-  IconHistory, 
-  IconLogout,
-  IconChevronRight,
-  IconMenu2,
-  IconX
+import api from '../api';
+import {
+    IconLayoutDashboard,
+    IconBuildingCommunity,
+    IconUsers,
+    IconFileDescription,
+    IconHistory,
+    IconLogout,
+    IconChevronRight,
+    IconMenu2,
+    IconX
 } from '@tabler/icons-react';
 import LogoutModal from '../component/LogoutModal';
 
 export default function RootSidebar() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(true);
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [adminName, setAdminName] = useState({ firstName: 'System', lastName: 'Admin' });
-
-  useEffect(() => {
-    const storedFirstName = localStorage.getItem('firstName');
-    const storedLastName = localStorage.getItem('lastName');
-    if (storedFirstName || storedLastName) {
-      setAdminName({
-        firstName: storedFirstName || '',
-        lastName: storedLastName || ''
-      });
+    const [isOpen, setIsOpen] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(true);
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [adminName, setAdminName] = useState({ firstName: 'System', lastName: 'Admin' });
+    const [role, setRole] = useState('')
+    const fetchRole = async () => {
+        try {
+            const res = await api.get(`/system-admin/role`);
+            setRole(res.data.role);
+            if (res.data.first_name.trim() === '' || res.data.lastName.trim() === '') {
+                return
+            }
+            setAdminName({
+                firstName: res.data.first_name,
+                lastName: res.data.last_name
+            });
+        } catch (err) {
+            console.error("Failed to fetch role", err);
+        }
     }
-  }, []);
+    useEffect(() => {
+        fetchRole()
+    }, []);
 
-  const menuItems = [
-    { name: 'Dashboard', icon: <IconLayoutDashboard size={24} stroke={2} />, path: '/RootDashboard' },
-    { name: 'Organization', icon: <IconBuildingCommunity size={24} stroke={2} />, path: '/RootOrganization' },
-    { name: 'Student Log', icon: <IconUsers size={24} stroke={2} />, path: '/RootStudLog' },
-    { name: 'Reports', icon: <IconFileDescription size={24} stroke={2} />, path: '/RootReports' },
-    { name: 'Audit Log', icon: <IconHistory size={24} stroke={2} />, path: '/RootAudit' }
-  ];
+    const menuItems = [
+        { name: 'Dashboard', icon: <IconLayoutDashboard size={24} stroke={2} />, path: '/RootDashboard' },
+        { name: 'Organization', icon: <IconBuildingCommunity size={24} stroke={2} />, path: '/RootOrganization' },
+        { name: 'Student Log', icon: <IconUsers size={24} stroke={2} />, path: '/RootStudLog' },
+        { name: 'Reports', icon: <IconFileDescription size={24} stroke={2} />, path: '/RootReports' },
+        { name: 'Audit Log', icon: <IconHistory size={24} stroke={2} />, path: '/RootAudit' }
+    ];
 
-  const handleLogout = () => {
-    localStorage.clear();
-    window.location.href = '/';
-  };
+    const handleLogout = () => {
+        localStorage.clear();
+        window.location.href = '/';
+    };
 
-  return (
-    <>
-      {/* 1. MOBILE ONLY ACTION BAR TRIGGER */}
-      <div className="md:hidden fixed top-4 left-4 z-30">
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="p-3 bg-[#FFFCFB] text-slate-800 rounded-xl shadow-xl border border-black/5 flex items-center justify-center cursor-pointer transition-all active:scale-95"
-        >
-          {isOpen ? <IconX size={20} stroke={2.5} className="text-[#093fb4]" /> : <IconMenu2 size={20} stroke={2.5} />}
-        </button>
-      </div>
+    return (
+        <>
+            {/* 1. MOBILE ONLY ACTION BAR TRIGGER */}
+            <div className="md:hidden fixed top-4 left-4 z-30">
+                <button
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="p-3 bg-[#FFFCFB] text-slate-800 rounded-xl shadow-xl border border-black/5 flex items-center justify-center cursor-pointer transition-all active:scale-95"
+                >
+                    {isOpen ? <IconX size={20} stroke={2.5} className="text-[#093fb4]" /> : <IconMenu2 size={20} stroke={2.5} />}
+                </button>
+            </div>
 
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/20 backdrop-blur-xs z-20 md:hidden"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
+            {isOpen && (
+                <div
+                    className="fixed inset-0 bg-black/20 backdrop-blur-xs z-20 md:hidden"
+                    onClick={() => setIsOpen(false)}
+                />
+            )}
 
-      {/* 2. THE MAIN SIDEBAR COMPONENT FRAME */}
-      <div className={`
+            {/* 2. THE MAIN SIDEBAR COMPONENT FRAME */}
+            <div className={`
         fixed md:sticky top-0 left-0 h-screen bg-[#FFFCFB] flex flex-col rounded-r-[2rem] border-r border-slate-50 shadow-2xl shadow-[#093fb4]/15  z-20 transition-all duration-300 ease-in-out
         ${isOpen ? 'translate-x-0 w-72' : '-translate-x-full md:translate-x-0'}
         ${isExpanded ? 'md:w-72' : 'md:w-28'}
       `}>
-        
-        <div className="pt-6 px-5 flex flex-col items-center gap-2 shrink-0 relative">
-          <button 
-            onClick={() => setIsExpanded(!isExpanded)} 
-            className="hidden md:flex self-end p-2.5 text-slate-400 hover:text-[#093fb4] hover:bg-slate-50 rounded-xl transition-colors cursor-pointer"
-          >
-            <IconMenu2 size={20} stroke={2.5} />
-          </button>
 
-          <div className={`transition-all duration-300 flex items-center justify-center ${isExpanded ? 'h-20 w-auto mt-2' : 'h-14 w-14 mt-1'}`}>
-            <img 
-              src="/logo.png" 
-              alt="KyusISKO Logo" 
-              className={`object-contain transition-all duration-300 ${isExpanded ? 'h-16' : 'h-12'}`} 
-            />
-          </div>
-        </div>
+                <div className="pt-6 px-5 flex flex-col items-center gap-2 shrink-0 relative">
+                    <button
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        className="hidden md:flex self-end p-2.5 text-slate-400 hover:text-[#093fb4] hover:bg-slate-50 rounded-xl transition-colors cursor-pointer"
+                    >
+                        <IconMenu2 size={20} stroke={2.5} />
+                    </button>
 
-        <div className="px-5 mt-6 shrink-0">
-          <div className={`
+                    <div className={`transition-all duration-300 flex items-center justify-center ${isExpanded ? 'h-20 w-auto mt-2' : 'h-14 w-14 mt-1'}`}>
+                        <img
+                            src="/logo.png"
+                            alt="KyusISKO Logo"
+                            className={`object-contain transition-all duration-300 ${isExpanded ? 'h-16' : 'h-12'}`}
+                        />
+                    </div>
+                </div>
+
+                <div className="px-5 mt-6 shrink-0">
+                    <div className={`
             flex items-center bg-slate-50 border border-slate-100 rounded-2xl transition-all duration-300
             ${isExpanded ? 'justify-start gap-4 p-4 w-full' : 'justify-center w-14 h-14 p-0 mx-auto'}
           `}>
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#093fb4] flex items-center justify-center shrink-0 border border-blue-100">
-              <IconUsers size={22} stroke={2} />
-            </div>
-            
-            <div className={`transition-all duration-200 min-w-0 flex flex-col
+                        <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#093fb4] flex items-center justify-center shrink-0 border border-blue-100">
+                            <IconUsers size={22} stroke={2} />
+                        </div>
+
+                        <div className={`transition-all duration-200 min-w-0 flex flex-col
               ${isExpanded ? 'opacity-100 max-w-[150px]' : 'opacity-0 max-w-0 hidden pointer-events-none'}
             `}>
-              <p className="text-[13px] font-black text-slate-800 tracking-wide uppercase truncate">
-                {adminName.firstName} {adminName.lastName}
-              </p>
-              <p className="text-[10px] font-bold text-[#093fb4] tracking-widest uppercase opacity-80 mt-0.5">
-                System Admin
-              </p>
-            </div>
-          </div>
-        </div>
+                            <p className="text-[13px] font-black text-slate-800 tracking-wide uppercase truncate">
+                                {adminName.firstName} {adminName.lastName}
+                            </p>
+                            <p className="text-[10px] font-bold text-[#093fb4] tracking-widest uppercase opacity-80 mt-0.5">
+                                {role}
+                            </p>
+                        </div>
+                    </div>
+                </div>
 
-        <nav className="flex-1 px-4 space-y-2 mt-8 overflow-y-auto overflow-x-hidden">
-          {menuItems.map((item) => (
-            <NavLink
-              key={item.name}
-              to={item.path}
-              onClick={() => setIsOpen(false)}
-              className={({ isActive }) => `
+                <nav className="flex-1 px-4 space-y-2 mt-8 overflow-y-auto overflow-x-hidden">
+                    {menuItems.map((item) => !(item.name === 'Audit Log' && role === 'co_admin') && (
+                        <NavLink
+                            key={item.name}
+                            to={item.path}
+                            onClick={() => setIsOpen(false)}
+                            className={({ isActive }) => `
                 flex items-center rounded-2xl transition-all group relative cursor-pointer
                 ${isExpanded ? 'px-5 py-4 justify-between w-full' : 'w-14 h-14 mx-auto justify-center'}
-                ${isActive 
-                  ? 'bg-[#093fb4] text-white shadow-lg shadow-blue-900/15' 
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-[#093fb4]'}
+                ${isActive
+                                    ? 'bg-[#093fb4] text-white shadow-lg shadow-blue-900/15'
+                                    : 'text-slate-600 hover:bg-slate-50 hover:text-[#093fb4]'}
               `}
-            >
-              {({ isActive }) => (
-                <>
-                  <div className={`flex items-center min-w-0 ${isExpanded ? 'gap-4' : 'gap-0'}`}>
-                    <span className="shrink-0 transition-transform group-hover:scale-105 flex items-center justify-center">
-                      {item.icon}
-                    </span>
-                    
-                    <span className={`text-[13px] font-black uppercase tracking-[0.1em] transition-all duration-200 truncate pt-0.5
+                        >
+                            {({ isActive }) => (
+                                <>
+                                    <div className={`flex items-center min-w-0 ${isExpanded ? 'gap-4' : 'gap-0'}`}>
+                                        <span className="shrink-0 transition-transform group-hover:scale-105 flex items-center justify-center">
+                                            {item.icon}
+                                        </span>
+
+                                        <span className={`text-[13px] font-black uppercase tracking-[0.1em] transition-all duration-200 truncate pt-0.5
                       ${isExpanded ? 'opacity-100 max-w-[150px]' : 'opacity-0 max-w-0 pointer-events-none hidden'}
                     `}>
-                      {item.name}
-                    </span>
-                  </div>
-                  
-                  {isActive && isExpanded && (
-                    <IconChevronRight size={18} className="opacity-60 shrink-0" stroke={2.5} />
-                  )}
+                                            {item.name}
+                                        </span>
+                                    </div>
 
-                  {!isExpanded && (
-                    <div className="absolute left-full ml-4 px-3 py-2 bg-slate-900 text-white text-[12px] font-bold uppercase tracking-wider rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl z-50">
-                      {item.name}
-                    </div>
-                  )}
-                </>
-              )}
-            </NavLink>
-          ))}
-        </nav>
+                                    {isActive && isExpanded && (
+                                        <IconChevronRight size={18} className="opacity-60 shrink-0" stroke={2.5} />
+                                    )}
 
-        <div className="p-4 mt-auto border-t border-slate-100/80 bg-[#FFFCFB] rounded-br-[2rem] shrink-0">
-          <button 
-            onClick={() => setShowLogoutModal(true)}
-            className={`flex items-center text-slate-600 hover:bg-red-50 hover:text-[#FF1E1E] rounded-2xl transition-all group cursor-pointer relative
+                                    {!isExpanded && (
+                                        <div className="absolute left-full ml-4 px-3 py-2 bg-slate-900 text-white text-[12px] font-bold uppercase tracking-wider rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl z-50">
+                                            {item.name}
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </NavLink>
+                    ))}
+                </nav>
+
+                <div className="p-4 mt-auto border-t border-slate-100/80 bg-[#FFFCFB] rounded-br-[2rem] shrink-0">
+                    <button
+                        onClick={() => setShowLogoutModal(true)}
+                        className={`flex items-center text-slate-600 hover:bg-red-50 hover:text-[#FF1E1E] rounded-2xl transition-all group cursor-pointer relative
               ${isExpanded ? 'px-5 py-4 gap-4 w-full justify-start' : 'w-14 h-14 mx-auto justify-center'}
             `}
-          >
-            <span className="shrink-0 flex items-center justify-center group-hover:-translate-x-0.5 transition-transform">
-               <IconLogout size={24} stroke={2} />
-            </span>
-            
-            <span className={`text-[13px] font-black uppercase tracking-[0.1em] transition-all duration-200 truncate pt-0.5
+                    >
+                        <span className="shrink-0 flex items-center justify-center group-hover:-translate-x-0.5 transition-transform">
+                            <IconLogout size={24} stroke={2} />
+                        </span>
+
+                        <span className={`text-[13px] font-black uppercase tracking-[0.1em] transition-all duration-200 truncate pt-0.5
               ${isExpanded ? 'opacity-100 max-w-[150px]' : 'opacity-0 max-w-0 pointer-events-none hidden'}
             `}>
-              Sign out
-            </span>
+                            Sign out
+                        </span>
 
-            {!isExpanded && (
-              <div className="absolute left-full ml-4 px-3 py-2 bg-red-600 text-white text-[12px] font-bold uppercase tracking-wider rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl z-50">
-                Sign Out
-              </div>
-            )}
-          </button>
-        </div>
-      </div>
+                        {!isExpanded && (
+                            <div className="absolute left-full ml-4 px-3 py-2 bg-red-600 text-white text-[12px] font-bold uppercase tracking-wider rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl z-50">
+                                Sign Out
+                            </div>
+                        )}
+                    </button>
+                </div>
+            </div>
 
-      {/* Reusable Logout Dialog */}
-      <LogoutModal 
-        isOpen={showLogoutModal}
-        onClose={() => setShowLogoutModal(false)}
-        onConfirm={handleLogout}
-        role="admin"
-      />
-    </>
-  );
+            {/* Reusable Logout Dialog */}
+            <LogoutModal
+                isOpen={showLogoutModal}
+                onClose={() => setShowLogoutModal(false)}
+                onConfirm={handleLogout}
+                role="admin"
+            />
+        </>
+    );
 }

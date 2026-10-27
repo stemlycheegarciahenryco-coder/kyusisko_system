@@ -563,4 +563,39 @@ router.post('/create-co-admin', verifyToken, async (req, res) => {
     }
 });
 
+router.get('/role', verifyToken, async (req, res) => {
+    try {
+        const email = req.user.email;
+
+        const roleCheck = await pool.query(
+            `SELECT role, first_name, last_name FROM users WHERE email = $1`,
+            [email.trim()]
+        );
+
+        if (roleCheck.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        const userRole = roleCheck.rows[0].role;
+        const first = roleCheck.rows[0].first_name;
+        const last = roleCheck.rows[0].last;
+        console.log(userRole);
+
+        res.status(200).json({
+            success: true,
+            role: userRole,
+            first_name:first,
+            last_name: last,
+        });
+    } 
+    catch (error) {
+        console.error('Error fetching SA role:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+});
+
+
 module.exports = router;
