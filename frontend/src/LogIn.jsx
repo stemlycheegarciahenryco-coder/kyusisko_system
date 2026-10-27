@@ -67,6 +67,7 @@ export default function LogIn() {
         } else if (role === 'student') {
             localStorage.setItem('userRole', role);
             if (!data.isProfileComplete) {
+                localStorage.removeItem('incomplete_profile');
                 localStorage.setItem('incomplete_profile', true)
                 navigate('/StudentProfile');
             } else {

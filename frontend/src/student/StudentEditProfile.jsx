@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { CheckCircle2, School, User, Users, Loader2, Pencil, Check, AlertCircle, ClipboardList, Plus, X, Sparkles } from 'lucide-react';
+import { CheckCircle2, School, User, Users, Loader2, Pencil, Check, AlertCircle, ClipboardList, Plus, X } from 'lucide-react';
 import api from '../api';
 
 const QC_CITY_CODE = '137404000';
@@ -159,7 +159,6 @@ function ContactField({ label, value, onChange, disabled, error, isEditing }) {
 
 export default function StudentEditProfile({ studentData, onRefresh }) {
     const topRef = useRef(null);
-    const submitRef = useRef(null);
     const sectionRefs = {
         academic: useRef(null),
         eligibility: useRef(null),
@@ -208,7 +207,6 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
 
     const [editMode, setEditMode] = useState({ academic: false, eligibility: false, personal: false, family: false });
     const [hasOnboardingRow, setHasOnboardingRow] = useState(false);
-    const [hasEdited, setHasEdited] = useState(false);
     const [colleges, setColleges] = useState([]);
     const [courses, setCourses] = useState([]);
     const [barangays, setBarangays] = useState([]);
@@ -217,7 +215,8 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
     const [fieldErrors, setFieldErrors] = useState({});
     const [globalError, setGlobalError] = useState('');
     const [isTourRunning, setIsTourRunning] = useState(false);
-    const [activeTourSection, setActiveTourSection] = useState(null); // 'academic' | 'eligibility' | 'personal' | 'family' | 'submit'
+    const [activeTourSection, setActiveTourSection] = useState(null);
+    const [incompleteProfile, setIncompleteProfile] = useState(false);
 
     const runSpecialTour = async () => {
         const sections = ['academic', 'eligibility', 'personal', 'family'];
@@ -243,31 +242,16 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
 
             await new Promise(resolve => setTimeout(resolve, 800));
 
-            // Close previous section and open current
             setEditMode(prev => ({
                 ...prev,
                 ...(prevSec ? { [prevSec]: false } : {}),
                 [currentSec]: true
             }));
-            setHasEdited(true);
 
             await new Promise(resolve => setTimeout(resolve, 2000));
         }
 
-        // Close the final section (family)
         setEditMode(prev => ({ ...prev, family: false }));
-
-        // Shift highlight to Submit area
-        setActiveTourSection('submit');
-        const submitEl = submitRef?.current;
-        if (submitEl) {
-            submitEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-
-        // Pause to let the user see the highlighted Submit section and dialogue bubble
-        await new Promise(resolve => setTimeout(resolve, 3000));
-
-        // Clear highlight and scroll back up to the top
         setActiveTourSection(null);
         topRef?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         setIsTourRunning(false);
@@ -275,15 +259,12 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
 
     useEffect(() => {
         const check_incomplete = () => {
-            // 1. Declare the variable properly
-            const incompleteProfile = localStorage.getItem('incomplete_profile');
-            
-            // 2. Check explicitly for your truthy condition (e.g., 'true')
-            if (incompleteProfile === 'true') {
+            const incP = localStorage.getItem('incomplete_profile');
+            if (incP != null) {
+                setIncompleteProfile(incP);
+            }
+            if (incP === 'true') {
                 runSpecialTour();
-                
-                // 3. Remove the item so the tour only runs once
-                localStorage.removeItem('incomplete_profile');
             }
         };
 
@@ -332,7 +313,9 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
 
         fetchLookups();
         check_incomplete();
-    }, [studentData]);    useEffect(() => {
+    }, [studentData]); 
+
+    useEffect(() => {
         fetch(`https://psgc.gitlab.io/api/cities-municipalities/${QC_CITY_CODE}/barangays/`)
             .then(res => res.json())
             .then(data => setBarangays([...data].sort((a, b) => a.name.localeCompare(b.name))))
@@ -365,46 +348,7 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
         family: ['mother_contact', 'father_contact', 'guardian_contact']
     };
 
-    const handleToggleEdit = (section) => {
-        if (isTourRunning) return;
-        if (editMode[section]) {
-            const errors = validateSection(section);
-            if (Object.keys(errors).length > 0) {
-                setFieldErrors(prev => ({ ...prev, ...errors }));
-                return;
-            }
-            setFieldErrors(prev => {
-                const next = { ...prev };
-                sectionFields[section].forEach(k => delete next[k]);
-                return next;
-            });
-            setEditMode(p => ({ ...p, [section]: false }));
-        } else {
-            setEditMode(p => ({ ...p, [section]: true }));
-            setHasEdited(true);
-        }
-    };
-
-    const toggleSport = (sport) => {
-        if (isTourRunning) return;
-        setForm(prev => ({
-            ...prev,
-            sports: prev.sports.includes(sport) ? prev.sports.filter(s => s !== sport) : [...prev.sports, sport]
-        }));
-    };
-
-    const clearError = (field) => setFieldErrors(prev => (prev[field] ? { ...prev, [field]: '' } : prev));
-
-    const handleContactChange = (field, e) => {
-        let val = e.target.value.replace(/\D/g, '');
-        if (val.startsWith('0')) val = val.substring(1);
-        if (val.length > 0 && val[0] !== '9') val = '';
-        setForm(prev => ({ ...prev, [field]: val.slice(0, 10) }));
-        clearError(field);
-    };
-
-    const handleSaveAll = async (e) => {
-        e.preventDefault();
+    const handleSaveAll = async () => {
         setGlobalError('');
 
         let errors = {};
@@ -498,7 +442,49 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
             setGlobalError(err?.response?.data?.message || err?.response?.data?.error || 'Failed to save profile updates.');
         } finally {
             setSaving(false);
+            localStorage.removeItem('incomplete_profile');
+            setIncompleteProfile(false);
         }
+    };
+
+    const handleToggleEdit = (section) => {
+        if (isTourRunning) return;
+        if (editMode[section]) {
+            const errors = validateSection(section);
+            if (Object.keys(errors).length > 0) {
+                setFieldErrors(prev => ({ ...prev, ...errors }));
+                return;
+            }
+            setFieldErrors(prev => {
+                const next = { ...prev };
+                sectionFields[section].forEach(k => delete next[k]);
+                return next;
+            });
+            setEditMode(p => ({ ...p, [section]: false }));
+
+            // Immediately submit changes upon clicking Done
+            handleSaveAll();
+        } else {
+            setEditMode(p => ({ ...p, [section]: true }));
+        }
+    };
+
+    const toggleSport = (sport) => {
+        if (isTourRunning) return;
+        setForm(prev => ({
+            ...prev,
+            sports: prev.sports.includes(sport) ? prev.sports.filter(s => s !== sport) : [...prev.sports, sport]
+        }));
+    };
+
+    const clearError = (field) => setFieldErrors(prev => (prev[field] ? { ...prev, [field]: '' } : prev));
+
+    const handleContactChange = (field, e) => {
+        let val = e.target.value.replace(/\D/g, '');
+        if (val.startsWith('0')) val = val.substring(1);
+        if (val.length > 0 && val[0] !== '9') val = '';
+        setForm(prev => ({ ...prev, [field]: val.slice(0, 10) }));
+        clearError(field);
     };
 
     const currentBarangayMissing = form.sbarangay && !barangays.some(b => b.name === form.sbarangay);
@@ -524,7 +510,6 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
 
     return (
         <div ref={topRef} className="max-w-4xl mx-auto space-y-8 antialiased relative">
-            {/* Overlay to disable mouse interaction during tour */}
             {isTourRunning && (
                 <div className="absolute inset-0 z-50 cursor-not-allowed bg-transparent" />
             )}
@@ -547,31 +532,26 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
                         </button>
                     </div>
                 ) : (
-                    <form onSubmit={handleSaveAll} noValidate className="flex flex-col">
+                    <div className="flex flex-col">
                         <div className="px-8 md:px-12 pt-8 pb-6 border-b-2 border-black/5 shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <div>
-                                <h2 className="text-2xl font-black text-black uppercase tracking-tight">Edit Profile</h2>
+                                <h2 className="text-2xl font-black text-black uppercase tracking-tight">Profile</h2>
                                 <p className="text-[11px] font-black text-black/40 uppercase tracking-[0.18em] mt-1">
                                     Update all your records in one place
                                 </p>
                             </div>
-                            {/**
-                            <button
-                                type="button"
-                                disabled={isTourRunning}
-                                onClick={runSpecialTour}
-                                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#093fb4] hover:bg-[#073496] text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-md shrink-0 active:scale-95 disabled:opacity-50"
-                            >
-                                {isTourRunning ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                                {isTourRunning ? 'Tour in progress...' : 'Scroll & Open Edit Tour'}
-                            </button>
-                        **/}
                         </div>
 
                         <div className="px-8 md:px-12 py-8 text-left space-y-2">
                             {globalError && (
                                 <div className="mb-5 p-3.5 bg-red-50 border-2 border-red-200 text-red-600 text-[11px] font-black uppercase tracking-wider rounded-xl flex items-center gap-2.5">
                                     <AlertCircle size={18} strokeWidth={2.5} className="shrink-0" /> {globalError}
+                                </div>
+                            )}
+
+                            {saving && (
+                                <div className="mb-5 p-3.5 bg-blue-50 border-2 border-blue-200 text-[#093fb4] text-[11px] font-black uppercase tracking-wider rounded-xl flex items-center gap-2.5">
+                                    <Loader2 size={18} className="animate-spin shrink-0" strokeWidth={2.5} /> Saving updates...
                                 </div>
                             )}
 
@@ -582,7 +562,7 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
                             >
                                 {activeTourSection === 'academic' && (
                                     <div className="absolute -top-10 left-4 z-20 bg-[#093fb4] text-white px-3.5 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider shadow-lg flex items-center gap-2">
-                                        <span>Editing Academic Information...</span>
+                                        <span>Edit Academic Information here...</span>
                                     </div>
                                 )}
                                 <SectionTitle
@@ -705,7 +685,7 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
                             >
                                 {activeTourSection === 'eligibility' && (
                                     <div className="absolute -top-10 left-4 z-20 bg-[#093fb4] text-white px-3.5 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider shadow-lg flex items-center gap-2">
-                                        <span>Editing Eligibility Details...</span>
+                                        <span>Edit Eligibility Details here...</span>
                                     </div>
                                 )}
                                 <SectionTitle
@@ -827,7 +807,7 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
                             >
                                 {activeTourSection === 'personal' && (
                                     <div className="absolute -top-10 left-4 z-20 bg-[#093fb4] text-white px-3.5 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider shadow-lg flex items-center gap-2">
-                                        <span>Editing Personal Details...</span>
+                                        <span>Edit Personal Details here...</span>
                                     </div>
                                 )}
                                 <SectionTitle
@@ -950,7 +930,7 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
                             >
                                 {activeTourSection === 'family' && (
                                     <div className="absolute -top-10 left-4 z-20 bg-[#093fb4] text-white px-3.5 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider shadow-lg flex items-center gap-2">
-                                        <span>Editing Family Information...</span>
+                                        <span>Edit Family Information here...</span>
                                     </div>
                                 )}
                                 <SectionTitle
@@ -1012,36 +992,7 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
                                 </div>
                             </div>
                         </div>
-
-                        {/* ================= SUBMIT SECTION ================= */}
-                        <div
-                            ref={submitRef}
-                            className={`px-8 md:px-12 py-6 border-t-2 border-black/5 bg-gray-50 shrink-0 transition-all duration-300 rounded-b-[2.5rem] relative ${activeTourSection === 'submit' ? 'border-2 border-[#093fb4] ring-4 ring-[#093fb4]/30 shadow-2xl bg-blue-50/20' : ''}`}
-                        >
-                            {activeTourSection === 'submit' && (
-                                <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-30 bg-[#093fb4] text-white px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-wider shadow-2xl flex items-center gap-2 animate-bounce">
-                                    <span>click submit when finished</span>
-                                </div>
-                            )}
-                            <div className="flex gap-4">
-                                <button
-                                    type="submit"
-                                    disabled={saving || (!hasEdited && activeTourSection !== 'submit') || (isTourRunning && activeTourSection !== 'submit')}
-                                    className={`w-full py-4 rounded-xl font-black text-xs uppercase tracking-[0.15em] transition-all flex items-center justify-center gap-2 border-2 ${hasEdited || activeTourSection === 'submit'
-                                        ? 'bg-[#093fb4] hover:bg-[#073496] text-white border-transparent shadow-lg shadow-[#093fb4]/25 active:scale-95 cursor-pointer'
-                                        : 'bg-black/10 text-black/40 cursor-not-allowed border-transparent'
-                                        }`}
-                                >
-                                    {saving ? <><Loader2 size={16} className="animate-spin" strokeWidth={2.5} /> Saving Updates...</> : 'Save Profile Changes'}
-                                </button>
-                            </div>
-                            {!hasEdited && activeTourSection !== 'submit' && !isTourRunning && (
-                                <p className="text-center text-[10px] font-black text-black/40 uppercase tracking-widest mt-3">
-                                    Click 'Edit' on any section above to make changes
-                                </p>
-                            )}
-                        </div>
-                    </form>
+                    </div>
                 )}
             </div>
         </div>
