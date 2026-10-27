@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CheckCircle2, School, User, Users, Loader2, Pencil, Check, AlertCircle, ClipboardList, Plus, X, Sparkles } from 'lucide-react';
 import api from '../api';
+import { QuestionIcon } from '@phosphor-icons/react';
 
 const QC_CITY_CODE = '137404000';
 
@@ -558,17 +559,15 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
                                     Update all your records in one place
                                 </p>
                             </div>
-                            {/**
                             <button
                                 type="button"
                                 disabled={isTourRunning}
                                 onClick={runSpecialTour}
-                                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#093fb4] hover:bg-[#073496] text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-md shrink-0 active:scale-95 disabled:opacity-50"
+                                className="flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-xl text-xs font-semibold transition-all shadow-sm active:scale-95 disabled:opacity-50 shrink-0"
                             >
-                                {isTourRunning ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                                {isTourRunning ? 'Tour in progress...' : 'Scroll & Open Edit Tour'}
+                                {isTourRunning ? <Loader2 size={15} className="animate-spin text-[#093fb4]" /> : <QuestionIcon size={16} className="text-[#093fb4]" />}
+                                <span>{isTourRunning ? 'Tour in progress...' : 'Help'}</span>
                             </button>
-                        **/}
                         </div>
 
                         <div className="px-8 md:px-12 py-8 text-left space-y-2">
