@@ -65,4 +65,31 @@ router.put('/reports/dismiss/:reportId', adminCtrl.dismissReport);
 router.get('/stats', adminCtrl.getStats);
 router.get('/rootadmin/audit-logs', adminCtrl.getAuditLogs);
 
+router.post('/post/check/email', async (req, res) => {
+    try {
+        const {email} = req.body
+        const emailCheck = await pool.query(
+            `SELECT email FROM users WHERE email = $1 
+             UNION 
+             SELECT student_email FROM students WHERE student_email = $1 
+             UNION 
+             SELECT sub_email FROM sub_admins WHERE sub_email = $1`,
+            [email.trim()]
+        );
+
+        if (emailCheck.rows.length > 0) {
+            return res.status(400).json({ success: false, message: 'Email address is already in use by another account.' });
+        }
+
+        // Return the plain-text generatedPassword so the frontend can display it in Swal
+        res.status(200).json({
+            success: true,
+        });
+
+    } catch (err) {
+        console.error(err)
+        res.status(500).json({ success: false, error: "Server Error" });
+    }
+});
+
 module.exports = router;

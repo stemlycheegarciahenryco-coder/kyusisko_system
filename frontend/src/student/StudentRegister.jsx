@@ -224,7 +224,7 @@ export default function StudentRegister() {
     };
 
     // Transition from Phase 1 -> Phase 2 (Terms)
-    const handleProceedToTerms = (e) => {
+    const handleProceedToTerms = async (e) => {
         e.preventDefault();
         setIsSubmitted(true);
 
@@ -253,9 +253,16 @@ export default function StudentRegister() {
             setShowError(true);
             return;
         }
-
-        setCurrentPhase(2);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        try {
+            await api.post(`/post/check/email`, {email: regform.email});
+            setCurrentPhase(2);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        catch (error) {
+            const message = error.response?.data?.message || error.response?.data?.error || "Server Error. Please try again later.";
+            setErrorMessage(message); // <-- This updates the modal's text state
+            setShowError(true);      // <-- This opens the modal
+        }
     };
 
     // Transition from Phase 2 -> Phase 3 (Trigger OTP & Send)
@@ -540,8 +547,8 @@ export default function StudentRegister() {
                                 type="submit"
                                 disabled={isPhase1Invalid}
                                 className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest transition-all text-xs flex items-center justify-center gap-2 ${!isPhase1Invalid
-                                        ? 'bg-[#093FB4] hover:bg-[#073496] text-white shadow-xl shadow-[#093FB4]/25 active:scale-95 cursor-pointer'
-                                        : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
+                                    ? 'bg-[#093FB4] hover:bg-[#073496] text-white shadow-xl shadow-[#093FB4]/25 active:scale-95 cursor-pointer'
+                                    : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
                                     }`}
                             >
                                 {!isPhase1Invalid ? "Next: Terms and Conditions" : "Please fill out all required fields"}
@@ -647,8 +654,8 @@ export default function StudentRegister() {
                                 onClick={handleAcceptTermsAndSendOtp}
                                 disabled={!hasReadToBottom || !acceptedTerms}
                                 className={`flex-[2] py-4 rounded-2xl font-black uppercase tracking-widest transition-all text-xs flex items-center justify-center gap-2 ${hasReadToBottom && acceptedTerms
-                                        ? 'bg-[#093FB4] hover:bg-[#073496] text-white shadow-xl shadow-[#093FB4]/25 active:scale-95 cursor-pointer'
-                                        : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
+                                    ? 'bg-[#093FB4] hover:bg-[#073496] text-white shadow-xl shadow-[#093FB4]/25 active:scale-95 cursor-pointer'
+                                    : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
                                     }`}
                             >
                                 {!hasReadToBottom ? "Scroll to Bottom" : !acceptedTerms ? "Check the Box" : "Next: Send OTP Verification"}

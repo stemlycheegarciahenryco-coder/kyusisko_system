@@ -7,6 +7,7 @@ import { OrgSuccessModal, ErrorModal } from './component/RegisterModals';
 import { useNavigate } from 'react-router-dom';
 import LoadingScreen from './component/LoadingScreen';
 import { ProviderGuidelinesMain } from './ProviderGuidelines';
+import api from "./api"
 
 const FieldStatus = Object.freeze({
     INCOMPLETE: 'Incomplete',
@@ -55,7 +56,7 @@ const OrganizationRegisterPage = () => {
     const [barangays, setBarangays] = useState([]);
     const [activeRegionCode, setActiveRegionCode] = useState('');
     const [activeCityCode, setActiveCityCode] = useState('');
-    
+
     // Phase Management: 1 = Fields, 2 = Terms & Guidelines, 3 = OTP Verification
     const [currentPhase, setCurrentPhase] = useState(1);
 
@@ -226,7 +227,7 @@ const OrganizationRegisterPage = () => {
     const isPhase1Invalid = hasInvalidRequiredFields || hasInvalidOptionalFields;
 
     // Transition from Phase 1 -> Phase 2 (Terms & Guidelines)
-    const handleProceedToTerms = (e) => {
+    const handleProceedToTerms = async (e) => {
         e.preventDefault();
         setIsSubmitted(true);
 
@@ -249,8 +250,16 @@ const OrganizationRegisterPage = () => {
             return;
         }
 
-        setCurrentPhase(2);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        try {
+            await api.post(`/post/check/email`, { email: formData.sub_email.trim() });
+            setCurrentPhase(2);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        catch (error) {
+            const message = error.response?.data?.message || error.response?.data?.error || "Server Error. Please try again later.";
+            setErrorMessage(message); // <-- This updates the modal's text state
+            setShowError(true);      // <-- This opens the modal
+        }
     };
 
     // Transition from Phase 2 -> Phase 3 (Trigger OTP Request)
@@ -600,7 +609,7 @@ const OrganizationRegisterPage = () => {
                             className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest transition-all text-xs flex items-center justify-center gap-2 mt-8 ${!isPhase1Invalid
                                 ? 'bg-[#093fb4] hover:bg-[#073496] text-white shadow-xl shadow-[#093fb4]/25 active:scale-95 cursor-pointer'
                                 : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
-                            }`}
+                                }`}
                         >
                             {!isPhase1Invalid ? "Next: Review Guidelines" : "Please fill out all required fields"}
                         </button>
@@ -621,7 +630,7 @@ const OrganizationRegisterPage = () => {
                                 onScroll={handleTermsScroll}
                                 className="max-h-[45vh] overflow-y-scroll pr-2 text-slate-600 text-sm leading-relaxed font-medium space-y-4 border-b border-slate-200 pb-6 custom-scrollbar bg-white p-6 rounded-2xl shadow-sm"
                             >
-                                <ProviderGuidelinesMain onClose={() => {}} handleFinishedReadingGuidelines={() => {}} isModal= {true}/>
+                                <ProviderGuidelinesMain onClose={() => { }} handleFinishedReadingGuidelines={() => { }} isModal={true} />
                             </div>
 
                             {/* Guidelines Checkbox */}
@@ -648,7 +657,7 @@ const OrganizationRegisterPage = () => {
                                 className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest transition-all text-xs flex items-center justify-center gap-2 ${hasReadToBottom && acceptedTerms
                                     ? 'bg-[#093fb4] hover:bg-[#073496] text-white shadow-xl shadow-[#093fb4]/25 active:scale-95 cursor-pointer'
                                     : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
-                                }`}
+                                    }`}
                             >
                                 {!hasReadToBottom ? "Scroll to Bottom of Guidelines" : !acceptedTerms ? "Check the Box to Continue" : loading || verifying ? "Sending OTP..." : "Next: Send OTP Verification"}
                             </button>
