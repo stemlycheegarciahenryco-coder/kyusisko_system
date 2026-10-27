@@ -218,6 +218,7 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
     const [globalError, setGlobalError] = useState('');
     const [isTourRunning, setIsTourRunning] = useState(false);
     const [activeTourSection, setActiveTourSection] = useState(null); // 'academic' | 'eligibility' | 'personal' | 'family' | 'submit'
+    const [incompleteProfile, setIncompleteProfile] = useState(false)
 
     const runSpecialTour = async () => {
         const sections = ['academic', 'eligibility', 'personal', 'family'];
@@ -273,17 +274,18 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
         setIsTourRunning(false);
     };
 
-    useEffect(() => {
-        const check_incomplete = () => {
-            // 1. Declare the variable properly
-            const incompleteProfile = localStorage.getItem('incomplete_profile');
-            
-            // 2. Check explicitly for your truthy condition (e.g., 'true')
-            if (incompleteProfile === 'true') {
-                runSpecialTour();
-            }
-        };
+    const check_incomplete = () => {
+        // 1. Declare the variable properly
+        const incompleteProfile = localStorage.getItem('incomplete_profile');
+        setIncompleteProfile(incompleteProfile)
 
+        // 2. Check explicitly for your truthy condition (e.g., 'true')
+        if (incompleteProfile === 'true') {
+            runSpecialTour();
+        }
+    };
+
+    useEffect(() => {
         const fetchLookups = async () => {
             try {
                 const [collegeRes, courseRes] = await Promise.all([
@@ -328,12 +330,13 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
         };
 
         fetchLookups();
-        check_incomplete();
-    }, [studentData]);    useEffect(() => {
+    }, [studentData]); useEffect(() => {
         fetch(`https://psgc.gitlab.io/api/cities-municipalities/${QC_CITY_CODE}/barangays/`)
             .then(res => res.json())
             .then(data => setBarangays([...data].sort((a, b) => a.name.localeCompare(b.name))))
             .catch(err => console.error('Error fetching barangays:', err));
+
+        check_incomplete();
     }, []);
 
     const validateSection = (section) => {
@@ -444,22 +447,6 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
                 other_religion: form.other_religion
             });
 
-            const hasCaregiverInfo = [form.mother_name, form.father_name, form.guardian_name].some(val => val && val.trim() !== '');
-            if (hasCaregiverInfo) {
-                await api.put(`/students/parent-profile/me`, {
-                    mother_name: form.mother_name,
-                    mother_contact: form.mother_contact,
-                    mother_occupation: form.mother_occupation,
-                    father_name: form.father_name,
-                    father_contact: form.father_contact,
-                    father_occupation: form.father_occupation,
-                    guardian_name: form.guardian_name,
-                    guardian_contact: form.guardian_contact,
-                    guardian_occupation: form.guardian_occupation,
-                    house_address: form.house_address
-                });
-            }
-
             if (hasOnboardingRow || isEligibilityComplete(form)) {
                 await api.post('/student-onboarding-profile', {
                     college_id: (schoolNotEnrolled || form.college_id === 'Others' || form.college_id === '') ? null : parseInt(form.college_id, 10),
@@ -479,7 +466,26 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
                     other_program: form.is_poverty_program === 'Yes' && form.program_type === 'Others' ? form.other_program : null
                 });
                 setHasOnboardingRow(true);
+                setIncompleteProfile(false);
+                localStorage.setItem('incomplete_profile', false)
             }
+
+            const hasCaregiverInfo = [form.mother_name, form.father_name, form.guardian_name].some(val => val && val.trim() !== '');
+            if (hasCaregiverInfo) {
+                await api.put(`/students/parent-profile/me`, {
+                    mother_name: form.mother_name,
+                    mother_contact: form.mother_contact,
+                    mother_occupation: form.mother_occupation,
+                    father_name: form.father_name,
+                    father_contact: form.father_contact,
+                    father_occupation: form.father_occupation,
+                    guardian_name: form.guardian_name,
+                    guardian_contact: form.guardian_contact,
+                    guardian_occupation: form.guardian_occupation,
+                    house_address: form.house_address
+                });
+            }
+
 
             setEditMode({ academic: false, eligibility: false, personal: false, family: false });
             setFieldErrors({});
@@ -941,7 +947,7 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
                             </div>
 
                             {/* ================= 4. FAMILY ================= */}
-                            <div
+                            {(<div
                                 ref={sectionRefs.family}
                                 className={`transition-all duration-300 rounded-3xl relative ${activeTourSection === 'family' ? 'border-2 border-[#093fb4] ring-4 ring-[#093fb4]/30 shadow-xl p-4 bg-blue-50/10' : ''}`}
                             >
@@ -1008,6 +1014,8 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
                                     </Field>
                                 </div>
                             </div>
+
+                            )}
                         </div>
 
                         {/* ================= SUBMIT SECTION ================= */}

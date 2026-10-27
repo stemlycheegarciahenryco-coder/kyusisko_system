@@ -115,7 +115,7 @@ export default function StudentRegister() {
 
     const [regform, setRegForm] = useState({
         firstName: '', middleName: '', lastName: '', suffix: '',
-        birthDate: '', gender: 'Male', contactNumber: '',
+        birthDate: '', gender: '', contactNumber: '',
         district: '', barangay: '', street: '', zipCode: '',
         email: '', password: '', confirmPassword: ''
     });
@@ -254,7 +254,7 @@ export default function StudentRegister() {
             return;
         }
         try {
-            await api.post(`/post/check/email`, {email: regform.email});
+            await api.post(`/post/check/email`, { email: regform.email });
             setCurrentPhase(2);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -484,6 +484,7 @@ export default function StudentRegister() {
                                 <div>
                                     <Label text="Gender" />
                                     <select name="gender" value={regform.gender} onChange={handleChange} className={getBorderClass("gender", FieldStatus.VALID)}>
+                                        <option value="" disabled>Select Gender</option>
                                         <option value="Male">Male</option>
                                         <option value="Female">Female</option>
                                         <option value="Prefer not to Say">Prefer not to Say</option>
