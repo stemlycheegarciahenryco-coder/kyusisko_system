@@ -88,7 +88,7 @@ router.post('/post/check/email', async (req, res) => {
 
     } catch (err) {
         console.error(err)
-        res.status(500).json({ success: false, error: "Server Error" });
+        res.status(500).json({ success: false, message: "An unexpected error occurred. Please try again later." });
     }
 });
 

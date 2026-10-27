@@ -273,9 +273,9 @@ router.get('/get/co-admins/archive', verifyToken, async (req, res) => {
 router.put('/update/password', verifyToken, async (req, res) => {
     try {
         // 1. Authorization check
-        if (req.user.role !== 'root_admin') {
-            return res.status(403).json({ success: false, message: 'Forbidden access.' });
-        }
+        // if (req.user.role !== 'root_admin') {
+        //     return res.status(403).json({ success: false, message: 'Forbidden access.' });
+        // }
 
         const { current_password, new_password } = req.body;
 

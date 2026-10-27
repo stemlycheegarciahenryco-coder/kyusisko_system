@@ -564,8 +564,9 @@ const getActivityLogs = async (req, res) => {
                     pat.action_type AS type,
                     pat.details AS detail,
                     pat.created_at,
-                    COALESCE(NULLIF(TRIM(CONCAT(actor.first_name, ' ', actor.last_name)), ''), actor.org_name, 'System') AS user_name,
-                    actor.account_type AS role,
+                    COALESCE(NULLIF(TRIM(CONCAT(pat.actor_name, ' ', pat.actor_lastname)), ''), actor.org_name, 'System') AS user_name,
+                    pat.actor_role AS role,
+                    pat.actor_email AS email,
                     st.sfirst_name AS student_first_name,
                     st.slast_name AS student_last_name,
                     CASE
@@ -598,6 +599,7 @@ const getActivityLogs = async (req, res) => {
                     'Student' AS role,
                     st.sfirst_name AS student_first_name,
                     st.slast_name AS student_last_name,
+                    st.student_email AS email,
                     'log' AS source
                 FROM applications a
                 JOIN scholarships prog ON a.scholarship_id = prog.id
@@ -615,6 +617,7 @@ const getActivityLogs = async (req, res) => {
             user: r.user_name,
             role: r.role === 'co_admin' ? 'Co-Admin' : r.role === 'main' ? 'Org Admin' : r.role,
             type: r.type,
+            email: r.email,
             detail: r.student_first_name && r.role !== 'Student'
                 ? `${r.detail || ''} (Student: ${r.student_first_name} ${r.student_last_name})`.trim()
                 : (r.detail || ''),

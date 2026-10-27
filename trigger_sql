@@ -1,0 +1,22 @@
+CREATE OR REPLACE FUNCTION fn_update_provider_audit_actor()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Update the newly inserted row by joining/looking up sub_admins using actor_id
+    UPDATE provider_audit_trails
+    SET 
+        actor_name = sa.first_name,
+        actor_lastname = sa.last_name,
+        actor_email = sa.sub_email,
+        actor_role = sa.account_type
+    FROM sub_admins sa
+    WHERE provider_audit_trails.id = NEW.id -- Replace 'id' with your provider_audit_trails primary key column name
+      AND sa.id = NEW.actor_id;          -- Replace 'id' with your sub_admins primary key column name
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER trg_provider_audit_actor_after_insert
+    AFTER INSERT ON provider_audit_trails
+    FOR EACH ROW
+    EXECUTE FUNCTION fn_update_provider_audit_actor();
