@@ -59,7 +59,7 @@ const normalizePhone = (raw) => {
     return d.slice(0, 10);
 };
 
-function SectionTitle({ icon: Icon, title, description, isEditing, onToggleEdit, disabled, isTourHighlighted }) {
+function SectionTitle({ icon: Icon, title, description }) {
     return (
         <div className="mb-4 pt-5 border-t-2 border-black/5 first:border-0 first:pt-0 flex justify-between items-start gap-3">
             <div className="min-w-0">
@@ -71,19 +71,6 @@ function SectionTitle({ icon: Icon, title, description, isEditing, onToggleEdit,
                 </div>
                 {description && <p className="text-[11px] font-bold text-black/50 ml-[38px]">{description}</p>}
             </div>
-
-            <button
-                type="button"
-                disabled={disabled}
-                onClick={onToggleEdit}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all border-2 shrink-0 ${disabled ? 'opacity-50 cursor-not-allowed' : ''
-                    } ${isEditing
-                        ? 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100'
-                        : 'bg-white text-[#093fb4] border-[#093fb4]/20 hover:border-[#093fb4] shadow-sm'
-                    } ${isTourHighlighted ? 'scale-125 ring-4 ring-[#093fb4]/50 shadow-lg animate-bounce bg-blue-50' : ''}`}
-            >
-                {isEditing ? <><Check size={13} strokeWidth={3} /> Done</> : <><Pencil size={13} strokeWidth={2.5} /> Edit</>}
-            </button>
         </div>
     );
 }
@@ -113,8 +100,8 @@ function YesNo({ value, onChange, disabled }) {
                     disabled={disabled}
                     onClick={() => onChange(opt)}
                     className={`py-2.5 rounded-xl border-2 text-xs font-black uppercase tracking-wider transition-all disabled:cursor-not-allowed ${value === opt
-                            ? (disabled ? 'bg-gray-200 text-black/70 border-gray-300 shadow-none' : 'bg-[#093fb4] text-white border-[#093fb4]')
-                            : (disabled ? 'bg-gray-50 text-black/30 border-black/5' : 'bg-white text-black/60 border-black/20 hover:border-[#093fb4]/60')
+                        ? (disabled ? 'bg-gray-200 text-black/70 border-gray-300 shadow-none' : 'bg-[#093fb4] text-white border-[#093fb4]')
+                        : (disabled ? 'bg-gray-50 text-black/30 border-black/5' : 'bg-white text-black/60 border-black/20 hover:border-[#093fb4]/60')
                         }`}
                 >
                     {opt}
@@ -219,13 +206,27 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
     const [globalError, setGlobalError] = useState('');
     const [isTourRunning, setIsTourRunning] = useState(false);
     const [activeTourSection, setActiveTourSection] = useState(null); // 'academic' | 'eligibility' | 'personal' | 'family' | 'submit'
-    const [incompleteProfile, setIncompleteProfile] = useState(false)
+    const [incompleteProfile, setIncompleteProfile] = useState(false);
+
+    const isGloballyEditing = editMode.academic || editMode.eligibility || editMode.personal || editMode.family;
+
+    const handleToggleGlobalEdit = () => {
+        if (isTourRunning) return;
+        if (isGloballyEditing) {
+            // Cancel/Close all
+            setEditMode({ academic: false, eligibility: false, personal: false, family: false });
+            setFieldErrors({});
+        } else {
+            // Open all
+            setEditMode({ academic: true, eligibility: true, personal: true, family: true });
+            setHasEdited(true);
+        }
+    };
 
     const runSpecialTour = async () => {
         const smoothScrollToTop = (duration = 800) => {
             const startPosition = window.pageYOffset;
             const startTime = performance.now();
-            // Easing function: creates a smooth acceleration and deceleration curve
             const easeInOutCubic = (t) => {
                 return t < 0.5
                     ? 4 * t * t * t
@@ -234,14 +235,8 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
             const animation = (currentTime) => {
                 const elapsedTime = currentTime - startTime;
                 const progress = Math.min(elapsedTime / duration, 1);
-
-                // Apply the curve to the progress
                 const ease = easeInOutCubic(progress);
-
-                // Scroll to the calculated position
                 window.scrollTo(0, startPosition * (1 - ease));
-
-                // Continue animating until duration is reached
                 if (progress < 1) {
                     requestAnimationFrame(animation);
                 }
@@ -251,10 +246,12 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
         const sections = ['academic', 'eligibility', 'personal', 'family'];
         setIsTourRunning(true);
 
+        // Turn on global edit mode for the tour simulation
+        setEditMode({ academic: true, eligibility: true, personal: true, family: true });
+        setHasEdited(true);
+
         for (let i = 0; i < sections.length; i++) {
             const currentSec = sections[i];
-            const prevSec = i > 0 ? sections[i - 1] : null;
-
             setActiveTourSection(currentSec);
 
             const el = sectionRefs[currentSec]?.current;
@@ -269,21 +266,11 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
                 });
             }
 
-            await new Promise(resolve => setTimeout(resolve, 800));
-
-            // Close previous section and open current
-            setEditMode(prev => ({
-                ...prev,
-                ...(prevSec ? { [prevSec]: false } : {}),
-                [currentSec]: true
-            }));
-            setHasEdited(true);
-
             await new Promise(resolve => setTimeout(resolve, 2000));
         }
 
-        // Close the final section (family)
-        setEditMode(prev => ({ ...prev, family: false }));
+        // Close all sections after tour completion
+        setEditMode({ academic: false, eligibility: false, personal: false, family: false });
 
         // Shift highlight to Submit area
         setActiveTourSection('submit');
@@ -292,19 +279,17 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
             submitEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
-        // Pause to let the user see the highlighted Submit section and dialogue bubble
         await new Promise(resolve => setTimeout(resolve, 3000));
 
-        // Clear highlight and scroll back up to the top
         setActiveTourSection(null);
-        smoothScrollToTop()
-        await onStudentProfileTour()
+        smoothScrollToTop();
+        await onStudentProfileTour();
         setIsTourRunning(false);
     };
 
     const check_incomplete = () => {
         const incompleteProfile = localStorage.getItem('incomplete_profile');
-        setIncompleteProfile(incompleteProfile)
+        setIncompleteProfile(incompleteProfile);
 
         if (incompleteProfile === 'true') {
             runSpecialTour();
@@ -367,50 +352,25 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
         check_incomplete();
     }, []);
 
-    const validateSection = (section) => {
+    const validateAll = () => {
         const errors = {};
         const phoneError = 'Enter a valid 10-digit number starting with 9';
 
-        if (section === 'personal') {
-            if (form.scontact_number && form.scontact_number.length !== 10) errors.scontact_number = phoneError;
-            if (form.szip_code && !/^\d{4}$/.test(form.szip_code)) errors.szip_code = 'Postal code must be exactly 4 digits';
+        // Personal
+        if (form.scontact_number && form.scontact_number.length !== 10) errors.scontact_number = phoneError;
+        if (form.szip_code && !/^\d{4}$/.test(form.szip_code)) errors.szip_code = 'Postal code must be exactly 4 digits';
+
+        // Eligibility
+        if (!isEligibilityComplete(form)) {
+            errors.eligibility = 'Answer every question (and pick at least one sport if you are an athlete).';
         }
-        if (section === 'eligibility') {
-            if (!isEligibilityComplete(form)) errors.eligibility = 'Answer every question (and pick at least one sport if you are an athlete).';
-        }
-        if (section === 'family') {
-            ['mother_contact', 'father_contact', 'guardian_contact'].forEach(key => {
-                if (form[key] && form[key].length !== 10) errors[key] = phoneError;
-            });
-        }
+
+        // Family
+        ['mother_contact', 'father_contact', 'guardian_contact'].forEach(key => {
+            if (form[key] && form[key].length !== 10) errors[key] = phoneError;
+        });
+
         return errors;
-    };
-
-    const sectionFields = {
-        academic: [],
-        eligibility: ['eligibility'],
-        personal: ['scontact_number', 'szip_code'],
-        family: ['mother_contact', 'father_contact', 'guardian_contact']
-    };
-
-    const handleToggleEdit = (section) => {
-        if (isTourRunning) return;
-        if (editMode[section]) {
-            const errors = validateSection(section);
-            if (Object.keys(errors).length > 0) {
-                setFieldErrors(prev => ({ ...prev, ...errors }));
-                return;
-            }
-            setFieldErrors(prev => {
-                const next = { ...prev };
-                sectionFields[section].forEach(k => delete next[k]);
-                return next;
-            });
-            setEditMode(p => ({ ...p, [section]: false }));
-        } else {
-            setEditMode(p => ({ ...p, [section]: true }));
-            setHasEdited(true);
-        }
     };
 
     const toggleSport = (sport) => {
@@ -435,10 +395,7 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
         e.preventDefault();
         setGlobalError('');
 
-        let errors = {};
-        Object.keys(editMode).forEach(section => {
-            if (editMode[section]) errors = { ...errors, ...validateSection(section) };
-        });
+        const errors = validateAll();
         if (Object.keys(errors).length > 0) {
             setFieldErrors(prev => ({ ...prev, ...errors }));
             return;
@@ -495,7 +452,7 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
                 });
                 setHasOnboardingRow(true);
                 setIncompleteProfile(false);
-                localStorage.setItem('incomplete_profile', false)
+                localStorage.setItem('incomplete_profile', false);
             }
 
             const hasCaregiverInfo = [form.mother_name, form.father_name, form.guardian_name].some(val => val && val.trim() !== '');
@@ -513,7 +470,6 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
                     house_address: form.house_address
                 });
             }
-
 
             setEditMode({ academic: false, eligibility: false, personal: false, family: false });
             setFieldErrors({});
@@ -583,18 +539,43 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
                             <div>
                                 <h2 className="text-2xl font-black text-black uppercase tracking-tight">Profile</h2>
                                 <p className="text-[11px] font-black text-black/40 uppercase tracking-[0.18em] mt-1">
-                                    Update all your records in one place
+                                    Update student information
                                 </p>
                             </div>
-                            <button
-                                type="button"
-                                disabled={isTourRunning}
-                                onClick={runSpecialTour}
-                                className="flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-xl text-xs font-semibold transition-all shadow-sm active:scale-95 disabled:opacity-50 shrink-0"
-                            >
-                                {isTourRunning ? <Loader2 size={15} className="animate-spin text-[#093fb4]" /> : <QuestionIcon size={16} className="text-[#093fb4]" />}
-                                <span>{isTourRunning ? 'Tour in progress...' : 'Help'}</span>
-                            </button>
+
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+                                {/* Help Button*/}
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        type="button"
+                                        disabled={isTourRunning}
+                                        onClick={runSpecialTour}
+                                        className="flex items-center justify-center w-9 h-9 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-xs font-semibold transition-all shadow-sm active:scale-95 disabled:opacity-50 shrink-0"
+                                    >
+                                        {isTourRunning ? <Loader2 size={15} className="animate-spin text-[#093fb4]" /> : <QuestionIcon size={16} className="text-[#093fb4]" />}
+                                    </button>
+                                </div>
+
+                                {/* Edit Profile Button (Moved below) */}
+                                <div className="flex justify-between items-center px-0 py-1 rounded-2xl">
+                                    <button
+                                        type="button"
+                                        disabled={isTourRunning}
+                                        onClick={handleToggleGlobalEdit}
+                                        className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all border-2 shrink-0 ${isTourRunning ? 'opacity-50 cursor-not-allowed' : ''
+                                            } ${isGloballyEditing
+                                                ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100 shadow-sm'
+                                                : 'bg-white text-[#093fb4] border-[#093fb4]/20 hover:border-[#093fb4] shadow-sm'
+                                            }`}
+                                    >
+                                        {isGloballyEditing ? (
+                                            <><X size={14} strokeWidth={3} /> Cancel</>
+                                        ) : (
+                                            <><Pencil size={14} strokeWidth={2.5} /> Edit Profile</>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="px-8 md:px-12 py-8 text-left space-y-2">
@@ -603,6 +584,8 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
                                     <AlertCircle size={18} strokeWidth={2.5} className="shrink-0" /> {globalError}
                                 </div>
                             )}
+
+                            {/* ================= GLOBAL EDIT TRIGGER / BUTTON ================= */}
 
                             {/* ================= 1. ACADEMIC ================= */}
                             <div
@@ -618,10 +601,6 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
                                     icon={School}
                                     title="Academic Information"
                                     description="School, course, and grades"
-                                    isEditing={editMode.academic}
-                                    disabled={isTourRunning}
-                                    onToggleEdit={() => handleToggleEdit('academic')}
-                                    isTourHighlighted={activeTourSection === 'academic'}
                                 />
                                 <div className="space-y-4 mb-7 pt-2">
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -742,10 +721,6 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
                                     icon={ClipboardList}
                                     title="Eligibility Details"
                                     description="Athletics and background used to match scholarships"
-                                    isEditing={editMode.eligibility}
-                                    disabled={isTourRunning}
-                                    onToggleEdit={() => handleToggleEdit('eligibility')}
-                                    isTourHighlighted={activeTourSection === 'eligibility'}
                                 />
                                 <div className="space-y-4 mb-7 pt-2">
                                     <Field label="Student Athlete" isEditing={editMode.eligibility} displayValue={form.is_athlete}>
@@ -771,8 +746,8 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
                                                             type="button"
                                                             onClick={() => { toggleSport(sport); clearError('eligibility'); }}
                                                             className={`px-3 py-2 rounded-xl border-2 text-[11px] font-black uppercase tracking-wide flex items-center gap-1.5 transition-all ${on
-                                                                    ? 'bg-[#093fb4] text-white border-[#093fb4]'
-                                                                    : 'bg-white text-black/60 border-black/20 hover:border-[#093fb4]/60'
+                                                                ? 'bg-[#093fb4] text-white border-[#093fb4]'
+                                                                : 'bg-white text-black/60 border-black/20 hover:border-[#093fb4]/60'
                                                                 }`}
                                                         >
                                                             {sport} {on ? <X size={12} strokeWidth={3} /> : <Plus size={12} strokeWidth={3} />}
@@ -865,10 +840,6 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
                                     icon={User}
                                     title="Personal Details"
                                     description="Contact, address, and demographic data"
-                                    isEditing={editMode.personal}
-                                    disabled={isTourRunning}
-                                    onToggleEdit={() => handleToggleEdit('personal')}
-                                    isTourHighlighted={activeTourSection === 'personal'}
                                 />
                                 <div className="space-y-4 mb-7 pt-2">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -989,10 +960,6 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
                                     icon={Users}
                                     title="Family Information"
                                     description="Parents and guardian details"
-                                    isEditing={editMode.family}
-                                    disabled={isTourRunning}
-                                    onToggleEdit={() => handleToggleEdit('family')}
-                                    isTourHighlighted={activeTourSection === 'family'}
                                 />
                                 <div className="space-y-5 mb-4 pt-2">
                                     {[
@@ -1061,8 +1028,8 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
                                     type="submit"
                                     disabled={saving || (!hasEdited && activeTourSection !== 'submit') || (isTourRunning && activeTourSection !== 'submit')}
                                     className={`w-full py-4 rounded-xl font-black text-xs uppercase tracking-[0.15em] transition-all flex items-center justify-center gap-2 border-2 ${hasEdited || activeTourSection === 'submit'
-                                            ? 'bg-[#093fb4] hover:bg-[#073496] text-white border-transparent shadow-lg shadow-[#093fb4]/25 active:scale-95 cursor-pointer'
-                                            : 'bg-black/10 text-black/40 cursor-not-allowed border-transparent'
+                                        ? 'bg-[#093fb4] hover:bg-[#073496] text-white border-transparent shadow-lg shadow-[#093fb4]/25 active:scale-95 cursor-pointer'
+                                        : 'bg-black/10 text-black/40 cursor-not-allowed border-transparent'
                                         }`}
                                 >
                                     {saving ? <><Loader2 size={16} className="animate-spin" strokeWidth={2.5} /> Saving Updates...</> : 'Save Profile Changes'}
@@ -1070,7 +1037,7 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
                             </div>
                             {!hasEdited && activeTourSection !== 'submit' && !isTourRunning && (
                                 <p className="text-center text-[10px] font-black text-black/40 uppercase tracking-widest mt-3">
-                                    Click 'Edit' on any section above to make changes
+                                    Click 'Edit Profile' above to make changes
                                 </p>
                             )}
                         </div>
