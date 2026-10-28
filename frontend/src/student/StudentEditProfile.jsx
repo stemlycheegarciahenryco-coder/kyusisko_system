@@ -59,7 +59,7 @@ const normalizePhone = (raw) => {
     return d.slice(0, 10);
 };
 
-function SectionTitle({ icon: Icon, title, description, isEditing, onToggleEdit, disabled }) {
+function SectionTitle({ icon: Icon, title, description, isEditing, onToggleEdit, disabled, isTourHighlighted }) {
     return (
         <div className="mb-4 pt-5 border-t-2 border-black/5 first:border-0 first:pt-0 flex justify-between items-start gap-3">
             <div className="min-w-0">
@@ -80,7 +80,7 @@ function SectionTitle({ icon: Icon, title, description, isEditing, onToggleEdit,
                     } ${isEditing
                         ? 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100'
                         : 'bg-white text-[#093fb4] border-[#093fb4]/20 hover:border-[#093fb4] shadow-sm'
-                    }`}
+                    } ${isTourHighlighted ? 'scale-125 ring-4 ring-[#093fb4]/50 shadow-lg animate-bounce bg-blue-50' : ''}`}
             >
                 {isEditing ? <><Check size={13} strokeWidth={3} /> Done</> : <><Pencil size={13} strokeWidth={2.5} /> Edit</>}
             </button>
@@ -113,8 +113,8 @@ function YesNo({ value, onChange, disabled }) {
                     disabled={disabled}
                     onClick={() => onChange(opt)}
                     className={`py-2.5 rounded-xl border-2 text-xs font-black uppercase tracking-wider transition-all disabled:cursor-not-allowed ${value === opt
-                        ? (disabled ? 'bg-gray-200 text-black/70 border-gray-300 shadow-none' : 'bg-[#093fb4] text-white border-[#093fb4]')
-                        : (disabled ? 'bg-gray-50 text-black/30 border-black/5' : 'bg-white text-black/60 border-black/20 hover:border-[#093fb4]/60')
+                            ? (disabled ? 'bg-gray-200 text-black/70 border-gray-300 shadow-none' : 'bg-[#093fb4] text-white border-[#093fb4]')
+                            : (disabled ? 'bg-gray-50 text-black/30 border-black/5' : 'bg-white text-black/60 border-black/20 hover:border-[#093fb4]/60')
                         }`}
                 >
                     {opt}
@@ -158,7 +158,7 @@ function ContactField({ label, value, onChange, disabled, error, isEditing }) {
     );
 }
 
-export default function StudentEditProfile({ studentData, onRefresh }) {
+export default function StudentEditProfile({ studentData, onRefresh, onStudentProfileTour }) {
     const topRef = useRef(null);
     const submitRef = useRef(null);
     const sectionRefs = {
@@ -222,6 +222,32 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
     const [incompleteProfile, setIncompleteProfile] = useState(false)
 
     const runSpecialTour = async () => {
+        const smoothScrollToTop = (duration = 800) => {
+            const startPosition = window.pageYOffset;
+            const startTime = performance.now();
+            // Easing function: creates a smooth acceleration and deceleration curve
+            const easeInOutCubic = (t) => {
+                return t < 0.5
+                    ? 4 * t * t * t
+                    : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
+            };
+            const animation = (currentTime) => {
+                const elapsedTime = currentTime - startTime;
+                const progress = Math.min(elapsedTime / duration, 1);
+
+                // Apply the curve to the progress
+                const ease = easeInOutCubic(progress);
+
+                // Scroll to the calculated position
+                window.scrollTo(0, startPosition * (1 - ease));
+
+                // Continue animating until duration is reached
+                if (progress < 1) {
+                    requestAnimationFrame(animation);
+                }
+            };
+            requestAnimationFrame(animation);
+        };
         const sections = ['academic', 'eligibility', 'personal', 'family'];
         setIsTourRunning(true);
 
@@ -271,16 +297,15 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
 
         // Clear highlight and scroll back up to the top
         setActiveTourSection(null);
-        topRef?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        smoothScrollToTop()
+        await onStudentProfileTour()
         setIsTourRunning(false);
     };
 
     const check_incomplete = () => {
-        // 1. Declare the variable properly
         const incompleteProfile = localStorage.getItem('incomplete_profile');
         setIncompleteProfile(incompleteProfile)
 
-        // 2. Check explicitly for your truthy condition (e.g., 'true')
         if (incompleteProfile === 'true') {
             runSpecialTour();
         }
@@ -331,7 +356,9 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
         };
 
         fetchLookups();
-    }, [studentData]); useEffect(() => {
+    }, [studentData]);
+
+    useEffect(() => {
         fetch(`https://psgc.gitlab.io/api/cities-municipalities/${QC_CITY_CODE}/barangays/`)
             .then(res => res.json())
             .then(data => setBarangays([...data].sort((a, b) => a.name.localeCompare(b.name))))
@@ -533,7 +560,7 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
                 <div className="absolute inset-0 z-50 cursor-not-allowed bg-transparent" />
             )}
 
-            <div className={`bg-white/70 backdrop-blur-xl border-2 border-white/80 rounded-[2.5rem] shadow-2xl overflow-hidden transition-all ${isTourRunning ? 'pointer-events-none' : ''}`}>
+            <div className={`bg-white/75 backdrop-blur-xl border-2 border-white/80 rounded-[2.5rem] shadow-2xl overflow-hidden transition-all ${isTourRunning ? 'pointer-events-none' : ''}`}>
                 {showSuccess ? (
                     <div className="p-12 text-center flex flex-col items-center max-w-sm mx-auto">
                         <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-500 mb-4 shadow-inner border-2 border-emerald-100">
@@ -594,6 +621,7 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
                                     isEditing={editMode.academic}
                                     disabled={isTourRunning}
                                     onToggleEdit={() => handleToggleEdit('academic')}
+                                    isTourHighlighted={activeTourSection === 'academic'}
                                 />
                                 <div className="space-y-4 mb-7 pt-2">
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -717,6 +745,7 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
                                     isEditing={editMode.eligibility}
                                     disabled={isTourRunning}
                                     onToggleEdit={() => handleToggleEdit('eligibility')}
+                                    isTourHighlighted={activeTourSection === 'eligibility'}
                                 />
                                 <div className="space-y-4 mb-7 pt-2">
                                     <Field label="Student Athlete" isEditing={editMode.eligibility} displayValue={form.is_athlete}>
@@ -742,8 +771,8 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
                                                             type="button"
                                                             onClick={() => { toggleSport(sport); clearError('eligibility'); }}
                                                             className={`px-3 py-2 rounded-xl border-2 text-[11px] font-black uppercase tracking-wide flex items-center gap-1.5 transition-all ${on
-                                                                ? 'bg-[#093fb4] text-white border-[#093fb4]'
-                                                                : 'bg-white text-black/60 border-black/20 hover:border-[#093fb4]/60'
+                                                                    ? 'bg-[#093fb4] text-white border-[#093fb4]'
+                                                                    : 'bg-white text-black/60 border-black/20 hover:border-[#093fb4]/60'
                                                                 }`}
                                                         >
                                                             {sport} {on ? <X size={12} strokeWidth={3} /> : <Plus size={12} strokeWidth={3} />}
@@ -839,6 +868,7 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
                                     isEditing={editMode.personal}
                                     disabled={isTourRunning}
                                     onToggleEdit={() => handleToggleEdit('personal')}
+                                    isTourHighlighted={activeTourSection === 'personal'}
                                 />
                                 <div className="space-y-4 mb-7 pt-2">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -946,7 +976,7 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
                             </div>
 
                             {/* ================= 4. FAMILY ================= */}
-                            {(<div
+                            <div
                                 ref={sectionRefs.family}
                                 className={`transition-all duration-300 rounded-3xl relative ${activeTourSection === 'family' ? 'border-2 border-[#093fb4] ring-4 ring-[#093fb4]/30 shadow-xl p-4 bg-blue-50/10' : ''}`}
                             >
@@ -962,6 +992,7 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
                                     isEditing={editMode.family}
                                     disabled={isTourRunning}
                                     onToggleEdit={() => handleToggleEdit('family')}
+                                    isTourHighlighted={activeTourSection === 'family'}
                                 />
                                 <div className="space-y-5 mb-4 pt-2">
                                     {[
@@ -1013,8 +1044,6 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
                                     </Field>
                                 </div>
                             </div>
-
-                            )}
                         </div>
 
                         {/* ================= SUBMIT SECTION ================= */}
@@ -1032,8 +1061,8 @@ export default function StudentEditProfile({ studentData, onRefresh }) {
                                     type="submit"
                                     disabled={saving || (!hasEdited && activeTourSection !== 'submit') || (isTourRunning && activeTourSection !== 'submit')}
                                     className={`w-full py-4 rounded-xl font-black text-xs uppercase tracking-[0.15em] transition-all flex items-center justify-center gap-2 border-2 ${hasEdited || activeTourSection === 'submit'
-                                        ? 'bg-[#093fb4] hover:bg-[#073496] text-white border-transparent shadow-lg shadow-[#093fb4]/25 active:scale-95 cursor-pointer'
-                                        : 'bg-black/10 text-black/40 cursor-not-allowed border-transparent'
+                                            ? 'bg-[#093fb4] hover:bg-[#073496] text-white border-transparent shadow-lg shadow-[#093fb4]/25 active:scale-95 cursor-pointer'
+                                            : 'bg-black/10 text-black/40 cursor-not-allowed border-transparent'
                                         }`}
                                 >
                                     {saving ? <><Loader2 size={16} className="animate-spin" strokeWidth={2.5} /> Saving Updates...</> : 'Save Profile Changes'}
