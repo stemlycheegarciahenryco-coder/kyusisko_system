@@ -148,6 +148,7 @@ function ContactField({ label, value, onChange, disabled, error, isEditing }) {
 export default function StudentEditProfile({ studentData, onRefresh, onStudentProfileTour }) {
     const topRef = useRef(null);
     const submitRef = useRef(null);
+    const editRef = useRef(null)
     const sectionRefs = {
         academic: useRef(null),
         eligibility: useRef(null),
@@ -241,12 +242,30 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
             };
             requestAnimationFrame(animation);
         };
-        const sections = ['academic', 'eligibility', 'personal', 'family'];
-        setIsTourRunning(true);
 
+        setIsTourRunning(true);
+        smoothScrollToTop();
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        // 1. Highlight and focus on the 'Edit Profile' button first
+        setActiveTourSection('editButton');
+        const editEl = editRef?.current;
+        if (editEl) {
+            const rect = editEl.getBoundingClientRect();
+            window.scrollTo({
+                top: rect.top + window.pageYOffset - 150,
+                behavior: 'smooth'
+            });
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 2200));
+
+        // Automatically trigger edit mode as part of the tour introduction
         setEditMode({ academic: true, eligibility: true, personal: true, family: true });
         setHasEdited(true);
 
+        // 2. Loop through the remaining sections
+        const sections = ['academic', 'eligibility', 'personal', 'family'];
         for (let i = 0; i < sections.length; i++) {
             const currentSec = sections[i];
             setActiveTourSection(currentSec);
@@ -266,8 +285,10 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
             await new Promise(resolve => setTimeout(resolve, 2000));
         }
 
+        // Close edit mode after tour walkthrough
         setEditMode({ academic: false, eligibility: false, personal: false, family: false });
 
+        // 3. Highlight Submit Section
         setActiveTourSection('submit');
         const submitEl = submitRef?.current;
         if (submitEl) {
@@ -584,31 +605,40 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
                                     )}
                                 </button>
 
-                                {/* Global Edit Button */}
-                                <button
-                                    type="button"
-                                    disabled={isTourRunning}
-                                    onClick={handleToggleGlobalEdit}
-                                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 border shrink-0 backdrop-blur-md ${isTourRunning ? 'opacity-50 cursor-not-allowed' : 'active:scale-95 shadow-md hover:shadow-lg'
-                                        } ${isGloballyEditing
-                                            ? 'bg-rose-500 hover:bg-rose-600 text-white border-rose-400/50'
-                                            : 'bg-white hover:bg-blue-50 text-[#093fb4] border-white/80'
-                                        }`}
-                                >
-                                    {isGloballyEditing ? (
-                                        <>
-                                            <X size={15} strokeWidth={2.5} />
-                                            <span>Cancel</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Pencil size={15} strokeWidth={2.5} />
-                                            <span>Edit Profile</span>
-                                        </>
+                                {/* Global Edit Button Container with the "Click button to Edit" Label */}
+                                <div className="relative flex items-center">
+                                    <button
+                                        ref={editRef}
+                                        type="button"
+                                        disabled={isTourRunning}
+                                        onClick={handleToggleGlobalEdit}
+                                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 border shrink-0 backdrop-blur-md ${isTourRunning ? 'opacity-50 cursor-not-allowed' : 'active:scale-95 shadow-md hover:shadow-lg'
+                                            } ${isGloballyEditing
+                                                ? 'bg-rose-500 hover:bg-rose-600 text-white border-rose-400/50'
+                                                : 'bg-white hover:bg-blue-50 text-[#093fb4] border-white/80'
+                                            } ${activeTourSection === 'editButton' ? 'border-2 border-yellow-400 ring-4 ring-yellow-400/40 shadow-2xl scale-105' : ''}`}
+                                    >
+                                        {isGloballyEditing ? (
+                                            <>
+                                                <X size={15} strokeWidth={2.5} />
+                                                <span>Cancel</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Pencil size={15} strokeWidth={2.5} />
+                                                <span>Edit Profile</span>
+                                            </>
+                                        )}
+                                    </button>
+
+                                    {activeTourSection === 'editButton' && (
+                                        <div className="absolute -bottom-10 right-0 z-30 bg-yellow-400 text-black px-3.5 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider shadow-2xl flex items-center gap-2 animate-bounce whitespace-nowrap">
+                                            <span>Click button to Edit</span>
+                                        </div>
                                     )}
-                                </button>
-                            </div>
-                        </div>
+
+                                </div>
+                            </div>                        </div>
 
                         <div className="px-8 md:px-12 py-8 text-left space-y-2">
                             {globalError && (
@@ -623,8 +653,8 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
                                 className={`transition-all duration-300 rounded-3xl relative ${activeTourSection === 'academic' ? 'border-2 border-[#093fb4] ring-4 ring-[#093fb4]/30 shadow-xl p-4 bg-blue-50/10' : ''}`}
                             >
                                 {activeTourSection === 'academic' && (
-                                    <div className="absolute -top-10 left-4 z-20 bg-white text-black px-3.5 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider shadow-lg flex items-center gap-2">
-                                        <span>Editing Academic Information...</span>
+                                    <div className="absolute -top-10 left-4 z-20 bg-yellow-400 text-black px-3.5 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider shadow-lg flex items-center gap-2">
+                                        <span>Edit Academic Information here...</span>
                                     </div>
                                 )}
                                 <SectionTitle
@@ -743,8 +773,8 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
                                 className={`transition-all duration-300 rounded-3xl relative ${activeTourSection === 'eligibility' ? 'border-2 border-[#093fb4] ring-4 ring-[#093fb4]/30 shadow-xl p-4 bg-blue-50/10' : ''}`}
                             >
                                 {activeTourSection === 'eligibility' && (
-                                    <div className="absolute -top-10 left-4 z-20 bg-[#093fb4] text-white px-3.5 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider shadow-lg flex items-center gap-2">
-                                        <span>Editing Eligibility Details...</span>
+                                    <div className="absolute -top-10 left-4 z-20 bg-yellow-400 text-black px-3.5 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider shadow-lg flex items-center gap-2">
+                                        <span>Edit Eligibility Details here...</span>
                                     </div>
                                 )}
                                 <SectionTitle
@@ -862,8 +892,8 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
                                 className={`transition-all duration-300 rounded-3xl relative ${activeTourSection === 'personal' ? 'border-2 border-[#093fb4] ring-4 ring-[#093fb4]/30 shadow-xl p-4 bg-blue-50/10' : ''}`}
                             >
                                 {activeTourSection === 'personal' && (
-                                    <div className="absolute -top-10 left-4 z-20 bg-[#093fb4] text-white px-3.5 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider shadow-lg flex items-center gap-2">
-                                        <span>Editing Personal Details...</span>
+                                    <div className="absolute -top-10 left-4 z-20 bg-yellow-400 text-black px-3.5 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider shadow-lg flex items-center gap-2">
+                                        <span>Edit Personal Details here...</span>
                                     </div>
                                 )}
                                 <SectionTitle
@@ -982,8 +1012,8 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
                                 className={`transition-all duration-300 rounded-3xl relative ${activeTourSection === 'family' ? 'border-2 border-[#093fb4] ring-4 ring-[#093fb4]/30 shadow-xl p-4 bg-blue-50/10' : ''}`}
                             >
                                 {activeTourSection === 'family' && (
-                                    <div className="absolute -top-10 left-4 z-20 bg-[#093fb4] text-white px-3.5 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider shadow-lg flex items-center gap-2">
-                                        <span>Editing Family Information...</span>
+                                    <div className="absolute -top-10 left-4 z-20 bg-yellow-400 text-black px-3.5 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider shadow-lg flex items-center gap-2">
+                                        <span>Edit Family Information here...</span>
                                     </div>
                                 )}
                                 <SectionTitle
@@ -1049,7 +1079,7 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
                             className={`px-8 md:px-12 py-6 border-t-2 border-black/5 bg-gray-50 shrink-0 transition-all duration-300 rounded-b-[2.5rem] relative ${activeTourSection === 'submit' ? 'border-2 border-[#093fb4] ring-4 ring-[#093fb4]/30 shadow-2xl bg-blue-50/20' : ''}`}
                         >
                             {activeTourSection === 'submit' && (
-                                <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-30 bg-[#093fb4] text-white px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-wider shadow-2xl flex items-center gap-2 animate-bounce">
+                                <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-30  bg-yellow-400 text-black px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-wider shadow-2xl flex items-center gap-2 animate-bounce">
                                     <span>click submit when finished</span>
                                 </div>
                             )}

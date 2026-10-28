@@ -167,7 +167,7 @@ export default function StudentProfile() {
                                 onClick={handleAvatarClick}
                             >
                                 {activeTourSection === 'profilePic' && (
-                                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 z-20 bg-white text-[#093fb4] px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg whitespace-nowrap animate-bounce">
+                                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 z-20 bg-yellow-400 text-black px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg whitespace-nowrap animate-bounce">
                                         Upload Profile Picture here...
                                     </div>
                                 )}
@@ -257,7 +257,7 @@ export default function StudentProfile() {
                                     }`}
                             >
                                 {activeTourSection === 'documents' && (
-                                    <div className="absolute -top-6 left-4 z-20 bg-[#093fb4] text-white px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg animate-bounce">
+                                    <div className="absolute -top-6 left-4 z-20 bg-yellow-400 text-black px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg animate-bounce">
                                         Upload Documents & Portfolio here...
                                     </div>
                                 )}
