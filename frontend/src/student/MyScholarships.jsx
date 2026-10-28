@@ -24,7 +24,7 @@ const TABS = [
   { key: 'pending', label: 'Applications', icon: <Clock size={14} />, desc: 'Pending submissions & initial decisions' },
   { key: 'compliance', label: 'For Compliance', icon: <ClipboardCheck size={14} />, desc: 'Requirements & verification reviews' },
   { key: 'active', label: 'Active', icon: <CheckCircle2 size={14} />, desc: 'Approved & active scholarships' },
-  { key: 'renewal', label: 'Renewal', icon: <AlertCircle size={14} />, desc: 'Renewal requirements & active submissions' },
+  //{ key: 'renewal', label: 'Renewal', icon: <AlertCircle size={14} />, desc: 'Renewal requirements & active submissions' },
   { key: 'saved', label: 'Saved', icon: <Bookmark size={14} />, desc: 'Saved scholarships' },
 ];
 

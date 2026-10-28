@@ -13,7 +13,7 @@ const TABS = [
     { key: 'pending', label: 'Pending', icon: Clock, statuses: ['pending'] },
     { key: 'compliance', label: 'For Compliance', icon: AlertTriangle, statuses: ['compliance', 'under_review', 'need_changes'] },
     { key: 'activescholar', label: 'Active Scholars', icon: CheckCircle, statuses: ['approved', 'active'] },
-    { key: 'renewal', label: 'Renewal', icon: RefreshCw, statuses: ['renewing', 'submitted'] },
+    //{ key: 'renewal', label: 'Renewal', icon: RefreshCw, statuses: ['renewing', 'submitted'] },
     { key: 'noteligible', label: 'Not Eligible / Terminated', labelShort: 'Not Eligible / Terminated', icon: XCircle, statuses: ['rejected', 'not_eligible', 'terminated'] },
 ];
 
@@ -26,7 +26,6 @@ export default function OrgApplicants() {
     const [activeTab, setActiveTab] = useState('all');
     // Pre-filled when arriving from a Student Monitored Applications card
     const [searchQuery, setSearchQuery] = useState(location.state?.search || '');
-
     const [terminateModal, setTerminateModal] = useState({ show: false, app: null });
     const [renewModal, setRenewModal] = useState({ show: false, app: null });
     const [disbursementModal, setDisbursementModal] = useState({ show: false, app: null });
@@ -47,37 +46,37 @@ export default function OrgApplicants() {
     };
 
 
-  // Delete now goes through a confirmation dialog instead of window.confirm / alert
-  const handleDeleteConfirm = async () => {
-    const target = deleteModal.app;
-    if (!target) return;
-    setDeleting(true);
-    try {
-      await api.delete(`/applications/scholarship/${id}/applications/${target.id}`);
-      setApplications(prev => prev.filter(app => app.id !== target.id));
-      setDeleteModal({ show: false, app: null });
-    } catch (err) {
-      console.error("Failed to delete applicant", err);
-      setDeleteModal({ show: false, app: null });
-      setErrorModal({
-        show: true,
-        message: err.response?.data?.message || "Failed to delete applicant record.",
-      });
-    } finally {
-      setDeleting(false);
-    }
-  };
+    // Delete now goes through a confirmation dialog instead of window.confirm / alert
+    const handleDeleteConfirm = async () => {
+        const target = deleteModal.app;
+        if (!target) return;
+        setDeleting(true);
+        try {
+            await api.delete(`/applications/scholarship/${id}/applications/${target.id}`);
+            setApplications(prev => prev.filter(app => app.id !== target.id));
+            setDeleteModal({ show: false, app: null });
+        } catch (err) {
+            console.error("Failed to delete applicant", err);
+            setDeleteModal({ show: false, app: null });
+            setErrorModal({
+                show: true,
+                message: err.response?.data?.message || "Failed to delete applicant record.",
+            });
+        } finally {
+            setDeleting(false);
+        }
+    };
 
-  const handleRenewConfirm = async (reason, docs) => {
-    try {
-      await api.patch(`/renewals/${renewModal.app.id}/renew`, { reason, docs });
-      setRenewModal({ show: false, app: null });
-      fetchApplicants();
-    } catch (err) {
-      console.error("Failed to renew applicant", err);
-    }
-  };
-  
+    const handleRenewConfirm = async (reason, docs) => {
+        try {
+            await api.patch(`/renewals/${renewModal.app.id}/renew`, { reason, docs });
+            setRenewModal({ show: false, app: null });
+            fetchApplicants();
+        } catch (err) {
+            console.error("Failed to renew applicant", err);
+        }
+    };
+
 
     // Opens the modal instead of firing a blind toggle — a real amount now has
     // to be entered and gets deducted from the program's remaining budget.
@@ -86,33 +85,33 @@ export default function OrgApplicants() {
     };
 
     const handleDisbursementSubmit = async (formData) => {
-    try {
-      const app = disbursementModal.app;
-      
-      // Pass formData directly — Axios automatically attaches the multipart/form-data headers for receipt uploads
-      const res = await api.post(`/applications/scholarship/${id}/applications/${app.id}/disburse`, formData);
-      const givenAmount = res.data.data.amount;
+        try {
+            const app = disbursementModal.app;
 
-      setApplications(prev => prev.map(item =>
-        item.id === app.id
-          ? {
-              ...item,
-              is_disbursed: true,
-              amount_range: Number(item.amount_range || 0) + Number(givenAmount),
-              total_disbursed: Number(item.total_disbursed || 0) + Number(givenAmount)
-            }
-          : item
-      ));
-      setProgram(prev => prev ? { ...prev, remaining_budget: Number(prev.remaining_budget) - Number(givenAmount) } : prev);
-      setDisbursementModal({ show: false, app: null });
-    } catch (error) {
-      console.error("Disbursement Error:", error);
-      setErrorModal({
-        show: true,
-        message: error.response?.data?.message || "Failed to process disbursement.",
-      });
-    }
-  };
+            // Pass formData directly — Axios automatically attaches the multipart/form-data headers for receipt uploads
+            const res = await api.post(`/applications/scholarship/${id}/applications/${app.id}/disburse`, formData);
+            const givenAmount = res.data.data.amount;
+
+            setApplications(prev => prev.map(item =>
+                item.id === app.id
+                    ? {
+                        ...item,
+                        is_disbursed: true,
+                        amount_range: Number(item.amount_range || 0) + Number(givenAmount),
+                        total_disbursed: Number(item.total_disbursed || 0) + Number(givenAmount)
+                    }
+                    : item
+            ));
+            setProgram(prev => prev ? { ...prev, remaining_budget: Number(prev.remaining_budget) - Number(givenAmount) } : prev);
+            setDisbursementModal({ show: false, app: null });
+        } catch (error) {
+            console.error("Disbursement Error:", error);
+            setErrorModal({
+                show: true,
+                message: error.response?.data?.message || "Failed to process disbursement.",
+            });
+        }
+    };
     const fetchApplicants = async () => {
         try {
             const res = await api.get(`/applications/scholarship/${id}/applicants`);
@@ -150,6 +149,8 @@ export default function OrgApplicants() {
             </div>
         </div>
     );
+
+
 
     return (
         <div className="min-h-screen bg-white p-8">
@@ -213,8 +214,8 @@ export default function OrgApplicants() {
                                 key={key}
                                 onClick={() => setActiveTab(key)}
                                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all border shrink-0 ${isActive
-                                        ? 'bg-[#093fb4] text-white border-[#093fb4] shadow-md shadow-[#093fb4]/20'
-                                        : 'bg-white text-slate-600 border-slate-300 hover:text-[#093fb4] hover:border-[#093fb4]'
+                                    ? 'bg-[#093fb4] text-white border-[#093fb4] shadow-md shadow-[#093fb4]/20'
+                                    : 'bg-white text-slate-600 border-slate-300 hover:text-[#093fb4] hover:border-[#093fb4]'
                                     }`}
                             >
                                 <Icon size={12} />
@@ -334,8 +335,8 @@ export default function OrgApplicants() {
                                                                 }}
                                                                 title="Give funds"
                                                                 className={`w-8 h-8 flex items-center justify-center rounded-full border transition-all ${app.is_disbursed
-                                                                        ? 'bg-emerald-50 border-emerald-300 text-emerald-600 hover:bg-emerald-100'
-                                                                        : 'bg-white border-slate-300 text-slate-400 hover:border-[#093fb4] hover:text-[#093fb4]'
+                                                                    ? 'bg-emerald-50 border-emerald-300 text-emerald-600 hover:bg-emerald-100'
+                                                                    : 'bg-white border-slate-300 text-slate-400 hover:border-[#093fb4] hover:text-[#093fb4]'
                                                                     }`}
                                                             >
                                                                 <PhilippinePeso size={15} />
@@ -359,7 +360,8 @@ export default function OrgApplicants() {
                                                     <div className="flex items-center justify-end gap-2">
                                                         {['approved', 'active', 'renewing', 'submitted'].includes(app.status) && (
                                                             <>
-                                                                <button
+                                                                {/**
+<button
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         if (['approved', 'active'].includes(app.status)) {
@@ -368,14 +370,16 @@ export default function OrgApplicants() {
                                                                     }}
                                                                     disabled={['renewing', 'submitted'].includes(app.status)}
                                                                     className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all border shrink-0 ${['approved', 'active'].includes(app.status)
-                                                                            ? 'bg-white text-slate-600 border-slate-300 hover:text-[#093fb4] hover:border-[#093fb4]'
-                                                                            : 'bg-white border-slate-200 text-slate-300 cursor-not-allowed'
+                                                                        ? 'bg-white text-slate-600 border-slate-300 hover:text-[#093fb4] hover:border-[#093fb4]'
+                                                                        : 'bg-white border-slate-200 text-slate-300 cursor-not-allowed'
                                                                         }`}
                                                                 >
                                                                     <RefreshCw size={12} className={['renewing', 'submitted'].includes(app.status) ? 'animate-spin' : ''} />
                                                                     Renew
                                                                 </button>
+                                                                **/}
 
+                                                                {/**
                                                                 <button
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
@@ -386,6 +390,7 @@ export default function OrgApplicants() {
                                                                     <XCircle size={12} />
                                                                     Terminate
                                                                 </button>
+                                                                    **/}
                                                             </>
                                                         )}
 
