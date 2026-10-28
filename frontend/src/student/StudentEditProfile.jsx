@@ -205,7 +205,7 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
     const [fieldErrors, setFieldErrors] = useState({});
     const [globalError, setGlobalError] = useState('');
     const [isTourRunning, setIsTourRunning] = useState(false);
-    const [activeTourSection, setActiveTourSection] = useState(null); // 'academic' | 'eligibility' | 'personal' | 'family' | 'submit'
+    const [activeTourSection, setActiveTourSection] = useState(null); 
     const [incompleteProfile, setIncompleteProfile] = useState(false);
 
     const isGloballyEditing = editMode.academic || editMode.eligibility || editMode.personal || editMode.family;
@@ -213,11 +213,9 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
     const handleToggleGlobalEdit = () => {
         if (isTourRunning) return;
         if (isGloballyEditing) {
-            // Cancel/Close all
             setEditMode({ academic: false, eligibility: false, personal: false, family: false });
             setFieldErrors({});
         } else {
-            // Open all
             setEditMode({ academic: true, eligibility: true, personal: true, family: true });
             setHasEdited(true);
         }
@@ -246,7 +244,6 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
         const sections = ['academic', 'eligibility', 'personal', 'family'];
         setIsTourRunning(true);
 
-        // Turn on global edit mode for the tour simulation
         setEditMode({ academic: true, eligibility: true, personal: true, family: true });
         setHasEdited(true);
 
@@ -269,10 +266,8 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
             await new Promise(resolve => setTimeout(resolve, 2000));
         }
 
-        // Close all sections after tour completion
         setEditMode({ academic: false, eligibility: false, personal: false, family: false });
 
-        // Shift highlight to Submit area
         setActiveTourSection('submit');
         const submitEl = submitRef?.current;
         if (submitEl) {
@@ -355,22 +350,33 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
     const validateAll = () => {
         const errors = {};
         const phoneError = 'Enter a valid 10-digit number starting with 9';
+        let firstErrorSection = null;
 
         // Personal
-        if (form.scontact_number && form.scontact_number.length !== 10) errors.scontact_number = phoneError;
-        if (form.szip_code && !/^\d{4}$/.test(form.szip_code)) errors.szip_code = 'Postal code must be exactly 4 digits';
+        if (form.scontact_number && form.scontact_number.length !== 10) {
+            errors.scontact_number = phoneError;
+            if (!firstErrorSection) firstErrorSection = 'personal';
+        }
+        if (form.szip_code && !/^\d{4}$/.test(form.szip_code)) {
+            errors.szip_code = 'Postal code must be exactly 4 digits';
+            if (!firstErrorSection) firstErrorSection = 'personal';
+        }
 
         // Eligibility
         if (!isEligibilityComplete(form)) {
             errors.eligibility = 'Answer every question (and pick at least one sport if you are an athlete).';
+            if (!firstErrorSection) firstErrorSection = 'eligibility';
         }
 
         // Family
         ['mother_contact', 'father_contact', 'guardian_contact'].forEach(key => {
-            if (form[key] && form[key].length !== 10) errors[key] = phoneError;
+            if (form[key] && form[key].length !== 10) {
+                errors[key] = phoneError;
+                if (!firstErrorSection) firstErrorSection = 'family';
+            }
         });
 
-        return errors;
+        return { errors, firstErrorSection };
     };
 
     const toggleSport = (sport) => {
@@ -395,9 +401,22 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
         e.preventDefault();
         setGlobalError('');
 
-        const errors = validateAll();
+        const { errors, firstErrorSection } = validateAll();
         if (Object.keys(errors).length > 0) {
             setFieldErrors(prev => ({ ...prev, ...errors }));
+
+            // Scroll to the first section containing an error smoothly
+            if (firstErrorSection && sectionRefs[firstErrorSection]?.current) {
+                const el = sectionRefs[firstErrorSection].current;
+                const elementRect = el.getBoundingClientRect();
+                const absoluteElementTop = elementRect.top + window.pageYOffset;
+                const offsetPosition = absoluteElementTop - (window.innerHeight / 2) + 120;
+
+                window.scrollTo({
+                    top: offsetPosition,
+                    behavior: 'smooth'
+                });
+            }
             return;
         }
 
@@ -511,7 +530,6 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
 
     return (
         <div ref={topRef} className="max-w-4xl mx-auto space-y-8 antialiased relative">
-            {/* Overlay to disable mouse interaction during tour */}
             {isTourRunning && (
                 <div className="absolute inset-0 z-50 cursor-not-allowed bg-transparent" />
             )}
@@ -544,7 +562,6 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
                             </div>
 
                             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
-                                {/* Help Button*/}
                                 <div className="flex items-center gap-3">
                                     <button
                                         type="button"
@@ -556,7 +573,6 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
                                     </button>
                                 </div>
 
-                                {/* Edit Profile Button (Moved below) */}
                                 <div className="flex justify-between items-center px-0 py-1 rounded-2xl">
                                     <button
                                         type="button"
@@ -584,8 +600,6 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
                                     <AlertCircle size={18} strokeWidth={2.5} className="shrink-0" /> {globalError}
                                 </div>
                             )}
-
-                            {/* ================= GLOBAL EDIT TRIGGER / BUTTON ================= */}
 
                             {/* ================= 1. ACADEMIC ================= */}
                             <div
