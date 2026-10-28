@@ -205,7 +205,7 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
     const [fieldErrors, setFieldErrors] = useState({});
     const [globalError, setGlobalError] = useState('');
     const [isTourRunning, setIsTourRunning] = useState(false);
-    const [activeTourSection, setActiveTourSection] = useState(null); 
+    const [activeTourSection, setActiveTourSection] = useState(null);
     const [incompleteProfile, setIncompleteProfile] = useState(false);
 
     const isGloballyEditing = editMode.academic || editMode.eligibility || editMode.personal || editMode.family;
@@ -553,44 +553,60 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
                     </div>
                 ) : (
                     <form onSubmit={handleSaveAll} noValidate className="flex flex-col">
-                        <div className="px-8 md:px-12 pt-8 pb-6 border-b-2 border-black/5 shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                            <div>
-                                <h2 className="text-2xl font-black text-black uppercase tracking-tight">Profile</h2>
-                                <p className="text-[11px] font-black text-black/40 uppercase tracking-[0.18em] mt-1">
+                        <div className="px-6 md:px-10 py-6 border-b border-white/10 shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 bg-gradient-to-r from-[#093fb4] to-[#07308a] shadow-md">
+                            {/* Left: Title & Subtitle */}
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-2.5">
+                                    <h2 className="text-2xl font-black text-white uppercase tracking-wider drop-shadow-sm">
+                                        Profile
+                                    </h2>
+                                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" title="Active" />
+                                </div>
+                                <p className="text-xs font-semibold text-blue-100/70 uppercase tracking-widest">
                                     Update student information
                                 </p>
                             </div>
 
-                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
-                                <div className="flex items-center gap-3">
-                                    <button
-                                        type="button"
-                                        disabled={isTourRunning}
-                                        onClick={runSpecialTour}
-                                        className="flex items-center justify-center w-9 h-9 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-xs font-semibold transition-all shadow-sm active:scale-95 disabled:opacity-50 shrink-0"
-                                    >
-                                        {isTourRunning ? <Loader2 size={15} className="animate-spin text-[#093fb4]" /> : <QuestionIcon size={16} className="text-[#093fb4]" />}
-                                    </button>
-                                </div>
+                            {/* Right: Actions */}
+                            <div className="flex items-center gap-3 shrink-0">
+                                {/* Help Tour Button */}
+                                <button
+                                    type="button"
+                                    disabled={isTourRunning}
+                                    onClick={runSpecialTour}
+                                    title="Start Guided Tour"
+                                    className="flex items-center justify-center w-10 h-10 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-xl text-xs font-semibold backdrop-blur-md transition-all duration-200 shadow-sm active:scale-95 disabled:opacity-50 shrink-0"
+                                >
+                                    {isTourRunning ? (
+                                        <Loader2 size={16} className="animate-spin text-white" />
+                                    ) : (
+                                        <QuestionIcon size={18} className="text-white" />
+                                    )}
+                                </button>
 
-                                <div className="flex justify-between items-center px-0 py-1 rounded-2xl">
-                                    <button
-                                        type="button"
-                                        disabled={isTourRunning}
-                                        onClick={handleToggleGlobalEdit}
-                                        className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all border-2 shrink-0 ${isTourRunning ? 'opacity-50 cursor-not-allowed' : ''
-                                            } ${isGloballyEditing
-                                                ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100 shadow-sm'
-                                                : 'bg-white text-[#093fb4] border-[#093fb4]/20 hover:border-[#093fb4] shadow-sm'
-                                            }`}
-                                    >
-                                        {isGloballyEditing ? (
-                                            <><X size={14} strokeWidth={3} /> Cancel</>
-                                        ) : (
-                                            <><Pencil size={14} strokeWidth={2.5} /> Edit Profile</>
-                                        )}
-                                    </button>
-                                </div>
+                                {/* Global Edit Button */}
+                                <button
+                                    type="button"
+                                    disabled={isTourRunning}
+                                    onClick={handleToggleGlobalEdit}
+                                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 border shrink-0 backdrop-blur-md ${isTourRunning ? 'opacity-50 cursor-not-allowed' : 'active:scale-95 shadow-md hover:shadow-lg'
+                                        } ${isGloballyEditing
+                                            ? 'bg-rose-500 hover:bg-rose-600 text-white border-rose-400/50'
+                                            : 'bg-white hover:bg-blue-50 text-[#093fb4] border-white/80'
+                                        }`}
+                                >
+                                    {isGloballyEditing ? (
+                                        <>
+                                            <X size={15} strokeWidth={2.5} />
+                                            <span>Cancel</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Pencil size={15} strokeWidth={2.5} />
+                                            <span>Edit Profile</span>
+                                        </>
+                                    )}
+                                </button>
                             </div>
                         </div>
 
@@ -607,7 +623,7 @@ export default function StudentEditProfile({ studentData, onRefresh, onStudentPr
                                 className={`transition-all duration-300 rounded-3xl relative ${activeTourSection === 'academic' ? 'border-2 border-[#093fb4] ring-4 ring-[#093fb4]/30 shadow-xl p-4 bg-blue-50/10' : ''}`}
                             >
                                 {activeTourSection === 'academic' && (
-                                    <div className="absolute -top-10 left-4 z-20 bg-[#093fb4] text-white px-3.5 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider shadow-lg flex items-center gap-2">
+                                    <div className="absolute -top-10 left-4 z-20 bg-white text-black px-3.5 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider shadow-lg flex items-center gap-2">
                                         <span>Editing Academic Information...</span>
                                     </div>
                                 )}

@@ -78,20 +78,6 @@ export default function StudentProfile() {
             const currentStep = steps[i];
             setActiveTourSection(currentStep);
 
-            // const targetRef = currentStep === 'profilePic' ? profilePicRef : documentsRef;
-            // const el = targetRef?.current;
-            //
-            // if (el) {
-            //     const elementRect = el.getBoundingClientRect();
-            //     const absoluteElementTop = elementRect.top + window.pageYOffset;
-            //     const offsetPosition = absoluteElementTop - (window.innerHeight / 2) + 120;
-            //
-            //     window.scrollTo({
-            //         top: offsetPosition,
-            //         behavior: 'smooth'
-            //     });
-            // }
-
             // Pause to let the user focus on the highlighted section
             await new Promise(resolve => setTimeout(resolve, 2500));
         }
@@ -154,145 +140,190 @@ export default function StudentProfile() {
                     </div>
                 </div>
             )}
+
             {/* ================= BALANCED TWO-COLUMN GRID LAYOUT ================= */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
                 {/* LEFT COLUMN: Sticky Profile Summary & Portfolio (Span 5) */}
                 <div className="lg:col-span-5 lg:sticky lg:top-24 space-y-6">
                     <div
-                        className={`bg-white/70 backdrop-blur-xl border-2 rounded-[2.5rem] shadow-2xl p-6 md:p-8 space-y-6 relative overflow-hidden transition-all duration-700 ease-out ${justUpdated ? 'border-[#093fb4]/60 ring-4 ring-[#093fb4]/20' : 'border-white/80'
+                        className={`bg-white/80 backdrop-blur-2xl border-2 rounded-[2.5rem] shadow-2xl overflow-hidden transition-all duration-700 ease-out ${justUpdated
+                            ? 'border-[#093fb4]/60 ring-4 ring-[#093fb4]/20 shadow-[#093fb4]/10'
+                            : 'border-white/80 shadow-black/5'
                             }`}
                     >
-                        {/* Avatar & Names (Focused Section 1) */}
-                        <div className="flex flex-col items-center text-center space-y-4 rounded-3xl p-3 relative">
+                        {/* ================= BLUE HERO SECTION ================= */}
+                        <div className="bg-gradient-to-r from-[#093fb4] to-[#07308a] rounded-t-[calc(2.5rem-2px)] p-6 md:p-8 text-white flex flex-col items-center text-center space-y-4 shadow-xl relative overflow-hidden">
+                            {/* Subtle decorative glow overlays */}
+                            <div className="absolute -top-12 -right-12 w-36 h-36 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+                            <div className="absolute -bottom-10 -left-10 w-28 h-28 bg-black/10 rounded-full blur-2xl pointer-events-none" />
 
                             <div
                                 ref={profilePicRef}
-                                className={`relative group cursor-pointer shrink-0 rounded-[2.25rem] transition-all duration-300 ${activeTourSection === 'profilePic'
-                                        ? 'border-4 border-[#093fb4] ring-4 ring-[#093fb4]/30 bg-blue-50/20 shadow-2xl scale-105'
-                                        : ''
+                                className={`relative group cursor-pointer shrink-0 rounded-[2.25rem] transition-all duration-300 z-10 ${activeTourSection === 'profilePic'
+                                    ? 'border-4 border-white ring-4 ring-white/30 bg-blue-50/25 shadow-2xl scale-105'
+                                    : ''
                                     }`}
                                 onClick={handleAvatarClick}
                             >
                                 {activeTourSection === 'profilePic' && (
-                                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 z-20 bg-[#093fb4] text-white px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg whitespace-nowrap">
+                                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 z-20 bg-white text-[#093fb4] px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg whitespace-nowrap animate-bounce">
                                         Upload Profile Picture here...
                                     </div>
                                 )}
 
-                                <div className="w-40 h-40 rounded-[2.25rem] bg-white/60 border-4 border-white/80 overflow-hidden flex items-center justify-center shadow-xl transition-transform group-hover:scale-[1.02]">
+                                <div className="w-36 h-36 rounded-[2rem] bg-white/20 border-4 border-white/40 overflow-hidden flex items-center justify-center shadow-2xl transition-transform duration-300 group-hover:scale-[1.03] backdrop-blur-md">
                                     {avatarPreview || student.sprofile_pic ? (
-                                        <img src={avatarPreview || student.sprofile_pic} className="w-full h-full object-cover transition-opacity duration-300" alt="Profile" />
+                                        <img
+                                            src={avatarPreview || student.sprofile_pic}
+                                            className="w-full h-full object-cover transition-opacity duration-300"
+                                            alt="Student Profile"
+                                        />
                                     ) : (
-                                        <User size={68} className="text-black/20" strokeWidth={1.5} />
+                                        <User size={60} className="text-white/80" strokeWidth={1.5} />
                                     )}
                                 </div>
-                                <div className="absolute inset-0 bg-black/40 rounded-[2.25rem] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
-                                    <Camera size={30} className="text-white" strokeWidth={2.5} />
+
+                                <div className="absolute inset-0 bg-black/40 rounded-[2rem] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-sm">
+                                    <div className="flex flex-col items-center gap-1 text-white">
+                                        <Camera size={26} strokeWidth={2.5} />
+                                        <span className="text-[9px] font-black uppercase tracking-widest">Change</span>
+                                    </div>
                                 </div>
                                 <input type="file" ref={fileInputRef} onChange={handleAvatarChange} accept="image/*" className="hidden" />
                             </div>
 
-                            <div>
-                                <h1 className="text-2xl font-black tracking-tight text-black uppercase">
+                            <div className="z-10 space-y-1">
+                                <h1 className="text-2xl font-black tracking-tight text-white uppercase drop-shadow-sm">
                                     {student.sfirst_name} {student.slast_name}
                                 </h1>
-                                <p className="text-[#093fb4] text-xs font-black uppercase tracking-[0.15em] mt-1">
+                                <p className="text-blue-100/90 text-xs font-black uppercase tracking-[0.15em] bg-white/10 py-1 px-3 rounded-full inline-block backdrop-blur-sm border border-white/10">
                                     {degreeName}
                                 </p>
                             </div>
-
-                            {student.bio && (
-                                <p className="text-xs text-black/70 font-bold leading-relaxed bg-white/50 p-4 rounded-2xl border-2 border-white/80 italic shadow-sm w-full">
-                                    "{student.bio}"
-                                </p>
-                            )}
-
-                            <div className="grid grid-cols-3 gap-2 w-full pt-2">
-                                <div className="flex flex-col items-center p-3 bg-white/60 border-2 border-white/80 rounded-xl text-[10px] font-black uppercase tracking-widest text-black/70 shadow-sm">
-                                    <GraduationCap size={16} className="text-[#093fb4] mb-1" strokeWidth={2.5} />
-                                    <span>ID</span>
-                                    <strong className="text-black text-xs mt-0.5 truncate max-w-full">{student.student_id || '—'}</strong>
-                                </div>
-                                <div className="flex flex-col items-center p-3 bg-white/60 border-2 border-white/80 rounded-xl text-[10px] font-black uppercase tracking-widest text-black/70 shadow-sm">
-                                    <School size={16} className="text-[#093fb4] mb-1" strokeWidth={2.5} />
-                                    <span>Level</span>
-                                    <strong className="text-black text-xs mt-0.5 truncate max-w-full">{student.year_level || '—'}</strong>
-                                </div>
-                                <div className="flex flex-col items-center p-3 bg-white/60 border-2 border-white/80 rounded-xl text-[10px] font-black uppercase tracking-widest text-black/70 shadow-sm">
-                                    <Award size={16} className="text-[#093fb4] mb-1" strokeWidth={2.5} />
-                                    <span>GWA</span>
-                                    <strong className="text-black text-xs mt-0.5 truncate max-w-full">{student.gwa ? `${student.gwa}%` : '—'}</strong>
-                                </div>
-                            </div>
                         </div>
 
-                        {/* PORTFOLIO & DOCUMENTS SECTION (Focused Section 2) */}
-                        <div
-                            ref={documentsRef}
-                            className={`space-y-3 pt-4 border-t-2 border-black/5 transition-all duration-300 rounded-3xl p-3 relative ${activeTourSection === 'documents' ? 'border-2 border-[#093fb4] ring-4 ring-[#093fb4]/30 bg-blue-50/20 shadow-xl' : ''
-                                }`}
-                        >
-                            {activeTourSection === 'documents' && (
-                                <div className="absolute -top-6 z-20 bg-[#093fb4] text-white px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg">
-                                    Upload Documents & Portfolio here...
+                        {/* ==================================================== */}
+
+                        {/* REST OF CONTENT (Wrapped with padding since parent wrapper padding was removed) */}
+                        <div className="p-6 md:p-8 space-y-6">
+                            {student.bio && (
+                                <div className="relative bg-gradient-to-br from-blue-50/50 to-indigo-50/30 p-4 rounded-2xl border-2 border-white/80 shadow-sm">
+                                    <p className="text-xs text-black/70 font-bold leading-relaxed italic text-center">
+                                        "{student.bio}"
+                                    </p>
                                 </div>
                             )}
 
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-xl bg-[#093fb4]/10 flex items-center justify-center text-[#093fb4] shrink-0">
-                                        <Award size={16} strokeWidth={2.5} />
+                            {/* STATS GRID */}
+                            <div className="grid grid-cols-3 gap-2.5 w-full">
+                                <div className="flex flex-col items-center p-3.5 bg-white/70 hover:bg-white border-2 border-white/90 rounded-2xl text-[10px] font-black uppercase tracking-widest text-black/60 shadow-sm transition-all group">
+                                    <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-[#093fb4] mb-1.5 group-hover:scale-110 transition-transform">
+                                        <GraduationCap size={15} strokeWidth={2.5} />
                                     </div>
-                                    <h3 className="text-xs font-black uppercase tracking-[0.15em] text-black">Portfolio & Files</h3>
+                                    <span>ID</span>
+                                    <strong className="text-black text-xs mt-0.5 truncate max-w-full font-black tracking-normal">
+                                        {student.student_id || '—'}
+                                    </strong>
                                 </div>
-                                <button
-                                    onClick={() => setIsPortfolioModalOpen(true)}
-                                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-black uppercase tracking-widest text-white bg-[#093fb4] rounded-xl hover:bg-[#073496] transition-all shadow-md shadow-[#093fb4]/20 active:scale-95"
-                                >
-                                    <Plus size={14} strokeWidth={3} /> Add
-                                </button>
+
+                                <div className="flex flex-col items-center p-3.5 bg-white/70 hover:bg-white border-2 border-white/90 rounded-2xl text-[10px] font-black uppercase tracking-widest text-black/60 shadow-sm transition-all group">
+                                    <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-[#093fb4] mb-1.5 group-hover:scale-110 transition-transform">
+                                        <School size={15} strokeWidth={2.5} />
+                                    </div>
+                                    <span>Level</span>
+                                    <strong className="text-black text-xs mt-0.5 truncate max-w-full font-black tracking-normal">
+                                        {student.year_level || '—'}
+                                    </strong>
+                                </div>
+
+                                <div className="flex flex-col items-center p-3.5 bg-white/70 hover:bg-white border-2 border-white/90 rounded-2xl text-[10px] font-black uppercase tracking-widest text-black/60 shadow-sm transition-all group">
+                                    <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-[#093fb4] mb-1.5 group-hover:scale-110 transition-transform">
+                                        <Award size={15} strokeWidth={2.5} />
+                                    </div>
+                                    <span>GWA</span>
+                                    <strong className="text-black text-xs mt-0.5 truncate max-w-full font-black tracking-normal">
+                                        {student.gwa ? `${student.gwa}%` : '—'}
+                                    </strong>
+                                </div>
                             </div>
 
-                            {Array.isArray(processedPortfolio) && processedPortfolio.length > 0 ? (
-                                <div className="space-y-2.5 pt-1 max-h-[280px] overflow-y-auto pr-1">
-                                    {processedPortfolio.map((item, idx) => {
-                                        if (!item) return null;
-                                        const itemTitle = typeof item === 'object' ? item.title : item;
-                                        let rawLink = typeof item === 'object' ? (item.link || item.url || item.href) : null;
+                            {/* PORTFOLIO & DOCUMENTS SECTION */}
+                            <div
+                                ref={documentsRef}
+                                className={`space-y-3.5 pt-4 border-t-2 border-black/5 transition-all duration-300 rounded-3xl p-3 relative ${activeTourSection === 'documents'
+                                    ? 'border-2 border-[#093fb4] ring-4 ring-[#093fb4]/20 bg-blue-50/30 shadow-xl'
+                                    : ''
+                                    }`}
+                            >
+                                {activeTourSection === 'documents' && (
+                                    <div className="absolute -top-6 left-4 z-20 bg-[#093fb4] text-white px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg animate-bounce">
+                                        Upload Documents & Portfolio here...
+                                    </div>
+                                )}
 
-                                        if (rawLink && typeof rawLink === 'string') {
-                                            rawLink = rawLink.trim().replace(/\\/g, '/');
-                                            if (rawLink.startsWith('uploads/')) rawLink = `${backendURL}/${rawLink}`;
-                                        }
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-8 h-8 rounded-xl bg-[#093fb4]/10 flex items-center justify-center text-[#093fb4] shrink-0 shadow-inner">
+                                            <Award size={16} strokeWidth={2.5} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xs font-black uppercase tracking-[0.15em] text-black">Portfolio & Files</h3>
+                                            <p className="text-[9px] font-bold text-black/40 uppercase tracking-wider">Credentials & Docs</p>
+                                        </div>
+                                    </div>
 
-                                        return (
-                                            <a
-                                                key={idx}
-                                                href={rawLink || '#'}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="flex items-center gap-3 px-4 py-3 bg-white/60 border-2 border-white/80 hover:border-[#093fb4]/50 hover:bg-white rounded-xl shadow-sm transition-all group"
-                                            >
-                                                <div className="w-10 h-10 rounded-lg bg-blue-50/50 border-2 border-blue-100 flex items-center justify-center shrink-0">
-                                                    <FileText size={18} className="text-[#093fb4]" strokeWidth={2.5} />
-                                                </div>
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="text-xs font-black text-black uppercase tracking-wider truncate group-hover:text-[#093fb4] transition-colors">
-                                                        {itemTitle}
-                                                    </p>
-                                                    <p className="text-[9px] text-black/50 font-black tracking-widest uppercase">Digital Copy</p>
-                                                </div>
-                                            </a>
-                                        );
-                                    })}
+                                    <button
+                                        onClick={() => setIsPortfolioModalOpen(true)}
+                                        className="inline-flex items-center gap-1.5 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white bg-[#093fb4] rounded-xl hover:bg-[#073496] transition-all shadow-md shadow-[#093fb4]/25 active:scale-95"
+                                    >
+                                        <Plus size={14} strokeWidth={3} /> Add File
+                                    </button>
                                 </div>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center py-8 bg-white/40 border-2 border-dashed border-white/80 rounded-2xl text-center px-4">
-                                    <FileText size={28} className="text-black/30 mb-2" strokeWidth={1.5} />
-                                    <p className="text-[10px] font-black text-black/50 uppercase tracking-widest">No extra portfolio files uploaded yet.</p>
-                                </div>
-                            )}
+
+                                {Array.isArray(processedPortfolio) && processedPortfolio.length > 0 ? (
+                                    <div className="space-y-2.5 pt-1 max-h-[260px] overflow-y-auto pr-1 custom-scrollbar">
+                                        {processedPortfolio.map((item, idx) => {
+                                            if (!item) return null;
+                                            const itemTitle = typeof item === 'object' ? item.title : item;
+                                            let rawLink = typeof item === 'object' ? (item.link || item.url || item.href) : null;
+
+                                            if (rawLink && typeof rawLink === 'string') {
+                                                rawLink = rawLink.trim().replace(/\\/g, '/');
+                                                if (rawLink.startsWith('uploads/')) rawLink = `${backendURL}/${rawLink}`;
+                                            }
+
+                                            return (
+                                                <a
+                                                    key={idx}
+                                                    href={rawLink || '#'}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="flex items-center gap-3.5 px-4 py-3 bg-white/70 hover:bg-white border-2 border-white/90 hover:border-[#093fb4]/40 rounded-2xl shadow-sm transition-all group"
+                                                >
+                                                    <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                                        <FileText size={18} className="text-[#093fb4]" strokeWidth={2.5} />
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-xs font-black text-black uppercase tracking-wider truncate group-hover:text-[#093fb4] transition-colors">
+                                                            {itemTitle}
+                                                        </p>
+                                                        <p className="text-[9px] text-black/40 font-black tracking-widest uppercase mt-0.5">Digital Copy</p>
+                                                    </div>
+                                                </a>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center py-8 bg-white/40 border-2 border-dashed border-black/10 rounded-2xl text-center px-4">
+                                        <div className="w-10 h-10 rounded-xl bg-black/5 flex items-center justify-center text-black/30 mb-2.5">
+                                            <FileText size={20} strokeWidth={2} />
+                                        </div>
+                                        <p className="text-[10px] font-black text-black/50 uppercase tracking-widest">No extra portfolio files uploaded yet.</p>
+                                        <p className="text-[9px] text-black/30 font-bold mt-1">Upload certificates, resumes, or documents.</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
