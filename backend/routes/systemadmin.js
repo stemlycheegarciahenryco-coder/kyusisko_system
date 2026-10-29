@@ -6,12 +6,20 @@ const { verifyToken } = require('../middleware/auth');
 const { has } = require('lodash');
 const crypto = require('crypto');
 const { re } = require('mathjs');
+const { trackEvent } = require('../utils/logger');
 
 
 //Report Archive
 router.patch('/reports/archive/:id', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
+
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+
         const result = await pool.query(
             `UPDATE reports 
              SET is_archived = NOT is_archived 
@@ -19,13 +27,22 @@ router.patch('/reports/archive/:id', verifyToken, async (req, res) => {
              RETURNING id, is_archived`,
             [id]
         );
-
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: "Co-Admin not found" });
+            return res.status(404).json({ error: "Report not found" });
         }
 
         const reports = result.rows[0];
-        const statusText = reports.is_archived ? 'archived' : 'unarchived';
+        const statusText = reports.is_archived ? 'Archived' : 'Unarchived';
+
+
+        const archive_status = result.rows[0].is_archived ? 'Archived' : 'Unarchived' 
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: null,
+            actionType: archive_status.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `${statusText} Report: ${result.rows[0].sfirst_name} ${result.rows[0].slast_name}.`
+        });
 
         res.json({
             message: `Report successfully ${statusText}.`,
@@ -53,17 +70,33 @@ router.get('/get/Student/snapshot_items/:id', verifyToken, async (req, res) => {
 router.patch('/student/archive/:id', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
+
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+
         const result = await pool.query(
             `UPDATE students 
              SET is_archived = NOT is_archived 
              WHERE id = $1 
-             RETURNING id, is_archived`,
+             RETURNING id, is_archived, sfirst_name, slast_name`,
             [id]
         );
-
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: "Co-Admin not found" });
+            return res.status(404).json({ error: "Student not found" });
         }
+
+        const archive_status = result.rows[0].is_archived ? 'Archived' : 'Unarchived' 
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: id,
+            actionType: archive_status.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `${archive_status} Student: ${result.rows[0].sfirst_name} ${result.rows[0].slast_name}.`
+        });
+
 
         const student = result.rows[0];
         const statusText = student.is_archived ? 'archived' : 'unarchived';
@@ -583,10 +616,10 @@ router.get('/role', verifyToken, async (req, res) => {
         res.status(200).json({
             success: true,
             role: userRole,
-            first_name:first,
+            first_name: first,
             last_name: last,
         });
-    } 
+    }
     catch (error) {
         console.error('Error fetching SA role:', error);
         res.status(500).json({
