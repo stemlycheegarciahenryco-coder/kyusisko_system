@@ -3,7 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const pool = require('../config/db');
 const { verifyToken } = require('../middleware/auth');
-const { has } = require('lodash');
+const { has, update } = require('lodash');
 const crypto = require('crypto');
 const { re } = require('mathjs');
 const { trackEvent } = require('../utils/logger');
@@ -387,9 +387,18 @@ router.put('/update/password', verifyToken, async (req, res) => {
             UPDATE users 
             SET password_hash = $1 
             WHERE email = $2 
-            RETURNING id, email;
+            RETURNING id, email, uid, first_name, last_name, role;
         `;
         const updateResult = await pool.query(updateQuery, [hashedNewPassword, req.user.email]);
+        const admin = updateResult.rows[0]
+
+        await trackEvent({
+            userId: admin.id, subAdminId: null, studentId: null,
+            actionType: 'Password Change'.toUpperCase(),
+            ipAddress: null, email: admin.email,
+            details: `${admin.role == 'root_admin' ? 'System' : admin.first_name} ${admin.role == 'root_admin' ? 'Admin' : admin.last_name} [${admin.email}] Changed Password.`
+        });
+
 
         return res.status(200).json({
             success: true,
@@ -411,6 +420,13 @@ router.put('/co-admins/update/:id', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
         const { firstName, lastName, email } = req.body;
+
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+
 
         const emailCheck = await pool.query(
             ` 
@@ -442,6 +458,14 @@ router.put('/co-admins/update/:id', verifyToken, async (req, res) => {
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Co-admin not found.' });
         }
+
+        const admin = result.rows[0]
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: null,
+            actionType: 'Updated'.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `System Admin Updated ${admin.role == 'root_admin' ? 'System' : admin.first_name} ${admin.role == 'root_admin' ? 'Admin' : admin.last_name} [${admin.email}].`
+        });
 
         res.json({ success: true, data: result.rows[0] });
     } catch (err) {

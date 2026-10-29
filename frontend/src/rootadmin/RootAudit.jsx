@@ -18,7 +18,8 @@ import {
   ChevronLeft,
   ChevronRight,
   UnlockIcon,
-  XCircleIcon
+  XCircleIcon,
+  CircleX
 } from 'lucide-react';
 
 export default function RootAudit() {
@@ -86,6 +87,7 @@ export default function RootAudit() {
       ORG_LOGIN: { bg: 'bg-sky-50 text-sky-700 border-sky-200', icon: LogIn, label: 'Org Login' },
       LOGIN_FAILED: { bg: 'bg-rose-50 text-rose-700 border-rose-200', icon: XCircle, label: 'Failed Auth' },
       SECURITY_LOCKOUT: { bg: 'bg-red-100 text-red-800 border-red-300 animate-pulse', icon: Shield, label: 'Lockout Trigger' },
+      TAKEDOWN: { bg: 'bg-red-100 text-red-800 border-red-300 animate-pulse', icon: CircleX, label: 'Lockout Trigger' },
        
       // Scholarship & Application Pipeline Actions
       STUDENT_APPLY: { bg: 'bg-blue-50 text-blue-700 border-blue-200', icon: UserCheck, label: 'Scholarship Apply' },
