@@ -6,6 +6,7 @@ const { verifyToken } = require('../middleware/auth');
 const { has } = require('lodash');
 const crypto = require('crypto');
 const { re } = require('mathjs');
+const { trackEvent } = require('../utils/logger');
 
 
 //Report Archive
@@ -53,13 +54,30 @@ router.get('/get/Student/snapshot_items/:id', verifyToken, async (req, res) => {
 router.patch('/student/archive/:id', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
+
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+
         const result = await pool.query(
             `UPDATE students 
              SET is_archived = NOT is_archived 
              WHERE id = $1 
-             RETURNING id, is_archived`,
+             RETURNING id, is_archived, sfirst_name, slast_name`,
             [id]
         );
+
+        const archive_status = result.rows[0].is_archived ? 'Archived' : 'Unarchived' 
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: id,
+            actionType: user.role === 'root_admin' ? 'ROOT_ADMIN_LOGIN' : 'CO_ADMIN_LOGIN',
+            ipAddress: null, email: user.email,
+            details: `Admin ${archive_status} Student ${result.rows[0].sfirst_name} ${result.rows[0].slast_name}.`
+        });
+
 
         if (result.rows.length === 0) {
             return res.status(404).json({ error: "Co-Admin not found" });
@@ -583,10 +601,10 @@ router.get('/role', verifyToken, async (req, res) => {
         res.status(200).json({
             success: true,
             role: userRole,
-            first_name:first,
+            first_name: first,
             last_name: last,
         });
-    } 
+    }
     catch (error) {
         console.error('Error fetching SA role:', error);
         res.status(500).json({

@@ -84,6 +84,7 @@ exports.getAllStudents = async (req, res) => {
                 END as derived_status,
                 CONCAT(sstreet, ', ', sbarangay, ', ', sdistrict, ' ', szip_code) as full_address
             FROM students
+            WHERE is_archived = false
             ORDER BY id DESC
         `;
         const result = await pool.query(query);

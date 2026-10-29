@@ -28,6 +28,7 @@ router.get('/list', verifyToken, async (req, res) => {
         region, city, barangay, street_address, website, provider_type, proof_files,
         provider_code, is_archived
        FROM sub_admins 
+       WHERE is_archived = false
        ORDER BY status = 'pending' DESC, id DESC`
         );
         res.json(result.rows);
