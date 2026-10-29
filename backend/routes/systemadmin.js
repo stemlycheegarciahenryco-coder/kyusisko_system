@@ -719,4 +719,37 @@ router.get('/role', verifyToken, async (req, res) => {
 });
 
 
+router.patch('/students/:id/status', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    const { activeStatus } = req.body;
+
+    try {
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+        const result = await pool.query(
+            'UPDATE students SET sis_active = $1 WHERE id = $2 RETURNING student_email, sfirst_name, slast_name, sis_active',
+            [activeStatus, id]
+        );
+        const student = result.rows[0]
+        const status = student.sis_active ? 'Activated' : 'Blocked'
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: null,
+            actionType: status.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `Admin ${status} Student: ${result.rows[0].sfirst_name} ${result.rows[0].slast_name} [${result.rows[0].student_email}].`
+        });
+
+        res.json({ success: true, message: "Account status updated" });
+    } catch (err) {
+        console.error(err)
+        res.status(500).json({ error: "Failed to update security status" });
+    }
+})
+
+
+
 module.exports = router;

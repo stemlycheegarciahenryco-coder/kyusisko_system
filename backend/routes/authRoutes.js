@@ -97,7 +97,7 @@ router.post('/post/check/email', async (req, res) => {
 router.get('/org/role', verifyToken, async (req, res) => {
     try {
         // 1. Get email from req.user (populated by verifyToken middleware)
-        const email = req.user.email; 
+        const email = req.user.email;
 
         // 2. Moved query inside the try block
         const roleCheck = await pool.query(
@@ -120,7 +120,7 @@ router.get('/org/role', verifyToken, async (req, res) => {
             first_name: first,
             last_name: last
         });
-    } 
+    }
     catch (error) {
         console.error('Error fetching org role:', error);
         res.status(500).json({
