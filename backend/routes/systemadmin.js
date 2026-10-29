@@ -3,7 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const pool = require('../config/db');
 const { verifyToken } = require('../middleware/auth');
-const { has, update } = require('lodash');
+const { has, update, constant } = require('lodash');
 const crypto = require('crypto');
 const { re } = require('mathjs');
 const { trackEvent } = require('../utils/logger');
@@ -443,6 +443,7 @@ router.put('/co-admins/update/:id', verifyToken, async (req, res) => {
         let query;
         let values;
         // If no password is provided, leave the existing password untouched
+        const old = await pool.query(`SELECT first_name, last_name, email FROM users WHERE id = $1`, [id])
         query = `
                 UPDATE users 
                 SET first_name = $1, 
@@ -460,11 +461,13 @@ router.put('/co-admins/update/:id', verifyToken, async (req, res) => {
         }
 
         const admin = result.rows[0]
+        const newAdmin = `${admin.role == 'root_admin' ? 'System' : admin.first_name} ${admin.role == 'root_admin' ? 'Admin' : admin.last_name} [${admin.email}]`
+        const oldAdmin = `${admin.role == 'root_admin' ? 'System' : old.rows[0].first_name} ${old.rows[0].role == 'root_admin' ? 'Admin' : old.rows[0].last_name} [${old.rows[0].email}]`
         await trackEvent({
             userId: user.id, subAdminId: null, studentId: null,
             actionType: 'Updated'.toUpperCase(),
             ipAddress: null, email: user.email,
-            details: `System Admin Updated ${admin.role == 'root_admin' ? 'System' : admin.first_name} ${admin.role == 'root_admin' ? 'Admin' : admin.last_name} [${admin.email}].`
+            details: `System Admin Updated ${oldAdmin} to ${newAdmin}.`
         });
 
         res.json({ success: true, data: result.rows[0] });
@@ -495,17 +498,16 @@ router.delete('/co-admins/delete/:id', verifyToken, async (req, res) => {
         );
         const user = userResult.rows[0]
 
-
-        await pool.query(
-            'Delete FROM users WHERE id = $1 AND is_archived = true',
+        const deleted = await pool.query(
+            'Delete FROM users WHERE id = $1 AND is_archived = true RETURNING first_name, last_name, email',
             [id]
         );
 
         await trackEvent({
-            userId: user.id, subAdminId: null, studentId: id,
-            actionType: archive_status.toUpperCase(),
+            userId: user.id, subAdminId: null, studentId: null,
+            actionType: 'DELETED'.toUpperCase(),
             ipAddress: null, email: user.email,
-            details: `Admin Removed Co-Admin: ${result.rows[0].sfirst_name} ${result.rows[0].slast_name} [${result.rows[0].student_email}].`
+            details: `System Admin Removed Co-Admin: ${deleted.rows[0].first_name} ${deleted.rows[0].last_name} [${deleted.rows[0].email}].`
         });
 
         res.json({ success: true, message: `Account Is Deleted.` });
@@ -596,24 +598,40 @@ router.put('/co-admin/update/reroll-password/:email', verifyToken, async (req, r
     try {
         const { email } = req.params;
 
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+
         // Generate a secure random plain-text password automatically
         const generatedPassword = crypto.randomBytes(4).toString('hex') + '@' + Math.floor(100 + Math.random() * 900);
         const salt = await bcrypt.genSalt(10);
         const hashedPw = await bcrypt.hash(generatedPassword, salt);
 
-        const newAdmin = await pool.query(
+        const result = await pool.query(
             `UPDATE users
             SET password_hash = $1
             WHERE email = $2
-            RETURNING id, uid
+            RETURNING id, uid, first_name, last_name, email
             `,
             [hashedPw, email.trim()]
         );
 
+        const newAdmin = result.rows[0]
+
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: null,
+            actionType: 'Password Change'.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `System Admin Regenerated Password for ${newAdmin.first_name} ${newAdmin.last_name} [${newAdmin.email}].`
+        });
+
         // Return the plain-text generatedPassword so the frontend can display it in Swal
         res.status(200).json({
             success: true,
-            data: newAdmin.rows[0],
+            data: newAdmin,
             generatedPassword
         });
     } catch (err) {

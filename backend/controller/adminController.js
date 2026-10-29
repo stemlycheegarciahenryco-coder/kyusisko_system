@@ -143,6 +143,7 @@ exports.takedownScholarship = async (req, res) => {
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
     try {
+
         // 1. Get scholarship + org info
         const scholarshipCheck = await pool.query(
             `SELECT sc.sub_admin_id, sc.title, sa.org_name
@@ -151,6 +152,12 @@ exports.takedownScholarship = async (req, res) => {
        WHERE sc.id = $1`,
             [scholarshipId]
         );
+
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
 
         if (scholarshipCheck.rows.length === 0) {
             return res.status(404).json({ success: false, message: "Scholarship not found" });
@@ -191,13 +198,35 @@ exports.takedownScholarship = async (req, res) => {
         );
 
         // 5. Track Enforcement Action — system-level action targeting a specific org
-        await trackEvent({
-            userId: req.user ? req.user.id : null,
-            targetOrgId: sub_admin_id,
-            actionType: 'Scholarship Takedown',
-            ipAddress: ip,
-            details: `Administrative takedown forced on scholarship program "${title}" (ID: ${scholarshipId}) managed by "${org_name}". Reason: ${reason || 'Unspecified violation'}.`
-        });
+        // await trackEvent({
+        //     userId: req.user ? req.user.id : null,
+        //     targetOrgId: sub_admin_id,
+        //     actionType: 'Scholarship Takedown',
+        //     ipAddress: ip,
+        //     details: `Administrative takedown forced on scholarship program "${title}" (ID: ${scholarshipId}) managed by "${org_name}". Reason: ${reason || 'Unspecified violation'}.`
+        // });
+        switch (user.role) {
+            case 'root_admin':
+                await trackEvent({
+                    userId: user.id, subAdminId: null, studentId: null,
+                    actionType: 'Takedown'.toUpperCase(),
+                    ipAddress: null, email: user.email,
+                    details: `System Admin tookdown |Scholarship: ${title} | Reason: ${reason}`
+                });
+                break;
+
+            case 'co_admin':
+                await trackEvent({
+                    userId: user.id, subAdminId: null, studentId: null,
+                    actionType: 'Takedown'.toUpperCase(),
+                    ipAddress: null, email: req.user.email,
+                    details: `Co-Admin ${user.first_name} ${user.last_name} [${user.email}] tookdown |Scholarship: ${title} | Reason: ${reason}`
+                });
+                break;
+
+            default:
+                break;
+        }
 
         res.status(200).json({
             success: true,
@@ -216,6 +245,14 @@ exports.dismissReport = async (req, res) => {
     const { reason } = req.body
 
     try {
+
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+
+
         const reportQuery = await pool.query(
             `SELECT r.reason, sc.title FROM reports r 
        JOIN scholarships sc ON r.scholarship_id = sc.id 
@@ -231,12 +268,35 @@ exports.dismissReport = async (req, res) => {
         const itemTitle = contextInfo ? `filed against "${contextInfo.title}"` : `ID #${reportId}`;
 
         // Log dismissal — system-level action
-        await trackEvent({
-            userId: req.user ? req.user.id : null,
-            actionType: 'Report Dismissed',
-            ipAddress: ip,
-            details: `Report ${itemTitle} was reviewed and dismissed by admin. No structural action taken.`
-        });
+        //await trackEvent({
+        //    userId: req.user ? req.user.id : null,
+        //    actionType: 'Report Dismissed',
+        //    ipAddress: ip,
+        //    details: `Report ${itemTitle} was reviewed and dismissed by admin. No structural action taken.`
+        //});
+
+        switch (user.role) {
+            case 'root_admin':
+                await trackEvent({
+                    userId: user.id, subAdminId: null, studentId: null,
+                    actionType: 'Dismissed Report'.toUpperCase(),
+                    ipAddress: null, email: user.email,
+                    details: `System Admin dismissed |Report ID #${reportId}:  ${itemTitle} | Reason: ${reason}`
+                });
+                break;
+
+            case 'co_admin':
+                await trackEvent({
+                    userId: user.id, subAdminId: null, studentId: null,
+                    actionType: 'Dismissed Report'.toUpperCase(),
+                    ipAddress: null, email: req.user.email,
+                    details: `Co-Admin ${user.first_name} ${user.last_name} [${user.email}] dismissed |Report ID #${reportId}: ${itemTitle} | Reason: ${reason}`
+                });
+                break;
+
+            default:
+                break;
+        }
 
         res.json({ success: true });
     } catch (err) {

@@ -87,19 +87,19 @@ export default function RootAudit() {
       ORG_LOGIN: { bg: 'bg-sky-50 text-sky-700 border-sky-200', icon: LogIn, label: 'Org Login' },
       LOGIN_FAILED: { bg: 'bg-rose-50 text-rose-700 border-rose-200', icon: XCircle, label: 'Failed Auth' },
       SECURITY_LOCKOUT: { bg: 'bg-red-100 text-red-800 border-red-300 animate-pulse', icon: Shield, label: 'Lockout Trigger' },
-      TAKEDOWN: { bg: 'bg-red-100 text-red-800 border-red-300 animate-pulse', icon: CircleX, label: 'Lockout Trigger' },
+      TAKEDOWN: { bg: 'bg-red-100 text-red-800 border-red-300', icon: CircleX, label: 'TakeDown' },
        
       // Scholarship & Application Pipeline Actions
       STUDENT_APPLY: { bg: 'bg-blue-50 text-blue-700 border-blue-200', icon: UserCheck, label: 'Scholarship Apply' },
       APPROVED: { bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: CheckCircle2, label: 'Approved' },
       UPDATED: { bg: 'bg-blue-50 text-blue-700 border-blue-200', icon: CheckCircle2, label: 'Updated' },
       REJECTED: { bg: 'bg-rose-50 text-rose-700 border-rose-200', icon: XCircleIcon, label: 'Rejected' },
-      DELETED: { bg: 'bg-rose-50 text-rose-700 border-rose-200', icon: XCircleIcon, label: 'Deleted' },
+      //DELETED: { bg: 'bg-red-50 text-red-700 border-red-200 animate-pulse', icon: XCircleIcon, label: 'Deleted' },
       APP_COMPLY: { bg: 'bg-amber-50 text-amber-700 border-amber-200', icon: AlertTriangle, label: 'Compliance Request' },
       ADMIN_APPROVED: { bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: CheckCircle2, label: 'Approved' },
       ADMIN_REJECTED: { bg: 'bg-rose-50 text-rose-700 border-rose-200', icon: XCircle, label: 'Rejected' },
       DELETED: { bg: 'bg-rose-50 text-rose-700 border-rose-200', icon: Trash2, label: 'Deleted' },
-      SCHOLARSHIP_TAKEDOWN: { bg: 'bg-orange-50 text-orange-700 border-orange-200', icon: Trash2, label: 'Takedown' },
+      //SCHOLARSHIP_TAKEDOWN: { bg: 'bg-orange-50 text-orange-700 border-orange-200', icon: Trash2, label: 'Takedown' },
       REPORT_DISMISSED: { bg: 'bg-slate-50 text-slate-600 border-slate-200', icon: CheckCircle2, label: 'Dismissed' },
       ARCHIVED: { bg: 'bg-orange-50 text-orange-600 border-orange-200', icon: ArchiveIcon, label: 'Archived' },
       UNARCHIVED: { bg: 'bg-amber-50 text-amber-600 border-amber-200', icon: ArchiveIcon, label: 'Unarchived' }

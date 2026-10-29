@@ -58,8 +58,8 @@ router.put('/students/personal-info/me', verifyToken, isStudent, stdCtrl.updateP
 // ==========================================
 router.get('/sub-admins', adminCtrl.getSubAdmins);
 router.get('/reports', adminCtrl.getReports);
-router.put('/reports/takedown/:scholarshipId', adminCtrl.takedownScholarship);
-router.put('/reports/dismiss/:reportId', adminCtrl.dismissReport);
+router.put('/reports/takedown/:scholarshipId', verifyToken, adminCtrl.takedownScholarship);
+router.put('/reports/dismiss/:reportId', verifyToken,adminCtrl.dismissReport);
 
 // Platform Analytical Telemetry & Audits
 router.get('/stats', adminCtrl.getStats);
