@@ -262,9 +262,9 @@ exports.getAuditLogs = async (req, res) => {
       sat.action_type,
       sat.details,
       sat.created_at,
-      COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), 'System Admin') AS actor_name,
-      u.email AS actor_email,
-      'Admin' AS actor_role,
+      COALESCE(NULLIF(TRIM(CONCAT(sat.admin_name, ' ', sat.admin_lastname)), ''), 'System Admin') AS actor_name,
+      sat.admin_email AS actor_email,
+      sat.admin_role AS actor_role,
       org.org_name AS related_org_name
     FROM system_admin_audit_trails sat
     LEFT JOIN users u ON sat.admin_id = u.id

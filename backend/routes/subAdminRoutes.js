@@ -15,6 +15,7 @@ const {
     registrationLimiter
 } = require('../middleware/rateLimiter');
 const path = require('path');
+const { trackEvent } = require('../utils/logger');
 /**
  * GET all organizations
  * Protected: Root Admin uses this to see who needs validation
@@ -28,6 +29,7 @@ router.get('/list', verifyToken, async (req, res) => {
         region, city, barangay, street_address, website, provider_type, proof_files,
         provider_code, is_archived
        FROM sub_admins 
+       WHERE NOT account_type = 'co_admin'
        ORDER BY status = 'pending' DESC, id DESC`
         );
         res.json(result.rows);
@@ -112,6 +114,15 @@ router.patch('/approve/:id', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
 
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
         // Generate a readable-but-random temporary password, e.g. "Xk7mQp2R9z"
         const generatedPassword = crypto.randomBytes(9).toString('base64')
             .replace(/[^a-zA-Z0-9]/g, '')
@@ -152,6 +163,15 @@ router.patch('/approve/:id', verifyToken, async (req, res) => {
             await sendApprovalEmail(sub_email, org_name);
         }
 
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: null,
+            actionType: 'approved'.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `Admin approved Organization Application: ${org_name}[${sub_email}].`
+        });
+
+
         // Plaintext password is returned ONCE here for the admin to see/copy —
         // it is never stored or logged anywhere after this point.
         res.json({
@@ -172,28 +192,57 @@ router.patch('/approve/:id', verifyToken, async (req, res) => {
 router.patch('/block/:id', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ error: "User not found" });
+        }
         const result = await pool.query(
             `UPDATE sub_admins 
        SET is_active = NOT is_active 
        WHERE id = $1 
-       RETURNING is_active, org_name`,
+       RETURNING is_active, org_name, sub_email`,
             [id]
         );
+        const subAdmin = result.rows[0]
         const status = result.rows[0].is_active ? 'Activated' : 'Blocked';
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: null,
+            actionType: status.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `Admin ${status} Organization: ${subAdmin.org_name}[${subAdmin.sub_email}].`
+        });
+
         res.json({ message: `${result.rows[0].org_name} ${status}` });
     } catch (err) {
+        console.log(err)
         res.status(500).json({ error: "Toggle failed" });
     }
 });
 
+
 router.patch('/archive/:id', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
+
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
         const result = await pool.query(
             `UPDATE sub_admins 
              SET is_archived = NOT is_archived 
              WHERE id = $1 
-             RETURNING id, org_name, is_archived`,
+             RETURNING id, org_name, is_archived, sub_email`,
             [id]
         );
 
@@ -203,6 +252,13 @@ router.patch('/archive/:id', verifyToken, async (req, res) => {
 
         const subAdmin = result.rows[0];
         const statusText = subAdmin.is_archived ? 'archived' : 'unarchived';
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: null,
+            actionType: statusText.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `Admin ${statusText} Organization: ${subAdmin.org_name}[${subAdmin.sub_email}].`
+        });
 
         res.json({
             message: `${subAdmin.first_name} successfully ${statusText}.`,
@@ -220,7 +276,27 @@ router.patch('/archive/:id', verifyToken, async (req, res) => {
 // Unblock account access
 router.patch('/unblock/:id', verifyToken, async (req, res) => {
     try {
-        await pool.query('UPDATE sub_admins SET is_active = true WHERE id = $1', [req.params.id]);
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ error: "User not found" });
+        }
+        const result = await pool.query('UPDATE sub_admins SET is_active = true WHERE id = $1 RETURNING id, org_name, is_archived, sub_email', [req.params.id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Sub-admin not found" });
+        }
+
+        const subAdmin = result.rows[0];
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: null,
+            actionType: 'UNBLOCKED',
+            ipAddress: null, email: user.email,
+            details: `Admin Blocked Organization: ${subAdmin.org_name}[${subAdmin.sub_email}].`
+        });
         res.json({ message: "Organization unblocked." });
     } catch (err) {
         res.status(500).json({ error: "Unblock failed" });
@@ -236,6 +312,16 @@ router.post('/reject/:id', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
         const { reasons, note } = req.body;
+
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
 
         if (!reasons || !Array.isArray(reasons) || reasons.length === 0) {
             return res.status(400).json({ error: "At least one rejection reason must be selected." });
@@ -267,7 +353,17 @@ router.post('/reject/:id', verifyToken, async (req, res) => {
             [combinedReason, JSON.stringify([]), id]
         );
 
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: null,
+            actionType: 'Rejected'.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `Admin rejected Organization: ${org_name}[${sub_email}].`
+        });
+
+
         await sendRejectionEmail(sub_email, org_name, combinedReason, id);
+
         res.json({ message: "Organization rejected and compliance email sent." });
     } catch (err) {
         console.error(err.message);
@@ -306,6 +402,16 @@ router.post('/send-requirements/:id', verifyToken, async (req, res) => {
         const { id } = req.params;
         const { requirements } = req.body;
 
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+
         if (!requirements || !Array.isArray(requirements)) {
             return res.status(400).json({ error: "Requirements checklist array is required." });
         }
@@ -335,6 +441,15 @@ router.post('/send-requirements/:id', verifyToken, async (req, res) => {
        WHERE id = $2`,
             [JSON.stringify(requirements), id]
         );
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: null,
+            actionType: 'Compliance'.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `Admin sent compliance requirements to Organization: ${org_name}[${sub_email}].`
+        });
+
+
 
         // Call function cleanly passing down the clean raw array data structure
         if (typeof sendRequirementsEmail === 'function') {
@@ -482,14 +597,14 @@ router.post('/request-otp', otpSendLimiter, async (req, res) => {
         const generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
 
         await pool.query(
-    `INSERT INTO otp_codes (email, code, method, purpose, expires_at, created_at) 
+            `INSERT INTO otp_codes (email, code, method, purpose, expires_at, created_at) 
      VALUES ($1, $2, 'email', 'registration_org', NOW() + INTERVAL '10 minutes', NOW())
      ON CONFLICT (email, purpose) DO UPDATE SET 
         code = $2, 
         expires_at = NOW() + INTERVAL '10 minutes',
         created_at = NOW()`,
-    [email, generatedCode]
-);
+            [email, generatedCode]
+        );
 
         await sendOrgOTPEmail(email, generatedCode);
         res.json({ message: "Verification code sent!" });

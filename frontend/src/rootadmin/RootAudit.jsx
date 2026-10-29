@@ -16,7 +16,9 @@ import {
   UserCheck,
   ArchiveIcon,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  UnlockIcon,
+  XCircleIcon
 } from 'lucide-react';
 
 export default function RootAudit() {
@@ -77,19 +79,28 @@ export default function RootAudit() {
   const getBadgeConfig = (type) => {
     const config = {
       ROOT_ADMIN_LOGIN: { bg: 'bg-indigo-50 text-indigo-700 border-indigo-200', icon: LogIn, label: 'Root Login' },
+      LOGIN: { bg: 'bg-indigo-50 text-indigo-700 border-indigo-200', icon: LogIn, label: 'Login' },
+      COADMIN_LOGIN: { bg: 'bg-indigo-50 text-indigo-700 border-indigo-200', icon: LogIn, label: 'Co-Admin Login' },
+      ACTIVATED: { bg: 'bg-green-50 text-green-700 border-green-200', icon: Shield, label: 'Activated' },
+      BLOCKED: { bg: 'bg-red-50 text-red-700 border-red-200', icon: Shield, label: 'Blocked' },
       ORG_LOGIN: { bg: 'bg-sky-50 text-sky-700 border-sky-200', icon: LogIn, label: 'Org Login' },
       LOGIN_FAILED: { bg: 'bg-rose-50 text-rose-700 border-rose-200', icon: XCircle, label: 'Failed Auth' },
       SECURITY_LOCKOUT: { bg: 'bg-red-100 text-red-800 border-red-300 animate-pulse', icon: Shield, label: 'Lockout Trigger' },
        
       // Scholarship & Application Pipeline Actions
       STUDENT_APPLY: { bg: 'bg-blue-50 text-blue-700 border-blue-200', icon: UserCheck, label: 'Scholarship Apply' },
-      APP_APPROVED: { bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: CheckCircle2, label: 'Approved' },
+      APPROVED: { bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: CheckCircle2, label: 'Approved' },
+      UPDATED: { bg: 'bg-blue-50 text-blue-700 border-blue-200', icon: CheckCircle2, label: 'Updated' },
+      REJECTED: { bg: 'bg-rose-50 text-rose-700 border-rose-200', icon: XCircleIcon, label: 'Rejected' },
+      DELETED: { bg: 'bg-rose-50 text-rose-700 border-rose-200', icon: XCircleIcon, label: 'Deleted' },
       APP_COMPLY: { bg: 'bg-amber-50 text-amber-700 border-amber-200', icon: AlertTriangle, label: 'Compliance Request' },
       ADMIN_APPROVED: { bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: CheckCircle2, label: 'Approved' },
       ADMIN_REJECTED: { bg: 'bg-rose-50 text-rose-700 border-rose-200', icon: XCircle, label: 'Rejected' },
+      DELETED: { bg: 'bg-rose-50 text-rose-700 border-rose-200', icon: Trash2, label: 'Deleted' },
       SCHOLARSHIP_TAKEDOWN: { bg: 'bg-orange-50 text-orange-700 border-orange-200', icon: Trash2, label: 'Takedown' },
       REPORT_DISMISSED: { bg: 'bg-slate-50 text-slate-600 border-slate-200', icon: CheckCircle2, label: 'Dismissed' },
-      ADMIN_ARCHIVED: { bg: 'bg-amber-50 text-amber-600 border-amber-200', icon: ArchiveIcon, label: 'Archived' }
+      ARCHIVED: { bg: 'bg-orange-50 text-orange-600 border-orange-200', icon: ArchiveIcon, label: 'Archived' },
+      UNARCHIVED: { bg: 'bg-amber-50 text-amber-600 border-amber-200', icon: ArchiveIcon, label: 'Unarchived' }
     };
     return config[type] || { bg: 'bg-slate-50 text-slate-700 border-slate-200', icon: AlertTriangle, label: type?.replace('_', ' ') || 'System Action' };
   };
@@ -98,6 +109,8 @@ export default function RootAudit() {
     switch (role?.toLowerCase()) {
       case 'student': return 'bg-blue-50 text-blue-700 border-blue-200';
       case 'organization': return 'bg-purple-50 text-purple-700 border-purple-200';
+      case 'root_admin': return 'bg-red-50 text-red-700 border-red-200';
+      case 'co_admin': return 'bg-amber-50 text-amber-700 border-purple-200';
       default: return 'bg-amber-50 text-amber-700 border-amber-200';
     }
   };
@@ -106,6 +119,8 @@ export default function RootAudit() {
     switch (role?.toLowerCase()) {
       case 'student': return User;
       case 'organization': return Building;
+      case 'root_admin': return Shield;
+      case 'co_admin': return Shield;
       default: return Shield;
     }
   };
@@ -259,7 +274,7 @@ export default function RootAudit() {
                         <td className="p-4 whitespace-nowrap">
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${badge.bg}`}>
                             <ActionIcon className="w-3 h-3" />
-                            {badge.label}
+                            {badge.label.toUpperCase()}
                           </span>
                         </td>
 
@@ -273,7 +288,7 @@ export default function RootAudit() {
                         <td className="p-4 whitespace-nowrap">
                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-medium ${getRoleBadgeStyle(item.actor_role)}`}>
                             <RoleIcon className="w-3 h-3" />
-                            {item.actor_role || 'Admin'}
+                            {item.actor_role.toUpperCase()}
                           </span>
                         </td>
 

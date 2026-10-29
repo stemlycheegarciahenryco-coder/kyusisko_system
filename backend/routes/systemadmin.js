@@ -9,55 +9,6 @@ const { re } = require('mathjs');
 const { trackEvent } = require('../utils/logger');
 
 
-//Report Archive
-router.patch('/reports/archive/:id', verifyToken, async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        const userResult = await pool.query(
-            `SELECT * FROM users WHERE email = $1`,
-            [req.user.email]
-        );
-        const user = userResult.rows[0]
-
-        const result = await pool.query(
-            `UPDATE reports 
-             SET is_archived = NOT is_archived 
-             WHERE id = $1 
-             RETURNING id, is_archived`,
-            [id]
-        );
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: "Report not found" });
-        }
-
-        const reports = result.rows[0];
-        const statusText = reports.is_archived ? 'Archived' : 'Unarchived';
-
-
-        const archive_status = result.rows[0].is_archived ? 'Archived' : 'Unarchived' 
-
-        await trackEvent({
-            userId: user.id, subAdminId: null, studentId: null,
-            actionType: archive_status.toUpperCase(),
-            ipAddress: null, email: user.email,
-            details: `${statusText} Report: ${result.rows[0].sfirst_name} ${result.rows[0].slast_name}.`
-        });
-
-        res.json({
-            message: `Report successfully ${statusText}.`,
-            data: {
-                id: reports.id,
-                isArchived: reports.is_archived
-            }
-        });
-    } catch (err) {
-        console.error("Archive error:", err);
-        res.status(500).json({ error: "Failed to update archive status" });
-    }
-});
-
-
 
 // Get Snapshot Student
 router.get('/get/Student/snapshots/instance', verifyToken, async (req, res) => {
@@ -65,52 +16,39 @@ router.get('/get/Student/snapshots/instance', verifyToken, async (req, res) => {
 router.get('/get/Student/snapshot_items/:id', verifyToken, async (req, res) => {
 })
 
+router.get('/co-admins', verifyToken, async (req, res) => {
+    if (req.user.role !== 'root_admin') {
+        return res.status(403).json({ success: false, message: 'Forbidden access.' });
+    }
 
-// Archive Student
-router.patch('/student/archive/:id', verifyToken, async (req, res) => {
     try {
-        const { id } = req.params;
-
-        const userResult = await pool.query(
-            `SELECT * FROM users WHERE email = $1`,
-            [req.user.email]
-        );
-        const user = userResult.rows[0]
-
         const result = await pool.query(
-            `UPDATE students 
-             SET is_archived = NOT is_archived 
-             WHERE id = $1 
-             RETURNING id, is_archived, sfirst_name, slast_name`,
-            [id]
+            `SELECT id, email, uid, account_status, first_name, last_name, is_archived
+             FROM users 
+             WHERE role = 'co_admin' 
+             ORDER BY id DESC`
         );
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: "Student not found" });
-        }
-
-        const archive_status = result.rows[0].is_archived ? 'Archived' : 'Unarchived' 
-
-        await trackEvent({
-            userId: user.id, subAdminId: null, studentId: id,
-            actionType: archive_status.toUpperCase(),
-            ipAddress: null, email: user.email,
-            details: `${archive_status} Student: ${result.rows[0].sfirst_name} ${result.rows[0].slast_name}.`
-        });
-
-
-        const student = result.rows[0];
-        const statusText = student.is_archived ? 'archived' : 'unarchived';
-
-        res.json({
-            message: `${student.name} successfully ${statusText}.`,
-            data: {
-                id: student.id,
-                isArchived: student.is_archived
-            }
-        });
+        res.json({ success: true, data: result.rows });
     } catch (err) {
-        console.error("Archive error:", err);
-        res.status(500).json({ error: "Failed to update archive status" });
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+router.get('/get/archive/co-admins', verifyToken, async (req, res) => {
+    if (req.user.role !== 'root_admin') {
+        return res.status(403).json({ success: false, message: 'Forbidden access.' });
+    }
+
+    try {
+        const result = await pool.query(
+            `SELECT id, email, uid, account_status, first_name, last_name, is_archived
+             FROM users 
+             WHERE role = 'co_admin' AND is_archived = true 
+             ORDER BY id DESC`
+        );
+        res.json({ success: true, data: result.rows });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 
@@ -169,28 +107,38 @@ router.get('/get/student/archive', verifyToken, async (req, res) => {
     }
 })
 
-// // Delete CoAdmin
-// router.delete('/delete/:id', verifyToken, async (req, res) => {
-// })
-
 // Archive CoAdmin
 router.patch('/archive/:id', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
+
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+
         const result = await pool.query(
             `UPDATE users 
              SET is_archived = NOT is_archived 
              WHERE id = $1 
-             RETURNING id, last_name, is_archived`,
+             RETURNING id, last_name, is_archived, first_name, uid, email`,
             [id]
         );
-
         if (result.rows.length === 0) {
             return res.status(404).json({ error: "Co-Admin not found" });
         }
 
         const subAdmin = result.rows[0];
-        const statusText = subAdmin.is_archived ? 'archived' : 'unarchived';
+        const statusText = subAdmin.is_archived ? 'Archived' : 'Unarchived';
+
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: null,
+            actionType: statusText.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `Admin ${statusText} Co-Admin: ${result.rows[0].first_name} ${result.rows[0].last_name} [${subAdmin.uid}|${subAdmin.email}].`
+        });
 
         res.json({
             message: `${subAdmin.org_name} successfully ${statusText}.`,
@@ -204,6 +152,111 @@ router.patch('/archive/:id', verifyToken, async (req, res) => {
         res.status(500).json({ error: "Failed to update archive status" });
     }
 });
+
+
+// Archive Student
+router.patch('/student/archive/:id', verifyToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+
+        const result = await pool.query(
+            `UPDATE students 
+             SET is_archived = NOT is_archived 
+             WHERE id = $1 
+             RETURNING id, is_archived, sfirst_name, slast_name, student_email`,
+            [id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Student not found" });
+        }
+
+        const archive_status = result.rows[0].is_archived ? 'Archived' : 'Unarchived'
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: id,
+            actionType: archive_status.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `Admin ${archive_status} Student: ${result.rows[0].sfirst_name} ${result.rows[0].slast_name} [${result.rows[0].student_email}].`
+        });
+
+
+        const student = result.rows[0];
+        const statusText = student.is_archived ? 'Archived' : 'Unarchived';
+
+        res.json({
+            message: `${student.name} successfully ${statusText}.`,
+            data: {
+                id: student.id,
+                isArchived: student.is_archived
+            }
+        });
+    } catch (err) {
+        console.error("Archive error:", err);
+        res.status(500).json({ error: "Failed to update archive status" });
+    }
+});
+
+
+//Report Archive
+router.patch('/reports/archive/:id', verifyToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+
+        const result = await pool.query(
+            `UPDATE reports 
+             SET is_archived = NOT is_archived 
+             WHERE id = $1 
+             RETURNING id, is_archived`,
+            [id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Report not found" });
+        }
+
+        const reports = result.rows[0];
+        const statusText = reports.is_archived ? 'Archived' : 'Unarchived';
+
+
+        const archive_status = result.rows[0].is_archived ? 'Archived' : 'Unarchived'
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: null,
+            actionType: archive_status.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `${statusText} Report: ${result.rows[0].sfirst_name} ${result.rows[0].slast_name}.`
+        });
+
+        res.json({
+            message: `Report successfully ${statusText}.`,
+            data: {
+                id: reports.id,
+                isArchived: reports.is_archived
+            }
+        });
+    } catch (err) {
+        console.error("Archive error:", err);
+        res.status(500).json({ error: "Failed to update archive status" });
+    }
+});
+
+
+
+// // Delete CoAdmin
+// router.delete('/delete/:id', verifyToken, async (req, res) => {
+// })
+
 
 /**
  * @route   PATCH /api/system-admin/toggle-status/:id
@@ -228,10 +281,27 @@ router.patch('/toggle-status/:id', verifyToken, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Root Admin structural accounts cannot be blocked.' });
         }
 
-        await pool.query(
-            'UPDATE users SET account_status = $1 WHERE id = $2',
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+
+
+        const result = await pool.query(
+            'UPDATE users SET account_status = $1 WHERE id = $2 RETURNING account_status, first_name, last_name, email',
             [status, id]
         );
+
+        const coadmin = result.rows[0]
+        const account_status = coadmin.account_status == 'active' ? 'activated' : 'blocked'
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: null,
+            actionType: account_status.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `Admin ${account_status} co-admin : ${result.rows[0].first_name} ${result.rows[0].last_name} [${result.rows[0].email}].`
+        });
 
         res.json({ success: true, message: `Account status updated successfully to ${status}.` });
     } catch (err) {
@@ -243,41 +313,6 @@ router.patch('/toggle-status/:id', verifyToken, async (req, res) => {
  * @route   GET /api/system-admin/co-admins
  * @desc    Fetch list of all co-admins including their assigned tracking IDs (Root Admin Only)
  */
-router.get('/co-admins', verifyToken, async (req, res) => {
-    if (req.user.role !== 'root_admin') {
-        return res.status(403).json({ success: false, message: 'Forbidden access.' });
-    }
-
-    try {
-        const result = await pool.query(
-            `SELECT id, email, uid, account_status, first_name, last_name, is_archived
-             FROM users 
-             WHERE role = 'co_admin' 
-             ORDER BY id DESC`
-        );
-        res.json({ success: true, data: result.rows });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-router.get('/get/archive/co-admins', verifyToken, async (req, res) => {
-    if (req.user.role !== 'root_admin') {
-        return res.status(403).json({ success: false, message: 'Forbidden access.' });
-    }
-
-    try {
-        const result = await pool.query(
-            `SELECT id, email, uid, account_status, first_name, last_name, is_archived
-             FROM users 
-             WHERE role = 'co_admin' AND is_archived = true 
-             ORDER BY id DESC`
-        );
-        res.json({ success: true, data: result.rows });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
 
 // // Get Snapshot CoAdmin
 // router.get('/get/CoAdmin/snapshots/instance', verifyToken, async (req, res) => {
@@ -430,10 +465,24 @@ router.delete('/co-admins/delete/:id', verifyToken, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Root Admin structural accounts cannot be blocked.' });
         }
 
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+
+
         await pool.query(
             'Delete FROM users WHERE id = $1 AND is_archived = true',
             [id]
         );
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: id,
+            actionType: archive_status.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `Admin Removed Co-Admin: ${result.rows[0].sfirst_name} ${result.rows[0].slast_name} [${result.rows[0].student_email}].`
+        });
 
         res.json({ success: true, message: `Account Is Deleted.` });
     } catch (err) {
@@ -447,11 +496,33 @@ router.delete('/provider/delete/:id', verifyToken, async (req, res) => {
     }
     const { id } = req.params;
     try {
-        await pool.query(
-            'Delete FROM sub_admins WHERE id = $1 AND is_archived = true',
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        const result = await pool.query(
+            `DELETE FROM sub_admins 
+         WHERE id = $1 AND is_archived = true RETURNING org_name, sub_email 
+         `,
             [id]
         );
+
+        const subAdmin = result.rows[0]
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: null,
+            actionType: 'Deleted'.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `Admin Removed Organization Application: ${subAdmin.org_name}[${subAdmin.sub_email}].`
+        });
+
         res.json({ success: true, message: `Account Is Deleted.` });
+
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
@@ -464,10 +535,28 @@ router.delete('/student/delete/:id', verifyToken, async (req, res) => {
     }
     const { id } = req.params;
     try {
-        await pool.query(
-            'Delete FROM students WHERE id = $1 AND is_archived = true',
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ error: "User not found" });
+        }
+        const result = await pool.query(
+            'Delete FROM students WHERE id = $1 AND is_archived = true RETURNING student_email, sfirst_name, slast_name',
             [id]
         );
+
+        const students = result.rows[0]
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: null,
+            actionType: 'Deleted'.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `Admin Removed Student: ${students.sfirst_name} ${students.slast_name} [${students.student_email}].`
+        });
+
 
         res.json({ success: true, message: `Account Is Deleted.` });
     } catch (err) {
