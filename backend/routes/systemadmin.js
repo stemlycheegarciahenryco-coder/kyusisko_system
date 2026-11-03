@@ -3,59 +3,10 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const pool = require('../config/db');
 const { verifyToken } = require('../middleware/auth');
-const { has } = require('lodash');
+const { has, update, constant } = require('lodash');
 const crypto = require('crypto');
 const { re } = require('mathjs');
 const { trackEvent } = require('../utils/logger');
-
-
-//Report Archive
-router.patch('/reports/archive/:id', verifyToken, async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        const userResult = await pool.query(
-            `SELECT * FROM users WHERE email = $1`,
-            [req.user.email]
-        );
-        const user = userResult.rows[0]
-
-        const result = await pool.query(
-            `UPDATE reports 
-             SET is_archived = NOT is_archived 
-             WHERE id = $1 
-             RETURNING id, is_archived`,
-            [id]
-        );
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: "Report not found" });
-        }
-
-        const reports = result.rows[0];
-        const statusText = reports.is_archived ? 'Archived' : 'Unarchived';
-
-
-        const archive_status = result.rows[0].is_archived ? 'Archived' : 'Unarchived' 
-
-        await trackEvent({
-            userId: user.id, subAdminId: null, studentId: null,
-            actionType: archive_status.toUpperCase(),
-            ipAddress: null, email: user.email,
-            details: `${statusText} Report: ${result.rows[0].sfirst_name} ${result.rows[0].slast_name}.`
-        });
-
-        res.json({
-            message: `Report successfully ${statusText}.`,
-            data: {
-                id: reports.id,
-                isArchived: reports.is_archived
-            }
-        });
-    } catch (err) {
-        console.error("Archive error:", err);
-        res.status(500).json({ error: "Failed to update archive status" });
-    }
-});
 
 
 
@@ -65,52 +16,39 @@ router.get('/get/Student/snapshots/instance', verifyToken, async (req, res) => {
 router.get('/get/Student/snapshot_items/:id', verifyToken, async (req, res) => {
 })
 
+router.get('/co-admins', verifyToken, async (req, res) => {
+    if (req.user.role !== 'root_admin') {
+        return res.status(403).json({ success: false, message: 'Forbidden access.' });
+    }
 
-// Archive Student
-router.patch('/student/archive/:id', verifyToken, async (req, res) => {
     try {
-        const { id } = req.params;
-
-        const userResult = await pool.query(
-            `SELECT * FROM users WHERE email = $1`,
-            [req.user.email]
-        );
-        const user = userResult.rows[0]
-
         const result = await pool.query(
-            `UPDATE students 
-             SET is_archived = NOT is_archived 
-             WHERE id = $1 
-             RETURNING id, is_archived, sfirst_name, slast_name`,
-            [id]
+            `SELECT id, email, uid, account_status, first_name, last_name, is_archived
+             FROM users 
+             WHERE role = 'co_admin' 
+             ORDER BY id DESC`
         );
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: "Student not found" });
-        }
-
-        const archive_status = result.rows[0].is_archived ? 'Archived' : 'Unarchived' 
-
-        await trackEvent({
-            userId: user.id, subAdminId: null, studentId: id,
-            actionType: archive_status.toUpperCase(),
-            ipAddress: null, email: user.email,
-            details: `${archive_status} Student: ${result.rows[0].sfirst_name} ${result.rows[0].slast_name}.`
-        });
-
-
-        const student = result.rows[0];
-        const statusText = student.is_archived ? 'archived' : 'unarchived';
-
-        res.json({
-            message: `${student.name} successfully ${statusText}.`,
-            data: {
-                id: student.id,
-                isArchived: student.is_archived
-            }
-        });
+        res.json({ success: true, data: result.rows });
     } catch (err) {
-        console.error("Archive error:", err);
-        res.status(500).json({ error: "Failed to update archive status" });
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+router.get('/get/archive/co-admins', verifyToken, async (req, res) => {
+    if (req.user.role !== 'root_admin') {
+        return res.status(403).json({ success: false, message: 'Forbidden access.' });
+    }
+
+    try {
+        const result = await pool.query(
+            `SELECT id, email, uid, account_status, first_name, last_name, is_archived
+             FROM users 
+             WHERE role = 'co_admin' AND is_archived = true 
+             ORDER BY id DESC`
+        );
+        res.json({ success: true, data: result.rows });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 
@@ -169,28 +107,38 @@ router.get('/get/student/archive', verifyToken, async (req, res) => {
     }
 })
 
-// // Delete CoAdmin
-// router.delete('/delete/:id', verifyToken, async (req, res) => {
-// })
-
 // Archive CoAdmin
 router.patch('/archive/:id', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
+
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+
         const result = await pool.query(
             `UPDATE users 
              SET is_archived = NOT is_archived 
              WHERE id = $1 
-             RETURNING id, last_name, is_archived`,
+             RETURNING id, last_name, is_archived, first_name, uid, email`,
             [id]
         );
-
         if (result.rows.length === 0) {
             return res.status(404).json({ error: "Co-Admin not found" });
         }
 
         const subAdmin = result.rows[0];
-        const statusText = subAdmin.is_archived ? 'archived' : 'unarchived';
+        const statusText = subAdmin.is_archived ? 'Archived' : 'Unarchived';
+
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: null,
+            actionType: statusText.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `Admin ${statusText} Co-Admin: ${result.rows[0].first_name} ${result.rows[0].last_name} [${subAdmin.uid}|${subAdmin.email}].`
+        });
 
         res.json({
             message: `${subAdmin.org_name} successfully ${statusText}.`,
@@ -204,6 +152,111 @@ router.patch('/archive/:id', verifyToken, async (req, res) => {
         res.status(500).json({ error: "Failed to update archive status" });
     }
 });
+
+
+// Archive Student
+router.patch('/student/archive/:id', verifyToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+
+        const result = await pool.query(
+            `UPDATE students 
+             SET is_archived = NOT is_archived 
+             WHERE id = $1 
+             RETURNING id, is_archived, sfirst_name, slast_name, student_email`,
+            [id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Student not found" });
+        }
+
+        const archive_status = result.rows[0].is_archived ? 'Archived' : 'Unarchived'
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: id,
+            actionType: archive_status.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `Admin ${archive_status} Student: ${result.rows[0].sfirst_name} ${result.rows[0].slast_name} [${result.rows[0].student_email}].`
+        });
+
+
+        const student = result.rows[0];
+        const statusText = student.is_archived ? 'Archived' : 'Unarchived';
+
+        res.json({
+            message: `${student.name} successfully ${statusText}.`,
+            data: {
+                id: student.id,
+                isArchived: student.is_archived
+            }
+        });
+    } catch (err) {
+        console.error("Archive error:", err);
+        res.status(500).json({ error: "Failed to update archive status" });
+    }
+});
+
+
+//Report Archive
+router.patch('/reports/archive/:id', verifyToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+
+        const result = await pool.query(
+            `UPDATE reports 
+             SET is_archived = NOT is_archived 
+             WHERE id = $1 
+             RETURNING id, is_archived`,
+            [id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Report not found" });
+        }
+
+        const reports = result.rows[0];
+        const statusText = reports.is_archived ? 'Archived' : 'Unarchived';
+
+
+        const archive_status = result.rows[0].is_archived ? 'Archived' : 'Unarchived'
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: null,
+            actionType: archive_status.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `${statusText} Report: ${result.rows[0].sfirst_name} ${result.rows[0].slast_name}.`
+        });
+
+        res.json({
+            message: `Report successfully ${statusText}.`,
+            data: {
+                id: reports.id,
+                isArchived: reports.is_archived
+            }
+        });
+    } catch (err) {
+        console.error("Archive error:", err);
+        res.status(500).json({ error: "Failed to update archive status" });
+    }
+});
+
+
+
+// // Delete CoAdmin
+// router.delete('/delete/:id', verifyToken, async (req, res) => {
+// })
+
 
 /**
  * @route   PATCH /api/system-admin/toggle-status/:id
@@ -228,10 +281,27 @@ router.patch('/toggle-status/:id', verifyToken, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Root Admin structural accounts cannot be blocked.' });
         }
 
-        await pool.query(
-            'UPDATE users SET account_status = $1 WHERE id = $2',
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+
+
+        const result = await pool.query(
+            'UPDATE users SET account_status = $1 WHERE id = $2 RETURNING account_status, first_name, last_name, email',
             [status, id]
         );
+
+        const coadmin = result.rows[0]
+        const account_status = coadmin.account_status == 'active' ? 'activated' : 'blocked'
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: null,
+            actionType: account_status.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `Admin ${account_status} co-admin : ${result.rows[0].first_name} ${result.rows[0].last_name} [${result.rows[0].email}].`
+        });
 
         res.json({ success: true, message: `Account status updated successfully to ${status}.` });
     } catch (err) {
@@ -243,41 +313,6 @@ router.patch('/toggle-status/:id', verifyToken, async (req, res) => {
  * @route   GET /api/system-admin/co-admins
  * @desc    Fetch list of all co-admins including their assigned tracking IDs (Root Admin Only)
  */
-router.get('/co-admins', verifyToken, async (req, res) => {
-    if (req.user.role !== 'root_admin') {
-        return res.status(403).json({ success: false, message: 'Forbidden access.' });
-    }
-
-    try {
-        const result = await pool.query(
-            `SELECT id, email, uid, account_status, first_name, last_name, is_archived
-             FROM users 
-             WHERE role = 'co_admin' 
-             ORDER BY id DESC`
-        );
-        res.json({ success: true, data: result.rows });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-router.get('/get/archive/co-admins', verifyToken, async (req, res) => {
-    if (req.user.role !== 'root_admin') {
-        return res.status(403).json({ success: false, message: 'Forbidden access.' });
-    }
-
-    try {
-        const result = await pool.query(
-            `SELECT id, email, uid, account_status, first_name, last_name, is_archived
-             FROM users 
-             WHERE role = 'co_admin' AND is_archived = true 
-             ORDER BY id DESC`
-        );
-        res.json({ success: true, data: result.rows });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
 
 // // Get Snapshot CoAdmin
 // router.get('/get/CoAdmin/snapshots/instance', verifyToken, async (req, res) => {
@@ -352,9 +387,18 @@ router.put('/update/password', verifyToken, async (req, res) => {
             UPDATE users 
             SET password_hash = $1 
             WHERE email = $2 
-            RETURNING id, email;
+            RETURNING id, email, uid, first_name, last_name, role;
         `;
         const updateResult = await pool.query(updateQuery, [hashedNewPassword, req.user.email]);
+        const admin = updateResult.rows[0]
+
+        await trackEvent({
+            userId: admin.id, subAdminId: null, studentId: null,
+            actionType: 'Password Change'.toUpperCase(),
+            ipAddress: null, email: admin.email,
+            details: `${admin.role == 'root_admin' ? 'System' : admin.first_name} ${admin.role == 'root_admin' ? 'Admin' : admin.last_name} [${admin.email}] Changed Password.`
+        });
+
 
         return res.status(200).json({
             success: true,
@@ -377,6 +421,13 @@ router.put('/co-admins/update/:id', verifyToken, async (req, res) => {
         const { id } = req.params;
         const { firstName, lastName, email } = req.body;
 
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+
+
         const emailCheck = await pool.query(
             ` 
              SELECT student_email FROM students WHERE student_email = $1 
@@ -392,6 +443,7 @@ router.put('/co-admins/update/:id', verifyToken, async (req, res) => {
         let query;
         let values;
         // If no password is provided, leave the existing password untouched
+        const old = await pool.query(`SELECT first_name, last_name, email FROM users WHERE id = $1`, [id])
         query = `
                 UPDATE users 
                 SET first_name = $1, 
@@ -407,6 +459,16 @@ router.put('/co-admins/update/:id', verifyToken, async (req, res) => {
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Co-admin not found.' });
         }
+
+        const admin = result.rows[0]
+        const newAdmin = `${admin.role == 'root_admin' ? 'System' : admin.first_name} ${admin.role == 'root_admin' ? 'Admin' : admin.last_name} [${admin.email}]`
+        const oldAdmin = `${admin.role == 'root_admin' ? 'System' : old.rows[0].first_name} ${old.rows[0].role == 'root_admin' ? 'Admin' : old.rows[0].last_name} [${old.rows[0].email}]`
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: null,
+            actionType: 'Updated'.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `System Admin Updated ${oldAdmin} to ${newAdmin}.`
+        });
 
         res.json({ success: true, data: result.rows[0] });
     } catch (err) {
@@ -430,10 +492,23 @@ router.delete('/co-admins/delete/:id', verifyToken, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Root Admin structural accounts cannot be blocked.' });
         }
 
-        await pool.query(
-            'Delete FROM users WHERE id = $1 AND is_archived = true',
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+
+        const deleted = await pool.query(
+            'Delete FROM users WHERE id = $1 AND is_archived = true RETURNING first_name, last_name, email',
             [id]
         );
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: null,
+            actionType: 'DELETED'.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `System Admin Removed Co-Admin: ${deleted.rows[0].first_name} ${deleted.rows[0].last_name} [${deleted.rows[0].email}].`
+        });
 
         res.json({ success: true, message: `Account Is Deleted.` });
     } catch (err) {
@@ -447,11 +522,33 @@ router.delete('/provider/delete/:id', verifyToken, async (req, res) => {
     }
     const { id } = req.params;
     try {
-        await pool.query(
-            'Delete FROM sub_admins WHERE id = $1 AND is_archived = true',
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        const result = await pool.query(
+            `DELETE FROM sub_admins 
+         WHERE id = $1 AND is_archived = true RETURNING org_name, sub_email 
+         `,
             [id]
         );
+
+        const subAdmin = result.rows[0]
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: null,
+            actionType: 'Deleted'.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `Admin Removed Organization Application: ${subAdmin.org_name}[${subAdmin.sub_email}].`
+        });
+
         res.json({ success: true, message: `Account Is Deleted.` });
+
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
@@ -464,10 +561,28 @@ router.delete('/student/delete/:id', verifyToken, async (req, res) => {
     }
     const { id } = req.params;
     try {
-        await pool.query(
-            'Delete FROM students WHERE id = $1 AND is_archived = true',
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ error: "User not found" });
+        }
+        const result = await pool.query(
+            'Delete FROM students WHERE id = $1 AND is_archived = true RETURNING student_email, sfirst_name, slast_name',
             [id]
         );
+
+        const students = result.rows[0]
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: null,
+            actionType: 'Deleted'.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `Admin Removed Student: ${students.sfirst_name} ${students.slast_name} [${students.student_email}].`
+        });
+
 
         res.json({ success: true, message: `Account Is Deleted.` });
     } catch (err) {
@@ -483,24 +598,40 @@ router.put('/co-admin/update/reroll-password/:email', verifyToken, async (req, r
     try {
         const { email } = req.params;
 
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+
         // Generate a secure random plain-text password automatically
         const generatedPassword = crypto.randomBytes(4).toString('hex') + '@' + Math.floor(100 + Math.random() * 900);
         const salt = await bcrypt.genSalt(10);
         const hashedPw = await bcrypt.hash(generatedPassword, salt);
 
-        const newAdmin = await pool.query(
+        const result = await pool.query(
             `UPDATE users
             SET password_hash = $1
             WHERE email = $2
-            RETURNING id, uid
+            RETURNING id, uid, first_name, last_name, email
             `,
             [hashedPw, email.trim()]
         );
 
+        const newAdmin = result.rows[0]
+
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: null,
+            actionType: 'Password Change'.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `System Admin Regenerated Password for ${newAdmin.first_name} ${newAdmin.last_name} [${newAdmin.email}].`
+        });
+
         // Return the plain-text generatedPassword so the frontend can display it in Swal
         res.status(200).json({
             success: true,
-            data: newAdmin.rows[0],
+            data: newAdmin,
             generatedPassword
         });
     } catch (err) {
@@ -628,6 +759,39 @@ router.get('/role', verifyToken, async (req, res) => {
         });
     }
 });
+
+
+router.patch('/students/:id/status', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    const { activeStatus } = req.body;
+
+    try {
+        const userResult = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [req.user.email]
+        );
+        const user = userResult.rows[0]
+        const result = await pool.query(
+            'UPDATE students SET sis_active = $1 WHERE id = $2 RETURNING student_email, sfirst_name, slast_name, sis_active',
+            [activeStatus, id]
+        );
+        const student = result.rows[0]
+        const status = student.sis_active ? 'Activated' : 'Blocked'
+
+        await trackEvent({
+            userId: user.id, subAdminId: null, studentId: null,
+            actionType: status.toUpperCase(),
+            ipAddress: null, email: user.email,
+            details: `Admin ${status} Student: ${result.rows[0].sfirst_name} ${result.rows[0].slast_name} [${result.rows[0].student_email}].`
+        });
+
+        res.json({ success: true, message: "Account status updated" });
+    } catch (err) {
+        console.error(err)
+        res.status(500).json({ error: "Failed to update security status" });
+    }
+})
+
 
 
 module.exports = router;

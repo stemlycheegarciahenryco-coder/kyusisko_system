@@ -99,7 +99,7 @@ exports.portalLogin = async (req, res) => {
             await logAttempt(input, ip, true);
             await trackEvent({
                 userId: user.id, subAdminId: null, studentId: null,
-                actionType: user.role === 'root_admin' ? 'ROOT_ADMIN_LOGIN' : 'CO_ADMIN_LOGIN',
+                actionType: 'LOGIN',
                 ipAddress: ip, email: user.email,
                 details: `System session verified and initialized successfully for administrative ID: ${user.uid}.`
             });

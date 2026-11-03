@@ -51,7 +51,7 @@ export default function RootStudentLog() {
         if (!result.isConfirmed) return;
 
         try {
-            await api.patch(`/students/${id}/status`, { activeStatus: newStatus });
+            await api.patch(`/system-admin/students/${id}/status`, { activeStatus: newStatus });
             setStudents(prev => prev.map(s => s.id === id ? { ...s, sis_active: newStatus } : s));
             setArchivedStudents(prev => prev.map(s => s.id === id ? { ...s, sis_active: newStatus } : s));
             Swal.fire({ title: 'Success!', icon: 'success', timer: 1500, showConfirmButton: false });
