@@ -325,7 +325,7 @@ const getScholarshipById = async (req, res) => {
     }
 };
 
-// Edit scholarship
+// Edit scholarship /scholarships/id with payload
 const updateScholarship = async (req, res) => {
     const { id } = req.params;
     const { title, description, deadline, slots, gwa, fund_type, budget, criteria, requirements } = req.body;

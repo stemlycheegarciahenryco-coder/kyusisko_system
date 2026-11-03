@@ -329,7 +329,7 @@ export default function Home() {
                                         About Kyus<span className="text-[#093FB4]">ISKO</span>
                                     </h4>
                                     <p className="home-body">
-                                        KyusISKO is a platform that helps students find seamlessly and discover College Scholarships across Quezon City.
+                                        KyusISKO is a platform that helps students find seamlessly and discover College Scholarships.
                                         Our mission is to bridge the gap between financial constraints and educational dreams through technology.
                                     </p>
                                     <p className="home-body">

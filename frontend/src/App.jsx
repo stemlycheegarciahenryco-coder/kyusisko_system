@@ -47,6 +47,7 @@ import OrgReports from './org/OrgReports';
 import OrgLogs from './org/OrgLogs';
 import OrgArchive from './org/OrgArchive';
 import CreateScholarship from './component/CreateScholarship';
+import EditProgram from './component/EditProgram';
 import DisbursementLedger from './component/DisbursementLedger';
 import { CompliancePage } from './CompliancePage';
 
@@ -119,6 +120,7 @@ export default function App() {
                     <Route path="/OrgLogs" element={<OrgLogs />} />
                     <Route path="/OrgSettings" element={<OrgSettings />} />
                     <Route path="/create-scholarship" element={<CreateScholarship />} />
+                    <Route path="/edit-scholarship/:id" element={<EditProgram />} />
 
                 </Route>
             </Route>

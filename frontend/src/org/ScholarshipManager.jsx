@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import api from '../api';
 import ViewProgram from '../component/ViewProgram';
-import EditProgram from '../component/EditProgram';
 
 export default function ScholarshipManager() {
   const navigate = useNavigate();
@@ -21,7 +20,6 @@ export default function ScholarshipManager() {
 
   // Modal States
   const [viewModal, setViewModal] = useState(null);
-  const [editModal, setEditModal] = useState(null);
   const [publishConfirm, setPublishConfirm] = useState({ show: false, id: null });
   const [closeConfirm, setCloseConfirm] = useState({ show: false, id: null });
   const [archiveConfirm, setArchiveConfirm] = useState({ show: false, id: null });
@@ -353,7 +351,7 @@ export default function ScholarshipManager() {
                     {badgeType === 'draft' && (
                       <>
                         <button
-                          onClick={() => setEditModal(s)}
+                          onClick={() => navigate(`/edit-scholarship/${s.id}`)}
                           className={`${btnBase} bg-white border-slate-300 hover:border-slate-500 text-slate-700`}
                         >
                           Edit
@@ -375,12 +373,20 @@ export default function ScholarshipManager() {
 
                     {/* OPEN: Close */}
                     {badgeType === 'open' && (
-                      <button
-                        onClick={() => setCloseConfirm({ show: true, id: s.id })}
-                        className={`${btnBase} bg-red-50 text-red-700 border-red-200 hover:bg-red-100`}
-                      >
-                        Close
-                      </button>
+                      <>
+                        <button
+                          onClick={() => navigate(`/edit-scholarship/${s.id}`)}
+                          className={`${btnBase} bg-white border-slate-300 hover:border-slate-500 text-slate-700`}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => setCloseConfirm({ show: true, id: s.id })}
+                          className={`${btnBase} bg-red-50 text-red-700 border-red-200 hover:bg-red-100`}
+                        >
+                          Close
+                        </button>
+                      </>
                     )}
 
                     {/* CLOSED: Archive */}
@@ -448,13 +454,6 @@ export default function ScholarshipManager() {
 
       {/* ── EXTERNAL MODAL DRAWERS ── */}
       {viewModal && <ViewProgram scholarship={viewModal} onClose={() => setViewModal(null)} />}
-      {editModal && (
-        <EditProgram
-          scholarship={editModal}
-          onUpdateSuccess={() => { setEditModal(null); fetchScholarships(); }}
-          onCancel={() => setEditModal(null)}
-        />
-      )}
 
       {/* ── UNIFIED CONFIRM DIALOG SYSTEM ── */}
       {(publishConfirm.show || closeConfirm.show || archiveConfirm.show) && (() => {
